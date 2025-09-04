@@ -1,6 +1,6 @@
 // src/components/common/LoadingSpinner.js
 import React from 'react'
-import './../../global.css'
+import '../../styles/global.css';
 
 const LoadingSpinner = ({ 
   message = "Loading...", 
