@@ -4,7 +4,7 @@ import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../contexts/AuthContext'
 import { db } from '../utils/supabase'
 import LoadingSpinner from '../components/common/LoadingSpinner'
-import './global.css'
+import '../styles/global.css';
 
 const Onboarding = () => {
   const { profile, isAuthenticated } = useAuth()

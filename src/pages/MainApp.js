@@ -21,7 +21,7 @@ import MatchFinder from '../components/dashboard/MatchFinder'
 import MatchRequests from '../components/dashboard/MatchRequests'
 import PropertyManagement from '../components/dashboard/PropertyManagement'
 
-import './global.css'
+import '../styles/global.css';
 
 // Placeholder components for features not yet implemented
 const PeerSupportDashboard = () => (
