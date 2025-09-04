@@ -6,7 +6,7 @@ import LoadingSpinner from './components/common/LoadingSpinner';
 import Landing from './pages/Landing';
 import MainApp from './pages/MainApp';
 import Onboarding from './pages/Onboarding';
-import './global.css';
+import './styles/global.css';
 
 // Protected Route wrapper
 const ProtectedRoute = ({ children }) => {
