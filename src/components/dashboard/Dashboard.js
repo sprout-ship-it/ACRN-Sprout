@@ -125,13 +125,17 @@ const Dashboard = () => {
     return cards
   }
 
-  const handleCardClick = (card) => {
-    if (card.path) {
-      navigate(card.path)
-    } else {
-      setCurrentView(card.id)
-    }
+const handleCardClick = (card) => {
+  console.log('🔄 Button clicked:', card.label, 'Path:', card.path)
+  
+  if (card.path) {
+    console.log('🧭 Navigating to:', card.path)
+    navigate(card.path)
+  } else {
+    console.log('🔄 Setting view to:', card.id)
+    setCurrentView(card.id)
   }
+}
 
   return (
     <div>
