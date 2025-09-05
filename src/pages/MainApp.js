@@ -106,7 +106,7 @@ const [profileSetup, setProfileSetup] = useState({
           const { data } = await db.peerSupport.getByUserId(user.id)
           peerProfile = data
         }
-        
+
         setProfileSetup({
           basicProfile: !!basicProfile,
           matchingProfile: !hasRole('applicant') || !!matchingProfile,
@@ -262,7 +262,7 @@ if (hasRole('peer') && !profileSetup.peerProfile) {
             {hasRole('applicant') && (
               <Route path="/profile/matching" element={
                 <div style={{ maxWidth: '900px', margin: '0 auto' }}>
-                  <MatchingProfileForm 
+                  <EnhancedMatchingProfileForm 
                     editMode={true}
                     onComplete={() => navigate('/')}
                     onCancel={() => navigate('/')}
