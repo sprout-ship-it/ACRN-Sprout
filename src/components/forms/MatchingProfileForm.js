@@ -3,7 +3,7 @@ import React, { useState, useEffect } from 'react';
 import { useAuth } from '../../contexts/AuthContext';
 import { db } from '../../utils/supabase';
 import LoadingSpinner from '../common/LoadingSpinner';
-import './../../global.css';
+import '../../styles/global.css';
 
 const MatchingProfileForm = ({ editMode = false, onComplete, onCancel }) => {
   const { user, profile, hasRole } = useAuth();
