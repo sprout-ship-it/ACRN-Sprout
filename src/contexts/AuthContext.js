@@ -134,7 +134,8 @@ const loadUserProfile = async (userId) => {
     console.log('📄 Combined profile loaded:', { 
       hasRoles: !!combinedProfile?.roles,
       roles: combinedProfile?.roles,
-      hasBasicData: !!basicProfileResult.data
+      hasBasicData: !!basicProfileResult.data,
+      fullProfile: combinedProfile
     });
 
     setProfile(combinedProfile);
@@ -299,9 +300,15 @@ const loadUserProfile = async (userId) => {
   // Check if user has specific role
   const hasRole = (role) => {
     const result = profile?.roles?.includes(role) || false
-    console.log('🔍 hasRole check:', { role, result, userRoles: profile?.roles })
+    console.log('🔍 hasRole check:', { 
+      role, 
+      result, 
+      userRoles: profile?.roles,
+      hasProfile: !!profile,
+      profileKeys: profile ? Object.keys(profile) : 'no profile'
+    })
     return result
-  }
+}
 
   // Check if user has any of the specified roles
   const hasAnyRole = (roles) => {

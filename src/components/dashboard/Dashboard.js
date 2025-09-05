@@ -6,6 +6,7 @@ import '../../styles/global.css';
 
 const Dashboard = () => {
   const { profile, hasRole } = useAuth()
+  console.log('🎯 Dashboard profile data:', { profile, hasProfile: !!profile, profileRoles: profile?.roles })
   const navigate = useNavigate()
   const [currentView, setCurrentView] = useState('dashboard')
 
