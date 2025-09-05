@@ -13,6 +13,8 @@ export const useAuth = () => {
 }
 
 export const AuthProvider = ({ children }) => {
+  console.log('🚀 AuthProvider starting...')
+  
   const [user, setUser] = useState(null)
   const [profile, setProfile] = useState(null)
   const [loading, setLoading] = useState(true)
@@ -20,54 +22,138 @@ export const AuthProvider = ({ children }) => {
 
   // Initialize auth state
   useEffect(() => {
-    // Get initial session
-    auth.getSession().then(({ session, error }) => {
-      if (error) {
-        console.error('Error getting session:', error)
-        setError(error.message)
-      } else {
-        setUser(session?.user ?? null)
-        if (session?.user) {
-          loadUserProfile(session.user.id)
+    console.log('🔄 AuthContext useEffect starting')
+    
+    let isMounted = true // Prevent state updates if component unmounts
+    
+    const initializeAuth = async () => {
+      try {
+        console.log('📡 Getting initial session...')
+        
+        // Add timeout to prevent hanging
+        const sessionPromise = auth.getSession()
+        const timeoutPromise = new Promise((_, reject) => 
+          setTimeout(() => reject(new Error('Session timeout')), 10000)
+        )
+        
+        const { session, error } = await Promise.race([sessionPromise, timeoutPromise])
+        
+        console.log('📡 Session result:', { 
+          hasSession: !!session, 
+          hasUser: !!session?.user,
+          error: error?.message 
+        })
+        
+        if (!isMounted) return
+        
+        if (error) {
+          console.error('❌ Error getting session:', error)
+          setError(error.message)
+        } else {
+          setUser(session?.user ?? null)
+          
+          if (session?.user) {
+            console.log('👤 User found, loading profile for:', session.user.id)
+            await loadUserProfile(session.user.id)
+          } else {
+            console.log('👤 No user session found')
+          }
+        }
+        
+        if (isMounted) {
+          console.log('✅ Auth initialization complete, setting loading to false')
+          setLoading(false)
+        }
+      } catch (err) {
+        console.error('💥 Auth initialization failed:', err)
+        if (isMounted) {
+          setError(err.message || 'Failed to initialize authentication')
+          setLoading(false)
         }
       }
-      setLoading(false)
-    })
+    }
+
+    // Initialize auth
+    initializeAuth()
 
     // Listen for auth changes
+    console.log('👂 Setting up auth state change listener')
     const { data: { subscription } } = auth.onAuthStateChange(async (event, session) => {
+      console.log('🔄 Auth state changed:', event, { hasSession: !!session })
+      
+      if (!isMounted) return
+      
       setUser(session?.user ?? null)
       
-      if (session?.user) {
-        await loadUserProfile(session.user.id)
-      } else {
-        setProfile(null)
+      try {
+        if (session?.user) {
+          console.log('👤 Auth changed: loading profile for user:', session.user.id)
+          await loadUserProfile(session.user.id)
+        } else {
+          console.log('👤 Auth changed: no user, clearing profile')
+          setProfile(null)
+        }
+      } catch (err) {
+        console.error('💥 Error in auth state change:', err)
+        setError(err.message || 'Error handling auth state change')
       }
       
-      setLoading(false)
+      if (isMounted) {
+        setLoading(false)
+      }
     })
 
-    return () => subscription.unsubscribe()
-  }, [])
+    // Cleanup function
+    return () => {
+      console.log('🧹 AuthContext cleanup')
+      isMounted = false
+      subscription.unsubscribe()
+    }
+  }, []) // Empty dependency array is intentional
 
   // Load user profile from database
   const loadUserProfile = async (userId) => {
+    console.log('📄 Loading profile for user:', userId)
+    
     try {
-      const { data, error } = await db.profiles.getById(userId)
+      // Add timeout for profile loading
+      const profilePromise = db.profiles.getById(userId)
+      const timeoutPromise = new Promise((_, reject) => 
+        setTimeout(() => reject(new Error('Profile load timeout')), 8000)
+      )
+      
+      const { data, error } = await Promise.race([profilePromise, timeoutPromise])
+      
+      console.log('📄 Profile load result:', { 
+        hasData: !!data, 
+        error: error?.message,
+        data: data ? { id: data.id, email: data.email, roles: data.roles } : null
+      })
+      
       if (error) {
-        console.error('Error loading profile:', error)
-        setError(error.message)
+        console.error('❌ Error loading profile:', error)
+        // Don't treat profile load errors as fatal - user might not have profile yet
+        if (error.code === 'PGRST116') {
+          console.log('ℹ️ Profile not found - this is normal for new users')
+          setProfile(null)
+        } else {
+          setError(error.message)
+        }
       } else {
+        console.log('✅ Profile loaded successfully')
         setProfile(data)
       }
     } catch (err) {
-      console.error('Profile loading error:', err)
-      setError('Failed to load user profile')
+      console.error('💥 Profile loading error:', err)
+      // Don't set error for profile loading issues - user can still use the app
+      console.log('ℹ️ Continuing without profile data')
     }
   }
 
   // Sign up new user
   const signUp = async (email, password, userData) => {
+    console.log('📝 Signing up user:', email)
+    
     try {
       setLoading(true)
       setError(null)
@@ -75,12 +161,15 @@ export const AuthProvider = ({ children }) => {
       const { data, error } = await auth.signUp(email, password, userData)
       
       if (error) {
+        console.error('❌ Signup error:', error)
         setError(error.message)
         return { success: false, error: error.message }
       }
 
       // Create profile in database
       if (data.user) {
+        console.log('👤 Creating profile for new user:', data.user.id)
+        
         const profileData = {
           id: data.user.id,
           email: data.user.email,
@@ -91,13 +180,16 @@ export const AuthProvider = ({ children }) => {
 
         const { error: profileError } = await db.profiles.create(profileData)
         if (profileError) {
-          console.error('Error creating profile:', profileError)
+          console.error('❌ Error creating profile:', profileError)
           setError('Account created but profile setup failed')
+        } else {
+          console.log('✅ Profile created successfully')
         }
       }
 
       return { success: true, data }
     } catch (err) {
+      console.error('💥 Signup failed:', err)
       const errorMessage = err.message || 'An error occurred during signup'
       setError(errorMessage)
       return { success: false, error: errorMessage }
@@ -108,6 +200,8 @@ export const AuthProvider = ({ children }) => {
 
   // Sign in existing user
   const signIn = async (email, password) => {
+    console.log('🔑 Signing in user:', email)
+    
     try {
       setLoading(true)
       setError(null)
@@ -115,12 +209,15 @@ export const AuthProvider = ({ children }) => {
       const { data, error } = await auth.signIn(email, password)
       
       if (error) {
+        console.error('❌ Signin error:', error)
         setError(error.message)
         return { success: false, error: error.message }
       }
 
+      console.log('✅ Signin successful')
       return { success: true, data }
     } catch (err) {
+      console.error('💥 Signin failed:', err)
       const errorMessage = err.message || 'An error occurred during signin'
       setError(errorMessage)
       return { success: false, error: errorMessage }
@@ -131,6 +228,8 @@ export const AuthProvider = ({ children }) => {
 
   // Sign out user
   const signOut = async () => {
+    console.log('🚪 Signing out user')
+    
     try {
       setLoading(true)
       setError(null)
@@ -138,14 +237,17 @@ export const AuthProvider = ({ children }) => {
       const { error } = await auth.signOut()
       
       if (error) {
+        console.error('❌ Signout error:', error)
         setError(error.message)
         return { success: false, error: error.message }
       }
 
       setUser(null)
       setProfile(null)
+      console.log('✅ Signout successful')
       return { success: true }
     } catch (err) {
+      console.error('💥 Signout failed:', err)
       const errorMessage = err.message || 'An error occurred during signout'
       setError(errorMessage)
       return { success: false, error: errorMessage }
@@ -156,6 +258,8 @@ export const AuthProvider = ({ children }) => {
 
   // Update user profile
   const updateProfile = async (updates) => {
+    console.log('📝 Updating profile:', updates)
+    
     try {
       setError(null)
 
@@ -166,13 +270,16 @@ export const AuthProvider = ({ children }) => {
       const { data, error } = await db.profiles.update(user.id, updates)
       
       if (error) {
+        console.error('❌ Profile update error:', error)
         setError(error.message)
         return { success: false, error: error.message }
       }
 
+      console.log('✅ Profile updated successfully')
       setProfile(data[0])
       return { success: true, data: data[0] }
     } catch (err) {
+      console.error('💥 Profile update failed:', err)
       const errorMessage = err.message || 'Failed to update profile'
       setError(errorMessage)
       return { success: false, error: errorMessage }
@@ -181,7 +288,9 @@ export const AuthProvider = ({ children }) => {
 
   // Check if user has specific role
   const hasRole = (role) => {
-    return profile?.roles?.includes(role) || false
+    const result = profile?.roles?.includes(role) || false
+    console.log('🔍 hasRole check:', { role, result, userRoles: profile?.roles })
+    return result
   }
 
   // Check if user has any of the specified roles
@@ -226,6 +335,13 @@ export const AuthProvider = ({ children }) => {
     isLandlord: hasRole('landlord'),
     isPeerSupport: hasRole('peer')
   }
+
+  console.log('🎯 AuthProvider rendering with state:', {
+    hasUser: !!user,
+    hasProfile: !!profile,
+    loading,
+    error: !!error
+  })
 
   return (
     <AuthContext.Provider value={value}>

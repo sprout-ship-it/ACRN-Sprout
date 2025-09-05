@@ -1,53 +1,115 @@
 // src/utils/supabase.js
 import { createClient } from '@supabase/supabase-js'
 
+console.log('🔧 Supabase client initializing...')
+
 const supabaseUrl = process.env.REACT_APP_SUPABASE_URL
 const supabaseAnonKey = process.env.REACT_APP_SUPABASE_ANON_KEY
 
+console.log('🔧 Environment check:', {
+  hasUrl: !!supabaseUrl,
+  hasKey: !!supabaseAnonKey,
+  urlPreview: supabaseUrl ? `${supabaseUrl.substring(0, 20)}...` : 'MISSING',
+  keyPreview: supabaseAnonKey ? `${supabaseAnonKey.substring(0, 10)}...` : 'MISSING'
+})
+
 if (!supabaseUrl || !supabaseAnonKey) {
+  console.error('💥 Missing Supabase environment variables')
+  console.error('REACT_APP_SUPABASE_URL:', supabaseUrl)
+  console.error('REACT_APP_SUPABASE_ANON_KEY exists:', !!supabaseAnonKey)
   throw new Error('Missing Supabase environment variables. Please check your .env file.')
 }
 
+console.log('🔧 Creating Supabase client...')
 export const supabase = createClient(supabaseUrl, supabaseAnonKey)
+console.log('✅ Supabase client created successfully')
 
 // Auth helpers
 export const auth = {
   // Sign up new user
   signUp: async (email, password, userData) => {
-    const { data, error } = await supabase.auth.signUp({
-      email,
-      password,
-      options: {
-        data: userData // firstName, lastName, roles
-      }
-    })
-    return { data, error }
+    console.log('🔑 Auth: signUp called for', email)
+    try {
+      const { data, error } = await supabase.auth.signUp({
+        email,
+        password,
+        options: {
+          data: userData // firstName, lastName, roles
+        }
+      })
+      console.log('🔑 Auth: signUp result', { hasData: !!data, hasError: !!error, error: error?.message })
+      return { data, error }
+    } catch (err) {
+      console.error('💥 Auth: signUp failed', err)
+      throw err
+    }
   },
 
   // Sign in existing user
   signIn: async (email, password) => {
-    const { data, error } = await supabase.auth.signInWithPassword({
-      email,
-      password
-    })
-    return { data, error }
+    console.log('🔑 Auth: signIn called for', email)
+    try {
+      const { data, error } = await supabase.auth.signInWithPassword({
+        email,
+        password
+      })
+      console.log('🔑 Auth: signIn result', { hasData: !!data, hasError: !!error, error: error?.message })
+      return { data, error }
+    } catch (err) {
+      console.error('💥 Auth: signIn failed', err)
+      throw err
+    }
   },
 
   // Sign out
   signOut: async () => {
-    const { error } = await supabase.auth.signOut()
-    return { error }
+    console.log('🔑 Auth: signOut called')
+    try {
+      const { error } = await supabase.auth.signOut()
+      console.log('🔑 Auth: signOut result', { hasError: !!error, error: error?.message })
+      return { error }
+    } catch (err) {
+      console.error('💥 Auth: signOut failed', err)
+      throw err
+    }
   },
 
   // Get current session
   getSession: async () => {
-    const { data: { session }, error } = await supabase.auth.getSession()
-    return { session, error }
+    console.log('🔑 Auth: getSession called')
+    try {
+      const timeoutPromise = new Promise((_, reject) => 
+        setTimeout(() => reject(new Error('getSession timeout after 8 seconds')), 8000)
+      )
+      
+      const sessionPromise = supabase.auth.getSession()
+      
+      const { data: { session }, error } = await Promise.race([sessionPromise, timeoutPromise])
+      
+      console.log('🔑 Auth: getSession result', { 
+        hasSession: !!session, 
+        hasUser: !!session?.user,
+        hasError: !!error, 
+        error: error?.message 
+      })
+      return { session, error }
+    } catch (err) {
+      console.error('💥 Auth: getSession failed', err)
+      throw err
+    }
   },
 
   // Listen to auth changes
   onAuthStateChange: (callback) => {
-    return supabase.auth.onAuthStateChange(callback)
+    console.log('🔑 Auth: onAuthStateChange listener setup')
+    try {
+      const result = supabase.auth.onAuthStateChange(callback)
+      console.log('🔑 Auth: onAuthStateChange listener created')
+      return result
+    } catch (err) {
+      console.error('💥 Auth: onAuthStateChange failed', err)
+      throw err
+    }
   }
 }
 
@@ -56,248 +118,415 @@ export const db = {
   // Profile operations
   profiles: {
     create: async (profileData) => {
-      const { data, error } = await supabase
-        .from('registrant_profiles')
-        .insert(profileData)
-        .select()
-      return { data, error }
+      console.log('📊 DB: profiles.create called', { id: profileData.id, email: profileData.email })
+      try {
+        const { data, error } = await supabase
+          .from('registrant_profiles')
+          .insert(profileData)
+          .select()
+        console.log('📊 DB: profiles.create result', { hasData: !!data, hasError: !!error, error: error?.message })
+        return { data, error }
+      } catch (err) {
+        console.error('💥 DB: profiles.create failed', err)
+        throw err
+      }
     },
 
     getById: async (id) => {
-      const { data, error } = await supabase
-        .from('registrant_profiles')
-        .select('*')
-        .eq('id', id)
-        .single()
-      return { data, error }
+      console.log('📊 DB: profiles.getById called', { id })
+      try {
+        const timeoutPromise = new Promise((_, reject) => 
+          setTimeout(() => reject(new Error('profiles.getById timeout after 6 seconds')), 6000)
+        )
+        
+        const queryPromise = supabase
+          .from('registrant_profiles')
+          .select('*')
+          .eq('id', id)
+          .single()
+        
+        const { data, error } = await Promise.race([queryPromise, timeoutPromise])
+        
+        console.log('📊 DB: profiles.getById result', { 
+          hasData: !!data, 
+          hasError: !!error, 
+          error: error?.message,
+          errorCode: error?.code 
+        })
+        return { data, error }
+      } catch (err) {
+        console.error('💥 DB: profiles.getById failed', err)
+        throw err
+      }
     },
 
     update: async (id, updates) => {
-      const { data, error } = await supabase
-        .from('registrant_profiles')
-        .update(updates)
-        .eq('id', id)
-        .select()
-      return { data, error }
+      console.log('📊 DB: profiles.update called', { id, updates })
+      try {
+        const { data, error } = await supabase
+          .from('registrant_profiles')
+          .update(updates)
+          .eq('id', id)
+          .select()
+        console.log('📊 DB: profiles.update result', { hasData: !!data, hasError: !!error, error: error?.message })
+        return { data, error }
+      } catch (err) {
+        console.error('💥 DB: profiles.update failed', err)
+        throw err
+      }
     }
   },
 
   // Basic profile operations
   basicProfiles: {
     create: async (profileData) => {
-      const { data, error } = await supabase
-        .from('basic_profiles')
-        .insert(profileData)
-        .select()
-      return { data, error }
+      console.log('📊 DB: basicProfiles.create called', { userId: profileData.user_id })
+      try {
+        const { data, error } = await supabase
+          .from('basic_profiles')
+          .insert(profileData)
+          .select()
+        console.log('📊 DB: basicProfiles.create result', { hasData: !!data, hasError: !!error, error: error?.message })
+        return { data, error }
+      } catch (err) {
+        console.error('💥 DB: basicProfiles.create failed', err)
+        throw err
+      }
     },
 
     getByUserId: async (userId) => {
-      const { data, error } = await supabase
-        .from('basic_profiles')
-        .select('*')
-        .eq('user_id', userId)
-        .single()
-      return { data, error }
+      console.log('📊 DB: basicProfiles.getByUserId called', { userId })
+      try {
+        const { data, error } = await supabase
+          .from('basic_profiles')
+          .select('*')
+          .eq('user_id', userId)
+          .single()
+        console.log('📊 DB: basicProfiles.getByUserId result', { hasData: !!data, hasError: !!error, error: error?.message })
+        return { data, error }
+      } catch (err) {
+        console.error('💥 DB: basicProfiles.getByUserId failed', err)
+        throw err
+      }
     },
 
     update: async (userId, updates) => {
-      const { data, error } = await supabase
-        .from('basic_profiles')
-        .update(updates)
-        .eq('user_id', userId)
-        .select()
-      return { data, error }
+      console.log('📊 DB: basicProfiles.update called', { userId, updates })
+      try {
+        const { data, error } = await supabase
+          .from('basic_profiles')
+          .update(updates)
+          .eq('user_id', userId)
+          .select()
+        console.log('📊 DB: basicProfiles.update result', { hasData: !!data, hasError: !!error, error: error?.message })
+        return { data, error }
+      } catch (err) {
+        console.error('💥 DB: basicProfiles.update failed', err)
+        throw err
+      }
     }
   },
 
   // Matching profile operations
   matchingProfiles: {
     create: async (profileData) => {
-      const { data, error } = await supabase
-        .from('applicant_forms')
-        .insert(profileData)
-        .select()
-      return { data, error }
+      console.log('📊 DB: matchingProfiles.create called', { userId: profileData.user_id })
+      try {
+        const { data, error } = await supabase
+          .from('applicant_forms')
+          .insert(profileData)
+          .select()
+        console.log('📊 DB: matchingProfiles.create result', { hasData: !!data, hasError: !!error, error: error?.message })
+        return { data, error }
+      } catch (err) {
+        console.error('💥 DB: matchingProfiles.create failed', err)
+        throw err
+      }
     },
 
     getByUserId: async (userId) => {
-      const { data, error } = await supabase
-        .from('applicant_forms')
-        .select('*')
-        .eq('user_id', userId)
-        .single()
-      return { data, error }
+      console.log('📊 DB: matchingProfiles.getByUserId called', { userId })
+      try {
+        const { data, error } = await supabase
+          .from('applicant_forms')
+          .select('*')
+          .eq('user_id', userId)
+          .single()
+        console.log('📊 DB: matchingProfiles.getByUserId result', { hasData: !!data, hasError: !!error, error: error?.message })
+        return { data, error }
+      } catch (err) {
+        console.error('💥 DB: matchingProfiles.getByUserId failed', err)
+        throw err
+      }
     },
 
     getActiveProfiles: async (excludeUserId = null) => {
-      let query = supabase
-        .from('applicant_forms')
-        .select(`
-          *,
-          registrant_profiles!inner(id, first_name, email)
-        `)
-        .eq('is_active', true)
+      console.log('📊 DB: matchingProfiles.getActiveProfiles called', { excludeUserId })
+      try {
+        let query = supabase
+          .from('applicant_forms')
+          .select(`
+            *,
+            registrant_profiles!inner(id, first_name, email)
+          `)
+          .eq('is_active', true)
 
-      if (excludeUserId) {
-        query = query.neq('user_id', excludeUserId)
+        if (excludeUserId) {
+          query = query.neq('user_id', excludeUserId)
+        }
+
+        const { data, error } = await query
+        console.log('📊 DB: matchingProfiles.getActiveProfiles result', { hasData: !!data, hasError: !!error, error: error?.message })
+        return { data, error }
+      } catch (err) {
+        console.error('💥 DB: matchingProfiles.getActiveProfiles failed', err)
+        throw err
       }
-
-      const { data, error } = await query
-      return { data, error }
     },
 
     update: async (userId, updates) => {
-      const { data, error } = await supabase
-        .from('applicant_forms')
-        .update(updates)
-        .eq('user_id', userId)
-        .select()
-      return { data, error }
+      console.log('📊 DB: matchingProfiles.update called', { userId, updates })
+      try {
+        const { data, error } = await supabase
+          .from('applicant_forms')
+          .update(updates)
+          .eq('user_id', userId)
+          .select()
+        console.log('📊 DB: matchingProfiles.update result', { hasData: !!data, hasError: !!error, error: error?.message })
+        return { data, error }
+      } catch (err) {
+        console.error('💥 DB: matchingProfiles.update failed', err)
+        throw err
+      }
     }
   },
 
   // Match request operations
   matchRequests: {
     create: async (requestData) => {
-      const { data, error } = await supabase
-        .from('match_requests')
-        .insert(requestData)
-        .select()
-      return { data, error }
+      console.log('📊 DB: matchRequests.create called', { requestData })
+      try {
+        const { data, error } = await supabase
+          .from('match_requests')
+          .insert(requestData)
+          .select()
+        console.log('📊 DB: matchRequests.create result', { hasData: !!data, hasError: !!error, error: error?.message })
+        return { data, error }
+      } catch (err) {
+        console.error('💥 DB: matchRequests.create failed', err)
+        throw err
+      }
     },
 
     getByUserId: async (userId) => {
-      const { data, error } = await supabase
-        .from('match_requests')
-        .select(`
-          *,
-          requester:registrant_profiles!requester_id(id, first_name),
-          target:registrant_profiles!target_id(id, first_name)
-        `)
-        .or(`requester_id.eq.${userId},target_id.eq.${userId}`)
-        .order('created_at', { ascending: false })
-      return { data, error }
+      console.log('📊 DB: matchRequests.getByUserId called', { userId })
+      try {
+        const { data, error } = await supabase
+          .from('match_requests')
+          .select(`
+            *,
+            requester:registrant_profiles!requester_id(id, first_name),
+            target:registrant_profiles!target_id(id, first_name)
+          `)
+          .or(`requester_id.eq.${userId},target_id.eq.${userId}`)
+          .order('created_at', { ascending: false })
+        console.log('📊 DB: matchRequests.getByUserId result', { hasData: !!data, hasError: !!error, error: error?.message })
+        return { data, error }
+      } catch (err) {
+        console.error('💥 DB: matchRequests.getByUserId failed', err)
+        throw err
+      }
     },
 
     update: async (id, updates) => {
-      const { data, error } = await supabase
-        .from('match_requests')
-        .update(updates)
-        .eq('id', id)
-        .select()
-      return { data, error }
+      console.log('📊 DB: matchRequests.update called', { id, updates })
+      try {
+        const { data, error } = await supabase
+          .from('match_requests')
+          .update(updates)
+          .eq('id', id)
+          .select()
+        console.log('📊 DB: matchRequests.update result', { hasData: !!data, hasError: !!error, error: error?.message })
+        return { data, error }
+      } catch (err) {
+        console.error('💥 DB: matchRequests.update failed', err)
+        throw err
+      }
     }
   },
 
   // Property operations
   properties: {
     create: async (propertyData) => {
-      const { data, error } = await supabase
-        .from('properties')
-        .insert(propertyData)
-        .select()
-      return { data, error }
+      console.log('📊 DB: properties.create called', { propertyData })
+      try {
+        const { data, error } = await supabase
+          .from('properties')
+          .insert(propertyData)
+          .select()
+        console.log('📊 DB: properties.create result', { hasData: !!data, hasError: !!error, error: error?.message })
+        return { data, error }
+      } catch (err) {
+        console.error('💥 DB: properties.create failed', err)
+        throw err
+      }
     },
 
     getByLandlordId: async (landlordId) => {
-      const { data, error } = await supabase
-        .from('properties')
-        .select('*')
-        .eq('landlord_id', landlordId)
-        .order('created_at', { ascending: false })
-      return { data, error }
+      console.log('📊 DB: properties.getByLandlordId called', { landlordId })
+      try {
+        const { data, error } = await supabase
+          .from('properties')
+          .select('*')
+          .eq('landlord_id', landlordId)
+          .order('created_at', { ascending: false })
+        console.log('📊 DB: properties.getByLandlordId result', { hasData: !!data, hasError: !!error, error: error?.message })
+        return { data, error }
+      } catch (err) {
+        console.error('💥 DB: properties.getByLandlordId failed', err)
+        throw err
+      }
     },
 
     getAvailable: async (filters = {}) => {
-      let query = supabase
-        .from('properties')
-        .select('*')
-        .eq('status', 'available')
+      console.log('📊 DB: properties.getAvailable called', { filters })
+      try {
+        let query = supabase
+          .from('properties')
+          .select('*')
+          .eq('status', 'available')
 
-      if (filters.maxPrice) {
-        query = query.lte('monthly_rent', filters.maxPrice)
+        if (filters.maxPrice) {
+          query = query.lte('monthly_rent', filters.maxPrice)
+        }
+
+        if (filters.bedrooms) {
+          query = query.gte('bedrooms', filters.bedrooms)
+        }
+
+        if (filters.city) {
+          query = query.ilike('city', `%${filters.city}%`)
+        }
+
+        const { data, error } = await query.order('is_recovery_friendly', { ascending: false })
+        console.log('📊 DB: properties.getAvailable result', { hasData: !!data, hasError: !!error, error: error?.message })
+        return { data, error }
+      } catch (err) {
+        console.error('💥 DB: properties.getAvailable failed', err)
+        throw err
       }
-
-      if (filters.bedrooms) {
-        query = query.gte('bedrooms', filters.bedrooms)
-      }
-
-      if (filters.city) {
-        query = query.ilike('city', `%${filters.city}%`)
-      }
-
-      const { data, error } = await query.order('is_recovery_friendly', { ascending: false })
-      return { data, error }
     },
 
     update: async (id, updates) => {
-      const { data, error } = await supabase
-        .from('properties')
-        .update(updates)
-        .eq('id', id)
-        .select()
-      return { data, error }
+      console.log('📊 DB: properties.update called', { id, updates })
+      try {
+        const { data, error } = await supabase
+          .from('properties')
+          .update(updates)
+          .eq('id', id)
+          .select()
+        console.log('📊 DB: properties.update result', { hasData: !!data, hasError: !!error, error: error?.message })
+        return { data, error }
+      } catch (err) {
+        console.error('💥 DB: properties.update failed', err)
+        throw err
+      }
     },
 
     delete: async (id) => {
-      const { data, error } = await supabase
-        .from('properties')
-        .delete()
-        .eq('id', id)
-      return { data, error }
+      console.log('📊 DB: properties.delete called', { id })
+      try {
+        const { data, error } = await supabase
+          .from('properties')
+          .delete()
+          .eq('id', id)
+        console.log('📊 DB: properties.delete result', { hasData: !!data, hasError: !!error, error: error?.message })
+        return { data, error }
+      } catch (err) {
+        console.error('💥 DB: properties.delete failed', err)
+        throw err
+      }
     }
   },
 
   // Peer support operations
   peerSupport: {
     create: async (profileData) => {
-      const { data, error } = await supabase
-        .from('peer_support_profiles')
-        .insert(profileData)
-        .select()
-      return { data, error }
+      console.log('📊 DB: peerSupport.create called', { profileData })
+      try {
+        const { data, error } = await supabase
+          .from('peer_support_profiles')
+          .insert(profileData)
+          .select()
+        console.log('📊 DB: peerSupport.create result', { hasData: !!data, hasError: !!error, error: error?.message })
+        return { data, error }
+      } catch (err) {
+        console.error('💥 DB: peerSupport.create failed', err)
+        throw err
+      }
     },
 
     getByUserId: async (userId) => {
-      const { data, error } = await supabase
-        .from('peer_support_profiles')
-        .select('*')
-        .eq('user_id', userId)
-        .single()
-      return { data, error }
+      console.log('📊 DB: peerSupport.getByUserId called', { userId })
+      try {
+        const { data, error } = await supabase
+          .from('peer_support_profiles')
+          .select('*')
+          .eq('user_id', userId)
+          .single()
+        console.log('📊 DB: peerSupport.getByUserId result', { hasData: !!data, hasError: !!error, error: error?.message })
+        return { data, error }
+      } catch (err) {
+        console.error('💥 DB: peerSupport.getByUserId failed', err)
+        throw err
+      }
     },
 
     getAvailable: async (filters = {}) => {
-      let query = supabase
-        .from('peer_support_profiles')
-        .select(`
-          *,
-          registrant_profiles!inner(id, first_name, email)
-        `)
-        .eq('is_accepting_clients', true)
+      console.log('📊 DB: peerSupport.getAvailable called', { filters })
+      try {
+        let query = supabase
+          .from('peer_support_profiles')
+          .select(`
+            *,
+            registrant_profiles!inner(id, first_name, email)
+          `)
+          .eq('is_accepting_clients', true)
 
-      if (filters.specialties && filters.specialties.length > 0) {
-        query = query.overlaps('specialties', filters.specialties)
+        if (filters.specialties && filters.specialties.length > 0) {
+          query = query.overlaps('specialties', filters.specialties)
+        }
+
+        if (filters.serviceArea) {
+          query = query.overlaps('service_area', [filters.serviceArea])
+        }
+
+        const { data, error } = await query.order('years_experience', { ascending: false })
+        console.log('📊 DB: peerSupport.getAvailable result', { hasData: !!data, hasError: !!error, error: error?.message })
+        return { data, error }
+      } catch (err) {
+        console.error('💥 DB: peerSupport.getAvailable failed', err)
+        throw err
       }
-
-      if (filters.serviceArea) {
-        query = query.overlaps('service_area', [filters.serviceArea])
-      }
-
-      const { data, error } = await query.order('years_experience', { ascending: false })
-      return { data, error }
     },
 
     update: async (userId, updates) => {
-      const { data, error } = await supabase
-        .from('peer_support_profiles')
-        .update(updates)
-        .eq('user_id', userId)
-        .select()
-      return { data, error }
+      console.log('📊 DB: peerSupport.update called', { userId, updates })
+      try {
+        const { data, error } = await supabase
+          .from('peer_support_profiles')
+          .update(updates)
+          .eq('user_id', userId)
+          .select()
+        console.log('📊 DB: peerSupport.update result', { hasData: !!data, hasError: !!error, error: error?.message })
+        return { data, error }
+      } catch (err) {
+        console.error('💥 DB: peerSupport.update failed', err)
+        throw err
+      }
     }
   }
 }
 
+console.log('✅ Supabase module fully loaded')
 export default supabase
