@@ -1,7 +1,7 @@
 // src/components/dashboard/MatchDashboard.js
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../../contexts/AuthContext';
-import './../../global.css';
+import '../../styles/global.css';
 
 // ==================== MOCK DATA ====================
 

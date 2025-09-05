@@ -3,7 +3,7 @@ import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
 import LoadingSpinner from '../common/LoadingSpinner';
-import './../../global.css';
+import '../../styles/global.css';
 
 const LoginForm = ({ onBackToLanding }) => {
   const [email, setEmail] = useState('');

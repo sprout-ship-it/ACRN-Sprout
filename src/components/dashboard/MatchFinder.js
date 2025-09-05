@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import './../../global.css'
+import '../../styles/global.css';
 
 // ==================== MOCK DATA AND MATCHING ALGORITHM ====================
 

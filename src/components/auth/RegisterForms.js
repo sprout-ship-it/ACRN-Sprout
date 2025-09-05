@@ -2,7 +2,7 @@
 import React, { useState } from 'react';
 import { useAuth } from '../../contexts/AuthContext';
 import LoadingSpinner from '../common/LoadingSpinner';
-import './../../global.css';
+import '../../styles/global.css';
 
 const RegisterForm = ({ onBackToLanding }) => {
   const [firstName, setFirstName] = useState('');
