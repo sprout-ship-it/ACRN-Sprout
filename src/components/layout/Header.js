@@ -1,7 +1,7 @@
 // src/components/layout/Header.js
 import React from 'react'
 import { useAuth } from '../../contexts/AuthContext'
-import './../../global.css'
+import '../../styles/global.css';
 
 const Header = () => {
   const { isAuthenticated, profile, signOut } = useAuth()

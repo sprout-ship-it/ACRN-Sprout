@@ -2,7 +2,7 @@
 import React from 'react'
 import { useLocation, useNavigate } from 'react-router-dom'
 import { useAuth } from '../../contexts/AuthContext'
-import './../../global.css'
+import '../../styles/global.css';
 
 const Navigation = () => {
   const { profile, hasRole } = useAuth()
