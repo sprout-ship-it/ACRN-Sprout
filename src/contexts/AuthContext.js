@@ -166,10 +166,10 @@ export const AuthProvider = ({ children }) => {
         return { success: false, error: error.message }
       }
 
-      // Create profile in database
+// Create profile in database
       if (data.user) {
         console.log('👤 Creating profile for new user:', data.user.id)
-        
+       
         const profileData = {
           id: data.user.id,
           email: data.user.email,
@@ -177,17 +177,31 @@ export const AuthProvider = ({ children }) => {
           last_name: userData.lastName,
           roles: userData.roles || ['applicant']
         }
-
+        
         const { error: profileError } = await db.profiles.create(profileData)
         if (profileError) {
           console.error('❌ Error creating profile:', profileError)
-          setError('Account created but profile setup failed')
+          
+          // Try to create profile again with a slight delay (sometimes timing issue)
+          console.log('🔄 Retrying profile creation...')
+          await new Promise(resolve => setTimeout(resolve, 1000))
+          
+          const { error: retryError } = await db.profiles.create(profileData)
+          if (retryError) {
+            console.error('❌ Profile creation retry failed:', retryError)
+            setError('Account created but profile setup failed. Please try logging in.')
+            // Still return success since the user account was created
+            return { success: true, data, profileError: true }
+          } else {
+            console.log('✅ Profile created successfully on retry')
+            setProfile(profileData)
+          }
         } else {
           console.log('✅ Profile created successfully')
           setProfile(profileData)
         }
       }
-
+      
       return { success: true, data }
     } catch (err) {
       console.error('💥 Signup failed:', err)
