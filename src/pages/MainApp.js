@@ -73,6 +73,7 @@ const Settings = () => (
 )
 
 const MainApp = () => {
+  console.log('🏠 MainApp rendering, current URL:', window.location.pathname);
   const { user, profile, isAuthenticated, hasRole } = useAuth()
   const navigate = useNavigate()
   
@@ -169,7 +170,7 @@ const MainApp = () => {
       </div>
     )
   }
-
+  console.log('🛣️ MainApp about to render routes, profileSetup:', profileSetup);
   // Main app routes
   return (
     <div className="app-background" style={{ minHeight: '100vh', padding: '20px 0' }}>
