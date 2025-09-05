@@ -6,7 +6,8 @@ import LoadingSpinner from '../common/LoadingSpinner';
 import '../../styles/global.css';
 
 const BasicProfileForm = ({ editMode = false, onComplete, onCancel }) => {
-  const { user, profile, updateProfile } = useAuth();
+  console.log('🎨 BasicProfileForm rendering!', { editMode, onComplete: !!onComplete, onCancel: !!onCancel });
+    const { user, profile, updateProfile } = useAuth();
   
   const [formData, setFormData] = useState({
     firstName: '',
