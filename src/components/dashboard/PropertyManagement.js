@@ -75,6 +75,8 @@ const mockProperties = [
 
 const PropertyManagement = ({ onBack }) => {
   const { user, profile, hasRole } = useAuth();
+  
+  // ALL HOOKS MUST BE CALLED FIRST - BEFORE ANY CONDITIONAL LOGIC
   const [properties, setProperties] = useState(mockProperties);
   const [filteredProperties, setFilteredProperties] = useState(mockProperties);
   const [showAddModal, setShowAddModal] = useState(false);
@@ -106,21 +108,13 @@ const PropertyManagement = ({ onBack }) => {
   const propertyTypes = ['Apartment', 'House', 'Condo', 'Townhouse', 'Studio', 'Room'];
   const propertyStatuses = ['available', 'rented', 'pending', 'maintenance'];
   
-  // Check if user has landlord role
-  if (!hasRole('landlord')) {
-    return (
-      <div className="content">
-        <div className="alert alert-info">
-          <p>Property management is only available for landlords.</p>
-        </div>
-      </div>
-    );
-  }
-
   // Load properties on mount
   useEffect(() => {
     const loadProperties = async () => {
-      if (!user) return;
+      if (!user || !hasRole('landlord')) {
+        setInitialLoading(false);
+        return;
+      }
 
       try {
         // In a real app, this would load from database
@@ -146,10 +140,14 @@ const PropertyManagement = ({ onBack }) => {
     };
 
     loadProperties();
-  }, [user]);
+  }, [user, hasRole]);
   
   // Filter properties
   useEffect(() => {
+    if (!hasRole('landlord')) {
+      return;
+    }
+    
     let filtered = properties;
     
     if (filters.search) {
@@ -168,7 +166,18 @@ const PropertyManagement = ({ onBack }) => {
     }
     
     setFilteredProperties(filtered);
-  }, [properties, filters]);
+  }, [properties, filters, hasRole]);
+  
+  // NOW CHECK FOR LANDLORD ROLE AFTER ALL HOOKS
+  if (!hasRole('landlord')) {
+    return (
+      <div className="content">
+        <div className="alert alert-info">
+          <p>Property management is only available for landlords.</p>
+        </div>
+      </div>
+    );
+  }
   
   // Handle filter changes
   const handleFilterChange = (key, value) => {

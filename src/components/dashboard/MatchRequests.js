@@ -139,7 +139,7 @@ const MatchRequests = () => {
   
   // Handle unmatch
   const handleUnmatch = async (requestId) => {
-    if (!confirm('Are you sure you want to unmatch? This action cannot be undone.')) {
+    if (!window.confirm('Are you sure you want to unmatch? This action cannot be undone.')) {
       return;
     }
     
