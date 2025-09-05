@@ -112,43 +112,38 @@ export const AuthProvider = ({ children }) => {
   }, []) // Empty dependency array is intentional
 
   // Load user profile from database
-  const loadUserProfile = async (userId) => {
-    console.log('📄 Loading profile for user:', userId)
-    
-    try {
-      // Add timeout for profile loading
-      const profilePromise = db.basicProfiles.getByUserId(userId)
-      const timeoutPromise = new Promise((_, reject) => 
-        setTimeout(() => reject(new Error('Profile load timeout')), 8000)
-      )
-      
-      const { data, error } = await Promise.race([profilePromise, timeoutPromise])
-      
-      console.log('📄 Profile load result:', { 
-        hasData: !!data, 
-        error: error?.message,
-        data: data ? { id: data.id, email: data.email, roles: data.roles } : null
-      })
-      
-      if (error) {
-        console.error('❌ Error loading profile:', error)
-        // Don't treat profile load errors as fatal - user might not have profile yet
-        if (error.code === 'PGRST116') {
-          console.log('ℹ️ Profile not found - this is normal for new users')
-          setProfile(null)
-        } else {
-          setError(error.message)
-        }
-      } else {
-        console.log('✅ Profile loaded successfully')
-        setProfile(data)
-      }
-    } catch (err) {
-      console.error('💥 Profile loading error:', err)
-      // Don't set error for profile loading issues - user can still use the app
-      console.log('ℹ️ Continuing without profile data')
-    }
+// Load user profile from database
+const loadUserProfile = async (userId) => {
+  console.log('📄 Loading profile for user:', userId)
+  
+  try {
+    // Load from BOTH tables
+    const [profileResult, basicProfileResult] = await Promise.all([
+      db.profiles.getById(userId),
+      db.basicProfiles.getByUserId(userId)
+    ]);
+
+    // Combine the data
+    const combinedProfile = {
+      // Main profile data (including roles)
+      ...profileResult.data,
+      // Basic profile data
+      ...basicProfileResult.data
+    };
+
+    console.log('📄 Combined profile loaded:', { 
+      hasRoles: !!combinedProfile?.roles,
+      roles: combinedProfile?.roles,
+      hasBasicData: !!basicProfileResult.data
+    });
+
+    setProfile(combinedProfile);
+
+  } catch (err) {
+    console.error('💥 Profile loading error:', err);
+    console.log('ℹ️ Continuing without profile data');
   }
+}
 
   // Sign up new user
   const signUp = async (email, password, userData) => {
