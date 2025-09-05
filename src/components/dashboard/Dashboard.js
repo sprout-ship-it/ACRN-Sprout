@@ -85,24 +85,31 @@ const Dashboard = () => {
       )
     }
     
-    if (hasRole('peer')) {
-      cards.push(
-        { 
-          id: 'peer-dashboard', 
-          label: 'Peer Support Dashboard', 
-          description: 'Manage your peer support services', 
-          color: 'var(--secondary-teal)',
-          path: '/app/peer-dashboard' // ✅ Fixed: Added /app prefix
-        },
-        { 
-          id: 'my-clients', 
-          label: 'My Clients', 
-          description: 'View and manage client relationships', 
-          color: 'var(--gold)',
-          path: '/app/clients' // ✅ Fixed: Added /app prefix
-        }
-      )
-    }
+      if (hasRole('peer')) {
+        cards.push(
+          { 
+            id: 'peer-profile', 
+            label: 'Peer Support Profile', 
+            description: 'Set up and manage your peer support services profile', 
+            color: 'var(--secondary-teal)',
+            path: '/app/profile/peer-support'
+          },
+          { 
+            id: 'peer-dashboard', 
+            label: 'Peer Support Dashboard', 
+            description: 'Manage your peer support services', 
+            color: 'var(--secondary-teal)',
+            path: '/app/peer-dashboard'
+          },
+          { 
+            id: 'my-clients', 
+            label: 'My Clients', 
+            description: 'View and manage client relationships', 
+            color: 'var(--gold)',
+            path: '/app/clients'
+          }
+        )
+      }
     
     // Common tools
     cards.push(

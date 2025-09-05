@@ -317,7 +317,8 @@ export const NAV_ITEMS = {
   MATCHING_PROFILE: { id: 'matching-profile', label: 'Matching Profile', icon: '📝', path: '/app/matching-profile' },
   FIND_MATCHES: { id: 'find-matches', label: 'Find Matches', icon: '🔍', path: '/app/find-matches' },
   PROPERTIES: { id: 'properties', label: 'Properties', icon: '🏢', path: '/app/properties' },
-  MATCH_DASHBOARD: { id: 'match-dashboard', label: 'Match Dashboard', icon: '🎯', path: '/app/match-dashboard' }
+  MATCH_DASHBOARD: { id: 'match-dashboard', label: 'Match Dashboard', icon: '🎯', path: '/app/match-dashboard' },
+  PEER_PROFILE: { id: 'peer-profile', label: 'Peer Profile', icon: '🤝', path: '/app/profile/peer-support'},
 };
 
 // Form validation constants

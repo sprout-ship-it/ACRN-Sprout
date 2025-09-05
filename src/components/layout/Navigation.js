@@ -59,6 +59,16 @@ const Navigation = () => {
       })
     }
 
+    if (hasRole('peer')) {
+  baseItems.push(
+    { 
+      id: 'peer-profile', 
+      label: 'Peer Profile', 
+      icon: '🤝',
+      path: '/app/profile/peer-support'
+    }
+  )
+}
     // Add match dashboard if user has active matches
     // This would be determined by actual user progress/match status
     baseItems.push({ 

@@ -13,7 +13,8 @@ import LoadingSpinner from '../components/common/LoadingSpinner'
 
 // Form Components
 import BasicProfileForm from '../components/forms/BasicProfileForm'
-import MatchingProfileForm from '../components/forms/MatchingProfileForm'
+import EnhancedMatchingProfileForm from '../components/forms/EnhancedMatchingProfileForm'
+import PeerSupportProfileForm from '../components/forms/PeerSupportProfileForm'
 
 // Dashboard Components  
 import Dashboard from '../components/dashboard/Dashboard'
@@ -77,11 +78,12 @@ const MainApp = () => {
   const { user, profile, isAuthenticated, hasRole } = useAuth()
   const navigate = useNavigate()
   
-  const [profileSetup, setProfileSetup] = useState({
-    basicProfile: false,
-    matchingProfile: false,
-    loading: true
-  })
+const [profileSetup, setProfileSetup] = useState({
+  basicProfile: false,
+  matchingProfile: false,
+  peerProfile: false, 
+  loading: true
+})
 
   // Check profile completion status
   useEffect(() => {
@@ -99,6 +101,12 @@ const MainApp = () => {
           matchingProfile = data
         }
 
+        let peerProfile = null
+        if (hasRole('peer')) {
+          const { data } = await db.peerSupport.getByUserId(user.id)
+          peerProfile = data
+        }
+        
         setProfileSetup({
           basicProfile: !!basicProfile,
           matchingProfile: !hasRole('applicant') || !!matchingProfile,
@@ -154,22 +162,41 @@ const MainApp = () => {
     )
   }
 
-  if (hasRole('applicant') && !profileSetup.matchingProfile) {
-    return (
-      <div className="app-background" style={{ minHeight: '100vh', padding: '20px 0' }}>
-        <div className="container">
-          <Header />
-          <div className="content">
-            <div style={{ maxWidth: '900px', margin: '0 auto' }}>
-              <MatchingProfileForm 
-                onComplete={() => setProfileSetup(prev => ({ ...prev, matchingProfile: true }))}
-              />
-            </div>
+// Replace the existing matching profile check for applicants:
+if (hasRole('applicant') && !profileSetup.matchingProfile) {
+  return (
+    <div className="app-background" style={{ minHeight: '100vh', padding: '20px 0' }}>
+      <div className="container">
+        <Header />
+        <div className="content">
+          <div style={{ maxWidth: '900px', margin: '0 auto' }}>
+            <EnhancedMatchingProfileForm 
+              onComplete={() => setProfileSetup(prev => ({ ...prev, matchingProfile: true }))}
+            />
           </div>
         </div>
       </div>
-    )
-  }
+    </div>
+  )
+}
+
+// Add peer support profile setup:
+if (hasRole('peer') && !profileSetup.peerProfile) {
+  return (
+    <div className="app-background" style={{ minHeight: '100vh', padding: '20px 0' }}>
+      <div className="container">
+        <Header />
+        <div className="content">
+          <div style={{ maxWidth: '900px', margin: '0 auto' }}>
+            <PeerSupportProfileForm 
+              onComplete={() => setProfileSetup(prev => ({ ...prev, peerProfile: true }))}
+            />
+          </div>
+        </div>
+      </div>
+    </div>
+  )
+}
   console.log('🛣️ MainApp about to render routes, profileSetup:', profileSetup);
   // Main app routes
   return (
@@ -182,13 +209,30 @@ const MainApp = () => {
             {/* Dashboard Routes */}
             <Route path="/" element={<Dashboard />} />
             
-            {/* Applicant Routes */}
+            {/* Replace the existing matching profile route */}
             {hasRole('applicant') && (
-              <>
-                <Route path="/find-matches" element={<MatchFinder />} />
-                <Route path="/match-requests" element={<MatchRequests />} />
-                <Route path="/properties" element={<PropertySearch />} />
-              </>
+              <Route path="/profile/matching" element={
+                <div style={{ maxWidth: '900px', margin: '0 auto' }}>
+                  <EnhancedMatchingProfileForm 
+                    editMode={true}
+                    onComplete={() => navigate('/')}
+                    onCancel={() => navigate('/')}
+                  />
+                </div>
+              } />
+            )}
+
+            {/* Add peer support profile route */}
+            {hasRole('peer') && (
+              <Route path="/profile/peer-support" element={
+                <div style={{ maxWidth: '900px', margin: '0 auto' }}>
+                  <PeerSupportProfileForm 
+                    editMode={true}
+                    onComplete={() => navigate('/')}
+                    onCancel={() => navigate('/')}
+                  />
+                </div>
+              } />
             )}
             
             {/* Landlord Routes */}
@@ -199,14 +243,7 @@ const MainApp = () => {
               </>
             )}
             
-            {/* Peer Support Routes */}
-            {hasRole('peer') && (
-              <>
-                <Route path="/peer-dashboard" element={<PeerSupportDashboard />} />
-                <Route path="/clients" element={<MatchRequests />} />
-              </>
-            )}
-            
+
             {/* Common Routes */}
             <Route path="/messages" element={<Messages />} />
             <Route path="/settings" element={<Settings />} />

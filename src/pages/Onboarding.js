@@ -28,7 +28,19 @@ const Onboarding = () => {
     aboutMe: '',
     lookingFor: ''
   })
-
+  const [peerProfile, setPeerProfile] = useState({
+    title: '',
+    yearsExperience: '',
+    specialties: [],
+    recoveryApproach: [],
+    servicesOffered: {
+      individualSessions: true,
+      groupSessions: true,
+      housingAssistance: true
+    },
+    bio: '',
+    serviceArea: []
+  })
   // Check if user is authenticated
   useEffect(() => {
     if (!isAuthenticated) {
@@ -56,35 +68,57 @@ const Onboarding = () => {
   ]
 
   // Progress indicator
-  const ProgressIndicator = () => {
-    const steps = [
-      { number: 1, label: 'Basic Info', completed: currentStep > 1 },
-      { number: 2, label: 'Matching Profile', completed: currentStep > 2 },
-      { number: 3, label: 'Complete', completed: currentStep > 3 }
-    ]
+const ProgressIndicator = () => {
+  // Determine steps based on user role
+  const getStepsForRole = () => {
+    const baseSteps = [
+      { number: 1, label: 'Basic Info', completed: currentStep > 1 }
+    ];
 
-    return (
-      <div className="progress-indicator">
-        <div className="progress-title">Complete Your Profile Setup</div>
-        <div className="progress-steps">
-          {steps.map((step, index) => (
-            <div key={step.number} className="progress-step">
-              {index < steps.length - 1 && (
-                <div className={`step-connector ${step.completed ? 'step-connector-active' : ''}`} />
-              )}
-              <div className={`step-number ${
-                currentStep === step.number ? 'step-number-active' : 
-                step.completed ? 'step-number-completed' : 'step-number-inactive'
-              }`}>
-                {step.completed ? '✓' : step.number}
-              </div>
-              <span className="step-label">{step.label}</span>
+    if (profile?.roles?.includes('applicant')) {
+      baseSteps.push(
+        { number: 2, label: 'Matching Profile', completed: currentStep > 2 },
+        { number: 3, label: 'Complete', completed: currentStep > 3 }
+      );
+    } else if (profile?.roles?.includes('peer')) {
+      baseSteps.push(
+        { number: 2, label: 'Peer Support Profile', completed: currentStep > 2 },
+        { number: 3, label: 'Complete', completed: currentStep > 3 }
+      );
+    } else {
+      // Landlord or other roles
+      baseSteps.push(
+        { number: 2, label: 'Complete', completed: currentStep > 2 }
+      );
+    }
+
+    return baseSteps;
+  };
+
+  const steps = getStepsForRole();
+
+  return (
+    <div className="progress-indicator">
+      <div className="progress-title">Complete Your Profile Setup</div>
+      <div className="progress-steps">
+        {steps.map((step, index) => (
+          <div key={step.number} className="progress-step">
+            {index < steps.length - 1 && (
+              <div className={`step-connector ${step.completed ? 'step-connector-active' : ''}`} />
+            )}
+            <div className={`step-number ${
+              currentStep === step.number ? 'step-number-active' : 
+              step.completed ? 'step-number-completed' : 'step-number-inactive'
+            }`}>
+              {step.completed ? '✓' : step.number}
             </div>
-          ))}
-        </div>
+            <span className="step-label">{step.label}</span>
+          </div>
+        ))}
       </div>
-    )
-  }
+    </div>
+  )
+}
 
   // Validate basic profile
   const validateBasicProfile = () => {
@@ -133,6 +167,26 @@ const Onboarding = () => {
     setErrors(newErrors)
     return Object.keys(newErrors).length === 0
   }
+
+const validatePeerProfile = () => {
+  const newErrors = {}
+  
+  if (!peerProfile.title.trim()) {
+    newErrors.title = 'Professional title is required'
+  }
+  if (!peerProfile.yearsExperience) {
+    newErrors.yearsExperience = 'Years of experience is required'
+  }
+  if (peerProfile.specialties.length === 0) {
+    newErrors.specialties = 'Please select at least one specialty'
+  }
+  if (!peerProfile.bio.trim()) {
+    newErrors.bio = 'Professional bio is required'
+  }
+
+  setErrors(newErrors)
+  return Object.keys(newErrors).length === 0
+}
 
   // Save basic profile
   const saveBasicProfile = async () => {
@@ -197,6 +251,46 @@ const Onboarding = () => {
       setLoading(false)
     }
   }
+
+const savePeerProfile = async () => {
+  if (!validatePeerProfile()) return
+
+  setLoading(true)
+  
+  try {
+    const profileData = {
+      user_id: profile.id,
+      title: peerProfile.title,
+      years_experience: parseInt(peerProfile.yearsExperience),
+      specialties: peerProfile.specialties,
+      recovery_approach: peerProfile.recoveryApproach,
+      individual_sessions: peerProfile.servicesOffered.individualSessions,
+      group_sessions: peerProfile.servicesOffered.groupSessions,
+      housing_assistance: peerProfile.servicesOffered.housingAssistance,
+      bio: peerProfile.bio,
+      service_area: peerProfile.serviceArea,
+      is_accepting_clients: true,
+      is_verified: false
+    }
+
+    const { error } = await db.peerSupport.create(profileData)
+    
+    if (error) throw error
+
+    setCurrentStep(3)
+    
+    // Redirect to main app after a short delay
+    setTimeout(() => {
+      navigate('/app')
+    }, 2000)
+    
+  } catch (error) {
+    console.error('Error saving peer support profile:', error)
+    setErrors({ submit: 'Failed to save profile. Please try again.' })
+  } finally {
+    setLoading(false)
+  }
+}
 
   // Loading state
   if (!profile) {
@@ -345,8 +439,10 @@ const Onboarding = () => {
     )
   }
 
-  // Step 2: Matching Profile
-  if (currentStep === 2) {
+// Step 2: Role-based Profile Setup
+if (currentStep === 2) {
+  // FOR APPLICANTS - Matching Profile
+  if (profile?.roles?.includes('applicant')) {
     return (
       <div className="content">
         <ProgressIndicator />
@@ -463,6 +559,167 @@ const Onboarding = () => {
       </div>
     )
   }
+  
+  // FOR PEER SUPPORT SPECIALISTS - Peer Profile
+  if (profile?.roles?.includes('peer')) {
+    return (
+      <div className="content">
+        <ProgressIndicator />
+        
+        <div className="card">
+          <h3 className="form-title">Peer Support Profile Setup</h3>
+          
+          <div className="grid-2 mb-4">
+            <div className="form-group">
+              <label className="label">
+                Professional Title <span className="text-red-500">*</span>
+              </label>
+              <input
+                className={`input ${errors.title ? 'border-red-500' : ''}`}
+                type="text"
+                value={peerProfile.title}
+                onChange={(e) => setPeerProfile(prev => ({ ...prev, title: e.target.value }))}
+                placeholder="e.g., Certified Peer Recovery Specialist"
+                disabled={loading}
+              />
+              {errors.title && (
+                <div className="text-red-500 mt-1" style={{ fontSize: '0.9rem' }}>
+                  {errors.title}
+                </div>
+              )}
+            </div>
+            
+            <div className="form-group">
+              <label className="label">
+                Years of Experience <span className="text-red-500">*</span>
+              </label>
+              <select
+                className={`input ${errors.yearsExperience ? 'border-red-500' : ''}`}
+                value={peerProfile.yearsExperience}
+                onChange={(e) => setPeerProfile(prev => ({ ...prev, yearsExperience: e.target.value }))}
+                disabled={loading}
+              >
+                <option value="">Select experience</option>
+                <option value="1">Less than 1 year</option>
+                <option value="2">1-2 years</option>
+                <option value="5">3-5 years</option>
+                <option value="10">5+ years</option>
+              </select>
+              {errors.yearsExperience && (
+                <div className="text-red-500 mt-1" style={{ fontSize: '0.9rem' }}>
+                  {errors.yearsExperience}
+                </div>
+              )}
+            </div>
+          </div>
+          
+          <div className="form-group">
+            <label className="label">
+              Specialties <span className="text-red-500">*</span>
+            </label>
+            <div className="grid-auto mt-2">
+              {['Addiction Recovery', 'Trauma-Informed Care', 'Mental Health', 'Housing Support', 'Employment Support', 'Family Recovery'].map(specialty => (
+                <div
+                  key={specialty}
+                  className={`checkbox-item ${peerProfile.specialties.includes(specialty) ? 'selected' : ''}`}
+                  onClick={() => {
+                    const newSpecialties = peerProfile.specialties.includes(specialty)
+                      ? peerProfile.specialties.filter(s => s !== specialty)
+                      : [...peerProfile.specialties, specialty]
+                    setPeerProfile(prev => ({ ...prev, specialties: newSpecialties }))
+                  }}
+                >
+                  <input
+                    type="checkbox"
+                    checked={peerProfile.specialties.includes(specialty)}
+                    onChange={() => {}}
+                    disabled={loading}
+                  />
+                  <span>{specialty}</span>
+                </div>
+              ))}
+            </div>
+            {errors.specialties && (
+              <div className="text-red-500 mt-1" style={{ fontSize: '0.9rem' }}>
+                {errors.specialties}
+              </div>
+            )}
+          </div>
+          
+          <div className="form-group">
+            <label className="label">
+              Professional Bio <span className="text-red-500">*</span>
+            </label>
+            <textarea
+              className={`input ${errors.bio ? 'border-red-500' : ''}`}
+              value={peerProfile.bio}
+              onChange={(e) => setPeerProfile(prev => ({ ...prev, bio: e.target.value }))}
+              placeholder="Describe your background, approach to peer support, and what makes you unique as a peer specialist..."
+              disabled={loading}
+              style={{ minHeight: '120px', resize: 'vertical' }}
+            />
+            <div className="text-gray-500 mt-1" style={{ fontSize: '0.9rem' }}>
+              {peerProfile.bio.length}/500 characters
+            </div>
+            {errors.bio && (
+              <div className="text-red-500 mt-1" style={{ fontSize: '0.9rem' }}>
+                {errors.bio}
+              </div>
+            )}
+          </div>
+          
+          <div className="grid-2">
+            <button
+              className="btn btn-outline"
+              onClick={() => setCurrentStep(1)}
+              disabled={loading}
+            >
+              Back
+            </button>
+            
+            <button
+              className={`btn btn-primary ${loading ? 'disabled' : ''}`}
+              onClick={savePeerProfile}
+              disabled={loading}
+            >
+              {loading ? 'Saving...' : 'Complete Setup'}
+            </button>
+          </div>
+        </div>
+      </div>
+    )
+  }
+  
+  // FOR LANDLORDS - Skip to completion (they don't need additional profile setup)
+  if (profile?.roles?.includes('landlord')) {
+    // Automatically advance to completion step
+    setCurrentStep(3)
+    return null // This will cause re-render with step 3
+  }
+  
+  // FALLBACK - If no specific role is found, show a message
+  return (
+    <div className="content">
+      <ProgressIndicator />
+      
+      <div className="card">
+        <h3 className="form-title">Profile Setup Complete</h3>
+        <p className="text-center text-gray-600 mb-4">
+          Your basic profile has been set up successfully.
+        </p>
+        
+        <div className="text-center">
+          <button
+            className="btn btn-primary"
+            onClick={() => setCurrentStep(3)}
+          >
+            Continue to Dashboard
+          </button>
+        </div>
+      </div>
+    </div>
+  )
+}
 
   // Step 3: Complete
   return (
