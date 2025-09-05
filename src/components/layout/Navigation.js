@@ -22,7 +22,7 @@ const Navigation = () => {
         id: 'profile', 
         label: 'Edit Profile', 
         icon: '👤',
-        path: '/app/profile'
+        path: '/app/profile/basic' // ✅ Fixed: Changed to match actual route
       },
       { 
         id: 'match-requests', 
@@ -39,7 +39,7 @@ const Navigation = () => {
           id: 'matching-profile', 
           label: 'Matching Profile', 
           icon: '📝',
-          path: '/app/matching-profile'
+          path: '/app/profile/matching' // ✅ Fixed: Changed to match actual route
         },
         { 
           id: 'find-matches', 
@@ -74,6 +74,7 @@ const Navigation = () => {
   const navigationItems = getNavigationItems()
 
   const handleNavigation = (path) => {
+    console.log('🧭 Navigation: Navigating to:', path) // ✅ Added debugging
     navigate(path)
   }
 

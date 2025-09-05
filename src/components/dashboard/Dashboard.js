@@ -21,14 +21,14 @@ const Dashboard = () => {
         label: 'Edit Profile', 
         description: 'Update your basic information', 
         color: 'var(--primary-purple)',
-        path: '/profile/basic'
+        path: '/app/profile/basic' // ✅ Fixed: Added /app prefix
       },
       { 
         id: 'view-match-requests', 
         label: 'View Match Requests', 
         description: 'See pending and completed matches', 
         color: 'var(--secondary-teal)',
-        path: '/match-requests'
+        path: '/app/match-requests' // ✅ Fixed: Added /app prefix
       }
     )
     
@@ -40,28 +40,28 @@ const Dashboard = () => {
           label: 'Add/Edit Matching Profile', 
           description: 'Set your preferences and compatibility criteria', 
           color: 'var(--coral)',
-          path: '/profile/matching'
+          path: '/app/profile/matching' // ✅ Fixed: Added /app prefix
         },
         { 
           id: 'find-matches', 
           label: 'Find Matches', 
           description: 'Discover compatible roommates', 
           color: 'var(--secondary-teal)',
-          path: '/find-matches'
+          path: '/app/find-matches' // ✅ Fixed: Added /app prefix
         },
         { 
           id: 'my-matches', 
           label: 'My Matches', 
           description: 'View your current matches', 
           color: 'var(--gold)',
-          path: '/matches'
+          path: '/app/match-requests' // ✅ Fixed: Changed to existing route
         },
         { 
           id: 'properties', 
           label: 'Browse Properties', 
           description: 'Search for recovery-friendly housing', 
           color: 'var(--secondary-purple)',
-          path: '/properties'
+          path: '/app/properties' // ✅ Fixed: Added /app prefix
         }
       )
     }
@@ -73,14 +73,14 @@ const Dashboard = () => {
           label: 'Manage Properties', 
           description: 'Add and manage your rental properties', 
           color: 'var(--secondary-purple)',
-          path: '/properties'
+          path: '/app/properties' // ✅ Fixed: Added /app prefix
         },
         { 
           id: 'tenant-requests', 
           label: 'Tenant Requests', 
           description: 'Review applications and requests', 
           color: 'var(--coral)',
-          path: '/tenants'
+          path: '/app/tenants' // ✅ Fixed: Added /app prefix
         }
       )
     }
@@ -92,14 +92,14 @@ const Dashboard = () => {
           label: 'Peer Support Dashboard', 
           description: 'Manage your peer support services', 
           color: 'var(--secondary-teal)',
-          path: '/peer-dashboard'
+          path: '/app/peer-dashboard' // ✅ Fixed: Added /app prefix
         },
         { 
           id: 'my-clients', 
           label: 'My Clients', 
           description: 'View and manage client relationships', 
           color: 'var(--gold)',
-          path: '/clients'
+          path: '/app/clients' // ✅ Fixed: Added /app prefix
         }
       )
     }
@@ -111,31 +111,31 @@ const Dashboard = () => {
         label: 'Messages', 
         description: 'Communicate with matches and contacts', 
         color: 'var(--primary-purple)',
-        path: '/messages'
+        path: '/app/messages' // ✅ Fixed: Added /app prefix
       },
       { 
         id: 'settings', 
         label: 'Settings', 
         description: 'Manage your account preferences', 
         color: 'var(--gray-600)',
-        path: '/settings'
+        path: '/app/settings' // ✅ Fixed: Added /app prefix
       }
     )
     
     return cards
   }
 
-const handleCardClick = (card) => {
-  console.log('🔄 Button clicked:', card.label, 'Path:', card.path)
-  
-  if (card.path) {
-    console.log('🧭 Navigating to:', card.path)
-    navigate(card.path)
-  } else {
-    console.log('🔄 Setting view to:', card.id)
-    setCurrentView(card.id)
+  const handleCardClick = (card) => {
+    console.log('🔄 Button clicked:', card.label, 'Path:', card.path)
+    
+    if (card.path) {
+      console.log('🧭 Navigating to:', card.path)
+      navigate(card.path)
+    } else {
+      console.log('🔄 Setting view to:', card.id)
+      setCurrentView(card.id)
+    }
   }
-}
 
   return (
     <div>
