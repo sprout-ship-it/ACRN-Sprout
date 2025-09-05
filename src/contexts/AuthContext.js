@@ -117,7 +117,7 @@ export const AuthProvider = ({ children }) => {
     
     try {
       // Add timeout for profile loading
-      const profilePromise = db.profiles.getById(userId)
+      const profilePromise = db.basicProfiles.getByUserId(userId)
       const timeoutPromise = new Promise((_, reject) => 
         setTimeout(() => reject(new Error('Profile load timeout')), 8000)
       )
