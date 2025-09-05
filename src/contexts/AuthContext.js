@@ -184,7 +184,7 @@ export const AuthProvider = ({ children }) => {
           setError('Account created but profile setup failed')
         } else {
           console.log('✅ Profile created successfully')
-          await loadUserProfile(data.user.id)
+          setProfile(profileData)
         }
       }
 
