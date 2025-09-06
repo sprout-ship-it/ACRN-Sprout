@@ -117,17 +117,17 @@ const loadUserProfile = async (userId) => {
   console.log('📄 Loading profile for user:', userId)
   
   try {
-    // Load from BOTH tables
-    const [profileResult, basicProfileResult] = await Promise.all([
-      db.profiles.getById(userId),
-      db.basicProfiles.getByUserId(userId)
+    // Load from your ACTUAL tables
+    const [registrantResult, basicProfileResult] = await Promise.all([
+      db.registrantProfiles.getById(userId),    // Main profile with roles, email, etc.
+      db.basicProfiles.getByUserId(userId)      // Additional profile data (phone, address, etc.)
     ]);
 
     // Combine the data
     const combinedProfile = {
-      // Main profile data (including roles)
-      ...profileResult.data,
-      // Basic profile data
+      // Main profile data (including roles) from registrant_profiles
+      ...registrantResult.data,
+      // Additional profile data from basic_profiles  
       ...basicProfileResult.data
     };
 
