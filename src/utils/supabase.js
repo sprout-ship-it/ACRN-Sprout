@@ -115,7 +115,7 @@ export const auth = {
 
 // Database helpers
 export const db = {
-  // Profile operations
+  // Profile operations (registrant_profiles table)
   profiles: {
     create: async (profileData) => {
       console.log('📊 DB: profiles.create called', { id: profileData.id, email: profileData.email })
@@ -177,7 +177,7 @@ export const db = {
     }
   },
 
-  // Basic profile operations
+  // Basic profile operations (basic_profiles table)
   basicProfiles: {
     create: async (profileData) => {
       console.log('📊 DB: basicProfiles.create called', { userId: profileData.user_id })
@@ -227,41 +227,42 @@ export const db = {
     }
   },
 
-  // Matching profile operations
-  matchingProfiles: {
+  // ✅ FIXED: Renamed matchingProfiles to applicantForms to match component expectations
+  // Applicant forms operations (applicant_forms table)
+  applicantForms: {
     create: async (profileData) => {
-      console.log('📊 DB: matchingProfiles.create called', { userId: profileData.user_id })
+      console.log('📊 DB: applicantForms.create called', { userId: profileData.user_id })
       try {
         const { data, error } = await supabase
           .from('applicant_forms')
           .insert(profileData)
           .select()
-        console.log('📊 DB: matchingProfiles.create result', { hasData: !!data, hasError: !!error, error: error?.message })
+        console.log('📊 DB: applicantForms.create result', { hasData: !!data, hasError: !!error, error: error?.message })
         return { data, error }
       } catch (err) {
-        console.error('💥 DB: matchingProfiles.create failed', err)
+        console.error('💥 DB: applicantForms.create failed', err)
         throw err
       }
     },
 
     getByUserId: async (userId) => {
-      console.log('📊 DB: matchingProfiles.getByUserId called', { userId })
+      console.log('📊 DB: applicantForms.getByUserId called', { userId })
       try {
         const { data, error } = await supabase
           .from('applicant_forms')
           .select('*')
           .eq('user_id', userId)
           .single()
-        console.log('📊 DB: matchingProfiles.getByUserId result', { hasData: !!data, hasError: !!error, error: error?.message })
+        console.log('📊 DB: applicantForms.getByUserId result', { hasData: !!data, hasError: !!error, error: error?.message })
         return { data, error }
       } catch (err) {
-        console.error('💥 DB: matchingProfiles.getByUserId failed', err)
+        console.error('💥 DB: applicantForms.getByUserId failed', err)
         throw err
       }
     },
 
     getActiveProfiles: async (excludeUserId = null) => {
-      console.log('📊 DB: matchingProfiles.getActiveProfiles called', { excludeUserId })
+      console.log('📊 DB: applicantForms.getActiveProfiles called', { excludeUserId })
       try {
         let query = supabase
           .from('applicant_forms')
@@ -276,32 +277,55 @@ export const db = {
         }
 
         const { data, error } = await query
-        console.log('📊 DB: matchingProfiles.getActiveProfiles result', { hasData: !!data, hasError: !!error, error: error?.message })
+        console.log('📊 DB: applicantForms.getActiveProfiles result', { hasData: !!data, hasError: !!error, error: error?.message })
         return { data, error }
       } catch (err) {
-        console.error('💥 DB: matchingProfiles.getActiveProfiles failed', err)
+        console.error('💥 DB: applicantForms.getActiveProfiles failed', err)
         throw err
       }
     },
 
     update: async (userId, updates) => {
-      console.log('📊 DB: matchingProfiles.update called', { userId, updates })
+      console.log('📊 DB: applicantForms.update called', { userId, updates })
       try {
         const { data, error } = await supabase
           .from('applicant_forms')
           .update(updates)
           .eq('user_id', userId)
           .select()
-        console.log('📊 DB: matchingProfiles.update result', { hasData: !!data, hasError: !!error, error: error?.message })
+        console.log('📊 DB: applicantForms.update result', { hasData: !!data, hasError: !!error, error: error?.message })
         return { data, error }
       } catch (err) {
-        console.error('💥 DB: matchingProfiles.update failed', err)
+        console.error('💥 DB: applicantForms.update failed', err)
         throw err
       }
     }
   },
 
-  // Match request operations
+  // ✅ ADDED: Keep legacy alias for backward compatibility
+  matchingProfiles: {
+    create: async (profileData) => {
+      console.log('📊 DB: matchingProfiles.create (legacy alias) called - redirecting to applicantForms')
+      return await db.applicantForms.create(profileData)
+    },
+
+    getByUserId: async (userId) => {
+      console.log('📊 DB: matchingProfiles.getByUserId (legacy alias) called - redirecting to applicantForms')
+      return await db.applicantForms.getByUserId(userId)
+    },
+
+    getActiveProfiles: async (excludeUserId = null) => {
+      console.log('📊 DB: matchingProfiles.getActiveProfiles (legacy alias) called - redirecting to applicantForms')
+      return await db.applicantForms.getActiveProfiles(excludeUserId)
+    },
+
+    update: async (userId, updates) => {
+      console.log('📊 DB: matchingProfiles.update (legacy alias) called - redirecting to applicantForms')
+      return await db.applicantForms.update(userId, updates)
+    }
+  },
+
+  // Match request operations (match_requests table)
   matchRequests: {
     create: async (requestData) => {
       console.log('📊 DB: matchRequests.create called', { requestData })
@@ -355,7 +379,7 @@ export const db = {
     }
   },
 
-  // Property operations
+  // Property operations (properties table)
   properties: {
     create: async (propertyData) => {
       console.log('📊 DB: properties.create called', { propertyData })
@@ -449,41 +473,42 @@ export const db = {
     }
   },
 
-  // Peer support operations
-  peerSupport: {
+  // ✅ FIXED: Renamed peerSupport to peerSupportProfiles to match expected usage
+  // Peer support operations (peer_support_profiles table)
+  peerSupportProfiles: {
     create: async (profileData) => {
-      console.log('📊 DB: peerSupport.create called', { profileData })
+      console.log('📊 DB: peerSupportProfiles.create called', { profileData })
       try {
         const { data, error } = await supabase
           .from('peer_support_profiles')
           .insert(profileData)
           .select()
-        console.log('📊 DB: peerSupport.create result', { hasData: !!data, hasError: !!error, error: error?.message })
+        console.log('📊 DB: peerSupportProfiles.create result', { hasData: !!data, hasError: !!error, error: error?.message })
         return { data, error }
       } catch (err) {
-        console.error('💥 DB: peerSupport.create failed', err)
+        console.error('💥 DB: peerSupportProfiles.create failed', err)
         throw err
       }
     },
 
     getByUserId: async (userId) => {
-      console.log('📊 DB: peerSupport.getByUserId called', { userId })
+      console.log('📊 DB: peerSupportProfiles.getByUserId called', { userId })
       try {
         const { data, error } = await supabase
           .from('peer_support_profiles')
           .select('*')
           .eq('user_id', userId)
           .single()
-        console.log('📊 DB: peerSupport.getByUserId result', { hasData: !!data, hasError: !!error, error: error?.message })
+        console.log('📊 DB: peerSupportProfiles.getByUserId result', { hasData: !!data, hasError: !!error, error: error?.message })
         return { data, error }
       } catch (err) {
-        console.error('💥 DB: peerSupport.getByUserId failed', err)
+        console.error('💥 DB: peerSupportProfiles.getByUserId failed', err)
         throw err
       }
     },
 
     getAvailable: async (filters = {}) => {
-      console.log('📊 DB: peerSupport.getAvailable called', { filters })
+      console.log('📊 DB: peerSupportProfiles.getAvailable called', { filters })
       try {
         let query = supabase
           .from('peer_support_profiles')
@@ -502,28 +527,51 @@ export const db = {
         }
 
         const { data, error } = await query.order('years_experience', { ascending: false })
-        console.log('📊 DB: peerSupport.getAvailable result', { hasData: !!data, hasError: !!error, error: error?.message })
+        console.log('📊 DB: peerSupportProfiles.getAvailable result', { hasData: !!data, hasError: !!error, error: error?.message })
         return { data, error }
       } catch (err) {
-        console.error('💥 DB: peerSupport.getAvailable failed', err)
+        console.error('💥 DB: peerSupportProfiles.getAvailable failed', err)
         throw err
       }
     },
 
     update: async (userId, updates) => {
-      console.log('📊 DB: peerSupport.update called', { userId, updates })
+      console.log('📊 DB: peerSupportProfiles.update called', { userId, updates })
       try {
         const { data, error } = await supabase
           .from('peer_support_profiles')
           .update(updates)
           .eq('user_id', userId)
           .select()
-        console.log('📊 DB: peerSupport.update result', { hasData: !!data, hasError: !!error, error: error?.message })
+        console.log('📊 DB: peerSupportProfiles.update result', { hasData: !!data, hasError: !!error, error: error?.message })
         return { data, error }
       } catch (err) {
-        console.error('💥 DB: peerSupport.update failed', err)
+        console.error('💥 DB: peerSupportProfiles.update failed', err)
         throw err
       }
+    }
+  },
+
+  // ✅ ADDED: Keep legacy alias for backward compatibility
+  peerSupport: {
+    create: async (profileData) => {
+      console.log('📊 DB: peerSupport.create (legacy alias) called - redirecting to peerSupportProfiles')
+      return await db.peerSupportProfiles.create(profileData)
+    },
+
+    getByUserId: async (userId) => {
+      console.log('📊 DB: peerSupport.getByUserId (legacy alias) called - redirecting to peerSupportProfiles')
+      return await db.peerSupportProfiles.getByUserId(userId)
+    },
+
+    getAvailable: async (filters = {}) => {
+      console.log('📊 DB: peerSupport.getAvailable (legacy alias) called - redirecting to peerSupportProfiles')
+      return await db.peerSupportProfiles.getAvailable(filters)
+    },
+
+    update: async (userId, updates) => {
+      console.log('📊 DB: peerSupport.update (legacy alias) called - redirecting to peerSupportProfiles')
+      return await db.peerSupportProfiles.update(userId, updates)
     }
   }
 }

@@ -111,75 +111,135 @@ export const AuthProvider = ({ children }) => {
     }
   }, []) // Empty dependency array is intentional
 
-  // Load user profile from database
-// Load user profile from database
-const loadUserProfile = async (userId) => {
-  console.log('📄 Loading profile for user:', userId)
-  
-  try {
-    // Load from your ACTUAL method names
-    const [registrantResult, basicProfileResult] = await Promise.all([
-      db.profiles.getById(userId),           // Changed: was db.registrantProfiles.getById
-      db.basicProfiles.getByUserId(userId)  // This stays the same
-    ]);
-
-    // Combine the data
-    const combinedProfile = {
-      // Main profile data (including roles) from registrant_profiles
-      ...registrantResult.data,
-      // Additional profile data from basic_profiles  
-      ...basicProfileResult.data
-    };
-
-    console.log('📄 Combined profile loaded:', { 
-      hasRoles: !!combinedProfile?.roles,
-      roles: combinedProfile?.roles,
-      hasBasicData: !!basicProfileResult.data,
-      fullProfile: combinedProfile
-    });
-
-    setProfile(combinedProfile);
-
-  } catch (err) {
-    console.error('💥 Profile loading error:', err);
-    console.log('ℹ️ Continuing without profile data');
-  }
-}
-
-  // Sign up new user
-// Replace your signUp function in AuthContext.js with this:
-const signUp = async (email, password, userData) => {
-  console.log('📝 Signing up user:', email)
-  
-  try {
-    setLoading(true)
-    setError(null)
-
-    // Call your auth helper - the trigger will create the profile automatically
-    const { data, error } = await auth.signUp(email, password, userData)
+  // ✅ FIXED: Improved profile loading with better error handling and fallback logic
+  const loadUserProfile = async (userId) => {
+    console.log('📄 Loading profile for user:', userId)
     
-    if (error) {
-      console.error('❌ Signup error:', error)
-      setError(error.message)
-      return { success: false, error: error.message }
-    }
+    try {
+      // Load both profile parts with individual error handling
+      const [registrantResult, basicProfileResult] = await Promise.allSettled([
+        db.profiles.getById(userId),           // registrant_profiles table
+        db.basicProfiles.getByUserId(userId)   // basic_profiles table
+      ])
 
-    if (data.user) {
-      console.log('✅ User created successfully via trigger:', data.user.id)
-      // The database trigger should have created the profile automatically
-      // We'll load it in the auth state change listener
+      console.log('📄 Profile loading results:', {
+        registrant: registrantResult.status,
+        basic: basicProfileResult.status,
+        registrantError: registrantResult.status === 'rejected' ? registrantResult.reason : null,
+        basicError: basicProfileResult.status === 'rejected' ? basicProfileResult.reason : null
+      })
+
+      // Extract data from successful results
+      const registrantData = registrantResult.status === 'fulfilled' && !registrantResult.value.error 
+        ? registrantResult.value.data 
+        : null
+
+      const basicData = basicProfileResult.status === 'fulfilled' && !basicProfileResult.value.error
+        ? basicProfileResult.value.data 
+        : null
+
+      // ✅ FIXED: Create fallback profile if registrant profile is missing
+      if (!registrantData) {
+        console.warn('⚠️ No registrant profile found - profile may not have been created by trigger')
+        console.log('ℹ️ This suggests the database trigger is not working correctly')
+        
+        // Set a minimal profile to prevent app crashes
+        const fallbackProfile = {
+          id: userId,
+          email: user?.email,
+          roles: [], // Empty roles array
+          ...basicData // Include basic profile data if available
+        }
+        
+        console.log('📄 Using fallback profile:', fallbackProfile)
+        setProfile(fallbackProfile)
+        return
+      }
+
+      // Combine the profile data
+      const combinedProfile = {
+        // Main profile data (including roles) from registrant_profiles
+        ...registrantData,
+        // Additional profile data from basic_profiles (if available)
+        ...(basicData || {})
+      }
+
+      console.log('📄 Combined profile loaded successfully:', { 
+        hasRoles: !!combinedProfile?.roles,
+        roles: combinedProfile?.roles,
+        hasBasicData: !!basicData,
+        registrantKeys: registrantData ? Object.keys(registrantData) : [],
+        basicKeys: basicData ? Object.keys(basicData) : [],
+        fullProfile: combinedProfile
+      })
+
+      setProfile(combinedProfile)
+
+    } catch (err) {
+      console.error('💥 Critical profile loading error:', err)
+      
+      // Create emergency fallback profile to prevent app crashes
+      const emergencyProfile = {
+        id: userId,
+        email: user?.email,
+        roles: [],
+        first_name: '',
+        last_name: ''
+      }
+      
+      console.log('🚨 Using emergency fallback profile due to error')
+      setProfile(emergencyProfile)
+      setError('Profile loading failed - using minimal profile')
     }
-    
-    return { success: true, data }
-  } catch (err) {
-    console.error('💥 Signup failed:', err)
-    const errorMessage = err.message || 'An error occurred during signup'
-    setError(errorMessage)
-    return { success: false, error: errorMessage }
-  } finally {
-    setLoading(false)
   }
-}
+
+  // ✅ FIXED: Enhanced signup with better trigger handling
+  const signUp = async (email, password, userData) => {
+    console.log('📝 Signing up user:', email)
+    
+    try {
+      setLoading(true)
+      setError(null)
+
+      // Call your auth helper - the trigger should create the profile automatically
+      const { data, error } = await auth.signUp(email, password, userData)
+      
+      if (error) {
+        console.error('❌ Signup error:', error)
+        setError(error.message)
+        return { success: false, error: error.message }
+      }
+
+      if (data.user) {
+        console.log('✅ User created successfully:', data.user.id)
+        console.log('⏳ Database trigger should create profile automatically...')
+        
+        // ✅ ADDED: Wait a moment for trigger to complete, then verify profile exists
+        setTimeout(async () => {
+          try {
+            const { data: profileCheck } = await db.profiles.getById(data.user.id)
+            if (!profileCheck) {
+              console.warn('⚠️ Profile not created by trigger - manual creation may be needed')
+              console.warn('🔧 Check your database triggers in Supabase dashboard')
+            } else {
+              console.log('✅ Profile confirmed created by trigger')
+            }
+          } catch (err) {
+            console.warn('⚠️ Could not verify profile creation:', err.message)
+          }
+        }, 2000)
+      }
+      
+      return { success: true, data }
+    } catch (err) {
+      console.error('💥 Signup failed:', err)
+      const errorMessage = err.message || 'An error occurred during signup'
+      setError(errorMessage)
+      return { success: false, error: errorMessage }
+    } finally {
+      setLoading(false)
+    }
+  }
 
   // Sign in existing user
   const signIn = async (email, password) => {
@@ -239,7 +299,7 @@ const signUp = async (email, password, userData) => {
     }
   }
 
-  // Update user profile
+  // ✅ FIXED: Enhanced update profile with proper data handling
   const updateProfile = async (updates) => {
     console.log('📝 Updating profile:', updates)
     
@@ -250,7 +310,20 @@ const signUp = async (email, password, userData) => {
         throw new Error('No authenticated user')
       }
 
-      const { data, error } = await db.profiles.update(user.id, updates)
+      // Determine which table to update based on the fields being updated
+      const registrantFields = ['email', 'first_name', 'last_name', 'roles']
+      const isRegistrantUpdate = Object.keys(updates).some(key => registrantFields.includes(key))
+      
+      let result
+      if (isRegistrantUpdate) {
+        console.log('📝 Updating registrant_profiles table')
+        result = await db.profiles.update(user.id, updates)
+      } else {
+        console.log('📝 Updating basic_profiles table')
+        result = await db.basicProfiles.update(user.id, updates)
+      }
+      
+      const { data, error } = result
       
       if (error) {
         console.error('❌ Profile update error:', error)
@@ -259,7 +332,10 @@ const signUp = async (email, password, userData) => {
       }
 
       console.log('✅ Profile updated successfully')
-      setProfile(data[0])
+      
+      // Reload the full profile to ensure consistency
+      await loadUserProfile(user.id)
+      
       return { success: true, data: data[0] }
     } catch (err) {
       console.error('💥 Profile update failed:', err)
@@ -269,28 +345,30 @@ const signUp = async (email, password, userData) => {
     }
   }
 
-  // Check if user has specific role
+  // ✅ IMPROVED: Enhanced role checking with better debugging
   const hasRole = (role) => {
-    const result = profile?.roles?.includes(role) || false
+    const result = Array.isArray(profile?.roles) && profile.roles.includes(role)
     console.log('🔍 hasRole check:', { 
       role, 
       result, 
       userRoles: profile?.roles,
+      rolesType: typeof profile?.roles,
+      isArray: Array.isArray(profile?.roles),
       hasProfile: !!profile,
       profileKeys: profile ? Object.keys(profile) : 'no profile'
     })
     return result
-}
+  }
 
   // Check if user has any of the specified roles
   const hasAnyRole = (roles) => {
-    if (!profile?.roles) return false
+    if (!Array.isArray(profile?.roles)) return false
     return roles.some(role => profile.roles.includes(role))
   }
 
   // Get user's primary role (first in array)
   const getPrimaryRole = () => {
-    return profile?.roles?.[0] || null
+    return Array.isArray(profile?.roles) && profile.roles.length > 0 ? profile.roles[0] : null
   }
 
   // Clear error
@@ -329,7 +407,8 @@ const signUp = async (email, password, userData) => {
     hasUser: !!user,
     hasProfile: !!profile,
     loading,
-    error: !!error
+    error: !!error,
+    userRoles: profile?.roles
   })
 
   return (
