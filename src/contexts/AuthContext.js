@@ -147,67 +147,39 @@ const loadUserProfile = async (userId) => {
 }
 
   // Sign up new user
-  const signUp = async (email, password, userData) => {
-    console.log('📝 Signing up user:', email)
+// Replace your signUp function in AuthContext.js with this:
+const signUp = async (email, password, userData) => {
+  console.log('📝 Signing up user:', email)
+  
+  try {
+    setLoading(true)
+    setError(null)
+
+    // Call your auth helper - the trigger will create the profile automatically
+    const { data, error } = await auth.signUp(email, password, userData)
     
-    try {
-      setLoading(true)
-      setError(null)
-
-      const { data, error } = await auth.signUp(email, password, userData)
-      
-      if (error) {
-        console.error('❌ Signup error:', error)
-        setError(error.message)
-        return { success: false, error: error.message }
-      }
-
-// Create profile in database
-      if (data.user) {
-        console.log('👤 Creating profile for new user:', data.user.id)
-       
-        const profileData = {
-          id: data.user.id,
-          email: data.user.email,
-          first_name: userData.firstName,
-          last_name: userData.lastName,
-          roles: userData.roles || ['applicant']
-        }
-        
-        const { error: profileError } = await db.profiles.create(profileData)
-        if (profileError) {
-          console.error('❌ Error creating profile:', profileError)
-          
-          // Try to create profile again with a slight delay (sometimes timing issue)
-          console.log('🔄 Retrying profile creation...')
-          await new Promise(resolve => setTimeout(resolve, 1000))
-          
-          const { error: retryError } = await db.profiles.create(profileData)
-          if (retryError) {
-            console.error('❌ Profile creation retry failed:', retryError)
-            setError('Account created but profile setup failed. Please try logging in.')
-            // Still return success since the user account was created
-            return { success: true, data, profileError: true }
-          } else {
-            console.log('✅ Profile created successfully on retry')
-            setProfile(profileData)
-          }
-        } else {
-          console.log('✅ Profile created successfully')
-          setProfile(profileData)
-        }
-      }
-      
-      return { success: true, data }
-    } catch (err) {
-      console.error('💥 Signup failed:', err)
-      const errorMessage = err.message || 'An error occurred during signup'
-      setError(errorMessage)
-      return { success: false, error: errorMessage }
-    } finally {
-      setLoading(false)
+    if (error) {
+      console.error('❌ Signup error:', error)
+      setError(error.message)
+      return { success: false, error: error.message }
     }
+
+    if (data.user) {
+      console.log('✅ User created successfully via trigger:', data.user.id)
+      // The database trigger should have created the profile automatically
+      // We'll load it in the auth state change listener
+    }
+    
+    return { success: true, data }
+  } catch (err) {
+    console.error('💥 Signup failed:', err)
+    const errorMessage = err.message || 'An error occurred during signup'
+    setError(errorMessage)
+    return { success: false, error: errorMessage }
+  } finally {
+    setLoading(false)
   }
+}
 
   // Sign in existing user
   const signIn = async (email, password) => {
