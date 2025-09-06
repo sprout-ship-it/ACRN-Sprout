@@ -218,39 +218,40 @@ const validatePeerProfile = () => {
 
   // Save matching profile and complete onboarding
   const saveMatchingProfile = async () => {
-    if (!validateMatchingProfile()) return
+  if (!validateMatchingProfile()) return
 
-    setLoading(true)
-    
-    try {
-      const profileData = {
-        user_id: profile.id,
-        preferred_location: matchingProfile.preferredLocation,
-        recovery_stage: matchingProfile.recoveryStage,
-        program_type: matchingProfile.programType,
-        about_me: matchingProfile.aboutMe,
-        looking_for: matchingProfile.lookingFor,
-        is_active: true
-      }
-
-      const { error } = await db.matchingProfiles.create(profileData)
-      
-      if (error) throw error
-
-      setCurrentStep(3)
-      
-      // Redirect to main app after a short delay
-      setTimeout(() => {
-        navigate('/app')
-      }, 2000)
-      
-    } catch (error) {
-      console.error('Error saving matching profile:', error)
-      setErrors({ submit: 'Failed to save profile. Please try again.' })
-    } finally {
-      setLoading(false)
+  setLoading(true)
+  
+  try {
+    const profileData = {
+      user_id: profile.id,
+      preferred_location: matchingProfile.preferredLocation,
+      recovery_stage: matchingProfile.recoveryStage,
+      program_type: matchingProfile.programType,
+      about_me: matchingProfile.aboutMe,
+      looking_for: matchingProfile.lookingFor,
+      budget_max: 1000, // Add this required field with a default value
+      is_active: true
     }
+
+    const { error } = await db.matchingProfiles.create(profileData)
+    
+    if (error) throw error
+
+    setCurrentStep(3)
+    
+    // Redirect to main app after a short delay
+    setTimeout(() => {
+      navigate('/app')
+    }, 2000)
+    
+  } catch (error) {
+    console.error('Error saving matching profile:', error)
+    setErrors({ submit: 'Failed to save profile. Please try again.' })
+  } finally {
+    setLoading(false)
   }
+}
 
 const savePeerProfile = async () => {
   if (!validatePeerProfile()) return
