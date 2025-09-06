@@ -1,9 +1,125 @@
 // src/utils/matching/compatibility.js
 
-import { calculateDetailedMatch } from './algorithm';
+import { calculateDetailedCompatibility, calculateDetailedMatch } from './algorithm';
 
 /**
- * Generate compatibility flags (green flags and red flags) for two users
+ * Generate detailed compatibility flags based on user data and scores
+ * @param {Object} user1 - First user's profile data
+ * @param {Object} user2 - Second user's profile data
+ * @param {Object} scores - Compatibility scores from algorithm
+ * @returns {Object} Object with greenFlags and redFlags arrays
+ */
+export const generateDetailedFlags = (user1, user2, scores) => {
+  const greenFlags = [];
+  const redFlags = [];
+  
+  // Lifestyle flags
+  if (scores.lifestyle >= 85) {
+    greenFlags.push('Very compatible lifestyle preferences');
+  } else if (scores.lifestyle <= 40) {
+    redFlags.push('Significantly different lifestyle preferences');
+  }
+  
+  // Age flags
+  if (scores.age >= 90) {
+    greenFlags.push('Similar ages for easy connection');
+  } else if (scores.age <= 45) {
+    redFlags.push('Considerable age difference to consider');
+  }
+  
+  // Budget flags
+  if (scores.budget >= 90) {
+    greenFlags.push('Very similar budget ranges');
+  } else if (scores.budget <= 50) {
+    redFlags.push('Different budget expectations');
+  }
+  
+  // Recovery flags
+  if (scores.recovery >= 85) {
+    greenFlags.push('Strong recovery stage compatibility');
+  } else if (scores.recovery <= 50) {
+    redFlags.push('Different recovery approaches or stages');
+  }
+  
+  // Gender preference flags
+  if (scores.gender === 0) {
+    redFlags.push('Incompatible gender preferences - this match should be filtered');
+  } else if (scores.gender === 100) {
+    greenFlags.push('Perfect gender preference match');
+  }
+  
+  // Spiritual flags
+  if (scores.spiritual >= 90) {
+    greenFlags.push('Shared spiritual/religious outlook');
+  } else if (scores.spiritual <= 40) {
+    redFlags.push('Very different religious/spiritual beliefs');
+  }
+  
+  // Location flags (if available)
+  if (scores.location >= 95) {
+    greenFlags.push('Perfect location match!');
+  } else if (scores.location >= 75) {
+    greenFlags.push('Good location compatibility');
+  } else if (scores.location <= 30) {
+    redFlags.push('Very different target areas');
+  }
+  
+  // Smoking flags
+  if (user1.smoking_status && user2.smoking_status) {
+    if (user1.smoking_status === 'non_smoker' && user2.smoking_status === 'regular') {
+      redFlags.push('Non-smoker matched with regular smoker');
+    } else if (user1.smoking_status === user2.smoking_status) {
+      greenFlags.push('Matching smoking preferences');
+    }
+  }
+  
+  // Binary preference flags
+  const binaryPrefs = [
+    { key: 'overnight_guests_ok', label: 'overnight guests' },
+    { key: 'shared_groceries', label: 'grocery sharing' },
+    { key: 'pets_owned', label: 'pet ownership' }
+  ];
+  
+  binaryPrefs.forEach(({ key, label }) => {
+    if (user1[key] !== undefined && user2[key] !== undefined) {
+      if (user1[key] === user2[key]) {
+        greenFlags.push(`Matching ${label} preferences`);
+      } else {
+        redFlags.push(`Different ${label} preferences`);
+      }
+    }
+  });
+  
+  // Interest flags
+  if (scores.interests >= 70) {
+    greenFlags.push('Several shared interests and hobbies');
+  }
+  
+  // Recovery method flags
+  if (user1.recovery_methods && user2.recovery_methods) {
+    const sharedMethods = user1.recovery_methods.filter(method => 
+      user2.recovery_methods.includes(method)
+    );
+    if (sharedMethods.length > 0) {
+      greenFlags.push(`Shared recovery methods: ${sharedMethods.slice(0, 2).join(', ')}`);
+    }
+  }
+  
+  // Program type flags
+  if (user1.program_type && user2.program_type) {
+    const sharedPrograms = user1.program_type.filter(program => 
+      user2.program_type.includes(program)
+    );
+    if (sharedPrograms.length > 0) {
+      greenFlags.push(`Shared recovery programs: ${sharedPrograms.slice(0, 2).join(', ')}`);
+    }
+  }
+  
+  return { green: greenFlags, red: redFlags };
+};
+
+/**
+ * Generate compatibility flags (legacy function for backward compatibility)
  * @param {Object} user1 - First user's profile data
  * @param {Object} user2 - Second user's profile data
  * @param {number} matchScore - Overall match score
@@ -13,7 +129,7 @@ export const generateCompatibilityFlags = (user1, user2, matchScore) => {
   const greenFlags = [];
   const redFlags = [];
 
-  // Recovery program overlap (Green Flag)
+  // Recovery program overlap
   const programOverlap = (user1.program_type || []).filter(program => 
     (user2.program_type || []).includes(program)
   );
@@ -25,7 +141,7 @@ export const generateCompatibilityFlags = (user1, user2, matchScore) => {
     }
   }
 
-  // Interest overlap (Green Flag)
+  // Interest overlap
   const interestOverlap = (user1.interests || []).filter(interest => 
     (user2.interests || []).includes(interest)
   );
@@ -33,13 +149,13 @@ export const generateCompatibilityFlags = (user1, user2, matchScore) => {
     greenFlags.push(`Common interests: ${interestOverlap.slice(0, 2).join(', ')}`);
   }
 
-  // Recovery stage compatibility (Green Flag)
+  // Recovery stage compatibility
   if (user1.recovery_stage === user2.recovery_stage) {
     greenFlags.push('Similar recovery stage');
   }
 
-  // Lifestyle compatibility (Green Flags)
-  if (user1.smoking_preference === user2.smoking_preference && user1.smoking_preference === 'non-smoking') {
+  // Lifestyle compatibility
+  if (user1.smoking_status === user2.smoking_status && user1.smoking_status === 'non_smoker') {
     greenFlags.push('Both non-smoking');
   }
 
@@ -51,7 +167,7 @@ export const generateCompatibilityFlags = (user1, user2, matchScore) => {
     greenFlags.push('Similar work schedules');
   }
 
-  // Location compatibility (Green Flag)
+  // Location compatibility
   if (user1.preferred_location && user2.preferred_location) {
     const location1 = user1.preferred_location.toLowerCase();
     const location2 = user2.preferred_location.toLowerCase();
@@ -60,19 +176,7 @@ export const generateCompatibilityFlags = (user1, user2, matchScore) => {
     }
   }
 
-  // Price range compatibility (Green Flag)
-  if (user1.price_range_min && user1.price_range_max && 
-      user2.price_range_min && user2.price_range_max) {
-    const overlap = Math.max(0, 
-      Math.min(user1.price_range_max, user2.price_range_max) - 
-      Math.max(user1.price_range_min, user2.price_range_min)
-    );
-    if (overlap > 200) { // Significant price range overlap
-      greenFlags.push('Compatible budget ranges');
-    }
-  }
-
-  // Age compatibility (Green Flag)
+  // Age compatibility
   if (user1.age && user2.age) {
     const ageDifference = Math.abs(user1.age - user2.age);
     if (ageDifference <= 5) {
@@ -82,26 +186,22 @@ export const generateCompatibilityFlags = (user1, user2, matchScore) => {
 
   // RED FLAGS
 
-  // Overall low compatibility (Red Flag)
+  // Overall low compatibility
   if (matchScore < 40) {
     redFlags.push('Lower overall compatibility');
   }
 
-  // Price range mismatch (Red Flag)
-  if (user1.price_range_min && user1.price_range_max && 
-      user2.price_range_min && user2.price_range_max) {
-    const overlap = Math.max(0, 
-      Math.min(user1.price_range_max, user2.price_range_max) - 
-      Math.max(user1.price_range_min, user2.price_range_min)
-    );
-    if (overlap === 0) {
-      redFlags.push('No budget overlap');
+  // Budget mismatch
+  if (user1.budget_max && user2.budget_max) {
+    const budgetDiff = Math.abs(user1.budget_max - user2.budget_max);
+    if (budgetDiff > 500) {
+      redFlags.push('Significant budget difference');
     }
   }
 
-  // Recovery stage mismatch (Red Flag)
+  // Recovery stage mismatch
   if (user1.recovery_stage && user2.recovery_stage) {
-    const stages = ['early', 'stable', 'maintained', 'long-term'];
+    const stages = ['early', 'stabilizing', 'stable', 'long-term'];
     const user1Index = stages.indexOf(user1.recovery_stage);
     const user2Index = stages.indexOf(user2.recovery_stage);
     if (user1Index !== -1 && user2Index !== -1 && Math.abs(user1Index - user2Index) > 2) {
@@ -109,30 +209,18 @@ export const generateCompatibilityFlags = (user1, user2, matchScore) => {
     }
   }
 
-  // Deal breaker conflicts (Red Flag)
+  // Deal breaker conflicts
   const dealBreakers1 = user1.deal_breakers || [];
   const dealBreakers2 = user2.deal_breakers || [];
   
-  // Check if either user's preferences conflict with the other's deal breakers
-  if (user1.smoking_preference === 'smoking' && dealBreakers2.includes('Smoking indoors')) {
+  if (user1.smoking_status === 'regular' && dealBreakers2.includes('Smoking indoors')) {
     redFlags.push('Smoking preference conflict');
   }
-  if (user2.smoking_preference === 'smoking' && dealBreakers1.includes('Smoking indoors')) {
+  if (user2.smoking_status === 'regular' && dealBreakers1.includes('Smoking indoors')) {
     redFlags.push('Smoking preference conflict');
   }
 
-  // Substance use conflicts (Red Flag)
-  const substanceUse1 = user1.substance_use || [];
-  const substanceUse2 = user2.substance_use || [];
-  
-  if (substanceUse1.includes('Alcohol') && dealBreakers2.includes('Drinking alcohol at home')) {
-    redFlags.push('Alcohol use conflict');
-  }
-  if (substanceUse2.includes('Alcohol') && dealBreakers1.includes('Drinking alcohol at home')) {
-    redFlags.push('Alcohol use conflict');
-  }
-
-  // Large age gap (Red Flag)
+  // Large age gap
   if (user1.age && user2.age) {
     const ageDifference = Math.abs(user1.age - user2.age);
     if (ageDifference > 15) {
@@ -140,12 +228,12 @@ export const generateCompatibilityFlags = (user1, user2, matchScore) => {
     }
   }
 
-  // No shared interests (Red Flag)
+  // No shared interests
   if (interestOverlap.length === 0 && (user1.interests || []).length > 0 && (user2.interests || []).length > 0) {
     redFlags.push('No shared interests');
   }
 
-  // No shared recovery programs (Red Flag)
+  // No shared recovery programs
   if (programOverlap.length === 0 && (user1.program_type || []).length > 0 && (user2.program_type || []).length > 0) {
     redFlags.push('No shared recovery programs');
   }
@@ -154,28 +242,28 @@ export const generateCompatibilityFlags = (user1, user2, matchScore) => {
 };
 
 /**
- * Get compatibility summary for two users
+ * Get comprehensive compatibility summary for two users
  * @param {Object} user1 - First user's profile data
  * @param {Object} user2 - Second user's profile data
- * @returns {Object} Compatibility summary
+ * @returns {Object} Comprehensive compatibility summary
  */
 export const getCompatibilitySummary = (user1, user2) => {
-  const detailedMatch = calculateDetailedMatch(user1, user2);
-  const flags = generateCompatibilityFlags(user1, user2, detailedMatch.overallScore);
+  const detailedMatch = calculateDetailedCompatibility(user1, user2);
+  const flags = generateDetailedFlags(user1, user2, detailedMatch.score_breakdown);
   
   let compatibilityLevel;
   let compatibilityDescription;
   
-  if (detailedMatch.overallScore >= 80) {
+  if (detailedMatch.compatibility_score >= 80) {
     compatibilityLevel = 'excellent';
     compatibilityDescription = 'Highly compatible - strong potential for a successful roommate relationship';
-  } else if (detailedMatch.overallScore >= 65) {
+  } else if (detailedMatch.compatibility_score >= 65) {
     compatibilityLevel = 'good';
     compatibilityDescription = 'Good compatibility - many shared values and preferences';
-  } else if (detailedMatch.overallScore >= 50) {
+  } else if (detailedMatch.compatibility_score >= 50) {
     compatibilityLevel = 'moderate';
     compatibilityDescription = 'Moderate compatibility - some areas align well, others may need discussion';
-  } else if (detailedMatch.overallScore >= 35) {
+  } else if (detailedMatch.compatibility_score >= 35) {
     compatibilityLevel = 'low';
     compatibilityDescription = 'Lower compatibility - significant differences to consider';
   } else {
@@ -184,13 +272,14 @@ export const getCompatibilitySummary = (user1, user2) => {
   }
 
   return {
-    overallScore: detailedMatch.overallScore,
+    overallScore: detailedMatch.compatibility_score,
     level: compatibilityLevel,
     description: compatibilityDescription,
-    breakdown: detailedMatch.breakdown,
-    greenFlags: flags.greenFlags,
-    redFlags: flags.redFlags,
-    recommendation: getRecommendation(detailedMatch.overallScore, flags)
+    breakdown: detailedMatch.score_breakdown,
+    greenFlags: flags.green,
+    redFlags: flags.red,
+    recommendation: getRecommendation(detailedMatch.compatibility_score, flags),
+    weights: detailedMatch.weights
   };
 };
 
@@ -287,34 +376,39 @@ const applyPriorityFactors = (matches, priorityFactors) => {
     
     priorityFactors.forEach(factor => {
       switch (factor) {
-        case 'recovery_stage':
-          if (match.compatibility.breakdown.recovery.score >= 80) {
+        case 'recovery':
+          if (match.compatibility.breakdown.recovery >= 80) {
             priorityBonus += 10;
           }
           break;
-        case 'programs':
-          if (match.compatibility.breakdown.programs.score >= 80) {
+        case 'lifestyle':
+          if (match.compatibility.breakdown.lifestyle >= 80) {
             priorityBonus += 8;
           }
           break;
-        case 'interests':
-          if (match.compatibility.breakdown.interests.score >= 80) {
+        case 'location':
+          if (match.compatibility.breakdown.location >= 80) {
+            priorityBonus += 12;
+          }
+          break;
+        case 'budget':
+          if (match.compatibility.breakdown.budget >= 80) {
+            priorityBonus += 8;
+          }
+          break;
+        case 'spiritual':
+          if (match.compatibility.breakdown.spiritual >= 80) {
             priorityBonus += 6;
           }
           break;
-        case 'housing':
-          if (match.compatibility.breakdown.housing.score >= 80) {
-            priorityBonus += 8;
+        case 'interests':
+          if (match.compatibility.breakdown.interests >= 80) {
+            priorityBonus += 4;
           }
           break;
-        case 'lifestyle':
-          if (match.compatibility.breakdown.lifestyle.score >= 80) {
-            priorityBonus += 7;
-          }
-          break;
-        case 'demographics':
-          if (match.compatibility.breakdown.demographics.score >= 80) {
-            priorityBonus += 5;
+        case 'gender':
+          if (match.compatibility.breakdown.gender >= 80) {
+            priorityBonus += 6;
           }
           break;
       }
@@ -338,13 +432,13 @@ export const generateMatchInsights = (userProfile, matchProfile) => {
   const insights = [];
 
   // Recovery insights
-  if (summary.breakdown.recovery.score >= 80) {
+  if (summary.breakdown.recovery >= 80) {
     insights.push({
       type: 'positive',
       category: 'recovery',
       message: 'You both are at similar stages in your recovery journey, which can provide mutual understanding and support.'
     });
-  } else if (summary.breakdown.recovery.score < 50) {
+  } else if (summary.breakdown.recovery < 50) {
     insights.push({
       type: 'consideration',
       category: 'recovery',
@@ -352,23 +446,14 @@ export const generateMatchInsights = (userProfile, matchProfile) => {
     });
   }
 
-  // Program insights
-  if (summary.breakdown.programs.score >= 70) {
-    insights.push({
-      type: 'positive',
-      category: 'programs',
-      message: 'Shared recovery programs can create opportunities for mutual support and accountability.'
-    });
-  }
-
   // Lifestyle insights
-  if (summary.breakdown.lifestyle.score >= 75) {
+  if (summary.breakdown.lifestyle >= 75) {
     insights.push({
       type: 'positive',
       category: 'lifestyle',
       message: 'Your daily routines and lifestyle preferences align well, which can reduce potential conflicts.'
     });
-  } else if (summary.breakdown.lifestyle.score < 40) {
+  } else if (summary.breakdown.lifestyle < 40) {
     insights.push({
       type: 'consideration',
       category: 'lifestyle',
@@ -376,17 +461,53 @@ export const generateMatchInsights = (userProfile, matchProfile) => {
     });
   }
 
-  // Housing insights
-  if (summary.breakdown.housing.score >= 80) {
+  // Location insights
+  if (summary.breakdown.location >= 80) {
     insights.push({
       type: 'positive',
-      category: 'housing',
-      message: 'You have compatible housing preferences, making it easier to find a place you both like.'
+      category: 'location',
+      message: 'You have compatible location preferences, making it easier to find housing in areas you both like.'
+    });
+  } else if (summary.breakdown.location < 40) {
+    insights.push({
+      type: 'consideration',
+      category: 'location',
+      message: 'Your preferred locations differ significantly. You may need to compromise on location.'
+    });
+  }
+
+  // Budget insights
+  if (summary.breakdown.budget >= 80) {
+    insights.push({
+      type: 'positive',
+      category: 'budget',
+      message: 'You have similar budget ranges, making it easier to find affordable housing together.'
+    });
+  } else if (summary.breakdown.budget < 50) {
+    insights.push({
+      type: 'consideration',
+      category: 'budget',
+      message: 'Your budget expectations differ. Discuss how to handle cost-sharing and housing choices.'
+    });
+  }
+
+  // Spiritual insights
+  if (summary.breakdown.spiritual >= 80) {
+    insights.push({
+      type: 'positive',
+      category: 'spiritual',
+      message: 'Shared spiritual or religious outlook can provide additional common ground for your relationship.'
+    });
+  } else if (summary.breakdown.spiritual < 40) {
+    insights.push({
+      type: 'consideration',
+      category: 'spiritual',
+      message: 'You have different spiritual or religious perspectives. Respect for each other\'s beliefs will be important.'
     });
   }
 
   // Interest insights
-  if (summary.breakdown.interests.score >= 60) {
+  if (summary.breakdown.interests >= 60) {
     insights.push({
       type: 'positive',
       category: 'interests',
@@ -442,9 +563,49 @@ const generateNextSteps = (score, redFlagCount) => {
   return steps;
 };
 
+/**
+ * Validate compatibility data structure
+ * @param {Object} user1 - First user's data
+ * @param {Object} user2 - Second user's data
+ * @returns {boolean} Whether data is valid for compatibility calculation
+ */
+export const validateCompatibilityData = (user1, user2) => {
+  if (!user1 || !user2) {
+    return false;
+  }
+
+  // Check for essential fields
+  const requiredFields = ['id', 'recovery_stage'];
+  
+  for (const field of requiredFields) {
+    if (!user1[field] || !user2[field]) {
+      console.warn(`Missing required field: ${field}`);
+      return false;
+    }
+  }
+
+  return true;
+};
+
+/**
+ * Get compatibility score tier
+ * @param {number} score - Compatibility score
+ * @returns {string} Compatibility tier
+ */
+export const getCompatibilityTier = (score) => {
+  if (score >= 80) return 'excellent';
+  if (score >= 65) return 'good';
+  if (score >= 50) return 'moderate';
+  if (score >= 35) return 'low';
+  return 'poor';
+};
+
 export default {
   generateCompatibilityFlags,
+  generateDetailedFlags,
   getCompatibilitySummary,
   filterAndRankMatches,
-  generateMatchInsights
+  generateMatchInsights,
+  validateCompatibilityData,
+  getCompatibilityTier
 };

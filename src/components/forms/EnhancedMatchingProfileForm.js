@@ -19,19 +19,21 @@ const EnhancedMatchingProfileForm = ({ editMode = false, onComplete, onCancel })
     housingType: [],
     priceRangeMin: 500,
     priceRangeMax: 2000,
+    budgetMax: 1000, // Key field for matching
     moveInDate: '',
     leaseDuration: '',
     
-    // Personal Preferences
+    // Personal Demographics & Preferences
     ageRangeMin: 18,
     ageRangeMax: 65,
     genderPreference: '',
+    preferredRoommateGender: '', // Key field for matching
     smokingPreference: '',
+    smokingStatus: '', // Key field for matching
     petPreference: '',
-    substanceUse: [],
     
-    // Recovery Information (Enhanced)
-    recoveryStage: '',
+    // Recovery Information
+    recoveryStage: '', // Key field for matching
     primarySubstance: '',
     timeInRecovery: '',
     treatmentHistory: '',
@@ -39,36 +41,37 @@ const EnhancedMatchingProfileForm = ({ editMode = false, onComplete, onCancel })
     sobrietyDate: '',
     sponsorMentor: '',
     supportMeetings: '',
-    spiritualAffiliation: '',
-    primaryIssues: [],
-    recoveryMethods: [],
+    spiritualAffiliation: '', // Key field for matching
+    primaryIssues: [], // Key field for matching
+    recoveryMethods: [], // Key field for matching
     
-    // Lifestyle Preferences (Enhanced)
-    workSchedule: '',
-    socialLevel: '',
-    cleanlinessLevel: '',
-    noiseLevel: '',
+    // Lifestyle Preferences (1-5 scales for matching)
+    workSchedule: '', // Key field for matching
+    socialLevel: 3, // 1-5 scale for matching
+    cleanlinessLevel: 3, // 1-5 scale for matching
+    noiseLevel: 3, // 1-5 scale for matching
     guestPolicy: '',
-    bedtimePreference: '',
+    guestsPolicy: '', // Key field for matching
+    bedtimePreference: '', // Key field for matching
     transportation: '',
     choreSharingPreference: '',
     preferredSupportStructure: '',
     conflictResolutionStyle: '',
     
-    // Living Situation Preferences
-    petsOwned: false,
-    petsComfortable: true,
-    overnightGuestsOk: true,
-    sharedGroceries: false,
+    // Living Situation Preferences (Key fields for matching)
+    petsOwned: false, // Key field for matching
+    petsComfortable: true, // Key field for matching
+    overnightGuestsOk: true, // Key field for matching
+    sharedGroceries: false, // Key field for matching
     cookingFrequency: '',
     
     // Housing Assistance
-    housingSubsidy: [],
+    housingSubsidy: [], // Key field for matching
     hasSection8: false,
     acceptsSubsidy: true,
     
     // Compatibility Factors
-    interests: [],
+    interests: [], // Key field for matching
     dealBreakers: [],
     importantQualities: [],
     
@@ -87,15 +90,60 @@ const EnhancedMatchingProfileForm = ({ editMode = false, onComplete, onCancel })
   const [initialLoading, setInitialLoading] = useState(true);
   const [successMessage, setSuccessMessage] = useState('');
   
-  // Enhanced form options based on old system
+  // Form options based on matching algorithm requirements
   const housingTypeOptions = [
     'Apartment', 'House', 'Condo', 'Townhouse', 'Room in house', 'Studio', 
     'Duplex', 'Sober living facility', 'Transitional housing'
   ];
   
-  const substanceUseOptions = [
-    'Alcohol', 'Marijuana', 'Prescription medications', 'Tobacco/Nicotine', 
-    'Cocaine', 'Heroin', 'Fentanyl', 'Methamphetamine', 'Other', 'None'
+  const genderPreferenceOptions = [
+    { value: '', label: 'No preference' },
+    { value: 'no_preference', label: 'No preference' },
+    { value: 'same_gender', label: 'Same gender only' },
+    { value: 'different_gender', label: 'Different gender only' }
+  ];
+
+  const smokingStatusOptions = [
+    { value: '', label: 'Select smoking status' },
+    { value: 'non_smoker', label: 'Non-smoker' },
+    { value: 'outdoor_only', label: 'Smoke outdoors only' },
+    { value: 'occasional', label: 'Occasional smoker' },
+    { value: 'regular', label: 'Regular smoker' }
+  ];
+
+  const recoveryStageOptions = [
+    { value: '', label: 'Select recovery stage' },
+    { value: 'early', label: 'Early Recovery (0-6 months)' },
+    { value: 'stabilizing', label: 'Stabilizing (6-18 months)' },
+    { value: 'stable', label: 'Stable Recovery (1.5-3 years)' },
+    { value: 'long-term', label: 'Long-term Recovery (3+ years)' }
+  ];
+
+  const guestsPolicyOptions = [
+    { value: '', label: 'Select guest policy' },
+    { value: 'no_guests', label: 'No overnight guests' },
+    { value: 'rare_guests', label: 'Rare overnight guests' },
+    { value: 'moderate_guests', label: 'Moderate overnight guests' },
+    { value: 'frequent_guests', label: 'Frequent overnight guests' }
+  ];
+
+  const bedtimePreferenceOptions = [
+    { value: '', label: 'Select bedtime preference' },
+    { value: 'early', label: 'Early (before 10 PM)' },
+    { value: 'moderate', label: 'Moderate (10 PM - 12 AM)' },
+    { value: 'late', label: 'Late (after 12 AM)' },
+    { value: 'varies', label: 'Varies/Flexible' }
+  ];
+
+  const workScheduleOptions = [
+    { value: '', label: 'Select work schedule' },
+    { value: 'traditional_9_5', label: 'Traditional 9-5' },
+    { value: 'flexible', label: 'Flexible hours' },
+    { value: 'early_morning', label: 'Early morning shift' },
+    { value: 'night_shift', label: 'Night shift' },
+    { value: 'student', label: 'Student schedule' },
+    { value: 'irregular', label: 'Irregular/Varies' },
+    { value: 'unemployed', label: 'Currently unemployed' }
   ];
   
   const primaryIssuesOptions = [
@@ -120,26 +168,22 @@ const EnhancedMatchingProfileForm = ({ editMode = false, onComplete, onCancel })
     'Learning/Education', 'Technology', 'Travel', 'Pets/Animals'
   ];
   
-  const dealBreakerOptions = [
-    'Smoking indoors', 'Drinking alcohol at home', 'Drug use', 'Loud parties',
-    'Poor hygiene', 'Pets', 'Overnight guests frequently', 'Messy common areas',
-    'Aggressive behavior', 'Dishonesty', 'Not respecting boundaries'
-  ];
-  
-  const importantQualityOptions = [
-    'Honesty', 'Respect for boundaries', 'Cleanliness', 'Reliability', 'Empathy',
-    'Good communication', 'Shared recovery values', 'Similar schedule', 'Sense of humor',
-    'Mutual support', 'Independence', 'Shared interests'
-  ];
-
   const housingSubsidyOptions = [
     'section_8', 'nonprofit_community_org', 'va_benefits', 'disability_assistance', 
     'lihtc', 'other'
   ];
 
   const spiritualAffiliationOptions = [
-    'christian-protestant', 'christian-catholic', 'muslim', 'jewish', 'buddhist',
-    'spiritual-not-religious', 'agnostic', 'atheist', 'other'
+    { value: '', label: 'Select spiritual affiliation' },
+    { value: 'christian-protestant', label: 'Christian (Protestant)' },
+    { value: 'christian-catholic', label: 'Christian (Catholic)' },
+    { value: 'muslim', label: 'Muslim' },
+    { value: 'jewish', label: 'Jewish' },
+    { value: 'buddhist', label: 'Buddhist' },
+    { value: 'spiritual-not-religious', label: 'Spiritual but not religious' },
+    { value: 'agnostic', label: 'Agnostic' },
+    { value: 'atheist', label: 'Atheist' },
+    { value: 'other', label: 'Other' }
   ];
 
   // Load existing data
@@ -153,7 +197,7 @@ const EnhancedMatchingProfileForm = ({ editMode = false, onComplete, onCancel })
         if (applicantForm) {
           setFormData(prev => ({
             ...prev,
-            // Map all the comprehensive fields from your old system
+            // Map all fields from database
             preferredLocation: applicantForm.preferred_location || '',
             targetZipCodes: applicantForm.target_zip_codes?.join(', ') || '',
             searchRadius: applicantForm.search_radius?.toString() || '25',
@@ -163,16 +207,18 @@ const EnhancedMatchingProfileForm = ({ editMode = false, onComplete, onCancel })
             housingType: applicantForm.housing_type || [],
             priceRangeMin: applicantForm.price_range_min || 500,
             priceRangeMax: applicantForm.price_range_max || 2000,
+            budgetMax: applicantForm.budget_max || 1000,
             moveInDate: applicantForm.move_in_date || '',
             leaseDuration: applicantForm.lease_duration || '',
             
-            // Personal & Recovery
             ageRangeMin: applicantForm.age_range_min || 18,
             ageRangeMax: applicantForm.age_range_max || 65,
             genderPreference: applicantForm.gender_preference || '',
+            preferredRoommateGender: applicantForm.preferred_roommate_gender || '',
             smokingPreference: applicantForm.smoking_preference || '',
+            smokingStatus: applicantForm.smoking_status || '',
             petPreference: applicantForm.pet_preference || '',
-            substanceUse: applicantForm.substance_use || [],
+            
             recoveryStage: applicantForm.recovery_stage || '',
             primarySubstance: applicantForm.primary_substance || '',
             timeInRecovery: applicantForm.time_in_recovery || '',
@@ -185,36 +231,32 @@ const EnhancedMatchingProfileForm = ({ editMode = false, onComplete, onCancel })
             primaryIssues: applicantForm.primary_issues || [],
             recoveryMethods: applicantForm.recovery_methods || [],
             
-            // Lifestyle
             workSchedule: applicantForm.work_schedule || '',
-            socialLevel: applicantForm.social_level?.toString() || '',
-            cleanlinessLevel: applicantForm.cleanliness_level?.toString() || '',
-            noiseLevel: applicantForm.noise_level?.toString() || '',
+            socialLevel: applicantForm.social_level || 3,
+            cleanlinessLevel: applicantForm.cleanliness_level || 3,
+            noiseLevel: applicantForm.noise_level || 3,
             guestPolicy: applicantForm.guest_policy || '',
+            guestsPolicy: applicantForm.guests_policy || '',
             bedtimePreference: applicantForm.bedtime_preference || '',
             transportation: applicantForm.transportation || '',
             choreSharingPreference: applicantForm.chore_sharing_preference || '',
             preferredSupportStructure: applicantForm.preferred_support_structure || '',
             conflictResolutionStyle: applicantForm.conflict_resolution_style || '',
             
-            // Living situation
             petsOwned: applicantForm.pets_owned || false,
             petsComfortable: applicantForm.pets_comfortable !== false,
             overnightGuestsOk: applicantForm.overnight_guests_ok !== false,
             sharedGroceries: applicantForm.shared_groceries || false,
             cookingFrequency: applicantForm.cooking_frequency || '',
             
-            // Housing assistance
             housingSubsidy: applicantForm.housing_subsidy || [],
             hasSection8: applicantForm.has_section8 || false,
             acceptsSubsidy: applicantForm.accepts_subsidy !== false,
             
-            // Compatibility
             interests: applicantForm.interests || [],
             dealBreakers: applicantForm.deal_breakers || [],
             importantQualities: applicantForm.important_qualities || [],
             
-            // Text fields
             aboutMe: applicantForm.about_me || '',
             lookingFor: applicantForm.looking_for || '',
             additionalInfo: applicantForm.additional_info || '',
@@ -240,15 +282,16 @@ const EnhancedMatchingProfileForm = ({ editMode = false, onComplete, onCancel })
   const getCompletionPercentage = () => {
     const requiredFields = [
       'preferredLocation', 'maxCommute', 'moveInDate', 'recoveryStage', 
-      'workSchedule', 'aboutMe', 'lookingFor'
+      'workSchedule', 'aboutMe', 'lookingFor', 'budgetMax', 'preferredRoommateGender',
+      'smokingStatus', 'spiritualAffiliation'
     ];
-    const arrayFields = ['housingType', 'programType', 'interests'];
+    const arrayFields = ['housingType', 'programType', 'interests', 'primaryIssues', 'recoveryMethods'];
     
     let completed = 0;
     let total = requiredFields.length + arrayFields.length;
     
     requiredFields.forEach(field => {
-      if (formData[field] && formData[field].trim() !== '') completed++;
+      if (formData[field] && formData[field].toString().trim() !== '') completed++;
     });
     
     arrayFields.forEach(field => {
@@ -294,11 +337,17 @@ const EnhancedMatchingProfileForm = ({ editMode = false, onComplete, onCancel })
     if (!formData.workSchedule) newErrors.workSchedule = 'Work schedule is required';
     if (!formData.aboutMe.trim()) newErrors.aboutMe = 'About me section is required';
     if (!formData.lookingFor.trim()) newErrors.lookingFor = 'Looking for section is required';
+    if (!formData.budgetMax) newErrors.budgetMax = 'Personal budget maximum is required';
+    if (!formData.preferredRoommateGender) newErrors.preferredRoommateGender = 'Roommate gender preference is required';
+    if (!formData.smokingStatus) newErrors.smokingStatus = 'Your smoking status is required';
+    if (!formData.spiritualAffiliation) newErrors.spiritualAffiliation = 'Spiritual affiliation is required';
     
     // Array fields
     if (formData.housingType.length === 0) newErrors.housingType = 'Please select at least one housing type';
     if (formData.programType.length === 0) newErrors.programType = 'Please select at least one program type';
     if (formData.interests.length === 0) newErrors.interests = 'Please select at least one interest';
+    if (formData.primaryIssues.length === 0) newErrors.primaryIssues = 'Please select at least one primary issue';
+    if (formData.recoveryMethods.length === 0) newErrors.recoveryMethods = 'Please select at least one recovery method';
     
     // Text length validation
     if (formData.aboutMe.length > 500) newErrors.aboutMe = 'About me must be 500 characters or less';
@@ -312,6 +361,14 @@ const EnhancedMatchingProfileForm = ({ editMode = false, onComplete, onCancel })
       if (moveInDate < today) {
         newErrors.moveInDate = 'Move-in date cannot be in the past';
       }
+    }
+
+    // Budget validation
+    if (formData.budgetMax < 200) {
+      newErrors.budgetMax = 'Budget must be at least $200';
+    }
+    if (formData.budgetMax > 5000) {
+      newErrors.budgetMax = 'Budget seems unreasonably high. Please verify.';
     }
     
     setErrors(newErrors);
@@ -347,6 +404,7 @@ const EnhancedMatchingProfileForm = ({ editMode = false, onComplete, onCancel })
         housing_type: formData.housingType,
         price_range_min: formData.priceRangeMin,
         price_range_max: formData.priceRangeMax,
+        budget_max: parseInt(formData.budgetMax),
         move_in_date: formData.moveInDate,
         lease_duration: formData.leaseDuration || null,
         
@@ -354,9 +412,10 @@ const EnhancedMatchingProfileForm = ({ editMode = false, onComplete, onCancel })
         age_range_min: formData.ageRangeMin,
         age_range_max: formData.ageRangeMax,
         gender_preference: formData.genderPreference || null,
+        preferred_roommate_gender: formData.preferredRoommateGender,
         smoking_preference: formData.smokingPreference || null,
+        smoking_status: formData.smokingStatus,
         pet_preference: formData.petPreference || null,
-        substance_use: formData.substanceUse,
         
         // Recovery Information
         recovery_stage: formData.recoveryStage,
@@ -367,16 +426,17 @@ const EnhancedMatchingProfileForm = ({ editMode = false, onComplete, onCancel })
         sobriety_date: formData.sobrietyDate || null,
         sponsor_mentor: formData.sponsorMentor || null,
         support_meetings: formData.supportMeetings || null,
-        spiritual_affiliation: formData.spiritualAffiliation || null,
+        spiritual_affiliation: formData.spiritualAffiliation,
         primary_issues: formData.primaryIssues,
         recovery_methods: formData.recoveryMethods,
         
         // Lifestyle Preferences
         work_schedule: formData.workSchedule,
-        social_level: parseInt(formData.socialLevel) || null,
-        cleanliness_level: parseInt(formData.cleanlinessLevel) || null,
-        noise_level: parseInt(formData.noiseLevel) || null,
+        social_level: parseInt(formData.socialLevel),
+        cleanliness_level: parseInt(formData.cleanlinessLevel),
+        noise_level: parseInt(formData.noiseLevel),
         guest_policy: formData.guestPolicy || null,
+        guests_policy: formData.guestsPolicy || null,
         bedtime_preference: formData.bedtimePreference || null,
         transportation: formData.transportation || null,
         chore_sharing_preference: formData.choreSharingPreference || null,
@@ -505,9 +565,7 @@ const EnhancedMatchingProfileForm = ({ editMode = false, onComplete, onCancel })
               required
             />
             {errors.preferredLocation && (
-              <div className="text-red-500 mt-1">
-                {errors.preferredLocation}
-              </div>
+              <div className="text-red-500 mt-1">{errors.preferredLocation}</div>
             )}
           </div>
           
@@ -522,43 +580,169 @@ const EnhancedMatchingProfileForm = ({ editMode = false, onComplete, onCancel })
               disabled={loading}
             />
             <div className="text-gray-500 mt-1 text-sm">
-              Specific ZIP codes you prefer (optional)
+              Specific ZIP codes you prefer (optional but helps with location matching)
             </div>
           </div>
         </div>
 
         <div className="grid-2 mb-4">
           <div className="form-group">
-            <label className="label">Current Location</label>
+            <label className="label">
+              Personal Budget Maximum <span className="text-red-500">*</span>
+            </label>
             <input
-              className="input"
-              type="text"
-              value={formData.currentLocation}
-              onChange={(e) => handleInputChange('currentLocation', e.target.value)}
-              placeholder="Where you currently live"
+              className={`input ${errors.budgetMax ? 'border-red-500' : ''}`}
+              type="number"
+              value={formData.budgetMax}
+              onChange={(e) => handleInputChange('budgetMax', e.target.value)}
+              placeholder="Your maximum monthly budget"
               disabled={loading}
+              min="200"
+              max="5000"
+              required
             />
+            {errors.budgetMax && (
+              <div className="text-red-500 mt-1">{errors.budgetMax}</div>
+            )}
+            <div className="text-gray-500 mt-1 text-sm">
+              Your personal budget for housing costs
+            </div>
           </div>
           
           <div className="form-group">
-            <label className="label">Search Radius (miles)</label>
+            <label className="label">
+              Maximum Commute Time <span className="text-red-500">*</span>
+            </label>
+            <select
+              className={`input ${errors.maxCommute ? 'border-red-500' : ''}`}
+              value={formData.maxCommute}
+              onChange={(e) => handleInputChange('maxCommute', e.target.value)}
+              disabled={loading}
+              required
+            >
+              <option value="">Select commute time</option>
+              <option value="15">15 minutes</option>
+              <option value="30">30 minutes</option>
+              <option value="45">45 minutes</option>
+              <option value="60">1 hour</option>
+              <option value="90">1.5 hours</option>
+              <option value="unlimited">No preference</option>
+            </select>
+            {errors.maxCommute && (
+              <div className="text-red-500 mt-1">{errors.maxCommute}</div>
+            )}
+          </div>
+        </div>
+
+        {/* Housing Type Selection */}
+        <div className="form-group mb-4">
+          <label className="label">
+            Housing Type Preferences <span className="text-red-500">*</span>
+          </label>
+          <div className="checkbox-grid">
+            {housingTypeOptions.map(type => (
+              <label key={type} className="checkbox-label">
+                <input
+                  type="checkbox"
+                  checked={formData.housingType.includes(type)}
+                  onChange={(e) => handleArrayChange('housingType', type, e.target.checked)}
+                  disabled={loading}
+                />
+                <span className="checkbox-text">{type}</span>
+              </label>
+            ))}
+          </div>
+          {errors.housingType && (
+            <div className="text-red-500 mt-1">{errors.housingType}</div>
+          )}
+        </div>
+
+        <div className="grid-2 mb-4">
+          <div className="form-group">
+            <label className="label">
+              Move-in Date <span className="text-red-500">*</span>
+            </label>
+            <input
+              className={`input ${errors.moveInDate ? 'border-red-500' : ''}`}
+              type="date"
+              value={formData.moveInDate}
+              onChange={(e) => handleInputChange('moveInDate', e.target.value)}
+              disabled={loading}
+              required
+            />
+            {errors.moveInDate && (
+              <div className="text-red-500 mt-1">{errors.moveInDate}</div>
+            )}
+          </div>
+          
+          <div className="form-group">
+            <label className="label">Preferred Lease Duration</label>
             <select
               className="input"
-              value={formData.searchRadius}
-              onChange={(e) => handleInputChange('searchRadius', e.target.value)}
+              value={formData.leaseDuration}
+              onChange={(e) => handleInputChange('leaseDuration', e.target.value)}
               disabled={loading}
             >
-              <option value="10">10 miles</option>
-              <option value="25">25 miles</option>
-              <option value="50">50 miles</option>
-              <option value="100">100 miles</option>
-              <option value="unlimited">Unlimited</option>
+              <option value="">Select duration</option>
+              <option value="month-to-month">Month-to-month</option>
+              <option value="6-months">6 months</option>
+              <option value="12-months">12 months</option>
+              <option value="18-months">18 months</option>
+              <option value="24-months">24 months</option>
             </select>
           </div>
         </div>
 
-        {/* Continue with the rest of the comprehensive form sections... */}
-        {/* Recovery Information Section - Enhanced */}
+        {/* Personal Preferences & Demographics */}
+        <h3 className="card-title mb-4">Personal Preferences & Demographics</h3>
+        
+        <div className="grid-2 mb-4">
+          <div className="form-group">
+            <label className="label">
+              Roommate Gender Preference <span className="text-red-500">*</span>
+            </label>
+            <select
+              className={`input ${errors.preferredRoommateGender ? 'border-red-500' : ''}`}
+              value={formData.preferredRoommateGender}
+              onChange={(e) => handleInputChange('preferredRoommateGender', e.target.value)}
+              disabled={loading}
+              required
+            >
+              {genderPreferenceOptions.map(option => (
+                <option key={option.value} value={option.value}>
+                  {option.label}
+                </option>
+              ))}
+            </select>
+            {errors.preferredRoommateGender && (
+              <div className="text-red-500 mt-1">{errors.preferredRoommateGender}</div>
+            )}
+          </div>
+          
+          <div className="form-group">
+            <label className="label">
+              Your Smoking Status <span className="text-red-500">*</span>
+            </label>
+            <select
+              className={`input ${errors.smokingStatus ? 'border-red-500' : ''}`}
+              value={formData.smokingStatus}
+              onChange={(e) => handleInputChange('smokingStatus', e.target.value)}
+              disabled={loading}
+              required
+            >
+              {smokingStatusOptions.map(option => (
+                <option key={option.value} value={option.value}>
+                  {option.label}
+                </option>
+              ))}
+            </select>
+            {errors.smokingStatus && (
+              <div className="text-red-500 mt-1">{errors.smokingStatus}</div>
+            )}
+          </div>
+        </div>
+
+        {/* Recovery Information - Enhanced */}
         <h3 className="card-title mb-4">Recovery Information</h3>
         
         <div className="grid-2 mb-4">
@@ -573,118 +757,414 @@ const EnhancedMatchingProfileForm = ({ editMode = false, onComplete, onCancel })
               disabled={loading}
               required
             >
-              <option value="">Select recovery stage</option>
-              <option value="early">Early recovery (0-90 days)</option>
-              <option value="stabilizing">Stabilizing (3-12 months)</option>
-              <option value="stable">Stable recovery (1+ years)</option>
-              <option value="long-term">Long-term recovery (3+ years)</option>
+              {recoveryStageOptions.map(option => (
+                <option key={option.value} value={option.value}>
+                  {option.label}
+                </option>
+              ))}
             </select>
             {errors.recoveryStage && (
-              <div className="text-red-500 mt-1">
-                {errors.recoveryStage}
-              </div>
+              <div className="text-red-500 mt-1">{errors.recoveryStage}</div>
             )}
           </div>
           
           <div className="form-group">
-            <label className="label">Primary Substance</label>
+            <label className="label">
+              Spiritual Affiliation <span className="text-red-500">*</span>
+            </label>
             <select
-              className="input"
-              value={formData.primarySubstance}
-              onChange={(e) => handleInputChange('primarySubstance', e.target.value)}
+              className={`input ${errors.spiritualAffiliation ? 'border-red-500' : ''}`}
+              value={formData.spiritualAffiliation}
+              onChange={(e) => handleInputChange('spiritualAffiliation', e.target.value)}
               disabled={loading}
+              required
             >
-              <option value="">Select...</option>
-              <option value="alcohol">Alcohol</option>
-              <option value="opioids">Opioids</option>
-              <option value="stimulants">Stimulants</option>
-              <option value="cannabis">Cannabis</option>
-              <option value="multiple">Multiple substances</option>
-              <option value="other">Other</option>
+              {spiritualAffiliationOptions.map(option => (
+                <option key={option.value} value={option.value}>
+                  {option.label}
+                </option>
+              ))}
             </select>
+            {errors.spiritualAffiliation && (
+              <div className="text-red-500 mt-1">{errors.spiritualAffiliation}</div>
+            )}
+          </div>
+        </div>
+
+        {/* Primary Issues */}
+        <div className="form-group mb-4">
+          <label className="label">
+            Primary Issues <span className="text-red-500">*</span>
+          </label>
+          <div className="checkbox-grid">
+            {primaryIssuesOptions.map(issue => (
+              <label key={issue} className="checkbox-label">
+                <input
+                  type="checkbox"
+                  checked={formData.primaryIssues.includes(issue)}
+                  onChange={(e) => handleArrayChange('primaryIssues', issue, e.target.checked)}
+                  disabled={loading}
+                />
+                <span className="checkbox-text">
+                  {issue.replace(/-/g, ' ').replace(/\b\w/g, l => l.toUpperCase())}
+                </span>
+              </label>
+            ))}
+          </div>
+          {errors.primaryIssues && (
+            <div className="text-red-500 mt-1">{errors.primaryIssues}</div>
+          )}
+        </div>
+
+        {/* Recovery Methods */}
+        <div className="form-group mb-4">
+          <label className="label">
+            Recovery Methods <span className="text-red-500">*</span>
+          </label>
+          <div className="checkbox-grid">
+            {recoveryMethodsOptions.map(method => (
+              <label key={method} className="checkbox-label">
+                <input
+                  type="checkbox"
+                  checked={formData.recoveryMethods.includes(method)}
+                  onChange={(e) => handleArrayChange('recoveryMethods', method, e.target.checked)}
+                  disabled={loading}
+                />
+                <span className="checkbox-text">
+                  {method.replace(/-/g, ' ').replace(/\b\w/g, l => l.toUpperCase())}
+                </span>
+              </label>
+            ))}
+          </div>
+          {errors.recoveryMethods && (
+            <div className="text-red-500 mt-1">{errors.recoveryMethods}</div>
+          )}
+        </div>
+
+        {/* Program Types */}
+        <div className="form-group mb-4">
+          <label className="label">
+            Recovery Program Types <span className="text-red-500">*</span>
+          </label>
+          <div className="checkbox-grid">
+            {programTypeOptions.map(program => (
+              <label key={program} className="checkbox-label">
+                <input
+                  type="checkbox"
+                  checked={formData.programType.includes(program)}
+                  onChange={(e) => handleArrayChange('programType', program, e.target.checked)}
+                  disabled={loading}
+                />
+                <span className="checkbox-text">{program}</span>
+              </label>
+            ))}
+          </div>
+          {errors.programType && (
+            <div className="text-red-500 mt-1">{errors.programType}</div>
+          )}
+        </div>
+
+        {/* Lifestyle Preferences - Enhanced with Scales */}
+        <h3 className="card-title mb-4">Lifestyle Preferences</h3>
+        
+        <div className="form-group mb-4">
+          <label className="label">
+            Work Schedule <span className="text-red-500">*</span>
+          </label>
+          <select
+            className={`input ${errors.workSchedule ? 'border-red-500' : ''}`}
+            value={formData.workSchedule}
+            onChange={(e) => handleInputChange('workSchedule', e.target.value)}
+            disabled={loading}
+            required
+          >
+            {workScheduleOptions.map(option => (
+              <option key={option.value} value={option.value}>
+                {option.label}
+              </option>
+            ))}
+          </select>
+          {errors.workSchedule && (
+            <div className="text-red-500 mt-1">{errors.workSchedule}</div>
+          )}
+        </div>
+
+        {/* 1-5 Scale Preferences */}
+        <div className="grid-3 mb-4">
+          <div className="form-group">
+            <label className="label">Social Level (1-5)</label>
+            <div className="range-container">
+              <input
+                type="range"
+                min="1"
+                max="5"
+                value={formData.socialLevel}
+                onChange={(e) => handleRangeChange('socialLevel', e.target.value)}
+                className="range-slider"
+                disabled={loading}
+              />
+              <div className="range-labels">
+                <span>Quiet</span>
+                <span className="range-value">{formData.socialLevel}</span>
+                <span>Very Social</span>
+              </div>
+            </div>
+          </div>
+          
+          <div className="form-group">
+            <label className="label">Cleanliness Level (1-5)</label>
+            <div className="range-container">
+              <input
+                type="range"
+                min="1"
+                max="5"
+                value={formData.cleanlinessLevel}
+                onChange={(e) => handleRangeChange('cleanlinessLevel', e.target.value)}
+                className="range-slider"
+                disabled={loading}
+              />
+              <div className="range-labels">
+                <span>Relaxed</span>
+                <span className="range-value">{formData.cleanlinessLevel}</span>
+                <span>Very Clean</span>
+              </div>
+            </div>
+          </div>
+          
+          <div className="form-group">
+            <label className="label">Noise Level (1-5)</label>
+            <div className="range-container">
+              <input
+                type="range"
+                min="1"
+                max="5"
+                value={formData.noiseLevel}
+                onChange={(e) => handleRangeChange('noiseLevel', e.target.value)}
+                className="range-slider"
+                disabled={loading}
+              />
+              <div className="range-labels">
+                <span>Very Quiet</span>
+                <span className="range-value">{formData.noiseLevel}</span>
+                <span>Loud OK</span>
+              </div>
+            </div>
           </div>
         </div>
 
         <div className="grid-2 mb-4">
           <div className="form-group">
-            <label className="label">Time in Recovery</label>
+            <label className="label">Bedtime Preference</label>
             <select
               className="input"
-              value={formData.timeInRecovery}
-              onChange={(e) => handleInputChange('timeInRecovery', e.target.value)}
+              value={formData.bedtimePreference}
+              onChange={(e) => handleInputChange('bedtimePreference', e.target.value)}
               disabled={loading}
             >
-              <option value="">Select...</option>
-              <option value="0_90_days">0-90 days</option>
-              <option value="3_12_months">3-12 months</option>
-              <option value="1_3_years">1-3 years</option>
-              <option value="3_plus_years">3+ years</option>
+              {bedtimePreferenceOptions.map(option => (
+                <option key={option.value} value={option.value}>
+                  {option.label}
+                </option>
+              ))}
             </select>
           </div>
           
           <div className="form-group">
-            <label className="label">Treatment History</label>
+            <label className="label">Guest Policy</label>
             <select
               className="input"
-              value={formData.treatmentHistory}
-              onChange={(e) => handleInputChange('treatmentHistory', e.target.value)}
+              value={formData.guestsPolicy}
+              onChange={(e) => handleInputChange('guestsPolicy', e.target.value)}
               disabled={loading}
             >
-              <option value="">Select...</option>
-              <option value="no-formal-treatment">No formal treatment</option>
-              <option value="outpatient">Outpatient only</option>
-              <option value="inpatient">Inpatient/Residential</option>
-              <option value="multiple">Multiple programs</option>
+              {guestsPolicyOptions.map(option => (
+                <option key={option.value} value={option.value}>
+                  {option.label}
+                </option>
+              ))}
             </select>
           </div>
         </div>
 
-        <div className="form-group mb-4">
-          <label className="label">Spiritual/Religious Affiliation</label>
-          <select
-            className="input"
-            value={formData.spiritualAffiliation}
-            onChange={(e) => handleInputChange('spiritualAffiliation', e.target.value)}
-            disabled={loading}
-          >
-            <option value="">Select...</option>
-            {spiritualAffiliationOptions.map(option => (
-              <option key={option} value={option}>
-                {option.replace(/-/g, ' ').replace(/\b\w/g, l => l.toUpperCase())}
-              </option>
-            ))}
-          </select>
+        {/* Living Situation Preferences */}
+        <h3 className="card-title mb-4">Living Situation Preferences</h3>
+        
+        <div className="grid-2 mb-4">
+          <div className="form-group">
+            <label className="checkbox-label">
+              <input
+                type="checkbox"
+                checked={formData.petsOwned}
+                onChange={(e) => handleInputChange('petsOwned', e.target.checked)}
+                disabled={loading}
+              />
+              <span className="checkbox-text">I own pets</span>
+            </label>
+            
+            <label className="checkbox-label">
+              <input
+                type="checkbox"
+                checked={formData.petsComfortable}
+                onChange={(e) => handleInputChange('petsComfortable', e.target.checked)}
+                disabled={loading}
+              />
+              <span className="checkbox-text">I'm comfortable with roommate's pets</span>
+            </label>
+          </div>
+          
+          <div className="form-group">
+            <label className="checkbox-label">
+              <input
+                type="checkbox"
+                checked={formData.overnightGuestsOk}
+                onChange={(e) => handleInputChange('overnightGuestsOk', e.target.checked)}
+                disabled={loading}
+              />
+              <span className="checkbox-text">Overnight guests are OK</span>
+            </label>
+            
+            <label className="checkbox-label">
+              <input
+                type="checkbox"
+                checked={formData.sharedGroceries}
+                onChange={(e) => handleInputChange('sharedGroceries', e.target.checked)}
+                disabled={loading}
+              />
+              <span className="checkbox-text">I'm open to sharing groceries</span>
+            </label>
+          </div>
         </div>
 
-        {/* Continue with all other sections from the old comprehensive form... */}
+        {/* Housing Assistance */}
+        <h3 className="card-title mb-4">Housing Assistance</h3>
         
-        {/* Action Buttons */}
-        <div className={`${onCancel ? 'grid-2' : ''} mt-5`}>
+        <div className="form-group mb-4">
+          <label className="label">Housing Assistance Programs</label>
+          <div className="checkbox-grid">
+            {housingSubsidyOptions.map(subsidy => (
+              <label key={subsidy} className="checkbox-label">
+                <input
+                  type="checkbox"
+                  checked={formData.housingSubsidy.includes(subsidy)}
+                  onChange={(e) => handleArrayChange('housingSubsidy', subsidy, e.target.checked)}
+                  disabled={loading}
+                />
+                <span className="checkbox-text">
+                  {subsidy.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase())}
+                </span>
+              </label>
+            ))}
+          </div>
+        </div>
+
+        {/* Compatibility Factors */}
+        <h3 className="card-title mb-4">Compatibility Factors</h3>
+        
+        <div className="form-group mb-4">
+          <label className="label">
+            Interests & Hobbies <span className="text-red-500">*</span>
+          </label>
+          <div className="checkbox-grid">
+            {interestOptions.map(interest => (
+              <label key={interest} className="checkbox-label">
+                <input
+                  type="checkbox"
+                  checked={formData.interests.includes(interest)}
+                  onChange={(e) => handleArrayChange('interests', interest, e.target.checked)}
+                  disabled={loading}
+                />
+                <span className="checkbox-text">{interest}</span>
+              </label>
+            ))}
+          </div>
+          {errors.interests && (
+            <div className="text-red-500 mt-1">{errors.interests}</div>
+          )}
+        </div>
+
+        {/* Open-ended Responses */}
+        <h3 className="card-title mb-4">About You</h3>
+        
+        <div className="form-group mb-4">
+          <label className="label">
+            About Me <span className="text-red-500">*</span>
+          </label>
+          <textarea
+            className={`input ${errors.aboutMe ? 'border-red-500' : ''}`}
+            value={formData.aboutMe}
+            onChange={(e) => handleInputChange('aboutMe', e.target.value)}
+            placeholder="Tell potential roommates about yourself, your recovery journey, and what makes you a good roommate..."
+            rows="4"
+            disabled={loading}
+            maxLength="500"
+            required
+          />
+          <div className="text-gray-500 mt-1 text-sm">
+            {formData.aboutMe.length}/500 characters
+          </div>
+          {errors.aboutMe && (
+            <div className="text-red-500 mt-1">{errors.aboutMe}</div>
+          )}
+        </div>
+
+        <div className="form-group mb-4">
+          <label className="label">
+            What I'm Looking For <span className="text-red-500">*</span>
+          </label>
+          <textarea
+            className={`input ${errors.lookingFor ? 'border-red-500' : ''}`}
+            value={formData.lookingFor}
+            onChange={(e) => handleInputChange('lookingFor', e.target.value)}
+            placeholder="Describe what you're looking for in a roommate and living situation..."
+            rows="4"
+            disabled={loading}
+            maxLength="500"
+            required
+          />
+          <div className="text-gray-500 mt-1 text-sm">
+            {formData.lookingFor.length}/500 characters
+          </div>
+          {errors.lookingFor && (
+            <div className="text-red-500 mt-1">{errors.lookingFor}</div>
+          )}
+        </div>
+
+        {/* Profile Status */}
+        <div className="form-group mb-4">
+          <label className="checkbox-label">
+            <input
+              type="checkbox"
+              checked={formData.isActive}
+              onChange={(e) => handleInputChange('isActive', e.target.checked)}
+              disabled={loading}
+            />
+            <span className="checkbox-text">Keep my profile active for matching</span>
+          </label>
+          <div className="text-gray-500 mt-1 text-sm">
+            You can deactivate your profile at any time to stop receiving new matches
+          </div>
+        </div>
+
+        {/* Submit Button */}
+        <div className="form-actions">
+          <button
+            type="submit"
+            className="btn btn-primary"
+            disabled={loading}
+          >
+            {loading ? 'Saving...' : (editMode ? 'Update Profile' : 'Save Profile')}
+          </button>
+          
           {onCancel && (
             <button
               type="button"
-              className="btn btn-outline"
+              className="btn btn-secondary ml-2"
               onClick={onCancel}
               disabled={loading}
             >
               Cancel
             </button>
           )}
-          
-          <button
-            type="submit"
-            className="btn btn-primary"
-            disabled={loading}
-          >
-            {loading ? (
-              <div className="flex-center">
-                <div className="loading-spinner small mr-2"></div>
-                Saving Profile...
-              </div>
-            ) : (
-              `${editMode ? 'Update Matching Profile' : 'Save Matching Profile'}`
-            )}
-          </button>
         </div>
       </form>
     </div>
