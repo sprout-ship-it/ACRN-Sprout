@@ -132,33 +132,49 @@ export const db = {
       }
     },
 
-    getById: async (id) => {
-      console.log('📊 DB: profiles.getById called', { id })
-      try {
-        const timeoutPromise = new Promise((_, reject) => 
-          setTimeout(() => reject(new Error('profiles.getById timeout after 6 seconds')), 6000)
-        )
-        
-        const queryPromise = supabase
-          .from('registrant_profiles')
-          .select('*')
-          .eq('id', id)
-          .single()
-        
-        const { data, error } = await Promise.race([queryPromise, timeoutPromise])
-        
-        console.log('📊 DB: profiles.getById result', { 
-          hasData: !!data, 
-          hasError: !!error, 
-          error: error?.message,
-          errorCode: error?.code 
-        })
-        return { data, error }
-      } catch (err) {
-        console.error('💥 DB: profiles.getById failed', err)
-        throw err
-      }
-    },
+getById: async (id) => {
+  console.log('📊 DB: profiles.getById called', { id })
+  try {
+    const timeoutPromise = new Promise((_, reject) => 
+      setTimeout(() => reject(new Error('profiles.getById timeout after 10 seconds')), 10000)
+    )
+    
+    const queryPromise = supabase
+      .from('registrant_profiles')
+      .select('*')
+      .eq('id', id)
+    
+    const { data, error } = await Promise.race([queryPromise, timeoutPromise])
+    
+    console.log('📊 DB: profiles.getById result', { 
+      hasData: !!data, 
+      dataLength: data?.length,
+      hasError: !!error, 
+      error: error?.message,
+      errorCode: error?.code 
+    })
+
+    // ✅ FIXED: Handle multiple rows or no rows gracefully
+    if (error) {
+      return { data: null, error }
+    }
+    
+    if (!data || data.length === 0) {
+      return { data: null, error: { code: 'PGRST116', message: 'No rows returned' } }
+    }
+    
+    if (data.length > 1) {
+      console.warn('⚠️ Multiple profiles found for user, using first one:', data.length)
+      return { data: data[0], error: null }
+    }
+    
+    return { data: data[0], error: null }
+    
+  } catch (err) {
+    console.error('💥 DB: profiles.getById failed', err)
+    throw err
+  }
+},
 
     update: async (id, updates) => {
       console.log('📊 DB: profiles.update called', { id, updates })
@@ -195,21 +211,42 @@ export const db = {
       }
     },
 
-    getByUserId: async (userId) => {
-      console.log('📊 DB: applicantForms.getByUserId called', { userId })
-      try {
-        const { data, error } = await supabase
-          .from('applicant_forms')
-          .select('*')
-          .eq('user_id', userId)
-          .single()
-        console.log('📊 DB: applicantForms.getByUserId result', { hasData: !!data, hasError: !!error, error: error?.message })
-        return { data, error }
-      } catch (err) {
-        console.error('💥 DB: applicantForms.getByUserId failed', err)
-        throw err
-      }
-    },
+getByUserId: async (userId) => {
+  console.log('📊 DB: applicantForms.getByUserId called', { userId })
+  try {
+    const { data, error } = await supabase
+      .from('applicant_forms')
+      .select('*')
+      .eq('user_id', userId)
+    
+    console.log('📊 DB: applicantForms.getByUserId result', { 
+      hasData: !!data, 
+      dataLength: data?.length,
+      hasError: !!error, 
+      error: error?.message 
+    })
+
+    // ✅ FIXED: Handle multiple rows or no rows gracefully
+    if (error) {
+      return { data: null, error }
+    }
+    
+    if (!data || data.length === 0) {
+      return { data: null, error: { code: 'PGRST116', message: 'No rows returned' } }
+    }
+    
+    if (data.length > 1) {
+      console.warn('⚠️ Multiple applicant forms found for user, using first one:', data.length)
+      return { data: data[0], error: null }
+    }
+    
+    return { data: data[0], error: null }
+    
+  } catch (err) {
+    console.error('💥 DB: applicantForms.getByUserId failed', err)
+    throw err
+  }
+},
 
     getActiveProfiles: async (excludeUserId = null) => {
       console.log('📊 DB: applicantForms.getActiveProfiles called', { excludeUserId })

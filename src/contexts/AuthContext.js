@@ -184,50 +184,72 @@ export const AuthProvider = ({ children }) => {
 
   // ✅ SIMPLIFIED: Enhanced signup (no basic_profiles creation needed)
   const signUp = async (email, password, userData) => {
-    console.log('📝 Signing up user:', email)
+  console.log('📝 Signing up user:', email)
+  
+  try {
+    setLoading(true)
+    setError(null)
+
+    // Step 1: Create the auth user
+    const { data, error } = await supabase.auth.signUp({
+      email,
+      password,
+      options: {
+        data: userData // firstName, lastName, roles
+      }
+    })
     
-    try {
-      setLoading(true)
-      setError(null)
-
-      // The trigger will automatically create registrant_profiles entry
-      const { data, error } = await auth.signUp(email, password, userData)
-      
-      if (error) {
-        console.error('❌ Signup error:', error)
-        setError(error.message)
-        return { success: false, error: error.message }
-      }
-
-      if (data.user) {
-        console.log('✅ User created successfully:', data.user.id)
-        console.log('⏳ Database trigger should create profile automatically...')
-        
-        // Wait for trigger to complete, then verify profile exists
-        setTimeout(async () => {
-          try {
-            const { data: profileCheck } = await db.profiles.getById(data.user.id)
-            if (!profileCheck) {
-              console.warn('⚠️ Profile not created by trigger - check database triggers')
-            } else {
-              console.log('✅ Profile confirmed created by trigger')
-            }
-          } catch (err) {
-            console.warn('⚠️ Could not verify profile creation:', err.message)
-          }
-        }, 2000)
-      }
-      
-      return { success: true, data }
-    } catch (err) {
-      console.error('💥 Signup failed:', err)
-      const errorMessage = err.message || 'An error occurred during signup'
-      setError(errorMessage)
-      return { success: false, error: errorMessage }
-    } finally {
-      setLoading(false)
+    if (error) {
+      console.error('❌ Signup error:', error)
+      setError(error.message)
+      return { success: false, error: error.message }
     }
+
+    if (data.user) {
+      console.log('✅ User created successfully:', data.user.id)
+      
+      // Step 2: Wait a moment for potential trigger
+      await new Promise(resolve => setTimeout(resolve, 1000));
+      
+      // Step 3: Check if profile was created by trigger
+      const { data: existingProfile } = await db.profiles.getById(data.user.id);
+      
+      if (!existingProfile) {
+        console.log('⚠️ No profile found, creating manually...');
+        
+        // Step 4: Manually create the registrant_profiles entry
+        const profileData = {
+          id: data.user.id,
+          email: email,
+          first_name: userData.firstName || '',
+          last_name: userData.lastName || '',
+          roles: userData.roles || [],
+          is_active: true
+        };
+        
+        const { error: profileError } = await db.profiles.create(profileData);
+        
+        if (profileError) {
+          console.error('❌ Failed to create profile manually:', profileError);
+          // Don't fail the signup, but log the issue
+        } else {
+          console.log('✅ Profile created manually');
+        }
+      } else {
+        console.log('✅ Profile found - trigger worked');
+      }
+    }
+    
+    return { success: true, data }
+  } catch (err) {
+    console.error('💥 Signup failed:', err)
+    const errorMessage = err.message || 'An error occurred during signup'
+    setError(errorMessage)
+    return { success: false, error: errorMessage }
+  } finally {
+    setLoading(false)
   }
+}
 
   const signIn = async (email, password) => {
     console.log('🔑 Signing in user:', email)
