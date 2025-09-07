@@ -376,125 +376,124 @@ const EnhancedMatchingProfileForm = ({ editMode = false, onComplete, onCancel })
   };
   
   // Handle form submission
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    
-    if (!validateForm()) return;
-    
-    setLoading(true);
-    setSuccessMessage('');
-    
-    try {
-      // Parse target zip codes
-      const targetZipCodes = formData.targetZipCodes
-        .split(',')
-        .map(zip => zip.trim())
-        .filter(zip => zip && /^\d{5}$/.test(zip));
+// Replace the handleSubmit function in EnhancedMatchingProfileForm.js with this:
 
-      const applicantFormData = {
-        user_id: user.id,
-        
-        // Location & Housing
-        preferred_location: formData.preferredLocation,
-        target_zip_codes: targetZipCodes,
-        search_radius: parseInt(formData.searchRadius),
-        current_location: formData.currentLocation || null,
-        relocation_timeline: formData.relocationTimeline || null,
-        max_commute: parseInt(formData.maxCommute),
-        housing_type: formData.housingType,
-        price_range_min: formData.priceRangeMin,
-        price_range_max: formData.priceRangeMax,
-        budget_max: parseInt(formData.budgetMax),
-        move_in_date: formData.moveInDate,
-        lease_duration: formData.leaseDuration || null,
-        
-        // Personal Preferences
-        age_range_min: formData.ageRangeMin,
-        age_range_max: formData.ageRangeMax,
-        gender_preference: formData.genderPreference || null,
-        preferred_roommate_gender: formData.preferredRoommateGender,
-        smoking_preference: formData.smokingPreference || null,
-        smoking_status: formData.smokingStatus,
-        pet_preference: formData.petPreference || null,
-        
-        // Recovery Information
-        recovery_stage: formData.recoveryStage,
-        primary_substance: formData.primarySubstance || null,
-        time_in_recovery: formData.timeInRecovery || null,
-        treatment_history: formData.treatmentHistory || null,
-        program_type: formData.programType,
-        sobriety_date: formData.sobrietyDate || null,
-        sponsor_mentor: formData.sponsorMentor || null,
-        support_meetings: formData.supportMeetings || null,
-        spiritual_affiliation: formData.spiritualAffiliation,
-        primary_issues: formData.primaryIssues,
-        recovery_methods: formData.recoveryMethods,
-        
-        // Lifestyle Preferences
-        work_schedule: formData.workSchedule,
-        social_level: parseInt(formData.socialLevel),
-        cleanliness_level: parseInt(formData.cleanlinessLevel),
-        noise_level: parseInt(formData.noiseLevel),
-        guest_policy: formData.guestPolicy || null,
-        guests_policy: formData.guestsPolicy || null,
-        bedtime_preference: formData.bedtimePreference || null,
-        transportation: formData.transportation || null,
-        chore_sharing_preference: formData.choreSharingPreference || null,
-        preferred_support_structure: formData.preferredSupportStructure || null,
-        conflict_resolution_style: formData.conflictResolutionStyle || null,
-        
-        // Living Situation
-        pets_owned: formData.petsOwned,
-        pets_comfortable: formData.petsComfortable,
-        overnight_guests_ok: formData.overnightGuestsOk,
-        shared_groceries: formData.sharedGroceries,
-        cooking_frequency: formData.cookingFrequency || null,
-        
-        // Housing Assistance
-        housing_subsidy: formData.housingSubsidy,
-        has_section8: formData.hasSection8,
-        accepts_subsidy: formData.acceptsSubsidy,
-        
-        // Compatibility Factors
-        interests: formData.interests,
-        deal_breakers: formData.dealBreakers,
-        important_qualities: formData.importantQualities,
-        
-        // Open-ended responses
-        about_me: formData.aboutMe,
-        looking_for: formData.lookingFor,
-        additional_info: formData.additionalInfo || null,
-        special_needs: formData.specialNeeds || null,
-        
-        // Status
-        is_active: formData.isActive,
-        profile_completed: true
-      };
+const handleSubmit = async (e) => {
+  e.preventDefault();
+  
+  if (!validateForm()) return;
+  
+  setLoading(true);
+  setSuccessMessage('');
+  
+  try {
+    // Parse target zip codes
+    const targetZipCodes = formData.targetZipCodes
+      .split(',')
+      .map(zip => zip.trim())
+      .filter(zip => zip && /^\d{5}$/.test(zip));
+
+    const applicantFormData = {
+      // Location & Housing
+      preferred_location: formData.preferredLocation,
+      target_zip_codes: targetZipCodes,
+      search_radius: parseInt(formData.searchRadius),
+      current_location: formData.currentLocation || null,
+      relocation_timeline: formData.relocationTimeline || null,
+      max_commute: parseInt(formData.maxCommute),
+      housing_type: formData.housingType,
+      price_range_min: formData.priceRangeMin,
+      price_range_max: formData.priceRangeMax,
+      budget_max: parseInt(formData.budgetMax),
+      move_in_date: formData.moveInDate,
+      lease_duration: formData.leaseDuration || null,
       
-      // Try to update existing form, or create new one
-      const { data: existingForm } = await db.applicantForms.getByUserId(user.id);
+      // Personal Preferences
+      age_range_min: formData.ageRangeMin,
+      age_range_max: formData.ageRangeMax,
+      gender_preference: formData.genderPreference || null,
+      preferred_roommate_gender: formData.preferredRoommateGender,
+      smoking_preference: formData.smokingPreference || null,
+      smoking_status: formData.smokingStatus,
+      pet_preference: formData.petPreference || null,
       
-      if (existingForm) {
-        const { error } = await db.applicantForms.update(user.id, applicantFormData);
-        if (error) throw error;
-      } else {
-        const { error } = await db.applicantForms.create(applicantFormData);
-        if (error) throw error;
-      }
+      // Recovery Information
+      recovery_stage: formData.recoveryStage,
+      primary_substance: formData.primarySubstance || null,
+      time_in_recovery: formData.timeInRecovery || null,
+      treatment_history: formData.treatmentHistory || null,
+      program_type: formData.programType,
+      sobriety_date: formData.sobrietyDate || null,
+      sponsor_mentor: formData.sponsorMentor || null,
+      support_meetings: formData.supportMeetings || null,
+      spiritual_affiliation: formData.spiritualAffiliation,
+      primary_issues: formData.primaryIssues,
+      recovery_methods: formData.recoveryMethods,
       
-      setSuccessMessage('Matching profile saved successfully!');
+      // Lifestyle Preferences
+      work_schedule: formData.workSchedule,
+      social_level: parseInt(formData.socialLevel),
+      cleanliness_level: parseInt(formData.cleanlinessLevel),
+      noise_level: parseInt(formData.noiseLevel),
+      guest_policy: formData.guestPolicy || null,
+      guests_policy: formData.guestsPolicy || null,
+      bedtime_preference: formData.bedtimePreference || null,
+      transportation: formData.transportation || null,
+      chore_sharing_preference: formData.choreSharingPreference || null,
+      preferred_support_structure: formData.preferredSupportStructure || null,
+      conflict_resolution_style: formData.conflictResolutionStyle || null,
       
-      if (onComplete) {
-        setTimeout(() => onComplete(), 1500);
-      }
+      // Living Situation
+      pets_owned: formData.petsOwned,
+      pets_comfortable: formData.petsComfortable,
+      overnight_guests_ok: formData.overnightGuestsOk,
+      shared_groceries: formData.sharedGroceries,
+      cooking_frequency: formData.cookingFrequency || null,
       
-    } catch (error) {
-      console.error('Error saving applicant form:', error);
-      setErrors({ submit: 'Failed to save matching profile. Please try again.' });
-    } finally {
-      setLoading(false);
+      // Housing Assistance
+      housing_subsidy: formData.housingSubsidy,
+      has_section8: formData.hasSection8,
+      accepts_subsidy: formData.acceptsSubsidy,
+      
+      // Compatibility Factors
+      interests: formData.interests,
+      deal_breakers: formData.dealBreakers,
+      important_qualities: formData.importantQualities,
+      
+      // Open-ended responses
+      about_me: formData.aboutMe,
+      looking_for: formData.lookingFor,
+      additional_info: formData.additionalInfo || null,
+      special_needs: formData.specialNeeds || null,
+      
+      // Status
+      is_active: formData.isActive,
+      profile_completed: true
+    };
+    
+    // ✅ FIXED: Always UPDATE the existing applicant form, never create a new one
+    console.log('🔧 Updating existing applicant form with matching profile data');
+    const { error } = await db.applicantForms.update(user.id, applicantFormData);
+    
+    if (error) {
+      console.error('❌ Error updating applicant form:', error);
+      throw error;
     }
-  };
+    
+    console.log('✅ Matching profile saved successfully to existing applicant form');
+    setSuccessMessage('Matching profile saved successfully!');
+    
+    if (onComplete) {
+      setTimeout(() => onComplete(), 1500);
+    }
+    
+  } catch (error) {
+    console.error('Error saving applicant form:', error);
+    setErrors({ submit: 'Failed to save matching profile. Please try again.' });
+  } finally {
+    setLoading(false);
+  }
+};
 
   if (initialLoading) {
     return (
