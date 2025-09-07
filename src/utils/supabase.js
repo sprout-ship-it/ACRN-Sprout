@@ -291,10 +291,45 @@ getByUserId: async (userId) => {
 
   // ✅ ADDED: Keep legacy alias for backward compatibility
   matchingProfiles: {
-    create: async (profileData) => {
-      console.log('📊 DB: matchingProfiles.create (legacy alias) called - redirecting to applicantForms')
-      return await db.applicantForms.create(profileData)
-    },
+create: async (profileData) => {
+  console.log('📊 DB: matchingProfiles.create (legacy alias) - checking for existing record first')
+  
+  // Extract user_id from profileData (handle both user_id and userId)
+  const userId = profileData.user_id || profileData.userId;
+  
+  if (!userId) {
+    console.error('❌ No user_id/userId provided to matchingProfiles.create');
+    return { data: null, error: { message: 'user_id is required' } };
+  }
+  
+  try {
+    // Check if record already exists
+    const { data: existingRecord } = await db.applicantForms.getByUserId(userId);
+    
+    if (existingRecord) {
+      console.log('✅ Found existing applicant form, updating instead of creating');
+      // Record exists, update it
+      // Ensure we're passing the right data structure
+      const updateData = { ...profileData };
+      delete updateData.userId; // Remove userId if it exists
+      updateData.user_id = userId; // Ensure user_id is set
+      
+      return await db.applicantForms.update(userId, updateData);
+    } else {
+      console.log('📝 No existing record found, creating new one');
+      // No record exists, create it
+      // Ensure we're passing the right data structure
+      const createData = { ...profileData };
+      delete createData.userId; // Remove userId if it exists
+      createData.user_id = userId; // Ensure user_id is set
+      
+      return await db.applicantForms.create(createData);
+    }
+  } catch (error) {
+    console.error('💥 Error in matchingProfiles.create legacy alias:', error);
+    return { data: null, error };
+  }
+},
 
     getByUserId: async (userId) => {
       console.log('📊 DB: matchingProfiles.getByUserId (legacy alias) called - redirecting to applicantForms')
