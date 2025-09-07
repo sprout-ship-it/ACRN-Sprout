@@ -76,12 +76,12 @@ export const UserProgressProvider = ({ children }) => {
     }
   };
 
-  // Check if basic profile is complete
+  // ✅ FIXED: Check if basic profile is complete using applicant_forms table
   const checkBasicProfile = async () => {
     if (!user) return false;
 
     try {
-      const { data, error } = await db.basicProfiles.getByUserId(user.id);
+      const { data, error } = await db.applicantForms.getByUserId(user.id);
       
       if (error && error.code !== 'PGRST116') { // PGRST116 = no rows returned
         console.error('Error checking basic profile:', error);
