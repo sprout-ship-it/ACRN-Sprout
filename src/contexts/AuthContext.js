@@ -183,21 +183,20 @@ export const AuthProvider = ({ children }) => {
   }
 
   // ✅ SIMPLIFIED: Enhanced signup (no basic_profiles creation needed)
-  const signUp = async (email, password, userData) => {
+// src/contexts/AuthContext.js
+// FIXED: Enhanced signup using existing auth and db imports (no supabase import needed)
+
+// Replace the signUp function (around line 110) with this:
+
+const signUp = async (email, password, userData) => {
   console.log('📝 Signing up user:', email)
   
   try {
     setLoading(true)
     setError(null)
 
-    // Step 1: Create the auth user
-    const { data, error } = await supabase.auth.signUp({
-      email,
-      password,
-      options: {
-        data: userData // firstName, lastName, roles
-      }
-    })
+    // Step 1: Create the auth user using existing auth helper
+    const { data, error } = await auth.signUp(email, password, userData)
     
     if (error) {
       console.error('❌ Signup error:', error)
