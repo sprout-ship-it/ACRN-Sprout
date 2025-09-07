@@ -307,41 +307,53 @@ const signUp = async (email, password, userData) => {
   }
 
   // ✅ SIMPLIFIED: Update profile (only registrant_profiles table)
-  const updateProfile = async (updates) => {
-    console.log('📝 Updating profile:', updates)
-    
-    try {
-      setError(null)
+const updateProfile = async (updates) => {
+  console.log('📝 Updating profile:', updates)
+  
+  try {
+    setError(null)
 
-      if (!user) {
-        throw new Error('No authenticated user')
-      }
-
-      // All updates go to registrant_profiles table now
-      console.log('📝 Updating registrant_profiles table')
-      const result = await db.profiles.update(user.id, updates)
-      
-      const { data, error } = result
-      
-      if (error) {
-        console.error('❌ Profile update error:', error)
-        setError(error.message)
-        return { success: false, error: error.message }
-      }
-
-      console.log('✅ Profile updated successfully')
-      
-      // Reload the profile to ensure consistency
-      await loadUserProfile(user.id)
-      
-      return { success: true, data: data[0] }
-    } catch (err) {
-      console.error('💥 Profile update failed:', err)
-      const errorMessage = err.message || 'Failed to update profile'
-      setError(errorMessage)
-      return { success: false, error: errorMessage }
+    if (!user) {
+      throw new Error('No authenticated user')
     }
+
+    // All updates go to registrant_profiles table now
+    console.log('📝 Updating registrant_profiles table')
+    const result = await db.profiles.update(user.id, updates)
+    
+    const { data, error } = result
+    
+    if (error) {
+      console.error('❌ Profile update error:', error)
+      setError(error.message)
+      return { success: false, error: error.message }
+    }
+
+    console.log('✅ Profile updated successfully')
+    
+    // ✅ FIXED: Update local profile state directly instead of reloading
+    // This prevents the timeout issue when reloading from database
+    if (data && data[0]) {
+      setProfile(prev => ({
+        ...prev,
+        ...data[0]
+      }))
+    } else {
+      // Fallback: update local state with the changes we made
+      setProfile(prev => ({
+        ...prev,
+        ...updates
+      }))
+    }
+    
+    return { success: true, data: data?.[0] }
+  } catch (err) {
+    console.error('💥 Profile update failed:', err)
+    const errorMessage = err.message || 'Failed to update profile'
+    setError(errorMessage)
+    return { success: false, error: errorMessage }
   }
+}
 
   // Role checking functions
   const hasRole = (role) => {

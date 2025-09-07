@@ -132,62 +132,96 @@ export const db = {
       }
     },
 
-getById: async (id) => {
-  console.log('📊 DB: profiles.getById called', { id })
-  try {
-    const timeoutPromise = new Promise((_, reject) => 
-      setTimeout(() => reject(new Error('profiles.getById timeout after 10 seconds')), 10000)
-    )
-    
-    const queryPromise = supabase
-      .from('registrant_profiles')
-      .select('*')
-      .eq('id', id)
-    
-    const { data, error } = await Promise.race([queryPromise, timeoutPromise])
-    
-    console.log('📊 DB: profiles.getById result', { 
-      hasData: !!data, 
-      dataLength: data?.length,
-      hasError: !!error, 
-      error: error?.message,
-      errorCode: error?.code 
-    })
+    getById: async (id) => {
+      console.log('📊 DB: profiles.getById called', { id })
+      try {
+        // ✅ FIXED: Increased timeout to 15 seconds
+        const timeoutPromise = new Promise((_, reject) => 
+          setTimeout(() => reject(new Error('profiles.getById timeout after 15 seconds')), 15000)
+        )
+        
+        const queryPromise = supabase
+          .from('registrant_profiles')
+          .select('*')
+          .eq('id', id)
+        
+        const { data, error } = await Promise.race([queryPromise, timeoutPromise])
+        
+        console.log('📊 DB: profiles.getById result', { 
+          hasData: !!data, 
+          dataLength: data?.length,
+          hasError: !!error, 
+          error: error?.message,
+          errorCode: error?.code 
+        })
 
-    // ✅ FIXED: Handle multiple rows or no rows gracefully
-    if (error) {
-      return { data: null, error }
-    }
-    
-    if (!data || data.length === 0) {
-      return { data: null, error: { code: 'PGRST116', message: 'No rows returned' } }
-    }
-    
-    if (data.length > 1) {
-      console.warn('⚠️ Multiple profiles found for user, using first one:', data.length)
-      return { data: data[0], error: null }
-    }
-    
-    return { data: data[0], error: null }
-    
-  } catch (err) {
-    console.error('💥 DB: profiles.getById failed', err)
-    throw err
-  }
-},
+        // ✅ FIXED: Handle multiple rows or no rows gracefully
+        if (error) {
+          return { data: null, error }
+        }
+        
+        if (!data || data.length === 0) {
+          return { data: null, error: { code: 'PGRST116', message: 'No rows returned' } }
+        }
+        
+        if (data.length > 1) {
+          console.warn('⚠️ Multiple profiles found for user, using first one:', data.length)
+          return { data: data[0], error: null }
+        }
+        
+        return { data: data[0], error: null }
+        
+      } catch (err) {
+        console.error('💥 DB: profiles.getById failed', err)
+        
+        // ✅ FIXED: Better timeout error handling
+        if (err.message && err.message.includes('timeout')) {
+          console.error('🕐 Database query timed out - this may indicate connectivity issues')
+          return { 
+            data: null, 
+            error: { 
+              code: 'TIMEOUT', 
+              message: 'Database query timed out. Please check your connection and try again.' 
+            } 
+          }
+        }
+        
+        throw err
+      }
+    },
 
     update: async (id, updates) => {
       console.log('📊 DB: profiles.update called', { id, updates })
       try {
-        const { data, error } = await supabase
+        // ✅ FIXED: Add timeout protection to updates
+        const timeoutPromise = new Promise((_, reject) => 
+          setTimeout(() => reject(new Error('profiles.update timeout after 10 seconds')), 10000)
+        )
+        
+        const updatePromise = supabase
           .from('registrant_profiles')
           .update(updates)
           .eq('id', id)
           .select()
+        
+        const { data, error } = await Promise.race([updatePromise, timeoutPromise])
+        
         console.log('📊 DB: profiles.update result', { hasData: !!data, hasError: !!error, error: error?.message })
         return { data, error }
       } catch (err) {
         console.error('💥 DB: profiles.update failed', err)
+        
+        // ✅ FIXED: Handle timeout errors gracefully
+        if (err.message && err.message.includes('timeout')) {
+          return { 
+            data: null, 
+            error: { 
+              code: 'TIMEOUT', 
+              message: 'Profile update timed out. Changes may not have been saved.' 
+            } 
+          }
+        }
+        
         throw err
       }
     }
@@ -211,42 +245,42 @@ getById: async (id) => {
       }
     },
 
-getByUserId: async (userId) => {
-  console.log('📊 DB: applicantForms.getByUserId called', { userId })
-  try {
-    const { data, error } = await supabase
-      .from('applicant_forms')
-      .select('*')
-      .eq('user_id', userId)
-    
-    console.log('📊 DB: applicantForms.getByUserId result', { 
-      hasData: !!data, 
-      dataLength: data?.length,
-      hasError: !!error, 
-      error: error?.message 
-    })
+    getByUserId: async (userId) => {
+      console.log('📊 DB: applicantForms.getByUserId called', { userId })
+      try {
+        const { data, error } = await supabase
+          .from('applicant_forms')
+          .select('*')
+          .eq('user_id', userId)
+        
+        console.log('📊 DB: applicantForms.getByUserId result', { 
+          hasData: !!data, 
+          dataLength: data?.length,
+          hasError: !!error, 
+          error: error?.message 
+        })
 
-    // ✅ FIXED: Handle multiple rows or no rows gracefully
-    if (error) {
-      return { data: null, error }
-    }
-    
-    if (!data || data.length === 0) {
-      return { data: null, error: { code: 'PGRST116', message: 'No rows returned' } }
-    }
-    
-    if (data.length > 1) {
-      console.warn('⚠️ Multiple applicant forms found for user, using first one:', data.length)
-      return { data: data[0], error: null }
-    }
-    
-    return { data: data[0], error: null }
-    
-  } catch (err) {
-    console.error('💥 DB: applicantForms.getByUserId failed', err)
-    throw err
-  }
-},
+        // ✅ FIXED: Handle multiple rows or no rows gracefully
+        if (error) {
+          return { data: null, error }
+        }
+        
+        if (!data || data.length === 0) {
+          return { data: null, error: { code: 'PGRST116', message: 'No rows returned' } }
+        }
+        
+        if (data.length > 1) {
+          console.warn('⚠️ Multiple applicant forms found for user, using first one:', data.length)
+          return { data: data[0], error: null }
+        }
+        
+        return { data: data[0], error: null }
+        
+      } catch (err) {
+        console.error('💥 DB: applicantForms.getByUserId failed', err)
+        throw err
+      }
+    },
 
     getActiveProfiles: async (excludeUserId = null) => {
       console.log('📊 DB: applicantForms.getActiveProfiles called', { excludeUserId })
@@ -291,45 +325,45 @@ getByUserId: async (userId) => {
 
   // ✅ ADDED: Keep legacy alias for backward compatibility
   matchingProfiles: {
-create: async (profileData) => {
-  console.log('📊 DB: matchingProfiles.create (legacy alias) - checking for existing record first')
-  
-  // Extract user_id from profileData (handle both user_id and userId)
-  const userId = profileData.user_id || profileData.userId;
-  
-  if (!userId) {
-    console.error('❌ No user_id/userId provided to matchingProfiles.create');
-    return { data: null, error: { message: 'user_id is required' } };
-  }
-  
-  try {
-    // Check if record already exists
-    const { data: existingRecord } = await db.applicantForms.getByUserId(userId);
-    
-    if (existingRecord) {
-      console.log('✅ Found existing applicant form, updating instead of creating');
-      // Record exists, update it
-      // Ensure we're passing the right data structure
-      const updateData = { ...profileData };
-      delete updateData.userId; // Remove userId if it exists
-      updateData.user_id = userId; // Ensure user_id is set
+    create: async (profileData) => {
+      console.log('📊 DB: matchingProfiles.create (legacy alias) - checking for existing record first')
       
-      return await db.applicantForms.update(userId, updateData);
-    } else {
-      console.log('📝 No existing record found, creating new one');
-      // No record exists, create it
-      // Ensure we're passing the right data structure
-      const createData = { ...profileData };
-      delete createData.userId; // Remove userId if it exists
-      createData.user_id = userId; // Ensure user_id is set
+      // Extract user_id from profileData (handle both user_id and userId)
+      const userId = profileData.user_id || profileData.userId;
       
-      return await db.applicantForms.create(createData);
-    }
-  } catch (error) {
-    console.error('💥 Error in matchingProfiles.create legacy alias:', error);
-    return { data: null, error };
-  }
-},
+      if (!userId) {
+        console.error('❌ No user_id/userId provided to matchingProfiles.create');
+        return { data: null, error: { message: 'user_id is required' } };
+      }
+      
+      try {
+        // Check if record already exists
+        const { data: existingRecord } = await db.applicantForms.getByUserId(userId);
+        
+        if (existingRecord) {
+          console.log('✅ Found existing applicant form, updating instead of creating');
+          // Record exists, update it
+          // Ensure we're passing the right data structure
+          const updateData = { ...profileData };
+          delete updateData.userId; // Remove userId if it exists
+          updateData.user_id = userId; // Ensure user_id is set
+          
+          return await db.applicantForms.update(userId, updateData);
+        } else {
+          console.log('📝 No existing record found, creating new one');
+          // No record exists, create it
+          // Ensure we're passing the right data structure
+          const createData = { ...profileData };
+          delete createData.userId; // Remove userId if it exists
+          createData.user_id = userId; // Ensure user_id is set
+          
+          return await db.applicantForms.create(createData);
+        }
+      } catch (error) {
+        console.error('💥 Error in matchingProfiles.create legacy alias:', error);
+        return { data: null, error };
+      }
+    },
 
     getByUserId: async (userId) => {
       console.log('📊 DB: matchingProfiles.getByUserId (legacy alias) called - redirecting to applicantForms')
