@@ -19,25 +19,6 @@ CREATE TABLE IF NOT EXISTS registrant_profiles (
   updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
 
--- 2. Basic Profiles Table 
--- Stores demographic and personal information
-CREATE TABLE IF NOT EXISTS basic_profiles (
-  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  user_id UUID REFERENCES registrant_profiles(id) ON DELETE CASCADE,
-  date_of_birth DATE,
-  phone TEXT,
-  gender TEXT,
-  sex TEXT,
-  address TEXT,
-  city TEXT,
-  state TEXT,
-  zip_code TEXT,
-  emergency_contact_name TEXT,
-  emergency_contact_phone TEXT,
-  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
-  updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
-  UNIQUE(user_id)
-);
 
 -- 3. Applicant Forms Table (Matching Profiles)
 -- Stores detailed matching preferences and recovery information
@@ -260,8 +241,6 @@ CREATE TABLE IF NOT EXISTS match_groups (
 CREATE INDEX IF NOT EXISTS idx_registrant_profiles_email ON registrant_profiles(email);
 CREATE INDEX IF NOT EXISTS idx_registrant_profiles_roles ON registrant_profiles USING GIN(roles);
 
-CREATE INDEX IF NOT EXISTS idx_basic_profiles_user_id ON basic_profiles(user_id);
-
 CREATE INDEX IF NOT EXISTS idx_applicant_forms_user_id ON applicant_forms(user_id);
 CREATE INDEX IF NOT EXISTS idx_applicant_forms_active ON applicant_forms(is_active) WHERE is_active = TRUE;
 CREATE INDEX IF NOT EXISTS idx_applicant_forms_location ON applicant_forms(preferred_location);
@@ -283,7 +262,6 @@ CREATE INDEX IF NOT EXISTS idx_peer_support_accepting ON peer_support_profiles(i
 
 -- Enable RLS on all tables
 ALTER TABLE registrant_profiles ENABLE ROW LEVEL SECURITY;
-ALTER TABLE basic_profiles ENABLE ROW LEVEL SECURITY;
 ALTER TABLE applicant_forms ENABLE ROW LEVEL SECURITY;
 ALTER TABLE match_requests ENABLE ROW LEVEL SECURITY;
 ALTER TABLE properties ENABLE ROW LEVEL SECURITY;
@@ -299,10 +277,6 @@ CREATE POLICY "Users can update own profile" ON registrant_profiles
 
 CREATE POLICY "Users can view other active profiles for matching" ON registrant_profiles
   FOR SELECT USING (is_active = TRUE);
-
--- RLS Policies for basic_profiles
-CREATE POLICY "Users can manage own basic profile" ON basic_profiles
-  FOR ALL USING (auth.uid() = user_id);
 
 -- RLS Policies for applicant_forms
 CREATE POLICY "Users can manage own matching profile" ON applicant_forms
@@ -358,10 +332,6 @@ $$ language 'plpgsql';
 -- Add updated_at triggers to all tables
 CREATE TRIGGER update_registrant_profiles_updated_at 
   BEFORE UPDATE ON registrant_profiles 
-  FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
-
-CREATE TRIGGER update_basic_profiles_updated_at 
-  BEFORE UPDATE ON basic_profiles 
   FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 
 CREATE TRIGGER update_applicant_forms_updated_at 

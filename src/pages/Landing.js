@@ -1,6 +1,6 @@
 // src/pages/Landing.js
 import React, { useState } from 'react'
-import { useAuth } from '../contexts/AuthContext'
+import { useAuth } from '../../contexts/AuthContext'
 import LoginForm from '../components/forms/LoginForm'
 import RegisterForm from '../components/forms/RegisterForms'
 import '../styles/global.css';

@@ -1,7 +1,7 @@
 // src/pages/MainApp.js
 import React, { useEffect, useState } from 'react'
 import { Routes, Route, Navigate, useNavigate } from 'react-router-dom'
-import { useAuth } from '../contexts/AuthContext'
+import { useAuth } from '../../contexts/AuthContext'
 import { db } from '../utils/supabase'
 
 // Layout
