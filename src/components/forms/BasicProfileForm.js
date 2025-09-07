@@ -176,29 +176,35 @@ const BasicProfileForm = ({ editMode = false, onComplete, onCancel }) => {
   };
   
   // ✅ FIXED: Handle form submission - save to both registrant_profiles and applicant_forms
-  const handleSubmit = async (e) => {
-    e.preventDefault();
+// src/components/forms/BasicProfileForm.js
+// FIXED: Replace the entire handleSubmit function (around line 200) with this:
+
+const handleSubmit = async (e) => {
+  e.preventDefault();
+  
+  if (!validateForm()) return;
+  
+  setLoading(true);
+  setSuccessMessage('');
+  
+  try {
+    // Update registrant profile with basic info (including phone now)
+    const profileUpdates = {
+      first_name: formData.firstName,
+      last_name: formData.lastName,
+      email: formData.email,
+      phone: formData.phone // ✅ Now that phone column exists, include it
+    };
     
-    if (!validateForm()) return;
+    await updateProfile(profileUpdates);
     
-    setLoading(true);
-    setSuccessMessage('');
+    // ✅ FIXED: Try to update existing applicant form, or create new one
+    const { data: existingApplicant } = await db.applicantForms.getByUserId(user.id);
     
-    try {
-      // Update registrant profile with basic info
-      const profileUpdates = {
-        first_name: formData.firstName,
-        last_name: formData.lastName,
-        email: formData.email
-      };
-      
-      await updateProfile(profileUpdates);
-      
-      // ✅ FIXED: Save demographic data to applicant_forms table
-      const applicantData = {
-        user_id: user.id,
+    if (existingApplicant) {
+      // Update existing applicant form with demographic data
+      const applicantUpdates = {
         date_of_birth: formData.dateOfBirth,
-        phone: formData.phone,
         gender: formData.gender || null,
         sex: formData.sex || null,
         address: formData.address || null,
@@ -209,51 +215,82 @@ const BasicProfileForm = ({ editMode = false, onComplete, onCancel }) => {
         emergency_contact_phone: formData.emergencyContactPhone || null
       };
       
-      // ✅ FIXED: Try to update existing applicant form, or create new one
-      const { data: existingApplicant } = await db.applicantForms.getByUserId(user.id);
+      const { error } = await db.applicantForms.update(user.id, applicantUpdates);
+      if (error) throw error;
       
-      if (existingApplicant) {
-        const { error } = await db.applicantForms.update(user.id, applicantData);
-        if (error) throw error;
-      } else {
-        // ✅ FIXED: Create with minimal required fields for applicant_forms
-        const minimalApplicantData = {
-          ...applicantData,
-          // Add required fields with defaults
-          budget_max: 1000, // Default budget
-          preferred_roommate_gender: 'no_preference',
-          smoking_status: 'non_smoker',
-          spiritual_affiliation: 'prefer-not-to-say',
-          recovery_stage: 'stable',
-          work_schedule: 'traditional_9_5',
-          about_me: 'Profile in progress',
-          looking_for: 'Profile in progress',
-          // Initialize arrays
-          housing_type: [],
-          program_type: [],
-          primary_issues: [],
-          recovery_methods: [],
-          interests: []
-        };
+    } else {
+      // ✅ FIXED: Create new applicant form with ALL required fields properly set
+      const newApplicantData = {
+        user_id: user.id,
         
-        const { error } = await db.applicantForms.create(minimalApplicantData);
-        if (error) throw error;
+        // Demographic data from form
+        date_of_birth: formData.dateOfBirth,
+        gender: formData.gender || null,
+        sex: formData.sex || null,
+        address: formData.address || null,
+        city: formData.city || null,
+        state: formData.state || null,
+        zip_code: formData.zipCode || null,
+        emergency_contact_name: formData.emergencyContactName || null,
+        emergency_contact_phone: formData.emergencyContactPhone || null,
+        
+        // ✅ REQUIRED FIELDS - Set proper defaults to avoid constraint violations
+        budget_max: 1000, // Required field
+        preferred_roommate_gender: 'no_preference', // Required field
+        smoking_status: 'non_smoker', // Required field
+        spiritual_affiliation: 'prefer-not-to-say', // Required field
+        recovery_stage: 'stable', // Required field
+        work_schedule: 'traditional_9_5', // Required field
+        
+        // Required text fields
+        about_me: 'Profile in progress - please update in matching profile section',
+        looking_for: 'Profile in progress - please update in matching profile section',
+        
+        // ✅ REQUIRED ARRAYS - Initialize empty to avoid issues
+        housing_type: [],
+        program_type: [],
+        primary_issues: [],
+        recovery_methods: [],
+        interests: [],
+        
+        // Optional fields with defaults
+        preferred_location: formData.city && formData.state ? `${formData.city}, ${formData.state}` : null,
+        age_range_min: 18,
+        age_range_max: 65,
+        price_range_min: 500,
+        price_range_max: 2000,
+        social_level: 3,
+        cleanliness_level: 3,
+        noise_level: 3,
+        
+        // Status fields
+        is_active: true,
+        profile_completed: false
+      };
+      
+      console.log('🔧 Creating applicant form with data:', newApplicantData);
+      
+      const { error } = await db.applicantForms.create(newApplicantData);
+      if (error) {
+        console.error('❌ Error creating applicant form:', error);
+        throw error;
       }
-      
-      setSuccessMessage('Profile saved successfully!');
-      
-      // Call completion callback after a brief delay
-      if (onComplete) {
-        setTimeout(() => onComplete(), 1500);
-      }
-      
-    } catch (error) {
-      console.error('Error saving profile:', error);
-      setErrors({ submit: 'Failed to save profile. Please try again.' });
-    } finally {
-      setLoading(false);
     }
-  };
+    
+    setSuccessMessage('Profile saved successfully!');
+    
+    // Call completion callback after a brief delay
+    if (onComplete) {
+      setTimeout(() => onComplete(), 1500);
+    }
+    
+  } catch (error) {
+    console.error('Error saving profile:', error);
+    setErrors({ submit: 'Failed to save profile. Please try again.' });
+  } finally {
+    setLoading(false);
+  }
+};
 
   // Loading state
   if (initialLoading) {
