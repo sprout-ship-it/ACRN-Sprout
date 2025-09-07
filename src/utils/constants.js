@@ -3,6 +3,7 @@
 /**
  * Application constants for Recovery Housing Connect
  * Centralized location for all app-wide constants, enums, and configuration values
+ * UPDATED: Removed old onboarding references, aligned with simplified flow
  */
 
 // User roles
@@ -280,12 +281,18 @@ export const COMPATIBILITY_LEVELS = {
   POOR: 'poor'
 };
 
-// Progress tracking constants
+// UPDATED: Simplified progress tracking constants (removed basic profile)
 export const PROGRESS_STEPS = {
-  BASIC_PROFILE: 'basicProfile',
-  MATCHING_PROFILE: 'matchingProfile',
+  MATCHING_PROFILE: 'matchingProfile', // Renamed from BASIC_PROFILE to MATCHING_PROFILE
   ACTIVE_MATCHING: 'activeMatching',
   HAS_MATCHES: 'hasMatches'
+};
+
+// UPDATED: Profile setup flow steps (simplified)
+export const PROFILE_SETUP_STEPS = {
+  ROLE_PROFILE: 'roleProfile',     // The comprehensive role-specific profile
+  FIND_MATCHES: 'findMatches',     // Start finding matches
+  HOUSING_SEARCH: 'housingSearch'  // Search for housing with matches
 };
 
 // Age ranges for filtering
@@ -309,16 +316,56 @@ export const PRICE_RANGES = [
   { value: '2500+', label: '$2,500+' }
 ];
 
-// Navigation items
+// UPDATED: Navigation items (removed onboarding references, updated paths)
 export const NAV_ITEMS = {
-  DASHBOARD: { id: 'dashboard', label: 'Dashboard', icon: '🏠', path: '/app' },
-  PROFILE: { id: 'profile', label: 'Edit Profile', icon: '👤', path: '/app/profile' },
-  MATCH_REQUESTS: { id: 'match-requests', label: 'Match Requests', icon: '🤝', path: '/app/match-requests' },
-  MATCHING_PROFILE: { id: 'matching-profile', label: 'Matching Profile', icon: '📝', path: '/app/matching-profile' },
-  FIND_MATCHES: { id: 'find-matches', label: 'Find Matches', icon: '🔍', path: '/app/find-matches' },
-  PROPERTIES: { id: 'properties', label: 'Properties', icon: '🏢', path: '/app/properties' },
-  MATCH_DASHBOARD: { id: 'match-dashboard', label: 'Match Dashboard', icon: '🎯', path: '/app/match-dashboard' },
-  PEER_PROFILE: { id: 'peer-profile', label: 'Peer Profile', icon: '🤝', path: '/app/profile/peer-support'},
+  DASHBOARD: { 
+    id: 'dashboard', 
+    label: 'Dashboard', 
+    icon: '🏠', 
+    path: '/app' 
+  },
+  PROFILE_BASIC: { 
+    id: 'profile-basic', 
+    label: 'Edit Profile', 
+    icon: '👤', 
+    path: '/app/profile/basic' 
+  },
+  MATCH_REQUESTS: { 
+    id: 'match-requests', 
+    label: 'Match Requests', 
+    icon: '🤝', 
+    path: '/app/match-requests' 
+  },
+  MATCHING_PROFILE: { 
+    id: 'matching-profile', 
+    label: 'Matching Profile', 
+    icon: '📝', 
+    path: '/app/profile/matching' 
+  },
+  FIND_MATCHES: { 
+    id: 'find-matches', 
+    label: 'Find Matches', 
+    icon: '🔍', 
+    path: '/app/find-matches' 
+  },
+  PROPERTIES: { 
+    id: 'properties', 
+    label: 'Properties', 
+    icon: '🏢', 
+    path: '/app/properties' 
+  },
+  MATCH_DASHBOARD: { 
+    id: 'match-dashboard', 
+    label: 'Match Dashboard', 
+    icon: '🎯', 
+    path: '/app/match-dashboard' 
+  },
+  PEER_PROFILE: { 
+    id: 'peer-profile', 
+    label: 'Peer Profile', 
+    icon: '🤝', 
+    path: '/app/profile/peer-support'
+  }
 };
 
 // Form validation constants
@@ -362,7 +409,7 @@ export const SUCCESS_MESSAGES = {
   SIGNED_OUT: 'You have been signed out.'
 };
 
-// Loading messages
+// UPDATED: Loading messages (removed onboarding references)
 export const LOADING_MESSAGES = {
   SIGNING_IN: 'Signing in...',
   CREATING_ACCOUNT: 'Creating account...',
@@ -370,10 +417,12 @@ export const LOADING_MESSAGES = {
   LOADING_MATCHES: 'Finding your perfect matches...',
   LOADING_PROPERTIES: 'Loading properties...',
   UPDATING_REQUEST: 'Updating request...',
-  LOADING_DASHBOARD: 'Loading your dashboard...'
+  LOADING_DASHBOARD: 'Loading your dashboard...',
+  SETTING_UP_PROFILE: 'Setting up your profile...',
+  PREPARING_EXPERIENCE: 'Preparing your experience...'
 };
 
-// Local storage keys
+// Local storage keys (Note: these are for reference only - app doesn't use localStorage in artifacts)
 export const STORAGE_KEYS = {
   THEME: 'rhc_theme',
   LANGUAGE: 'rhc_language',
@@ -417,6 +466,14 @@ export const THEME_COLORS = {
   BORDER_BEIGE: '#E6D5C3'
 };
 
+// LEGACY COMPATIBILITY: Keep old progress step names as aliases
+export const LEGACY_PROGRESS_STEPS = {
+  BASIC_PROFILE: 'matchingProfile', // Maps to matching profile now
+  MATCHING_PROFILE: 'matchingProfile',
+  ACTIVE_MATCHING: 'activeMatching',
+  HAS_MATCHES: 'hasMatches'
+};
+
 export default {
   USER_ROLES,
   RECOVERY_STAGES,
@@ -445,6 +502,7 @@ export default {
   MATCH_REQUEST_STATUSES,
   COMPATIBILITY_LEVELS,
   PROGRESS_STEPS,
+  PROFILE_SETUP_STEPS,
   AGE_RANGES,
   PRICE_RANGES,
   NAV_ITEMS,
@@ -456,5 +514,6 @@ export default {
   API_ENDPOINTS,
   PAGINATION,
   FEATURES,
-  THEME_COLORS
+  THEME_COLORS,
+  LEGACY_PROGRESS_STEPS
 };

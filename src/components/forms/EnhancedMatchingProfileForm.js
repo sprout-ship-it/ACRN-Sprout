@@ -9,6 +9,19 @@ const EnhancedMatchingProfileForm = ({ editMode = false, onComplete, onCancel })
   const { user, profile, hasRole } = useAuth();
   
   const [formData, setFormData] = useState({
+    // ✅ PHASE 3: Added demographic data fields
+    // Personal Demographics (from BasicProfileForm)
+    dateOfBirth: '',
+    phone: '',
+    gender: '',
+    sex: '',
+    address: '',
+    city: '',
+    state: '',
+    zipCode: '',
+    emergencyContactName: '',
+    emergencyContactPhone: '',
+    
     // Location & Housing Preferences
     preferredLocation: '',
     targetZipCodes: '',
@@ -89,6 +102,37 @@ const EnhancedMatchingProfileForm = ({ editMode = false, onComplete, onCancel })
   const [loading, setLoading] = useState(false);
   const [initialLoading, setInitialLoading] = useState(true);
   const [successMessage, setSuccessMessage] = useState('');
+  
+  // ✅ PHASE 3: Added demographic options
+  // Gender options
+  const genderOptions = [
+    { value: '', label: 'Select Gender Identity' },
+    { value: 'male', label: 'Male' },
+    { value: 'female', label: 'Female' },
+    { value: 'non-binary', label: 'Non-binary' },
+    { value: 'genderfluid', label: 'Genderfluid' },
+    { value: 'agender', label: 'Agender' },
+    { value: 'other', label: 'Other' },
+    { value: 'prefer-not-to-say', label: 'Prefer not to say' }
+  ];
+  
+  // Sex options
+  const sexOptions = [
+    { value: '', label: 'Select Biological Sex' },
+    { value: 'male', label: 'Male' },
+    { value: 'female', label: 'Female' },
+    { value: 'intersex', label: 'Intersex' },
+    { value: 'prefer-not-to-say', label: 'Prefer not to say' }
+  ];
+
+  // US States for dropdown
+  const states = [
+    'AL', 'AK', 'AZ', 'AR', 'CA', 'CO', 'CT', 'DE', 'FL', 'GA',
+    'HI', 'ID', 'IL', 'IN', 'IA', 'KS', 'KY', 'LA', 'ME', 'MD',
+    'MA', 'MI', 'MN', 'MS', 'MO', 'MT', 'NE', 'NV', 'NH', 'NJ',
+    'NM', 'NY', 'NC', 'ND', 'OH', 'OK', 'OR', 'PA', 'RI', 'SC',
+    'SD', 'TN', 'TX', 'UT', 'VT', 'VA', 'WA', 'WV', 'WI', 'WY'
+  ];
   
   // Form options based on matching algorithm requirements
   const housingTypeOptions = [
@@ -197,7 +241,19 @@ const EnhancedMatchingProfileForm = ({ editMode = false, onComplete, onCancel })
         if (applicantForm) {
           setFormData(prev => ({
             ...prev,
-            // Map all fields from database
+            // ✅ PHASE 3: Load demographic data
+            dateOfBirth: applicantForm.date_of_birth || '',
+            phone: applicantForm.phone || '',
+            gender: applicantForm.gender || '',
+            sex: applicantForm.sex || '',
+            address: applicantForm.address || '',
+            city: applicantForm.city || '',
+            state: applicantForm.state || '',
+            zipCode: applicantForm.zip_code || '',
+            emergencyContactName: applicantForm.emergency_contact_name || '',
+            emergencyContactPhone: applicantForm.emergency_contact_phone || '',
+            
+            // Map all existing fields from database
             preferredLocation: applicantForm.preferred_location || '',
             targetZipCodes: applicantForm.target_zip_codes?.join(', ') || '',
             searchRadius: applicantForm.search_radius?.toString() || '25',
@@ -278,9 +334,12 @@ const EnhancedMatchingProfileForm = ({ editMode = false, onComplete, onCancel })
     }
   }, [user, profile, hasRole]);
   
-  // Calculate completion percentage
+  // ✅ PHASE 3: Updated completion percentage to include demographic fields
   const getCompletionPercentage = () => {
     const requiredFields = [
+      // Demographic fields
+      'dateOfBirth', 'phone',
+      // Core matching fields
       'preferredLocation', 'maxCommute', 'moveInDate', 'recoveryStage', 
       'workSchedule', 'aboutMe', 'lookingFor', 'budgetMax', 'preferredRoommateGender',
       'smokingStatus', 'spiritualAffiliation'
@@ -325,9 +384,40 @@ const EnhancedMatchingProfileForm = ({ editMode = false, onComplete, onCancel })
     setFormData(prev => ({ ...prev, [field]: parseInt(value) }));
   };
   
-  // Validate form
+  // ✅ PHASE 3: Updated validation to include demographic fields
   const validateForm = () => {
     const newErrors = {};
+    
+    // ✅ PHASE 3: Demographic validation
+    if (!formData.dateOfBirth) newErrors.dateOfBirth = 'Date of birth is required';
+    if (!formData.phone.trim()) newErrors.phone = 'Phone number is required';
+    
+    // Age validation (must be 18+)
+    if (formData.dateOfBirth) {
+      const today = new Date();
+      const birthDate = new Date(formData.dateOfBirth);
+      let age = today.getFullYear() - birthDate.getFullYear();
+      const monthDiff = today.getMonth() - birthDate.getMonth();
+      
+      if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birthDate.getDate())) {
+        age--;
+      }
+      
+      if (age < 18) {
+        newErrors.dateOfBirth = 'You must be 18 or older to use this service';
+      }
+    }
+
+    // Phone validation (basic)
+    const phoneRegex = /^[\d\s\-\(\)\+]{10,}$/;
+    if (formData.phone && !phoneRegex.test(formData.phone.replace(/\D/g, ''))) {
+      newErrors.phone = 'Please enter a valid phone number';
+    }
+
+    // ZIP code validation
+    if (formData.zipCode && !/^\d{5}(-\d{4})?$/.test(formData.zipCode)) {
+      newErrors.zipCode = 'Please enter a valid ZIP code';
+    }
     
     // Required fields
     if (!formData.preferredLocation.trim()) newErrors.preferredLocation = 'Preferred location is required';
@@ -375,125 +465,135 @@ const EnhancedMatchingProfileForm = ({ editMode = false, onComplete, onCancel })
     return Object.keys(newErrors).length === 0;
   };
   
-  // Handle form submission
-// Replace the handleSubmit function in EnhancedMatchingProfileForm.js with this:
+  // ✅ PHASE 3: Updated form submission to include demographic data
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    
+    if (!validateForm()) return;
+    
+    setLoading(true);
+    setSuccessMessage('');
+    
+    try {
+      // Parse target zip codes
+      const targetZipCodes = formData.targetZipCodes
+        .split(',')
+        .map(zip => zip.trim())
+        .filter(zip => zip && /^\d{5}$/.test(zip));
 
-const handleSubmit = async (e) => {
-  e.preventDefault();
-  
-  if (!validateForm()) return;
-  
-  setLoading(true);
-  setSuccessMessage('');
-  
-  try {
-    // Parse target zip codes
-    const targetZipCodes = formData.targetZipCodes
-      .split(',')
-      .map(zip => zip.trim())
-      .filter(zip => zip && /^\d{5}$/.test(zip));
-
-    const applicantFormData = {
-      // Location & Housing
-      preferred_location: formData.preferredLocation,
-      target_zip_codes: targetZipCodes,
-      search_radius: parseInt(formData.searchRadius),
-      current_location: formData.currentLocation || null,
-      relocation_timeline: formData.relocationTimeline || null,
-      max_commute: parseInt(formData.maxCommute),
-      housing_type: formData.housingType,
-      price_range_min: formData.priceRangeMin,
-      price_range_max: formData.priceRangeMax,
-      budget_max: parseInt(formData.budgetMax),
-      move_in_date: formData.moveInDate,
-      lease_duration: formData.leaseDuration || null,
+      const applicantFormData = {
+        // ✅ PHASE 3: Include demographic data in submission
+        // Personal Demographics
+        date_of_birth: formData.dateOfBirth,
+        phone: formData.phone,
+        gender: formData.gender || null,
+        sex: formData.sex || null,
+        address: formData.address || null,
+        city: formData.city || null,
+        state: formData.state || null,
+        zip_code: formData.zipCode || null,
+        emergency_contact_name: formData.emergencyContactName || null,
+        emergency_contact_phone: formData.emergencyContactPhone || null,
+        
+        // Location & Housing
+        preferred_location: formData.preferredLocation,
+        target_zip_codes: targetZipCodes,
+        search_radius: parseInt(formData.searchRadius),
+        current_location: formData.currentLocation || null,
+        relocation_timeline: formData.relocationTimeline || null,
+        max_commute: parseInt(formData.maxCommute),
+        housing_type: formData.housingType,
+        price_range_min: formData.priceRangeMin,
+        price_range_max: formData.priceRangeMax,
+        budget_max: parseInt(formData.budgetMax),
+        move_in_date: formData.moveInDate,
+        lease_duration: formData.leaseDuration || null,
+        
+        // Personal Preferences
+        age_range_min: formData.ageRangeMin,
+        age_range_max: formData.ageRangeMax,
+        gender_preference: formData.genderPreference || null,
+        preferred_roommate_gender: formData.preferredRoommateGender,
+        smoking_preference: formData.smokingPreference || null,
+        smoking_status: formData.smokingStatus,
+        pet_preference: formData.petPreference || null,
+        
+        // Recovery Information
+        recovery_stage: formData.recoveryStage,
+        primary_substance: formData.primarySubstance || null,
+        time_in_recovery: formData.timeInRecovery || null,
+        treatment_history: formData.treatmentHistory || null,
+        program_type: formData.programType,
+        sobriety_date: formData.sobrietyDate || null,
+        sponsor_mentor: formData.sponsorMentor || null,
+        support_meetings: formData.supportMeetings || null,
+        spiritual_affiliation: formData.spiritualAffiliation,
+        primary_issues: formData.primaryIssues,
+        recovery_methods: formData.recoveryMethods,
+        
+        // Lifestyle Preferences
+        work_schedule: formData.workSchedule,
+        social_level: parseInt(formData.socialLevel),
+        cleanliness_level: parseInt(formData.cleanlinessLevel),
+        noise_level: parseInt(formData.noiseLevel),
+        guest_policy: formData.guestPolicy || null,
+        guests_policy: formData.guestsPolicy || null,
+        bedtime_preference: formData.bedtimePreference || null,
+        transportation: formData.transportation || null,
+        chore_sharing_preference: formData.choreSharingPreference || null,
+        preferred_support_structure: formData.preferredSupportStructure || null,
+        conflict_resolution_style: formData.conflictResolutionStyle || null,
+        
+        // Living Situation
+        pets_owned: formData.petsOwned,
+        pets_comfortable: formData.petsComfortable,
+        overnight_guests_ok: formData.overnightGuestsOk,
+        shared_groceries: formData.sharedGroceries,
+        cooking_frequency: formData.cookingFrequency || null,
+        
+        // Housing Assistance
+        housing_subsidy: formData.housingSubsidy,
+        has_section8: formData.hasSection8,
+        accepts_subsidy: formData.acceptsSubsidy,
+        
+        // Compatibility Factors
+        interests: formData.interests,
+        deal_breakers: formData.dealBreakers,
+        important_qualities: formData.importantQualities,
+        
+        // Open-ended responses
+        about_me: formData.aboutMe,
+        looking_for: formData.lookingFor,
+        additional_info: formData.additionalInfo || null,
+        special_needs: formData.specialNeeds || null,
+        
+        // Status
+        is_active: formData.isActive,
+        profile_completed: true
+      };
       
-      // Personal Preferences
-      age_range_min: formData.ageRangeMin,
-      age_range_max: formData.ageRangeMax,
-      gender_preference: formData.genderPreference || null,
-      preferred_roommate_gender: formData.preferredRoommateGender,
-      smoking_preference: formData.smokingPreference || null,
-      smoking_status: formData.smokingStatus,
-      pet_preference: formData.petPreference || null,
+      console.log('🔧 Updating existing applicant form with comprehensive profile data');
+      const { error } = await db.applicantForms.update(user.id, applicantFormData);
       
-      // Recovery Information
-      recovery_stage: formData.recoveryStage,
-      primary_substance: formData.primarySubstance || null,
-      time_in_recovery: formData.timeInRecovery || null,
-      treatment_history: formData.treatmentHistory || null,
-      program_type: formData.programType,
-      sobriety_date: formData.sobrietyDate || null,
-      sponsor_mentor: formData.sponsorMentor || null,
-      support_meetings: formData.supportMeetings || null,
-      spiritual_affiliation: formData.spiritualAffiliation,
-      primary_issues: formData.primaryIssues,
-      recovery_methods: formData.recoveryMethods,
+      if (error) {
+        console.error('❌ Error updating applicant form:', error);
+        throw error;
+      }
       
-      // Lifestyle Preferences
-      work_schedule: formData.workSchedule,
-      social_level: parseInt(formData.socialLevel),
-      cleanliness_level: parseInt(formData.cleanlinessLevel),
-      noise_level: parseInt(formData.noiseLevel),
-      guest_policy: formData.guestPolicy || null,
-      guests_policy: formData.guestsPolicy || null,
-      bedtime_preference: formData.bedtimePreference || null,
-      transportation: formData.transportation || null,
-      chore_sharing_preference: formData.choreSharingPreference || null,
-      preferred_support_structure: formData.preferredSupportStructure || null,
-      conflict_resolution_style: formData.conflictResolutionStyle || null,
+      console.log('✅ Comprehensive matching profile saved successfully');
+      setSuccessMessage('Comprehensive matching profile saved successfully!');
       
-      // Living Situation
-      pets_owned: formData.petsOwned,
-      pets_comfortable: formData.petsComfortable,
-      overnight_guests_ok: formData.overnightGuestsOk,
-      shared_groceries: formData.sharedGroceries,
-      cooking_frequency: formData.cookingFrequency || null,
+      if (onComplete) {
+        setTimeout(() => onComplete(), 1500);
+      }
       
-      // Housing Assistance
-      housing_subsidy: formData.housingSubsidy,
-      has_section8: formData.hasSection8,
-      accepts_subsidy: formData.acceptsSubsidy,
-      
-      // Compatibility Factors
-      interests: formData.interests,
-      deal_breakers: formData.dealBreakers,
-      important_qualities: formData.importantQualities,
-      
-      // Open-ended responses
-      about_me: formData.aboutMe,
-      looking_for: formData.lookingFor,
-      additional_info: formData.additionalInfo || null,
-      special_needs: formData.specialNeeds || null,
-      
-      // Status
-      is_active: formData.isActive,
-      profile_completed: true
-    };
-    
-    // ✅ FIXED: Always UPDATE the existing applicant form, never create a new one
-    console.log('🔧 Updating existing applicant form with matching profile data');
-    const { error } = await db.applicantForms.update(user.id, applicantFormData);
-    
-    if (error) {
-      console.error('❌ Error updating applicant form:', error);
-      throw error;
+    } catch (error) {
+      console.error('Error saving applicant form:', error);
+      setErrors({ submit: 'Failed to save matching profile. Please try again.' });
+    } finally {
+      setLoading(false);
     }
-    
-    console.log('✅ Matching profile saved successfully to existing applicant form');
-    setSuccessMessage('Matching profile saved successfully!');
-    
-    if (onComplete) {
-      setTimeout(() => onComplete(), 1500);
-    }
-    
-  } catch (error) {
-    console.error('Error saving applicant form:', error);
-    setErrors({ submit: 'Failed to save matching profile. Please try again.' });
-  } finally {
-    setLoading(false);
-  }
-};
+  };
 
   if (initialLoading) {
     return (
@@ -519,7 +619,7 @@ const handleSubmit = async (e) => {
           {editMode ? 'Edit Your Comprehensive Matching Profile' : 'Create Your Comprehensive Matching Profile'}
         </h2>
         <p className="text-gray-600">
-          Complete information helps us find the best roommate matches for your recovery journey.
+          Complete your personal information and preferences to find the best roommate matches for your recovery journey.
         </p>
       </div>
       
@@ -546,6 +646,211 @@ const handleSubmit = async (e) => {
       )}
       
       <form onSubmit={handleSubmit}>
+        {/* ✅ PHASE 3: Added Personal Information Section */}
+        <h3 className="card-title mb-4">Personal Information</h3>
+        
+        <div className="grid-2 mb-4">
+          <div className="form-group">
+            <label className="label">First Name</label>
+            <input
+              className="input"
+              type="text"
+              value={profile?.first_name || ''}
+              disabled
+            />
+          </div>
+          
+          <div className="form-group">
+            <label className="label">Last Name</label>
+            <input
+              className="input"
+              type="text"
+              value={profile?.last_name || ''}
+              disabled
+            />
+          </div>
+        </div>
+        
+        <div className="form-group mb-4">
+          <label className="label">Email</label>
+          <input
+            className="input"
+            type="email"
+            value={profile?.email || ''}
+            disabled
+          />
+        </div>
+        
+        <div className="grid-2 mb-4">
+          <div className="form-group">
+            <label className="label">
+              Date of Birth <span className="text-red-500">*</span>
+            </label>
+            <input
+              className={`input ${errors.dateOfBirth ? 'border-red-500' : ''}`}
+              type="date"
+              value={formData.dateOfBirth}
+              onChange={(e) => handleInputChange('dateOfBirth', e.target.value)}
+              disabled={loading}
+              required
+            />
+            {errors.dateOfBirth && (
+              <div className="text-red-500 mt-1">{errors.dateOfBirth}</div>
+            )}
+          </div>
+          
+          <div className="form-group">
+            <label className="label">
+              Phone Number <span className="text-red-500">*</span>
+            </label>
+            <input
+              className={`input ${errors.phone ? 'border-red-500' : ''}`}
+              type="tel"
+              value={formData.phone}
+              onChange={(e) => handleInputChange('phone', e.target.value)}
+              placeholder="(555) 123-4567"
+              disabled={loading}
+              required
+            />
+            {errors.phone && (
+              <div className="text-red-500 mt-1">{errors.phone}</div>
+            )}
+          </div>
+        </div>
+        
+        <div className="grid-2 mb-4">
+          <div className="form-group">
+            <label className="label">Gender Identity</label>
+            <select
+              className="input"
+              value={formData.gender}
+              onChange={(e) => handleInputChange('gender', e.target.value)}
+              disabled={loading}
+            >
+              {genderOptions.map(option => (
+                <option key={option.value} value={option.value}>
+                  {option.label}
+                </option>
+              ))}
+            </select>
+            <div className="text-gray-500 mt-1 text-sm">
+              This information helps us provide better matches
+            </div>
+          </div>
+          
+          <div className="form-group">
+            <label className="label">Biological Sex</label>
+            <select
+              className="input"
+              value={formData.sex}
+              onChange={(e) => handleInputChange('sex', e.target.value)}
+              disabled={loading}
+            >
+              {sexOptions.map(option => (
+                <option key={option.value} value={option.value}>
+                  {option.label}
+                </option>
+              ))}
+            </select>
+            <div className="text-gray-500 mt-1 text-sm">
+              Used for housing compatibility purposes
+            </div>
+          </div>
+        </div>
+
+        {/* Address Information (Optional) */}
+        <h4 style={{ color: 'var(--secondary-teal)', marginBottom: 'var(--spacing-lg)', paddingBottom: '10px', borderBottom: '2px solid var(--border-beige)' }}>
+          Address Information (Optional)
+        </h4>
+
+        <div className="form-group mb-4">
+          <label className="label">Street Address</label>
+          <input
+            className="input"
+            type="text"
+            value={formData.address}
+            onChange={(e) => handleInputChange('address', e.target.value)}
+            placeholder="123 Main St, Apt 4B"
+            disabled={loading}
+          />
+        </div>
+
+        <div className="grid-2 mb-4">
+          <div className="form-group">
+            <label className="label">City</label>
+            <input
+              className="input"
+              type="text"
+              value={formData.city}
+              onChange={(e) => handleInputChange('city', e.target.value)}
+              placeholder="City"
+              disabled={loading}
+            />
+          </div>
+          
+          <div className="form-group">
+            <label className="label">State</label>
+            <select
+              className="input"
+              value={formData.state}
+              onChange={(e) => handleInputChange('state', e.target.value)}
+              disabled={loading}
+            >
+              <option value="">Select State</option>
+              {states.map(state => (
+                <option key={state} value={state}>{state}</option>
+              ))}
+            </select>
+          </div>
+        </div>
+
+        <div className="form-group mb-4">
+          <label className="label">ZIP Code</label>
+          <input
+            className={`input ${errors.zipCode ? 'border-red-500' : ''}`}
+            type="text"
+            value={formData.zipCode}
+            onChange={(e) => handleInputChange('zipCode', e.target.value)}
+            placeholder="12345 or 12345-6789"
+            disabled={loading}
+            style={{ maxWidth: '200px' }}
+          />
+          {errors.zipCode && (
+            <div className="text-red-500 mt-1">{errors.zipCode}</div>
+          )}
+        </div>
+
+        {/* Emergency Contact (Optional) */}
+        <h4 style={{ color: 'var(--secondary-teal)', marginBottom: 'var(--spacing-lg)', paddingBottom: '10px', borderBottom: '2px solid var(--border-beige)' }}>
+          Emergency Contact (Optional)
+        </h4>
+
+        <div className="grid-2 mb-4">
+          <div className="form-group">
+            <label className="label">Emergency Contact Name</label>
+            <input
+              className="input"
+              type="text"
+              value={formData.emergencyContactName}
+              onChange={(e) => handleInputChange('emergencyContactName', e.target.value)}
+              placeholder="Full name"
+              disabled={loading}
+            />
+          </div>
+          
+          <div className="form-group">
+            <label className="label">Emergency Contact Phone</label>
+            <input
+              className="input"
+              type="tel"
+              value={formData.emergencyContactPhone}
+              onChange={(e) => handleInputChange('emergencyContactPhone', e.target.value)}
+              placeholder="(555) 123-4567"
+              disabled={loading}
+            />
+          </div>
+        </div>
+
         {/* Location & Housing Preferences */}
         <h3 className="card-title mb-4">Location & Housing Preferences</h3>
         
@@ -693,7 +998,7 @@ const handleSubmit = async (e) => {
         </div>
 
         {/* Personal Preferences & Demographics */}
-        <h3 className="card-title mb-4">Personal Preferences & Demographics</h3>
+        <h3 className="card-title mb-4">Roommate Preferences</h3>
         
         <div className="grid-2 mb-4">
           <div className="form-group">

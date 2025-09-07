@@ -17,41 +17,36 @@ export const useUserProgress = () => {
 };
 
 /**
- * Hook for onboarding flow management
+ * Hook for profile setup flow management (UPDATED for simplified flow)
+ * NOTE: Renamed from "onboarding" to "profile setup" to reflect new simplified flow
  */
-export const useOnboarding = () => {
+export const useProfileSetup = () => {
   const {
     progress,
     currentStep,
-    isOnboardingComplete,
-    markBasicProfileComplete,
+    isOnboardingComplete: isSetupComplete, // Legacy compatibility
     markMatchingProfileComplete,
     progressPercentage
   } = useUserProgress();
   
   const getStepInfo = (step) => {
+    // UPDATED: Simplified to match new flow (no basic profile step)
     const steps = {
       1: {
-        title: 'Basic Profile',
-        description: 'Complete your personal information',
-        completed: progress.basicProfile,
-        required: true
-      },
-      2: {
-        title: 'Matching Profile',
-        description: 'Set up your roommate preferences',
+        title: 'Role-Specific Profile',
+        description: 'Complete your comprehensive profile',
         completed: progress.matchingProfile,
         required: true
       },
-      3: {
+      2: {
         title: 'Find Matches',
         description: 'Start connecting with potential roommates',
         completed: progress.activeMatching,
         required: false
       },
-      4: {
+      3: {
         title: 'Housing Search',
-        description: 'Search for housing with your match',
+        description: 'Search for housing with your matches',
         completed: progress.hasMatches,
         required: false
       }
@@ -61,15 +56,16 @@ export const useOnboarding = () => {
   };
   
   const getNextStep = () => {
-    if (!progress.basicProfile) return 1;
-    if (!progress.matchingProfile) return 2;
-    if (!progress.activeMatching) return 3;
-    if (!progress.hasMatches) return 4;
+    // UPDATED: Simplified flow without basic profile
+    if (!progress.matchingProfile) return 1;
+    if (!progress.activeMatching) return 2;
+    if (!progress.hasMatches) return 3;
     return null; // All steps complete
   };
   
   const getStepsRemaining = () => {
-    const requiredSteps = [1, 2];
+    // UPDATED: Only matching profile is required now
+    const requiredSteps = [1]; // Only step 1 (role-specific profile) is required
     const completedRequired = requiredSteps.filter(step => {
       const stepInfo = getStepInfo(step);
       return stepInfo?.completed;
@@ -81,11 +77,11 @@ export const useOnboarding = () => {
   return {
     currentStep,
     nextStep: getNextStep(),
-    isComplete: isOnboardingComplete,
+    isComplete: isSetupComplete,
     progressPercentage,
     stepsRemaining: getStepsRemaining(),
     getStepInfo,
-    markBasicComplete: markBasicProfileComplete,
+    // UPDATED: Removed markBasicComplete since we eliminated basic profile step
     markMatchingComplete: markMatchingProfileComplete,
     progress
   };
@@ -103,6 +99,7 @@ export const useMatchingProgress = () => {
   } = useUserProgress();
   
   const matchingStatus = {
+    // UPDATED: Simplified status without basic profile dependency
     notStarted: !progress.matchingProfile && !progress.activeMatching && !progress.hasMatches,
     profileIncomplete: !progress.matchingProfile,
     readyToMatch: progress.matchingProfile && !progress.activeMatching,
@@ -123,13 +120,13 @@ export const useMatchingProgress = () => {
     const stageInfo = {
       'not-started': {
         title: 'Get Started',
-        description: 'Complete your basic profile to begin',
-        action: 'Start Setup',
+        description: 'Complete your profile to begin matching',
+        action: 'Complete Profile',
         color: 'gray'
       },
       'setup': {
-        title: 'Complete Setup',
-        description: 'Finish your matching profile to find roommates',
+        title: 'Complete Profile',
+        description: 'Finish your profile to start finding roommates',
         action: 'Complete Profile',
         color: 'orange'
       },
@@ -169,26 +166,18 @@ export const useMatchingProgress = () => {
 };
 
 /**
- * Hook for progress notifications and guidance
+ * Hook for progress notifications and guidance (UPDATED for simplified flow)
  */
 export const useProgressGuidance = () => {
-  const { progress, currentStep, isOnboardingComplete } = useUserProgress();
+  const { progress, currentStep, isOnboardingComplete: isSetupComplete } = useUserProgress();
   
   const getNextAction = () => {
-    if (!progress.basicProfile) {
-      return {
-        title: 'Complete Your Profile',
-        description: 'Add your personal information to get started',
-        action: 'edit-profile',
-        priority: 'high'
-      };
-    }
-    
+    // UPDATED: Simplified guidance without basic profile step
     if (!progress.matchingProfile) {
       return {
-        title: 'Set Up Matching Preferences',
-        description: 'Tell us what you\'re looking for in a roommate',
-        action: 'matching-profile',
+        title: 'Complete Your Profile',
+        description: 'Set up your comprehensive profile to get started',
+        action: 'complete-profile',
         priority: 'high'
       };
     }
@@ -220,8 +209,10 @@ export const useProgressGuidance = () => {
   };
   
   const getProgressMessage = () => {
+    // UPDATED: Simplified progress calculation (3 main steps instead of 4)
+    const steps = [progress.matchingProfile, progress.activeMatching, progress.hasMatches];
     const completionPercentage = Math.round(
-      Object.values(progress).filter(Boolean).length / 4 * 100
+      steps.filter(Boolean).length / steps.length * 100
     );
     
     if (completionPercentage === 0) {
@@ -242,20 +233,19 @@ export const useProgressGuidance = () => {
   const getTips = () => {
     const tips = [];
     
-    if (!progress.basicProfile) {
-      tips.push('A complete profile helps you find better matches');
-    }
-    
     if (!progress.matchingProfile) {
+      tips.push('A complete profile helps you find better matches');
       tips.push('Be specific about your preferences for better compatibility');
     }
     
     if (progress.matchingProfile && !progress.activeMatching) {
       tips.push('Send match requests to people who seem compatible');
+      tips.push('Review profiles carefully before sending requests');
     }
     
     if (progress.activeMatching && !progress.hasMatches) {
       tips.push('Be patient - good matches take time to develop');
+      tips.push('Consider broadening your criteria if needed');
     }
     
     return tips;
@@ -265,21 +255,27 @@ export const useProgressGuidance = () => {
     nextAction: getNextAction(),
     progressMessage: getProgressMessage(),
     tips: getTips(),
-    isOnboardingComplete,
+    isSetupComplete, // Renamed from isOnboardingComplete
     currentStep,
-    shouldShowGuidance: !isOnboardingComplete
+    shouldShowGuidance: !isSetupComplete
   };
 };
 
 /**
- * Hook for progress analytics and insights
+ * Hook for progress analytics and insights (UPDATED for simplified flow)
  */
 export const useProgressInsights = () => {
   const { progress } = useUserProgress();
   
   const getCompletionStats = () => {
-    const total = 4; // Total number of progress items
-    const completed = Object.values(progress).filter(Boolean).length;
+    // UPDATED: 3 main progress items instead of 4 (removed basic profile)
+    const progressItems = [
+      progress.matchingProfile,
+      progress.activeMatching, 
+      progress.hasMatches
+    ];
+    const total = progressItems.length;
+    const completed = progressItems.filter(Boolean).length;
     
     return {
       completed,
@@ -291,7 +287,7 @@ export const useProgressInsights = () => {
   
   const getEstimatedTimeToComplete = () => {
     const stats = getCompletionStats();
-    const averageTimePerStep = 10; // minutes
+    const averageTimePerStep = 15; // minutes (increased since steps are more comprehensive)
     
     return stats.remaining * averageTimePerStep;
   };
@@ -300,10 +296,9 @@ export const useProgressInsights = () => {
     const stats = getCompletionStats();
     
     if (stats.percentage === 100) return 'excellent';
-    if (stats.percentage >= 75) return 'good';
-    if (stats.percentage >= 50) return 'fair';
-    if (stats.percentage >= 25) return 'needs-attention';
-    return 'critical';
+    if (stats.percentage >= 67) return 'good';  // 2 of 3 steps
+    if (stats.percentage >= 33) return 'fair';  // 1 of 3 steps
+    return 'needs-attention'; // 0 of 3 steps
   };
   
   return {
@@ -313,5 +308,11 @@ export const useProgressInsights = () => {
     lastUpdated: progress.lastUpdated
   };
 };
+
+/**
+ * LEGACY COMPATIBILITY: Keep old onboarding hook name as alias
+ * This ensures any existing code using useOnboarding still works
+ */
+export const useOnboarding = useProfileSetup;
 
 export default useUserProgress;

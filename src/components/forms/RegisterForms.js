@@ -87,7 +87,7 @@ const RegisterForm = ({ onBackToLanding }) => {
     const { success: signUpSuccess, error: signUpError } = await signUp(email, password, userData);
     
     if (signUpSuccess) {
-      console.log('✅ Registration successful');
+      console.log('✅ Registration successful - redirecting to simplified onboarding flow');
       setSuccess(true);
       
       // Clear form
@@ -98,9 +98,9 @@ const RegisterForm = ({ onBackToLanding }) => {
       setConfirmPassword('');
       setSelectedRoles([]);
       
-      // Navigate to onboarding after brief success display
+      // ✅ FIXED: Navigate to /app which will trigger the simplified onboarding flow in MainApp
       setTimeout(() => {
-        navigate('/onboarding');
+        navigate('/app');
       }, 2000);
     } else {
       console.error('❌ Registration failed:', signUpError);
@@ -115,12 +115,18 @@ const RegisterForm = ({ onBackToLanding }) => {
         <div style={{ maxWidth: '500px', margin: '0 auto' }}>
           <div className="card">
             <div className="alert alert-success">
-              Account created successfully! Please check your email to verify your account.
+              <h3 style={{ margin: '0 0 10px 0', color: 'var(--success-text)' }}>Welcome to Recovery Housing Connect! 🎉</h3>
+              <p style={{ margin: '0' }}>
+                Account created successfully! Please check your email to verify your account if prompted.
+              </p>
             </div>
             <div className="text-center">
               <LoadingSpinner size="large" />
               <p className="text-gray-600 mt-3">
-                Redirecting to profile setup...
+                Taking you to your personalized dashboard...
+              </p>
+              <p style={{ fontSize: '0.9rem', color: 'var(--gray-500)', marginTop: '10px' }}>
+                You'll be guided through setting up your profile based on your selected role(s).
               </p>
             </div>
           </div>
@@ -251,6 +257,9 @@ const RegisterForm = ({ onBackToLanding }) => {
             
             <div className="form-group">
               <label className="label">Select Your Role(s)</label>
+              <p style={{ fontSize: '0.9rem', color: 'var(--gray-600)', marginBottom: '15px' }}>
+                Choose the role(s) that best describe how you'll use the platform:
+              </p>
               <div className="grid-auto">
                 {roles.map(role => (
                   <div

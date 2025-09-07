@@ -1,4 +1,5 @@
 // src/contexts/AuthContext.js
+// PHASE 2: Simplified auth - no basic profile creation, direct to role dashboard
 import React, { createContext, useContext, useEffect, useState } from 'react'
 import { auth, db } from '../utils/supabase'
 
@@ -107,12 +108,12 @@ export const AuthProvider = ({ children }) => {
     }
   }, [])
 
-  // ✅ SIMPLIFIED: Load only registrant_profiles (no more basic_profiles)
+  // SIMPLIFIED: Load only registrant_profiles (no basic profile logic)
   const loadUserProfile = async (userId) => {
     console.log('📄 Loading profile for user:', userId)
     
     try {
-      // Load only the registrant profile
+      // Load only the registrant profile - no additional profile tables needed
       const { data: registrantData, error: registrantError } = await db.profiles.getById(userId)
 
       console.log('📄 Profile loading result:', {
@@ -155,7 +156,7 @@ export const AuthProvider = ({ children }) => {
         return
       }
 
-      // Use the registrant profile directly (no more basic_profiles to merge)
+      // Use the registrant profile directly - that's all we need for the simplified flow
       console.log('📄 Profile loaded successfully:', { 
         hasRoles: !!registrantData?.roles,
         roles: registrantData?.roles,
@@ -182,73 +183,68 @@ export const AuthProvider = ({ children }) => {
     }
   }
 
-  // ✅ SIMPLIFIED: Enhanced signup (no basic_profiles creation needed)
-// src/contexts/AuthContext.js
-// FIXED: Enhanced signup using existing auth and db imports (no supabase import needed)
-
-// Replace the signUp function (around line 110) with this:
-
-const signUp = async (email, password, userData) => {
-  console.log('📝 Signing up user:', email)
-  
-  try {
-    setLoading(true)
-    setError(null)
-
-    // Step 1: Create the auth user using existing auth helper
-    const { data, error } = await auth.signUp(email, password, userData)
+  // SIMPLIFIED: Enhanced signup (only creates registrant_profiles entry)
+  const signUp = async (email, password, userData) => {
+    console.log('📝 Simplified signup for user:', email)
     
-    if (error) {
-      console.error('❌ Signup error:', error)
-      setError(error.message)
-      return { success: false, error: error.message }
-    }
+    try {
+      setLoading(true)
+      setError(null)
 
-    if (data.user) {
-      console.log('✅ User created successfully:', data.user.id)
+      // Step 1: Create the auth user
+      const { data, error } = await auth.signUp(email, password, userData)
       
-      // Step 2: Wait a moment for potential trigger
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      
-      // Step 3: Check if profile was created by trigger
-      const { data: existingProfile } = await db.profiles.getById(data.user.id);
-      
-      if (!existingProfile) {
-        console.log('⚠️ No profile found, creating manually...');
-        
-        // Step 4: Manually create the registrant_profiles entry
-        const profileData = {
-          id: data.user.id,
-          email: email,
-          first_name: userData.firstName || '',
-          last_name: userData.lastName || '',
-          roles: userData.roles || [],
-          is_active: true
-        };
-        
-        const { error: profileError } = await db.profiles.create(profileData);
-        
-        if (profileError) {
-          console.error('❌ Failed to create profile manually:', profileError);
-          // Don't fail the signup, but log the issue
-        } else {
-          console.log('✅ Profile created manually');
-        }
-      } else {
-        console.log('✅ Profile found - trigger worked');
+      if (error) {
+        console.error('❌ Signup error:', error)
+        setError(error.message)
+        return { success: false, error: error.message }
       }
+
+      if (data.user) {
+        console.log('✅ User created successfully:', data.user.id)
+        
+        // Step 2: Wait a moment for potential trigger
+        await new Promise(resolve => setTimeout(resolve, 1000));
+        
+        // Step 3: Check if profile was created by trigger
+        const { data: existingProfile } = await db.profiles.getById(data.user.id);
+        
+        if (!existingProfile) {
+          console.log('⚠️ No profile found, creating manually...');
+          
+          // Step 4: Create ONLY the registrant_profiles entry (no other tables)
+          const profileData = {
+            id: data.user.id,
+            email: email,
+            first_name: userData.firstName || '',
+            last_name: userData.lastName || '',
+            roles: userData.roles || [],
+            is_active: true
+          };
+          
+          const { error: profileError } = await db.profiles.create(profileData);
+          
+          if (profileError) {
+            console.error('❌ Failed to create profile manually:', profileError);
+            // Don't fail the signup, but log the issue
+          } else {
+            console.log('✅ Profile created manually - user can proceed to role-specific forms');
+          }
+        } else {
+          console.log('✅ Profile found - trigger worked');
+        }
+      }
+      
+      return { success: true, data }
+    } catch (err) {
+      console.error('💥 Signup failed:', err)
+      const errorMessage = err.message || 'An error occurred during signup'
+      setError(errorMessage)
+      return { success: false, error: errorMessage }
+    } finally {
+      setLoading(false)
     }
-    
-    return { success: true, data }
-  } catch (err) {
-    console.error('💥 Signup failed:', err)
-    const errorMessage = err.message || 'An error occurred during signup'
-    setError(errorMessage)
-    return { success: false, error: errorMessage }
-  } finally {
-    setLoading(false)
   }
-}
 
   const signIn = async (email, password) => {
     console.log('🔑 Signing in user:', email)
@@ -306,54 +302,53 @@ const signUp = async (email, password, userData) => {
     }
   }
 
-  // ✅ SIMPLIFIED: Update profile (only registrant_profiles table)
-const updateProfile = async (updates) => {
-  console.log('📝 Updating profile:', updates)
-  
-  try {
-    setError(null)
+  // SIMPLIFIED: Update profile (only registrant_profiles table)
+  const updateProfile = async (updates) => {
+    console.log('📝 Updating profile:', updates)
+    
+    try {
+      setError(null)
 
-    if (!user) {
-      throw new Error('No authenticated user')
-    }
+      if (!user) {
+        throw new Error('No authenticated user')
+      }
 
-    // All updates go to registrant_profiles table now
-    console.log('📝 Updating registrant_profiles table')
-    const result = await db.profiles.update(user.id, updates)
-    
-    const { data, error } = result
-    
-    if (error) {
-      console.error('❌ Profile update error:', error)
-      setError(error.message)
-      return { success: false, error: error.message }
-    }
+      // All updates go to registrant_profiles table
+      console.log('📝 Updating registrant_profiles table')
+      const result = await db.profiles.update(user.id, updates)
+      
+      const { data, error } = result
+      
+      if (error) {
+        console.error('❌ Profile update error:', error)
+        setError(error.message)
+        return { success: false, error: error.message }
+      }
 
-    console.log('✅ Profile updated successfully')
-    
-    // ✅ FIXED: Update local profile state directly instead of reloading
-    // This prevents the timeout issue when reloading from database
-    if (data && data[0]) {
-      setProfile(prev => ({
-        ...prev,
-        ...data[0]
-      }))
-    } else {
-      // Fallback: update local state with the changes we made
-      setProfile(prev => ({
-        ...prev,
-        ...updates
-      }))
+      console.log('✅ Profile updated successfully')
+      
+      // Update local profile state directly instead of reloading
+      if (data && data[0]) {
+        setProfile(prev => ({
+          ...prev,
+          ...data[0]
+        }))
+      } else {
+        // Fallback: update local state with the changes we made
+        setProfile(prev => ({
+          ...prev,
+          ...updates
+        }))
+      }
+      
+      return { success: true, data: data?.[0] }
+    } catch (err) {
+      console.error('💥 Profile update failed:', err)
+      const errorMessage = err.message || 'Failed to update profile'
+      setError(errorMessage)
+      return { success: false, error: errorMessage }
     }
-    
-    return { success: true, data: data?.[0] }
-  } catch (err) {
-    console.error('💥 Profile update failed:', err)
-    const errorMessage = err.message || 'Failed to update profile'
-    setError(errorMessage)
-    return { success: false, error: errorMessage }
   }
-}
 
   // Role checking functions
   const hasRole = (role) => {

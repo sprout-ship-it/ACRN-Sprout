@@ -5,7 +5,6 @@ import { AuthProvider, useAuth } from './contexts/AuthContext';
 import LoadingSpinner from './components/common/LoadingSpinner';
 import Landing from './pages/Landing';
 import MainApp from './pages/MainApp';
-import Onboarding from './pages/Onboarding';
 import './styles/global.css';
 
 // Protected Route wrapper
@@ -71,22 +70,7 @@ const AppContent = () => {
           } 
         />
         
-        {/* Protected Routes */}
-        <Route 
-          path="/onboarding" 
-          element={
-            <ProtectedRoute>
-              <div className="container">
-                <header className="app-header">
-                  <h1 className="header-title">Recovery Housing Connect</h1>
-                  <p className="header-subtitle">Complete Your Profile Setup</p>
-                </header>
-                <Onboarding />
-              </div>
-            </ProtectedRoute>
-          } 
-        />
-        
+        {/* Protected Routes - MainApp handles all authenticated user flows */}
         <Route 
           path="/app/*" 
           element={
@@ -95,6 +79,11 @@ const AppContent = () => {
             </ProtectedRoute>
           } 
         />
+        
+        {/* Legacy route redirects for any old bookmarks */}
+        <Route path="/onboarding" element={<Navigate to="/app" replace />} />
+        <Route path="/profile" element={<Navigate to="/app/profile/basic" replace />} />
+        <Route path="/matching-profile" element={<Navigate to="/app/profile/matching" replace />} />
         
         {/* Catch all route */}
         <Route path="*" element={<Navigate to="/" replace />} />

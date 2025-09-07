@@ -9,13 +9,16 @@ const PeerSupportProfileForm = ({ editMode = false, onComplete, onCancel }) => {
   const { user, profile, hasRole } = useAuth();
   
   const [formData, setFormData] = useState({
+    // ✅ PHASE 3: Demographic data now collected here instead of basic profile
+    dateOfBirth: '',
+    phone: '',
+    gender: '',
+    sex: '',
+    
     // Basic Information
     firstName: '',
     lastName: '',
     email: '',
-    phone: '',
-    age: '',
-    gender: '',
     
     // Location & Availability
     serviceLocation: '',
@@ -87,6 +90,26 @@ const PeerSupportProfileForm = ({ editMode = false, onComplete, onCancel }) => {
   const [initialLoading, setInitialLoading] = useState(true);
   const [successMessage, setSuccessMessage] = useState('');
   
+  // ✅ PHASE 3: Added demographic options
+  const genderOptions = [
+    { value: '', label: 'Select Gender Identity' },
+    { value: 'male', label: 'Male' },
+    { value: 'female', label: 'Female' },
+    { value: 'non-binary', label: 'Non-binary' },
+    { value: 'genderfluid', label: 'Genderfluid' },
+    { value: 'agender', label: 'Agender' },
+    { value: 'other', label: 'Other' },
+    { value: 'prefer-not-to-say', label: 'Prefer not to say' }
+  ];
+  
+  const sexOptions = [
+    { value: '', label: 'Select Biological Sex' },
+    { value: 'male', label: 'Male' },
+    { value: 'female', label: 'Female' },
+    { value: 'intersex', label: 'Intersex' },
+    { value: 'prefer-not-to-say', label: 'Prefer not to say' }
+  ];
+  
   // Form options
   const recoveryStageOptions = [
     'early', 'stabilizing', 'stable', 'long-term', 'maintained'
@@ -155,24 +178,35 @@ const PeerSupportProfileForm = ({ editMode = false, onComplete, onCancel }) => {
     'insurance-navigation', 'benefits-assistance'
   ];
 
-  // Load existing data
+  // ✅ PHASE 3: Load existing data from both tables
   useEffect(() => {
     const loadExistingData = async () => {
-      if (!user || !hasRole('peer_support')) return;
+      if (!user || !hasRole('peer')) return;
 
       try {
+        // Load registrant profile for basic info and phone
+        const registrantProfile = profile;
+        
+        // Load peer support profile for comprehensive data
         const { data: peerProfile } = await db.peerSupportProfiles.getByUserId(user.id);
         
+        // Load demographic data from peer support profiles table
         if (peerProfile) {
           setFormData(prev => ({
             ...prev,
-            firstName: peerProfile.first_name || '',
-            lastName: peerProfile.last_name || '',
-            email: peerProfile.email || '',
-            phone: peerProfile.phone || '',
-            age: peerProfile.age?.toString() || '',
+            // ✅ PHASE 3: Load demographic data from peer support profile
+            phone: registrantProfile?.phone || '',
             gender: peerProfile.gender || '',
+            // Calculate age from DOB if available, or use stored age
+            dateOfBirth: peerProfile.date_of_birth || '',
+            sex: peerProfile.sex || '', // Note: sex field may not exist in peer table
             
+            // Load basic info from registrant profile
+            firstName: registrantProfile?.first_name || '',
+            lastName: registrantProfile?.last_name || '',
+            email: registrantProfile?.email || '',
+            
+            // Load comprehensive peer support data
             serviceLocation: peerProfile.service_location || '',
             serviceRadius: peerProfile.service_radius?.toString() || '25',
             availableLocations: peerProfile.available_locations || [],
@@ -227,6 +261,15 @@ const PeerSupportProfileForm = ({ editMode = false, onComplete, onCancel }) => {
             isActive: peerProfile.is_active !== false,
             acceptingClients: peerProfile.accepting_clients !== false
           }));
+        } else {
+          // No peer profile exists, load basic info from registrant profile
+          setFormData(prev => ({
+            ...prev,
+            firstName: registrantProfile?.first_name || '',
+            lastName: registrantProfile?.last_name || '',
+            email: registrantProfile?.email || '',
+            phone: registrantProfile?.phone || ''
+          }));
         }
       } catch (error) {
         console.error('Error loading peer support profile:', error);
@@ -245,8 +288,9 @@ const PeerSupportProfileForm = ({ editMode = false, onComplete, onCancel }) => {
   // Calculate completion percentage
   const getCompletionPercentage = () => {
     const requiredFields = [
-      'firstName', 'lastName', 'email', 'timeInRecovery', 'specialties', 
-      'availability', 'bio'
+      // ✅ PHASE 3: Include demographic fields in completion calculation
+      'dateOfBirth', 'phone', 'firstName', 'lastName', 'email', 
+      'timeInRecovery', 'specialties', 'availability', 'bio'
     ];
     const arrayFields = ['supportedRecoveryMethods', 'serviceTypes'];
     
@@ -254,7 +298,7 @@ const PeerSupportProfileForm = ({ editMode = false, onComplete, onCancel }) => {
     let total = requiredFields.length + arrayFields.length;
     
     requiredFields.forEach(field => {
-      if (formData[field] && formData[field].trim() !== '') completed++;
+      if (formData[field] && formData[field].toString().trim() !== '') completed++;
     });
     
     arrayFields.forEach(field => {
@@ -283,24 +327,52 @@ const PeerSupportProfileForm = ({ editMode = false, onComplete, onCancel }) => {
     }));
   };
   
-  // Validate form
+  // ✅ PHASE 3: Enhanced validation including demographic fields
   const validateForm = () => {
     const newErrors = {};
     
-    // Required fields
+    // ✅ PHASE 3: Validate demographic fields
+    if (!formData.dateOfBirth) newErrors.dateOfBirth = 'Date of birth is required';
+    if (!formData.phone.trim()) newErrors.phone = 'Phone number is required';
+    
+    // Age validation
+    if (formData.dateOfBirth) {
+      const today = new Date();
+      const birthDate = new Date(formData.dateOfBirth);
+      let age = today.getFullYear() - birthDate.getFullYear();
+      const monthDiff = today.getMonth() - birthDate.getMonth();
+      
+      if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birthDate.getDate())) {
+        age--;
+      }
+      
+      if (age < 18) {
+        newErrors.dateOfBirth = 'You must be 18 or older';
+      }
+    }
+
+    // Phone validation
+    const phoneRegex = /^[\d\s\-\(\)\+]{10,}$/;
+    if (formData.phone && !phoneRegex.test(formData.phone.replace(/\D/g, ''))) {
+      newErrors.phone = 'Please enter a valid phone number';
+    }
+    
+    // Basic info validation
     if (!formData.firstName.trim()) newErrors.firstName = 'First name is required';
     if (!formData.lastName.trim()) newErrors.lastName = 'Last name is required';
     if (!formData.email.trim()) newErrors.email = 'Email is required';
-    if (!formData.timeInRecovery) newErrors.timeInRecovery = 'Time in recovery is required';
-    if (!formData.specialties.trim()) newErrors.specialties = 'Specialties description is required';
-    if (!formData.availability) newErrors.availability = 'Availability is required';
-    if (!formData.bio.trim()) newErrors.bio = 'Bio is required';
     
     // Email validation
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     if (formData.email && !emailRegex.test(formData.email)) {
       newErrors.email = 'Please enter a valid email address';
     }
+    
+    // Peer-specific validation
+    if (!formData.timeInRecovery) newErrors.timeInRecovery = 'Time in recovery is required';
+    if (!formData.specialties.trim()) newErrors.specialties = 'Specialties description is required';
+    if (!formData.availability) newErrors.availability = 'Availability is required';
+    if (!formData.bio.trim()) newErrors.bio = 'Bio is required';
     
     // Array fields
     if (formData.supportedRecoveryMethods.length === 0) {
@@ -318,7 +390,7 @@ const PeerSupportProfileForm = ({ editMode = false, onComplete, onCancel }) => {
     return Object.keys(newErrors).length === 0;
   };
   
-  // Handle form submission
+  // ✅ PHASE 3: Enhanced form submission with demographic data handling
   const handleSubmit = async (e) => {
     e.preventDefault();
     
@@ -328,16 +400,41 @@ const PeerSupportProfileForm = ({ editMode = false, onComplete, onCancel }) => {
     setSuccessMessage('');
     
     try {
-      const peerProfileData = {
-        user_id: user.id,
-        
-        // Basic Information
+      // ✅ PHASE 3: Step 1: Update registrant profile with basic info and phone
+      const registrantUpdates = {
         first_name: formData.firstName,
         last_name: formData.lastName,
         email: formData.email,
-        phone: formData.phone || null,
-        age: parseInt(formData.age) || null,
+        phone: formData.phone
+      };
+      
+      const { error: registrantError } = await db.profiles.update(user.id, registrantUpdates);
+      if (registrantError) throw registrantError;
+      
+      // ✅ PHASE 3: Step 2: Calculate age from date of birth
+      const calculateAge = (dateOfBirth) => {
+        if (!dateOfBirth) return null;
+        const today = new Date();
+        const birthDate = new Date(dateOfBirth);
+        let age = today.getFullYear() - birthDate.getFullYear();
+        const monthDiff = today.getMonth() - birthDate.getMonth();
+        
+        if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birthDate.getDate())) {
+          age--;
+        }
+        
+        return age;
+      };
+      
+      // ✅ PHASE 3: Step 3: Prepare peer support profile data with demographics
+      const peerProfileData = {
+        user_id: user.id,
+        
+        // ✅ PHASE 3: Include demographic data
+        age: calculateAge(formData.dateOfBirth),
         gender: formData.gender || null,
+        date_of_birth: formData.dateOfBirth || null, // Store DOB for reference
+        // Note: sex field may not exist in peer_support_profiles table
         
         // Location & Availability
         service_location: formData.serviceLocation || null,
@@ -438,7 +535,7 @@ const PeerSupportProfileForm = ({ editMode = false, onComplete, onCancel }) => {
     );
   }
 
-  if (!hasRole('peer_support')) {
+  if (!hasRole('peer')) {
     return (
       <div className="alert alert-info">
         <p>Peer support profiles are only available for peer support specialists.</p>
@@ -481,8 +578,8 @@ const PeerSupportProfileForm = ({ editMode = false, onComplete, onCancel }) => {
       )}
       
       <form onSubmit={handleSubmit}>
-        {/* Basic Information */}
-        <h3 className="card-title mb-4">Basic Information</h3>
+        {/* ✅ PHASE 3: Demographic Information Section */}
+        <h3 className="card-title mb-4">Personal Information</h3>
         
         <div className="grid-2 mb-4">
           <div className="form-group">
@@ -539,14 +636,62 @@ const PeerSupportProfileForm = ({ editMode = false, onComplete, onCancel }) => {
           </div>
           
           <div className="form-group">
-            <label className="label">Phone</label>
+            <label className="label">
+              Phone <span className="text-red-500">*</span>
+            </label>
             <input
-              className="input"
+              className={`input ${errors.phone ? 'border-red-500' : ''}`}
               type="tel"
               value={formData.phone}
               onChange={(e) => handleInputChange('phone', e.target.value)}
+              placeholder="(555) 123-4567"
               disabled={loading}
+              required
             />
+            {errors.phone && (
+              <div className="text-red-500 mt-1">{errors.phone}</div>
+            )}
+          </div>
+        </div>
+
+        <div className="grid-2 mb-4">
+          <div className="form-group">
+            <label className="label">
+              Date of Birth <span className="text-red-500">*</span>
+            </label>
+            <input
+              className={`input ${errors.dateOfBirth ? 'border-red-500' : ''}`}
+              type="date"
+              value={formData.dateOfBirth}
+              onChange={(e) => handleInputChange('dateOfBirth', e.target.value)}
+              disabled={loading}
+              required
+            />
+            {errors.dateOfBirth && (
+              <div className="text-red-500 mt-1">{errors.dateOfBirth}</div>
+            )}
+            <div className="text-gray-500 mt-1 text-sm">
+              Your age helps clients find appropriate peer support
+            </div>
+          </div>
+          
+          <div className="form-group">
+            <label className="label">Gender Identity</label>
+            <select
+              className="input"
+              value={formData.gender}
+              onChange={(e) => handleInputChange('gender', e.target.value)}
+              disabled={loading}
+            >
+              {genderOptions.map(option => (
+                <option key={option.value} value={option.value}>
+                  {option.label}
+                </option>
+              ))}
+            </select>
+            <div className="text-gray-500 mt-1 text-sm">
+              Helps with client-peer matching preferences
+            </div>
           </div>
         </div>
 
