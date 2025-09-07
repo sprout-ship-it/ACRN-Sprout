@@ -188,33 +188,71 @@ const validatePeerProfile = () => {
   return Object.keys(newErrors).length === 0
 }
 
-  // Save basic profile
-  const saveBasicProfile = async () => {
-    if (!validateBasicProfile()) return
+// Save basic profile
+const saveBasicProfile = async () => {
+  if (!validateBasicProfile()) return
 
-    setLoading(true)
+  setLoading(true)
+  
+  try {
+    // 1. Always save phone to registrant_profiles (for all user types)
+    const { error: phoneError } = await db.profiles.update(profile.id, {
+      phone: basicProfile.phone
+    })
     
-    try {
-      const profileData = {
+    if (phoneError) throw phoneError
+
+    // 2. Save demographic data based on user role
+    if (profile?.roles?.includes('applicant')) {
+      // For applicants: save demographic data to applicant_forms
+      const demographicData = {
         user_id: profile.id,
         date_of_birth: basicProfile.dateOfBirth,
-        phone: basicProfile.phone,
         gender: basicProfile.gender,
         sex: basicProfile.sex
       }
-
-      const { error } = await db.basicProfiles.create(profileData)
       
-      if (error) throw error
-
-      setCurrentStep(2)
-    } catch (error) {
-      console.error('Error saving basic profile:', error)
-      setErrors({ submit: 'Failed to save profile. Please try again.' })
-    } finally {
-      setLoading(false)
+      const { error: demoError } = await db.applicantForms.create(demographicData)
+      if (demoError) throw demoError
+      
+    } else if (profile?.roles?.includes('peer')) {
+      // For peer support: save demographic data to peer_support_profiles
+      const demographicData = {
+        user_id: profile.id,
+        age: calculateAge(basicProfile.dateOfBirth), // Convert DOB to age for peers
+        gender: basicProfile.gender
+        // Note: sex field doesn't exist in peer_support_profiles table
+      }
+      
+      const { error: demoError } = await db.peerSupportProfiles.create(demographicData)
+      if (demoError) throw demoError
+      
     }
+    // For landlords: only phone was saved above, no demographic data needed
+
+    setCurrentStep(2)
+  } catch (error) {
+    console.error('Error saving basic profile:', error)
+    setErrors({ submit: 'Failed to save profile. Please try again.' })
+  } finally {
+    setLoading(false)
   }
+}
+
+// Helper function to calculate age from date of birth
+const calculateAge = (dateOfBirth) => {
+  if (!dateOfBirth) return null
+  const today = new Date()
+  const birthDate = new Date(dateOfBirth)
+  let age = today.getFullYear() - birthDate.getFullYear()
+  const monthDiff = today.getMonth() - birthDate.getMonth()
+  
+  if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birthDate.getDate())) {
+    age--
+  }
+  
+  return age
+}
 
   // Save matching profile and complete onboarding
   const saveMatchingProfile = async () => {

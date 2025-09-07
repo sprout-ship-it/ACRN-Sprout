@@ -177,56 +177,6 @@ export const db = {
     }
   },
 
-  // Basic profile operations (basic_profiles table)
-  basicProfiles: {
-    create: async (profileData) => {
-      console.log('📊 DB: basicProfiles.create called', { userId: profileData.user_id })
-      try {
-        const { data, error } = await supabase
-          .from('basic_profiles')
-          .insert(profileData)
-          .select()
-        console.log('📊 DB: basicProfiles.create result', { hasData: !!data, hasError: !!error, error: error?.message })
-        return { data, error }
-      } catch (err) {
-        console.error('💥 DB: basicProfiles.create failed', err)
-        throw err
-      }
-    },
-
-    getByUserId: async (userId) => {
-      console.log('📊 DB: basicProfiles.getByUserId called', { userId })
-      try {
-        const { data, error } = await supabase
-          .from('basic_profiles')
-          .select('*')
-          .eq('user_id', userId)
-          .single()
-        console.log('📊 DB: basicProfiles.getByUserId result', { hasData: !!data, hasError: !!error, error: error?.message })
-        return { data, error }
-      } catch (err) {
-        console.error('💥 DB: basicProfiles.getByUserId failed', err)
-        throw err
-      }
-    },
-
-    update: async (userId, updates) => {
-      console.log('📊 DB: basicProfiles.update called', { userId, updates })
-      try {
-        const { data, error } = await supabase
-          .from('basic_profiles')
-          .update(updates)
-          .eq('user_id', userId)
-          .select()
-        console.log('📊 DB: basicProfiles.update result', { hasData: !!data, hasError: !!error, error: error?.message })
-        return { data, error }
-      } catch (err) {
-        console.error('💥 DB: basicProfiles.update failed', err)
-        throw err
-      }
-    }
-  },
-
   // ✅ FIXED: Renamed matchingProfiles to applicantForms to match component expectations
   // Applicant forms operations (applicant_forms table)
   applicantForms: {

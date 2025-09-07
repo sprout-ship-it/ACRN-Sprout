@@ -7,7 +7,7 @@ import '../../styles/global.css';
 
 const BasicProfileForm = ({ editMode = false, onComplete, onCancel }) => {
   console.log('🎨 BasicProfileForm rendering!', { editMode, onComplete: !!onComplete, onCancel: !!onCancel });
-    const { user, profile, updateProfile } = useAuth();
+  const { user, profile, updateProfile } = useAuth();
   
   const [formData, setFormData] = useState({
     firstName: '',
@@ -60,30 +60,31 @@ const BasicProfileForm = ({ editMode = false, onComplete, onCancel }) => {
     'SD', 'TN', 'TX', 'UT', 'VT', 'VA', 'WA', 'WV', 'WI', 'WY'
   ];
   
-  // Load existing profile data
+  // ✅ FIXED: Load existing profile data from applicant_forms table
   useEffect(() => {
     const loadExistingData = async () => {
       if (!user) return;
 
       try {
-        // Load basic profile data if it exists
-        const { data: basicProfile } = await db.basicProfiles.getByUserId(user.id);
+        // ✅ FIXED: Load from applicant_forms table instead of basic_profiles
+        const { data: applicantData } = await db.applicantForms.getByUserId(user.id);
         
         setFormData(prev => ({
           ...prev,
           firstName: profile?.first_name || '',
           lastName: profile?.last_name || '',
           email: profile?.email || '',
-          dateOfBirth: basicProfile?.date_of_birth || '',
-          phone: basicProfile?.phone || '',
-          gender: basicProfile?.gender || '',
-          sex: basicProfile?.sex || '',
-          address: basicProfile?.address || '',
-          city: basicProfile?.city || '',
-          state: basicProfile?.state || '',
-          zipCode: basicProfile?.zip_code || '',
-          emergencyContactName: basicProfile?.emergency_contact_name || '',
-          emergencyContactPhone: basicProfile?.emergency_contact_phone || ''
+          // ✅ FIXED: Load demographic data from applicant_forms
+          dateOfBirth: applicantData?.date_of_birth || '',
+          phone: applicantData?.phone || '',
+          gender: applicantData?.gender || '',
+          sex: applicantData?.sex || '',
+          address: applicantData?.address || '',
+          city: applicantData?.city || '',
+          state: applicantData?.state || '',
+          zipCode: applicantData?.zip_code || '',
+          emergencyContactName: applicantData?.emergency_contact_name || '',
+          emergencyContactPhone: applicantData?.emergency_contact_phone || ''
         }));
       } catch (error) {
         console.error('Error loading profile data:', error);
@@ -174,7 +175,7 @@ const BasicProfileForm = ({ editMode = false, onComplete, onCancel }) => {
     return Object.keys(newErrors).length === 0;
   };
   
-  // Handle form submission
+  // ✅ FIXED: Handle form submission - save to both registrant_profiles and applicant_forms
   const handleSubmit = async (e) => {
     e.preventDefault();
     
@@ -193,8 +194,8 @@ const BasicProfileForm = ({ editMode = false, onComplete, onCancel }) => {
       
       await updateProfile(profileUpdates);
       
-      // Prepare basic profile data
-      const basicProfileData = {
+      // ✅ FIXED: Save demographic data to applicant_forms table
+      const applicantData = {
         user_id: user.id,
         date_of_birth: formData.dateOfBirth,
         phone: formData.phone,
@@ -208,14 +209,34 @@ const BasicProfileForm = ({ editMode = false, onComplete, onCancel }) => {
         emergency_contact_phone: formData.emergencyContactPhone || null
       };
       
-      // Try to update existing profile, or create new one
-      const { data: existingProfile } = await db.basicProfiles.getByUserId(user.id);
+      // ✅ FIXED: Try to update existing applicant form, or create new one
+      const { data: existingApplicant } = await db.applicantForms.getByUserId(user.id);
       
-      if (existingProfile) {
-        const { error } = await db.basicProfiles.update(user.id, basicProfileData);
+      if (existingApplicant) {
+        const { error } = await db.applicantForms.update(user.id, applicantData);
         if (error) throw error;
       } else {
-        const { error } = await db.basicProfiles.create(basicProfileData);
+        // ✅ FIXED: Create with minimal required fields for applicant_forms
+        const minimalApplicantData = {
+          ...applicantData,
+          // Add required fields with defaults
+          budget_max: 1000, // Default budget
+          preferred_roommate_gender: 'no_preference',
+          smoking_status: 'non_smoker',
+          spiritual_affiliation: 'prefer-not-to-say',
+          recovery_stage: 'stable',
+          work_schedule: 'traditional_9_5',
+          about_me: 'Profile in progress',
+          looking_for: 'Profile in progress',
+          // Initialize arrays
+          housing_type: [],
+          program_type: [],
+          primary_issues: [],
+          recovery_methods: [],
+          interests: []
+        };
+        
+        const { error } = await db.applicantForms.create(minimalApplicantData);
         if (error) throw error;
       }
       

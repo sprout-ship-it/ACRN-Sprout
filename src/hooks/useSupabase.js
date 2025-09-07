@@ -105,7 +105,7 @@ export const useBasicProfile = () => {
 
   const createBasicProfile = useCallback(async (profileData) => {
     return executeOperation(
-      () => db.basicProfiles.create({ ...profileData, user_id: user.id }),
+      () => db.applicantForms.create({ ...profileData, user_id: user.id }),
       { successMessage: 'Basic profile created successfully' }
     );
   }, [executeOperation, user]);
@@ -114,7 +114,7 @@ export const useBasicProfile = () => {
     if (!user) throw new Error('No authenticated user');
     
     return executeOperation(
-      () => db.basicProfiles.update(user.id, updates),
+      () => db.applicantForms.update(user.id, updates),
       { successMessage: 'Basic profile updated successfully' }
     );
   }, [executeOperation, user]);
@@ -123,7 +123,7 @@ export const useBasicProfile = () => {
     if (!userId) throw new Error('User ID required');
     
     return executeOperation(
-      () => db.basicProfiles.getByUserId(userId),
+      () => db.applicantForms.getByUserId(userId),
       { setLoadingState: false }
     );
   }, [executeOperation, user]);

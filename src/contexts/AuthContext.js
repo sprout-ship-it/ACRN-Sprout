@@ -24,13 +24,12 @@ export const AuthProvider = ({ children }) => {
   useEffect(() => {
     console.log('🔄 AuthContext useEffect starting')
     
-    let isMounted = true // Prevent state updates if component unmounts
+    let isMounted = true
     
     const initializeAuth = async () => {
       try {
         console.log('📡 Getting initial session...')
         
-        // Add timeout to prevent hanging
         const sessionPromise = auth.getSession()
         const timeoutPromise = new Promise((_, reject) => 
           setTimeout(() => reject(new Error('Session timeout')), 10000)
@@ -73,10 +72,8 @@ export const AuthProvider = ({ children }) => {
       }
     }
 
-    // Initialize auth
     initializeAuth()
 
-    // Listen for auth changes
     console.log('👂 Setting up auth state change listener')
     const { data: { subscription } } = auth.onAuthStateChange(async (event, session) => {
       console.log('🔄 Auth state changed:', event, { hasSession: !!session })
@@ -103,52 +100,54 @@ export const AuthProvider = ({ children }) => {
       }
     })
 
-    // Cleanup function
     return () => {
       console.log('🧹 AuthContext cleanup')
       isMounted = false
       subscription.unsubscribe()
     }
-  }, []) // Empty dependency array is intentional
+  }, [])
 
-  // ✅ FIXED: Improved profile loading with better error handling and fallback logic
+  // ✅ SIMPLIFIED: Load only registrant_profiles (no more basic_profiles)
   const loadUserProfile = async (userId) => {
     console.log('📄 Loading profile for user:', userId)
     
     try {
-      // Load both profile parts with individual error handling
-      const [registrantResult, basicProfileResult] = await Promise.allSettled([
-        db.profiles.getById(userId),           // registrant_profiles table
-        db.basicProfiles.getByUserId(userId)   // basic_profiles table
-      ])
+      // Load only the registrant profile
+      const { data: registrantData, error: registrantError } = await db.profiles.getById(userId)
 
-      console.log('📄 Profile loading results:', {
-        registrant: registrantResult.status,
-        basic: basicProfileResult.status,
-        registrantError: registrantResult.status === 'rejected' ? registrantResult.reason : null,
-        basicError: basicProfileResult.status === 'rejected' ? basicProfileResult.reason : null
+      console.log('📄 Profile loading result:', {
+        hasRegistrant: !!registrantData,
+        registrantError: registrantError?.message
       })
 
-      // Extract data from successful results
-      const registrantData = registrantResult.status === 'fulfilled' && !registrantResult.value.error 
-        ? registrantResult.value.data 
-        : null
+      if (registrantError && registrantError.code !== 'PGRST116') {
+        console.error('❌ Error loading registrant profile:', registrantError)
+        
+        // Create emergency fallback profile
+        const emergencyProfile = {
+          id: userId,
+          email: user?.email,
+          roles: [],
+          first_name: '',
+          last_name: ''
+        }
+        
+        console.log('🚨 Using emergency fallback profile')
+        setProfile(emergencyProfile)
+        setError('Profile loading failed - using minimal profile')
+        return
+      }
 
-      const basicData = basicProfileResult.status === 'fulfilled' && !basicProfileResult.value.error
-        ? basicProfileResult.value.data 
-        : null
-
-      // ✅ FIXED: Create fallback profile if registrant profile is missing
       if (!registrantData) {
-        console.warn('⚠️ No registrant profile found - profile may not have been created by trigger')
-        console.log('ℹ️ This suggests the database trigger is not working correctly')
+        console.warn('⚠️ No registrant profile found - may not have been created by trigger')
         
         // Set a minimal profile to prevent app crashes
         const fallbackProfile = {
           id: userId,
           email: user?.email,
-          roles: [], // Empty roles array
-          ...basicData // Include basic profile data if available
+          roles: [],
+          first_name: '',
+          last_name: ''
         }
         
         console.log('📄 Using fallback profile:', fallbackProfile)
@@ -156,29 +155,19 @@ export const AuthProvider = ({ children }) => {
         return
       }
 
-      // Combine the profile data
-      const combinedProfile = {
-        // Main profile data (including roles) from registrant_profiles
-        ...registrantData,
-        // Additional profile data from basic_profiles (if available)
-        ...(basicData || {})
-      }
-
-      console.log('📄 Combined profile loaded successfully:', { 
-        hasRoles: !!combinedProfile?.roles,
-        roles: combinedProfile?.roles,
-        hasBasicData: !!basicData,
-        registrantKeys: registrantData ? Object.keys(registrantData) : [],
-        basicKeys: basicData ? Object.keys(basicData) : [],
-        fullProfile: combinedProfile
+      // Use the registrant profile directly (no more basic_profiles to merge)
+      console.log('📄 Profile loaded successfully:', { 
+        hasRoles: !!registrantData?.roles,
+        roles: registrantData?.roles,
+        fullProfile: registrantData
       })
 
-      setProfile(combinedProfile)
+      setProfile(registrantData)
 
     } catch (err) {
       console.error('💥 Critical profile loading error:', err)
       
-      // Create emergency fallback profile to prevent app crashes
+      // Create emergency fallback profile
       const emergencyProfile = {
         id: userId,
         email: user?.email,
@@ -193,7 +182,7 @@ export const AuthProvider = ({ children }) => {
     }
   }
 
-  // ✅ FIXED: Enhanced signup with better trigger handling
+  // ✅ SIMPLIFIED: Enhanced signup (no basic_profiles creation needed)
   const signUp = async (email, password, userData) => {
     console.log('📝 Signing up user:', email)
     
@@ -201,7 +190,7 @@ export const AuthProvider = ({ children }) => {
       setLoading(true)
       setError(null)
 
-      // Call your auth helper - the trigger should create the profile automatically
+      // The trigger will automatically create registrant_profiles entry
       const { data, error } = await auth.signUp(email, password, userData)
       
       if (error) {
@@ -214,13 +203,12 @@ export const AuthProvider = ({ children }) => {
         console.log('✅ User created successfully:', data.user.id)
         console.log('⏳ Database trigger should create profile automatically...')
         
-        // ✅ ADDED: Wait a moment for trigger to complete, then verify profile exists
+        // Wait for trigger to complete, then verify profile exists
         setTimeout(async () => {
           try {
             const { data: profileCheck } = await db.profiles.getById(data.user.id)
             if (!profileCheck) {
-              console.warn('⚠️ Profile not created by trigger - manual creation may be needed')
-              console.warn('🔧 Check your database triggers in Supabase dashboard')
+              console.warn('⚠️ Profile not created by trigger - check database triggers')
             } else {
               console.log('✅ Profile confirmed created by trigger')
             }
@@ -241,7 +229,6 @@ export const AuthProvider = ({ children }) => {
     }
   }
 
-  // Sign in existing user
   const signIn = async (email, password) => {
     console.log('🔑 Signing in user:', email)
     
@@ -269,7 +256,6 @@ export const AuthProvider = ({ children }) => {
     }
   }
 
-  // Sign out user
   const signOut = async () => {
     console.log('🚪 Signing out user')
     
@@ -299,7 +285,7 @@ export const AuthProvider = ({ children }) => {
     }
   }
 
-  // ✅ FIXED: Enhanced update profile with proper data handling
+  // ✅ SIMPLIFIED: Update profile (only registrant_profiles table)
   const updateProfile = async (updates) => {
     console.log('📝 Updating profile:', updates)
     
@@ -310,18 +296,9 @@ export const AuthProvider = ({ children }) => {
         throw new Error('No authenticated user')
       }
 
-      // Determine which table to update based on the fields being updated
-      const registrantFields = ['email', 'first_name', 'last_name', 'roles']
-      const isRegistrantUpdate = Object.keys(updates).some(key => registrantFields.includes(key))
-      
-      let result
-      if (isRegistrantUpdate) {
-        console.log('📝 Updating registrant_profiles table')
-        result = await db.profiles.update(user.id, updates)
-      } else {
-        console.log('📝 Updating basic_profiles table')
-        result = await db.basicProfiles.update(user.id, updates)
-      }
+      // All updates go to registrant_profiles table now
+      console.log('📝 Updating registrant_profiles table')
+      const result = await db.profiles.update(user.id, updates)
       
       const { data, error } = result
       
@@ -333,7 +310,7 @@ export const AuthProvider = ({ children }) => {
 
       console.log('✅ Profile updated successfully')
       
-      // Reload the full profile to ensure consistency
+      // Reload the profile to ensure consistency
       await loadUserProfile(user.id)
       
       return { success: true, data: data[0] }
@@ -345,7 +322,7 @@ export const AuthProvider = ({ children }) => {
     }
   }
 
-  // ✅ IMPROVED: Enhanced role checking with better debugging
+  // Role checking functions
   const hasRole = (role) => {
     const result = Array.isArray(profile?.roles) && profile.roles.includes(role)
     console.log('🔍 hasRole check:', { 
@@ -354,24 +331,20 @@ export const AuthProvider = ({ children }) => {
       userRoles: profile?.roles,
       rolesType: typeof profile?.roles,
       isArray: Array.isArray(profile?.roles),
-      hasProfile: !!profile,
-      profileKeys: profile ? Object.keys(profile) : 'no profile'
+      hasProfile: !!profile
     })
     return result
   }
 
-  // Check if user has any of the specified roles
   const hasAnyRole = (roles) => {
     if (!Array.isArray(profile?.roles)) return false
     return roles.some(role => profile.roles.includes(role))
   }
 
-  // Get user's primary role (first in array)
   const getPrimaryRole = () => {
     return Array.isArray(profile?.roles) && profile.roles.length > 0 ? profile.roles[0] : null
   }
 
-  // Clear error
   const clearError = () => {
     setError(null)
   }

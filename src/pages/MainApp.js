@@ -92,7 +92,7 @@ const [profileSetup, setProfileSetup] = useState({
 
       try {
         // Check basic profile
-        const { data: basicProfile } = await db.basicProfiles.getByUserId(user.id)
+        const { data: basicProfile } = await db.applicantForms.getByUserId(user.id)
         
         // Check matching profile (for applicants only)
         let matchingProfile = null

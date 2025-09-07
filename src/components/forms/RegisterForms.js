@@ -1,5 +1,6 @@
-// src/components/forms/RegisterForm.js
+// src/components/forms/RegisterForms.js
 import React, { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
 import LoadingSpinner from '../common/LoadingSpinner';
 import '../../styles/global.css';
@@ -17,6 +18,7 @@ const RegisterForm = ({ onBackToLanding }) => {
   const [success, setSuccess] = useState(false);
 
   const { signUp, loading, error, clearError } = useAuth();
+  const navigate = useNavigate();
 
   const roles = [
     { id: 'applicant', label: 'Applicant', description: 'Seeking housing and roommates' },
@@ -80,10 +82,14 @@ const RegisterForm = ({ onBackToLanding }) => {
       roles: selectedRoles
     };
 
-    const { success: signUpSuccess } = await signUp(email, password, userData);
+    console.log('🔄 RegisterForm submitting:', { email, userData });
+
+    const { success: signUpSuccess, error: signUpError } = await signUp(email, password, userData);
     
     if (signUpSuccess) {
+      console.log('✅ Registration successful');
       setSuccess(true);
+      
       // Clear form
       setFirstName('');
       setLastName('');
@@ -92,10 +98,12 @@ const RegisterForm = ({ onBackToLanding }) => {
       setConfirmPassword('');
       setSelectedRoles([]);
       
-      // Show success message briefly then navigate
+      // Navigate to onboarding after brief success display
       setTimeout(() => {
-        // Navigation will be handled by MainApp based on auth state
+        navigate('/onboarding');
       }, 2000);
+    } else {
+      console.error('❌ Registration failed:', signUpError);
     }
   };
 
@@ -112,7 +120,7 @@ const RegisterForm = ({ onBackToLanding }) => {
             <div className="text-center">
               <LoadingSpinner size="large" />
               <p className="text-gray-600 mt-3">
-                Redirecting to your dashboard...
+                Redirecting to profile setup...
               </p>
             </div>
           </div>
