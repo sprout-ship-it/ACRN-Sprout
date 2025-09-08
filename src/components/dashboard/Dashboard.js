@@ -1,7 +1,7 @@
 // src/components/dashboard/Dashboard.js
 import React, { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { useAuth } from '../../contexts/AuthContext'
+import { useAuth } from '../../context/AuthContext'
 import { db } from '../../utils/supabase'
 import '../../styles/global.css';
 

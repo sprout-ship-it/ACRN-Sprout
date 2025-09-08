@@ -1,7 +1,7 @@
 // src/components/layout/Navigation.js
 import React from 'react'
 import { useLocation, useNavigate } from 'react-router-dom'
-import { useAuth } from '../../contexts/AuthContext'
+import { useAuth } from '../../context/AuthContext'
 import '../../styles/global.css';
 
 const Navigation = () => {

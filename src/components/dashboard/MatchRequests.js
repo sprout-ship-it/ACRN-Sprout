@@ -1,6 +1,6 @@
 // src/components/dashboard/MatchRequests.js
 import React, { useState, useEffect } from 'react';
-import { useAuth } from '../../contexts/AuthContext';
+import { useAuth } from '../../context/AuthContext';
 import { db } from '../../utils/supabase';
 import LoadingSpinner from '../common/LoadingSpinner';
 import '../../styles/global.css';

@@ -2,7 +2,7 @@
 import React from 'react';
 import Header from './Header';
 import Navigation from './Navigation';
-import { useAuth } from '../../contexts/AuthContext';
+import { useAuth } from '../../context/AuthContext';
 import '../../styles/global.css';
 
 const Layout = ({ children, showNavigation = true, showHeader = true }) => {

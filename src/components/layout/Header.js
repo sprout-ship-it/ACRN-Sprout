@@ -1,6 +1,6 @@
 // src/components/layout/Header.js
 import React from 'react'
-import { useAuth } from '../../contexts/AuthContext'
+import { useAuth } from '../../context/AuthContext'
 import '../../styles/global.css';
 
 const Header = () => {
