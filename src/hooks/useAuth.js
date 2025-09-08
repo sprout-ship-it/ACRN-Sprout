@@ -1,6 +1,6 @@
 // src/hooks/useAuth.js
 import { useContext } from 'react';
-import { useAuth } from '../../contexts/AuthContext'
+import { useAuth } from '../context/AuthContext';
 
 /**
  * Custom hook for accessing authentication state and methods
