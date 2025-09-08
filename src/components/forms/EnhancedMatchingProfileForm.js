@@ -16,7 +16,28 @@ import {
   smokingStatusOptions 
 } from './constants/matchingFormConstants';
 import '../../styles/global.css';
+import { useMatchingProfileForm } from './hooks/useMatchingProfileForm';
 
+const EnhancedMatchingProfileForm = ({ editMode, onComplete, onCancel }) => {
+  const {
+    formData,
+    errors,
+    loading,
+    initialLoading,
+    successMessage,
+    completionPercentage,
+    canSubmit,
+    handleInputChange,
+    handleArrayChange,
+    handleRangeChange,
+    submitForm
+  } = useMatchingProfileForm();
+
+  const handleSubmit = (e) => {
+    e.preventDefault();
+    submitForm(onComplete);
+  };
+}
 const EnhancedMatchingProfileForm = ({ editMode = false, onComplete, onCancel }) => {
   const { user, profile, hasRole } = useAuth();
   
