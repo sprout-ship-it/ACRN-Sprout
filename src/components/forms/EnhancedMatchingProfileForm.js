@@ -1,4 +1,4 @@
-// src/components/forms/EnhancedMatchingProfileForm.js
+// Enhanced debugging version of EnhancedMatchingProfileForm.js
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../../context/AuthContext';
 import { db } from '../../utils/supabase';
@@ -23,6 +23,12 @@ const EnhancedMatchingProfileForm = ({ editMode = false, onComplete, onCancel })
   const [loading, setLoading] = useState(false);
   const [initialLoading, setInitialLoading] = useState(true);
   const [successMessage, setSuccessMessage] = useState('');
+  const [debugInfo, setDebugInfo] = useState(''); // DEBUG: Add debug info state
+
+  // DEBUG: Add logging for form data changes
+  useEffect(() => {
+    console.log('🔍 DEBUG: Current formData state:', formData);
+  }, [formData]);
 
   // Load existing data
   useEffect(() => {
@@ -30,11 +36,14 @@ const EnhancedMatchingProfileForm = ({ editMode = false, onComplete, onCancel })
       if (!user || !hasRole('applicant')) return;
 
       try {
+        console.log('🔍 DEBUG: Loading existing data for user:', user.id);
         const { data: applicantForm } = await db.applicantForms.getByUserId(user.id);
         
+        console.log('🔍 DEBUG: Loaded applicant form data:', applicantForm);
+        
         if (applicantForm) {
-          setFormData(prev => ({
-            ...prev,
+          const loadedData = {
+            ...defaultFormData, // Start with defaults
             // Personal Demographics
             dateOfBirth: applicantForm.date_of_birth || '',
             phone: applicantForm.phone || '',
@@ -119,10 +128,14 @@ const EnhancedMatchingProfileForm = ({ editMode = false, onComplete, onCancel })
             additionalInfo: applicantForm.additional_info || '',
             specialNeeds: applicantForm.special_needs || '',
             isActive: applicantForm.is_active !== false
-          }));
+          };
+          
+          console.log('🔍 DEBUG: Setting loaded form data:', loadedData);
+          setFormData(loadedData);
         }
       } catch (error) {
-        console.error('Error loading applicant form data:', error);
+        console.error('🔍 DEBUG: Error loading applicant form data:', error);
+        setDebugInfo(`Error loading data: ${error.message}`);
       } finally {
         setInitialLoading(false);
       }
@@ -138,9 +151,7 @@ const EnhancedMatchingProfileForm = ({ editMode = false, onComplete, onCancel })
   // Calculate completion percentage
   const getCompletionPercentage = () => {
     const requiredFields = [
-      // Demographic fields
       'dateOfBirth', 'phone',
-      // Core matching fields
       'preferredLocation', 'maxCommute', 'moveInDate', 'recoveryStage', 
       'workSchedule', 'aboutMe', 'lookingFor', 'budgetMax', 'preferredRoommateGender',
       'smokingStatus', 'spiritualAffiliation'
@@ -161,37 +172,56 @@ const EnhancedMatchingProfileForm = ({ editMode = false, onComplete, onCancel })
     return Math.round((completed / total) * 100);
   };
   
-  // Handle input changes
+  // Handle input changes with debugging
   const handleInputChange = (field, value) => {
-    setFormData(prev => ({ ...prev, [field]: value }));
+    console.log('🔍 DEBUG: handleInputChange called:', { field, value, type: typeof value });
+    setFormData(prev => {
+      const newData = { ...prev, [field]: value };
+      console.log('🔍 DEBUG: Updated formData for field:', field, 'New value:', value);
+      return newData;
+    });
     
+    // Clear error for this field
     if (errors[field]) {
       setErrors(prev => ({ ...prev, [field]: '' }));
     }
   };
   
-  // Handle array field changes
+  // Handle array field changes with debugging
   const handleArrayChange = (field, value, checked) => {
-    setFormData(prev => ({
-      ...prev,
-      [field]: checked 
+    console.log('🔍 DEBUG: handleArrayChange called:', { field, value, checked });
+    setFormData(prev => {
+      const newArray = checked 
         ? [...prev[field], value]
-        : prev[field].filter(item => item !== value)
-    }));
+        : prev[field].filter(item => item !== value);
+      console.log('🔍 DEBUG: Updated array for field:', field, 'New array:', newArray);
+      return {
+        ...prev,
+        [field]: newArray
+      };
+    });
   };
   
-  // Handle range changes
+  // Handle range changes with debugging
   const handleRangeChange = (field, value) => {
-    setFormData(prev => ({ ...prev, [field]: parseInt(value) }));
+    console.log('🔍 DEBUG: handleRangeChange called:', { field, value });
+    handleInputChange(field, parseInt(value));
   };
   
-  // Form validation
+  // Form validation with detailed logging
   const validateForm = () => {
+    console.log('🔍 DEBUG: Starting form validation...');
     const newErrors = {};
     
     // Demographic validation
-    if (!formData.dateOfBirth) newErrors.dateOfBirth = 'Date of birth is required';
-    if (!formData.phone.trim()) newErrors.phone = 'Phone number is required';
+    if (!formData.dateOfBirth) {
+      newErrors.dateOfBirth = 'Date of birth is required';
+      console.log('🔍 DEBUG: Validation error - dateOfBirth missing');
+    }
+    if (!formData.phone.trim()) {
+      newErrors.phone = 'Phone number is required';
+      console.log('🔍 DEBUG: Validation error - phone missing');
+    }
     
     // Age validation (must be 18+)
     if (formData.dateOfBirth) {
@@ -206,6 +236,7 @@ const EnhancedMatchingProfileForm = ({ editMode = false, onComplete, onCancel })
       
       if (age < 18) {
         newErrors.dateOfBirth = 'You must be 18 or older to use this service';
+        console.log('🔍 DEBUG: Validation error - user under 18, age:', age);
       }
     }
 
@@ -213,37 +244,64 @@ const EnhancedMatchingProfileForm = ({ editMode = false, onComplete, onCancel })
     const phoneRegex = /^[\d\s\-\(\)\+]{10,}$/;
     if (formData.phone && !phoneRegex.test(formData.phone.replace(/\D/g, ''))) {
       newErrors.phone = 'Please enter a valid phone number';
+      console.log('🔍 DEBUG: Validation error - invalid phone format:', formData.phone);
     }
 
     // ZIP code validation
     if (formData.zipCode && !/^\d{5}(-\d{4})?$/.test(formData.zipCode)) {
       newErrors.zipCode = 'Please enter a valid ZIP code';
+      console.log('🔍 DEBUG: Validation error - invalid ZIP code:', formData.zipCode);
     }
     
-    // Required fields
-    if (!formData.preferredLocation.trim()) newErrors.preferredLocation = 'Preferred location is required';
-    if (!formData.maxCommute) newErrors.maxCommute = 'Maximum commute time is required';
-    if (!formData.moveInDate) newErrors.moveInDate = 'Move-in date is required';
-    if (!formData.recoveryStage) newErrors.recoveryStage = 'Recovery stage is required';
-    if (!formData.workSchedule) newErrors.workSchedule = 'Work schedule is required';
-    if (!formData.aboutMe.trim()) newErrors.aboutMe = 'About me section is required';
-    if (!formData.lookingFor.trim()) newErrors.lookingFor = 'Looking for section is required';
-    if (!formData.budgetMax) newErrors.budgetMax = 'Personal budget maximum is required';
-    if (!formData.preferredRoommateGender) newErrors.preferredRoommateGender = 'Roommate gender preference is required';
-    if (!formData.smokingStatus) newErrors.smokingStatus = 'Your smoking status is required';
-    if (!formData.spiritualAffiliation) newErrors.spiritualAffiliation = 'Spiritual affiliation is required';
+    // Required fields validation
+    const requiredStringFields = [
+      'preferredLocation', 'recoveryStage', 'workSchedule', 'aboutMe', 'lookingFor', 
+      'preferredRoommateGender', 'smokingStatus', 'spiritualAffiliation'
+    ];
     
-    // Array fields
-    if (formData.housingType.length === 0) newErrors.housingType = 'Please select at least one housing type';
-    if (formData.programType.length === 0) newErrors.programType = 'Please select at least one program type';
-    if (formData.interests.length === 0) newErrors.interests = 'Please select at least one interest';
-    if (formData.primaryIssues.length === 0) newErrors.primaryIssues = 'Please select at least one primary issue';
-    if (formData.recoveryMethods.length === 0) newErrors.recoveryMethods = 'Please select at least one recovery method';
+    requiredStringFields.forEach(field => {
+      if (!formData[field] || !formData[field].toString().trim()) {
+        newErrors[field] = `${field} is required`;
+        console.log(`🔍 DEBUG: Validation error - ${field} missing:`, formData[field]);
+      }
+    });
+    
+    // Required number fields
+    if (!formData.maxCommute) {
+      newErrors.maxCommute = 'Maximum commute time is required';
+      console.log('🔍 DEBUG: Validation error - maxCommute missing:', formData.maxCommute);
+    }
+    if (!formData.moveInDate) {
+      newErrors.moveInDate = 'Move-in date is required';
+      console.log('🔍 DEBUG: Validation error - moveInDate missing:', formData.moveInDate);
+    }
+    if (!formData.budgetMax) {
+      newErrors.budgetMax = 'Personal budget maximum is required';
+      console.log('🔍 DEBUG: Validation error - budgetMax missing:', formData.budgetMax);
+    }
+    
+    // Array fields validation
+    const requiredArrayFields = ['housingType', 'programType', 'interests', 'primaryIssues', 'recoveryMethods'];
+    requiredArrayFields.forEach(field => {
+      if (!formData[field] || formData[field].length === 0) {
+        newErrors[field] = `Please select at least one ${field.replace(/([A-Z])/g, ' $1').toLowerCase()}`;
+        console.log(`🔍 DEBUG: Validation error - ${field} array empty:`, formData[field]);
+      }
+    });
     
     // Text length validation
-    if (formData.aboutMe.length > 500) newErrors.aboutMe = 'About me must be 500 characters or less';
-    if (formData.lookingFor.length > 500) newErrors.lookingFor = 'Looking for must be 500 characters or less';
-    if (formData.additionalInfo.length > 300) newErrors.additionalInfo = 'Additional info must be 300 characters or less';
+    if (formData.aboutMe && formData.aboutMe.length > 500) {
+      newErrors.aboutMe = 'About me must be 500 characters or less';
+      console.log('🔍 DEBUG: Validation error - aboutMe too long:', formData.aboutMe.length);
+    }
+    if (formData.lookingFor && formData.lookingFor.length > 500) {
+      newErrors.lookingFor = 'Looking for must be 500 characters or less';
+      console.log('🔍 DEBUG: Validation error - lookingFor too long:', formData.lookingFor.length);
+    }
+    if (formData.additionalInfo && formData.additionalInfo.length > 300) {
+      newErrors.additionalInfo = 'Additional info must be 300 characters or less';
+      console.log('🔍 DEBUG: Validation error - additionalInfo too long:', formData.additionalInfo.length);
+    }
     
     // Date validation
     if (formData.moveInDate) {
@@ -251,29 +309,46 @@ const EnhancedMatchingProfileForm = ({ editMode = false, onComplete, onCancel })
       const today = new Date();
       if (moveInDate < today) {
         newErrors.moveInDate = 'Move-in date cannot be in the past';
+        console.log('🔍 DEBUG: Validation error - moveInDate in past:', formData.moveInDate);
       }
     }
 
     // Budget validation
-    if (formData.budgetMax < 200) {
-      newErrors.budgetMax = 'Budget must be at least $200';
+    if (formData.budgetMax) {
+      const budget = parseInt(formData.budgetMax);
+      if (budget < 200) {
+        newErrors.budgetMax = 'Budget must be at least $200';
+        console.log('🔍 DEBUG: Validation error - budget too low:', budget);
+      }
+      if (budget > 5000) {
+        newErrors.budgetMax = 'Budget seems unreasonably high. Please verify.';
+        console.log('🔍 DEBUG: Validation error - budget too high:', budget);
+      }
     }
-    if (formData.budgetMax > 5000) {
-      newErrors.budgetMax = 'Budget seems unreasonably high. Please verify.';
-    }
+    
+    console.log('🔍 DEBUG: Validation complete. Errors found:', Object.keys(newErrors).length);
+    console.log('🔍 DEBUG: Validation errors:', newErrors);
     
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
   
-  // Form submission
+  // Form submission with extensive debugging
   const handleSubmit = async (e) => {
     e.preventDefault();
     
-    if (!validateForm()) return;
+    console.log('🔍 DEBUG: Form submission started');
+    console.log('🔍 DEBUG: Current formData at submission:', formData);
+    
+    if (!validateForm()) {
+      console.log('🔍 DEBUG: Form validation failed - stopping submission');
+      setDebugInfo('Form validation failed. Check the error messages above.');
+      return;
+    }
     
     setLoading(true);
     setSuccessMessage('');
+    setDebugInfo('');
     
     try {
       // Parse target zip codes
@@ -372,24 +447,29 @@ const EnhancedMatchingProfileForm = ({ editMode = false, onComplete, onCancel })
         profile_completed: true
       };
       
+      console.log('🔍 DEBUG: Prepared applicantFormData for database:', applicantFormData);
+      
       console.log('🔧 Updating existing applicant form with comprehensive profile data');
       const { error } = await db.applicantForms.update(user.id, applicantFormData);
       
       if (error) {
         console.error('❌ Error updating applicant form:', error);
+        setDebugInfo(`Database error: ${error.message || JSON.stringify(error)}`);
         throw error;
       }
       
       console.log('✅ Comprehensive matching profile saved successfully');
       setSuccessMessage('Comprehensive matching profile saved successfully!');
+      setDebugInfo('Form submitted successfully to database!');
       
       if (onComplete) {
         setTimeout(() => onComplete(), 1500);
       }
       
     } catch (error) {
-      console.error('Error saving applicant form:', error);
+      console.error('💥 Error saving applicant form:', error);
       setErrors({ submit: 'Failed to save matching profile. Please try again.' });
+      setDebugInfo(`Submission error: ${error.message}`);
     } finally {
       setLoading(false);
     }
@@ -523,6 +603,18 @@ const EnhancedMatchingProfileForm = ({ editMode = false, onComplete, onCancel })
           margin-bottom: 12px;
           font-style: italic;
         }
+        
+        .debug-info {
+          background: #f0f0f0;
+          border: 1px solid #ccc;
+          padding: 10px;
+          margin: 10px 0;
+          border-radius: 4px;
+          font-family: monospace;
+          font-size: 12px;
+          max-height: 200px;
+          overflow-y: auto;
+        }
       `}</style>
 
       {/* Header */}
@@ -546,6 +638,13 @@ const EnhancedMatchingProfileForm = ({ editMode = false, onComplete, onCancel })
           </div>
           <p className="text-center text-gray-500 mb-4">Form completion: {getCompletionPercentage()}%</p>
         </>
+      )}
+      
+      {/* DEBUG INFO */}
+      {debugInfo && (
+        <div className="debug-info">
+          <strong>Debug Info:</strong> {debugInfo}
+        </div>
       )}
       
       {/* Messages */}
