@@ -3,236 +3,26 @@ import React, { useState, useEffect } from 'react';
 import { useAuth } from '../../context/AuthContext';
 import { db } from '../../utils/supabase';
 import LoadingSpinner from '../common/LoadingSpinner';
+import PersonalInfoSection from './sections/PersonalInfoSection';
+import LocationPreferencesSection from './sections/LocationPreferencesSection';
+import RecoveryInfoSection from './sections/RecoveryInfoSection';
+import LifestylePreferencesSection from './sections/LifestylePreferencesSection';
+import CompatibilitySection from './sections/CompatibilitySection';
+import { 
+  defaultFormData, 
+  genderPreferenceOptions,
+  smokingStatusOptions 
+} from './constants/matchingFormConstants';
 import '../../styles/global.css';
 
 const EnhancedMatchingProfileForm = ({ editMode = false, onComplete, onCancel }) => {
   const { user, profile, hasRole } = useAuth();
   
-  const [formData, setFormData] = useState({
-    // ✅ PHASE 3: Added demographic data fields
-    // Personal Demographics (from BasicProfileForm)
-    dateOfBirth: '',
-    phone: '',
-    gender: '',
-    sex: '',
-    address: '',
-    city: '',
-    state: '',
-    zipCode: '',
-    emergencyContactName: '',
-    emergencyContactPhone: '',
-    
-    // Location & Housing Preferences
-    preferredLocation: '',
-    targetZipCodes: '',
-    searchRadius: '25',
-    currentLocation: '',
-    relocationTimeline: '',
-    maxCommute: '',
-    housingType: [],
-    priceRangeMin: 500,
-    priceRangeMax: 2000,
-    budgetMax: 1000, // Key field for matching
-    moveInDate: '',
-    leaseDuration: '',
-    
-    // Personal Demographics & Preferences
-    ageRangeMin: 18,
-    ageRangeMax: 65,
-    genderPreference: '',
-    preferredRoommateGender: '', // Key field for matching
-    smokingPreference: '',
-    smokingStatus: '', // Key field for matching
-    petPreference: '',
-    
-    // Recovery Information
-    recoveryStage: '', // Key field for matching
-    primarySubstance: '',
-    timeInRecovery: '',
-    treatmentHistory: '',
-    programType: [],
-    sobrietyDate: '',
-    sponsorMentor: '',
-    supportMeetings: '',
-    spiritualAffiliation: '', // Key field for matching
-    primaryIssues: [], // Key field for matching
-    recoveryMethods: [], // Key field for matching
-    
-    // Lifestyle Preferences (1-5 scales for matching)
-    workSchedule: '', // Key field for matching
-    socialLevel: 3, // 1-5 scale for matching
-    cleanlinessLevel: 3, // 1-5 scale for matching
-    noiseLevel: 3, // 1-5 scale for matching
-    guestPolicy: '',
-    guestsPolicy: '', // Key field for matching
-    bedtimePreference: '', // Key field for matching
-    transportation: '',
-    choreSharingPreference: '',
-    preferredSupportStructure: '',
-    conflictResolutionStyle: '',
-    
-    // Living Situation Preferences (Key fields for matching)
-    petsOwned: false, // Key field for matching
-    petsComfortable: true, // Key field for matching
-    overnightGuestsOk: true, // Key field for matching
-    sharedGroceries: false, // Key field for matching
-    cookingFrequency: '',
-    
-    // Housing Assistance
-    housingSubsidy: [], // Key field for matching
-    hasSection8: false,
-    acceptsSubsidy: true,
-    
-    // Compatibility Factors
-    interests: [], // Key field for matching
-    dealBreakers: [],
-    importantQualities: [],
-    
-    // Open-ended responses
-    aboutMe: '',
-    lookingFor: '',
-    additionalInfo: '',
-    specialNeeds: '',
-    
-    // Status
-    isActive: true
-  });
-  
+  const [formData, setFormData] = useState(defaultFormData);
   const [errors, setErrors] = useState({});
   const [loading, setLoading] = useState(false);
   const [initialLoading, setInitialLoading] = useState(true);
   const [successMessage, setSuccessMessage] = useState('');
-  
-  // ✅ PHASE 3: Added demographic options
-  // Gender options
-  const genderOptions = [
-    { value: '', label: 'Select Gender Identity' },
-    { value: 'male', label: 'Male' },
-    { value: 'female', label: 'Female' },
-    { value: 'non-binary', label: 'Non-binary' },
-    { value: 'genderfluid', label: 'Genderfluid' },
-    { value: 'agender', label: 'Agender' },
-    { value: 'other', label: 'Other' },
-    { value: 'prefer-not-to-say', label: 'Prefer not to say' }
-  ];
-  
-  // Sex options
-  const sexOptions = [
-    { value: '', label: 'Select Biological Sex' },
-    { value: 'male', label: 'Male' },
-    { value: 'female', label: 'Female' },
-    { value: 'intersex', label: 'Intersex' },
-    { value: 'prefer-not-to-say', label: 'Prefer not to say' }
-  ];
-
-  // US States for dropdown
-  const states = [
-    'AL', 'AK', 'AZ', 'AR', 'CA', 'CO', 'CT', 'DE', 'FL', 'GA',
-    'HI', 'ID', 'IL', 'IN', 'IA', 'KS', 'KY', 'LA', 'ME', 'MD',
-    'MA', 'MI', 'MN', 'MS', 'MO', 'MT', 'NE', 'NV', 'NH', 'NJ',
-    'NM', 'NY', 'NC', 'ND', 'OH', 'OK', 'OR', 'PA', 'RI', 'SC',
-    'SD', 'TN', 'TX', 'UT', 'VT', 'VA', 'WA', 'WV', 'WI', 'WY'
-  ];
-  
-  // Form options based on matching algorithm requirements
-  const housingTypeOptions = [
-    'Apartment', 'House', 'Condo', 'Townhouse', 'Room in house', 'Studio', 
-    'Duplex', 'Sober living facility', 'Transitional housing'
-  ];
-  
-  const genderPreferenceOptions = [
-    { value: '', label: 'No preference' },
-    { value: 'no_preference', label: 'No preference' },
-    { value: 'same_gender', label: 'Same gender only' },
-    { value: 'different_gender', label: 'Different gender only' }
-  ];
-
-  const smokingStatusOptions = [
-    { value: '', label: 'Select smoking status' },
-    { value: 'non_smoker', label: 'Non-smoker' },
-    { value: 'outdoor_only', label: 'Smoke outdoors only' },
-    { value: 'occasional', label: 'Occasional smoker' },
-    { value: 'regular', label: 'Regular smoker' }
-  ];
-
-  const recoveryStageOptions = [
-    { value: '', label: 'Select recovery stage' },
-    { value: 'early', label: 'Early Recovery (0-6 months)' },
-    { value: 'stabilizing', label: 'Stabilizing (6-18 months)' },
-    { value: 'stable', label: 'Stable Recovery (1.5-3 years)' },
-    { value: 'long-term', label: 'Long-term Recovery (3+ years)' }
-  ];
-
-  const guestsPolicyOptions = [
-    { value: '', label: 'Select guest policy' },
-    { value: 'no_guests', label: 'No overnight guests' },
-    { value: 'rare_guests', label: 'Rare overnight guests' },
-    { value: 'moderate_guests', label: 'Moderate overnight guests' },
-    { value: 'frequent_guests', label: 'Frequent overnight guests' }
-  ];
-
-  const bedtimePreferenceOptions = [
-    { value: '', label: 'Select bedtime preference' },
-    { value: 'early', label: 'Early (before 10 PM)' },
-    { value: 'moderate', label: 'Moderate (10 PM - 12 AM)' },
-    { value: 'late', label: 'Late (after 12 AM)' },
-    { value: 'varies', label: 'Varies/Flexible' }
-  ];
-
-  const workScheduleOptions = [
-    { value: '', label: 'Select work schedule' },
-    { value: 'traditional_9_5', label: 'Traditional 9-5' },
-    { value: 'flexible', label: 'Flexible hours' },
-    { value: 'early_morning', label: 'Early morning shift' },
-    { value: 'night_shift', label: 'Night shift' },
-    { value: 'student', label: 'Student schedule' },
-    { value: 'irregular', label: 'Irregular/Varies' },
-    { value: 'unemployed', label: 'Currently unemployed' }
-  ];
-  
-  const primaryIssuesOptions = [
-    'alcohol', 'cocaine', 'heroin', 'fentanyl', 'methamphetamine', 
-    'prescription-opioids', 'prescription-stimulants', 'cannabis', 'other'
-  ];
-  
-  const recoveryMethodsOptions = [
-    '12-step', 'diet-exercise', 'clinical-therapy', 'church-religion', 'recovery-community'
-  ];
-  
-  const programTypeOptions = [
-    'AA (Alcoholics Anonymous)', 'NA (Narcotics Anonymous)', 'SMART Recovery', 
-    'Celebrate Recovery', 'LifeRing', 'Secular recovery', 'Faith-based program',
-    'Outpatient therapy', 'Intensive outpatient (IOP)', 'Medication-assisted treatment',
-    'Peer support groups', 'Meditation/Spirituality', 'Other'
-  ];
-  
-  const interestOptions = [
-    'Fitness/Exercise', 'Cooking', 'Reading', 'Movies/TV', 'Music', 'Art/Crafts',
-    'Outdoor activities', 'Sports', 'Gaming', 'Volunteering', 'Meditation/Spirituality',
-    'Learning/Education', 'Technology', 'Travel', 'Pets/Animals'
-  ];
-  
-  const housingSubsidyOptions = [
-    { value: 'section_8', label: 'Section 8' },
-    { value: 'nonprofit_community_org', label: 'Nonprofit Community Org' },
-    { value: 'va_benefits', label: 'VA Benefits' },
-    { value: 'disability_assistance', label: 'Disability Assistance' },
-    { value: 'lihtc', label: 'LIHTC' },
-    { value: 'other', label: 'Other' }
-  ];
-
-  const spiritualAffiliationOptions = [
-    { value: '', label: 'Select spiritual affiliation' },
-    { value: 'christian-protestant', label: 'Christian (Protestant)' },
-    { value: 'christian-catholic', label: 'Christian (Catholic)' },
-    { value: 'muslim', label: 'Muslim' },
-    { value: 'jewish', label: 'Jewish' },
-    { value: 'buddhist', label: 'Buddhist' },
-    { value: 'spiritual-not-religious', label: 'Spiritual but not religious' },
-    { value: 'agnostic', label: 'Agnostic' },
-    { value: 'atheist', label: 'Atheist' },
-    { value: 'other', label: 'Other' }
-  ];
 
   // Load existing data
   useEffect(() => {
@@ -245,7 +35,7 @@ const EnhancedMatchingProfileForm = ({ editMode = false, onComplete, onCancel })
         if (applicantForm) {
           setFormData(prev => ({
             ...prev,
-            // ✅ PHASE 3: Load demographic data
+            // Personal Demographics
             dateOfBirth: applicantForm.date_of_birth || '',
             phone: applicantForm.phone || '',
             gender: applicantForm.gender || '',
@@ -257,7 +47,7 @@ const EnhancedMatchingProfileForm = ({ editMode = false, onComplete, onCancel })
             emergencyContactName: applicantForm.emergency_contact_name || '',
             emergencyContactPhone: applicantForm.emergency_contact_phone || '',
             
-            // Map all existing fields from database
+            // Location & Housing
             preferredLocation: applicantForm.preferred_location || '',
             targetZipCodes: applicantForm.target_zip_codes?.join(', ') || '',
             searchRadius: applicantForm.search_radius?.toString() || '25',
@@ -271,6 +61,7 @@ const EnhancedMatchingProfileForm = ({ editMode = false, onComplete, onCancel })
             moveInDate: applicantForm.move_in_date || '',
             leaseDuration: applicantForm.lease_duration || '',
             
+            // Personal Preferences
             ageRangeMin: applicantForm.age_range_min || 18,
             ageRangeMax: applicantForm.age_range_max || 65,
             genderPreference: applicantForm.gender_preference || '',
@@ -279,6 +70,7 @@ const EnhancedMatchingProfileForm = ({ editMode = false, onComplete, onCancel })
             smokingStatus: applicantForm.smoking_status || '',
             petPreference: applicantForm.pet_preference || '',
             
+            // Recovery Information
             recoveryStage: applicantForm.recovery_stage || '',
             primarySubstance: applicantForm.primary_substance || '',
             timeInRecovery: applicantForm.time_in_recovery || '',
@@ -291,6 +83,7 @@ const EnhancedMatchingProfileForm = ({ editMode = false, onComplete, onCancel })
             primaryIssues: applicantForm.primary_issues || [],
             recoveryMethods: applicantForm.recovery_methods || [],
             
+            // Lifestyle Preferences
             workSchedule: applicantForm.work_schedule || '',
             socialLevel: applicantForm.social_level || 3,
             cleanlinessLevel: applicantForm.cleanliness_level || 3,
@@ -303,20 +96,24 @@ const EnhancedMatchingProfileForm = ({ editMode = false, onComplete, onCancel })
             preferredSupportStructure: applicantForm.preferred_support_structure || '',
             conflictResolutionStyle: applicantForm.conflict_resolution_style || '',
             
+            // Living Situation
             petsOwned: applicantForm.pets_owned || false,
             petsComfortable: applicantForm.pets_comfortable !== false,
             overnightGuestsOk: applicantForm.overnight_guests_ok !== false,
             sharedGroceries: applicantForm.shared_groceries || false,
             cookingFrequency: applicantForm.cooking_frequency || '',
             
+            // Housing Assistance
             housingSubsidy: applicantForm.housing_subsidy || [],
             hasSection8: applicantForm.has_section8 || false,
             acceptsSubsidy: applicantForm.accepts_subsidy !== false,
             
+            // Compatibility Factors
             interests: applicantForm.interests || [],
             dealBreakers: applicantForm.deal_breakers || [],
             importantQualities: applicantForm.important_qualities || [],
             
+            // Open-ended responses
             aboutMe: applicantForm.about_me || '',
             lookingFor: applicantForm.looking_for || '',
             additionalInfo: applicantForm.additional_info || '',
@@ -338,7 +135,7 @@ const EnhancedMatchingProfileForm = ({ editMode = false, onComplete, onCancel })
     }
   }, [user, profile, hasRole]);
   
-  // ✅ PHASE 3: Updated completion percentage to include demographic fields
+  // Calculate completion percentage
   const getCompletionPercentage = () => {
     const requiredFields = [
       // Demographic fields
@@ -388,11 +185,11 @@ const EnhancedMatchingProfileForm = ({ editMode = false, onComplete, onCancel })
     setFormData(prev => ({ ...prev, [field]: parseInt(value) }));
   };
   
-  // ✅ PHASE 3: Updated validation to include demographic fields
+  // Form validation
   const validateForm = () => {
     const newErrors = {};
     
-    // ✅ PHASE 3: Demographic validation
+    // Demographic validation
     if (!formData.dateOfBirth) newErrors.dateOfBirth = 'Date of birth is required';
     if (!formData.phone.trim()) newErrors.phone = 'Phone number is required';
     
@@ -469,7 +266,7 @@ const EnhancedMatchingProfileForm = ({ editMode = false, onComplete, onCancel })
     return Object.keys(newErrors).length === 0;
   };
   
-  // ✅ PHASE 3: Updated form submission to include demographic data
+  // Form submission
   const handleSubmit = async (e) => {
     e.preventDefault();
     
@@ -486,7 +283,6 @@ const EnhancedMatchingProfileForm = ({ editMode = false, onComplete, onCancel })
         .filter(zip => zip && /^\d{5}$/.test(zip));
 
       const applicantFormData = {
-        // ✅ PHASE 3: Include demographic data in submission
         // Personal Demographics
         date_of_birth: formData.dateOfBirth,
         phone: formData.phone,
@@ -762,358 +558,16 @@ const EnhancedMatchingProfileForm = ({ editMode = false, onComplete, onCancel })
       )}
       
       <form onSubmit={handleSubmit}>
-        {/* ✅ PHASE 3: Added Personal Information Section */}
-        <h3 className="card-title mb-4">Personal Information</h3>
-        
-        <div className="grid-2 mb-4">
-          <div className="form-group">
-            <label className="label">First Name</label>
-            <input
-              className="input"
-              type="text"
-              value={profile?.first_name || ''}
-              disabled
-            />
-          </div>
-          
-          <div className="form-group">
-            <label className="label">Last Name</label>
-            <input
-              className="input"
-              type="text"
-              value={profile?.last_name || ''}
-              disabled
-            />
-          </div>
-        </div>
-        
-        <div className="form-group mb-4">
-          <label className="label">Email</label>
-          <input
-            className="input"
-            type="email"
-            value={profile?.email || ''}
-            disabled
-          />
-        </div>
-        
-        <div className="grid-2 mb-4">
-          <div className="form-group">
-            <label className="label">
-              Date of Birth <span className="text-red-500">*</span>
-            </label>
-            <input
-              className={`input ${errors.dateOfBirth ? 'border-red-500' : ''}`}
-              type="date"
-              value={formData.dateOfBirth}
-              onChange={(e) => handleInputChange('dateOfBirth', e.target.value)}
-              disabled={loading}
-              required
-            />
-            {errors.dateOfBirth && (
-              <div className="text-red-500 mt-1">{errors.dateOfBirth}</div>
-            )}
-          </div>
-          
-          <div className="form-group">
-            <label className="label">
-              Phone Number <span className="text-red-500">*</span>
-            </label>
-            <input
-              className={`input ${errors.phone ? 'border-red-500' : ''}`}
-              type="tel"
-              value={formData.phone}
-              onChange={(e) => handleInputChange('phone', e.target.value)}
-              placeholder="(555) 123-4567"
-              disabled={loading}
-              required
-            />
-            {errors.phone && (
-              <div className="text-red-500 mt-1">{errors.phone}</div>
-            )}
-          </div>
-        </div>
-        
-        <div className="grid-2 mb-4">
-          <div className="form-group">
-            <label className="label">Gender Identity</label>
-            <select
-              className="input"
-              value={formData.gender}
-              onChange={(e) => handleInputChange('gender', e.target.value)}
-              disabled={loading}
-            >
-              {genderOptions.map(option => (
-                <option key={option.value} value={option.value}>
-                  {option.label}
-                </option>
-              ))}
-            </select>
-            <div className="text-gray-500 mt-1 text-sm">
-              This information helps us provide better matches
-            </div>
-          </div>
-          
-          <div className="form-group">
-            <label className="label">Biological Sex</label>
-            <select
-              className="input"
-              value={formData.sex}
-              onChange={(e) => handleInputChange('sex', e.target.value)}
-              disabled={loading}
-            >
-              {sexOptions.map(option => (
-                <option key={option.value} value={option.value}>
-                  {option.label}
-                </option>
-              ))}
-            </select>
-            <div className="text-gray-500 mt-1 text-sm">
-              Used for housing compatibility purposes
-            </div>
-          </div>
-        </div>
+        {/* Personal Information Section */}
+        <PersonalInfoSection
+          formData={formData}
+          errors={errors}
+          loading={loading}
+          onInputChange={handleInputChange}
+          profile={profile}
+        />
 
-        {/* Address Information (Optional) */}
-        <h4 style={{ color: 'var(--secondary-teal)', marginBottom: 'var(--spacing-lg)', paddingBottom: '10px', borderBottom: '2px solid var(--border-beige)' }}>
-          Address Information (Optional)
-        </h4>
-
-        <div className="form-group mb-4">
-          <label className="label">Street Address</label>
-          <input
-            className="input"
-            type="text"
-            value={formData.address}
-            onChange={(e) => handleInputChange('address', e.target.value)}
-            placeholder="123 Main St, Apt 4B"
-            disabled={loading}
-          />
-        </div>
-
-        <div className="grid-2 mb-4">
-          <div className="form-group">
-            <label className="label">City</label>
-            <input
-              className="input"
-              type="text"
-              value={formData.city}
-              onChange={(e) => handleInputChange('city', e.target.value)}
-              placeholder="City"
-              disabled={loading}
-            />
-          </div>
-          
-          <div className="form-group">
-            <label className="label">State</label>
-            <select
-              className="input"
-              value={formData.state}
-              onChange={(e) => handleInputChange('state', e.target.value)}
-              disabled={loading}
-            >
-              <option value="">Select State</option>
-              {states.map(state => (
-                <option key={state} value={state}>{state}</option>
-              ))}
-            </select>
-          </div>
-        </div>
-
-        <div className="form-group mb-4">
-          <label className="label">ZIP Code</label>
-          <input
-            className={`input ${errors.zipCode ? 'border-red-500' : ''}`}
-            type="text"
-            value={formData.zipCode}
-            onChange={(e) => handleInputChange('zipCode', e.target.value)}
-            placeholder="12345 or 12345-6789"
-            disabled={loading}
-            style={{ maxWidth: '200px' }}
-          />
-          {errors.zipCode && (
-            <div className="text-red-500 mt-1">{errors.zipCode}</div>
-          )}
-        </div>
-
-        {/* Emergency Contact (Optional) */}
-        <h4 style={{ color: 'var(--secondary-teal)', marginBottom: 'var(--spacing-lg)', paddingBottom: '10px', borderBottom: '2px solid var(--border-beige)' }}>
-          Emergency Contact (Optional)
-        </h4>
-
-        <div className="grid-2 mb-4">
-          <div className="form-group">
-            <label className="label">Emergency Contact Name</label>
-            <input
-              className="input"
-              type="text"
-              value={formData.emergencyContactName}
-              onChange={(e) => handleInputChange('emergencyContactName', e.target.value)}
-              placeholder="Full name"
-              disabled={loading}
-            />
-          </div>
-          
-          <div className="form-group">
-            <label className="label">Emergency Contact Phone</label>
-            <input
-              className="input"
-              type="tel"
-              value={formData.emergencyContactPhone}
-              onChange={(e) => handleInputChange('emergencyContactPhone', e.target.value)}
-              placeholder="(555) 123-4567"
-              disabled={loading}
-            />
-          </div>
-        </div>
-
-        {/* Location & Housing Preferences */}
-        <h3 className="card-title mb-4">Location & Housing Preferences</h3>
-        
-        <div className="grid-2 mb-4">
-          <div className="form-group">
-            <label className="label">
-              Preferred Location <span className="text-red-500">*</span>
-            </label>
-            <input
-              className={`input ${errors.preferredLocation ? 'border-red-500' : ''}`}
-              type="text"
-              value={formData.preferredLocation}
-              onChange={(e) => handleInputChange('preferredLocation', e.target.value)}
-              placeholder="City, State or general area"
-              disabled={loading}
-              required
-            />
-            {errors.preferredLocation && (
-              <div className="text-red-500 mt-1">{errors.preferredLocation}</div>
-            )}
-          </div>
-          
-          <div className="form-group">
-            <label className="label">Target ZIP Codes</label>
-            <input
-              className="input"
-              type="text"
-              value={formData.targetZipCodes}
-              onChange={(e) => handleInputChange('targetZipCodes', e.target.value)}
-              placeholder="29301, 29302, 29303 (comma separated)"
-              disabled={loading}
-            />
-            <div className="text-gray-500 mt-1 text-sm">
-              Specific ZIP codes you prefer (optional but helps with location matching)
-            </div>
-          </div>
-        </div>
-
-        <div className="grid-2 mb-4">
-          <div className="form-group">
-            <label className="label">
-              Personal Budget Maximum <span className="text-red-500">*</span>
-            </label>
-            <input
-              className={`input ${errors.budgetMax ? 'border-red-500' : ''}`}
-              type="number"
-              value={formData.budgetMax}
-              onChange={(e) => handleInputChange('budgetMax', e.target.value)}
-              placeholder="Your maximum monthly budget"
-              disabled={loading}
-              min="200"
-              max="5000"
-              required
-            />
-            {errors.budgetMax && (
-              <div className="text-red-500 mt-1">{errors.budgetMax}</div>
-            )}
-            <div className="text-gray-500 mt-1 text-sm">
-              Your personal budget for housing costs
-            </div>
-          </div>
-          
-          <div className="form-group">
-            <label className="label">
-              Maximum Commute Time <span className="text-red-500">*</span>
-            </label>
-            <select
-              className={`input ${errors.maxCommute ? 'border-red-500' : ''}`}
-              value={formData.maxCommute}
-              onChange={(e) => handleInputChange('maxCommute', e.target.value)}
-              disabled={loading}
-              required
-            >
-              <option value="">Select commute time</option>
-              <option value="15">15 minutes</option>
-              <option value="30">30 minutes</option>
-              <option value="45">45 minutes</option>
-              <option value="60">1 hour</option>
-              <option value="90">1.5 hours</option>
-              <option value="unlimited">No preference</option>
-            </select>
-            {errors.maxCommute && (
-              <div className="text-red-500 mt-1">{errors.maxCommute}</div>
-            )}
-          </div>
-        </div>
-
-        {/* Housing Type Selection - Enhanced with Columns */}
-        <div className="form-group mb-4">
-          <label className="label">
-            Housing Type Preferences <span className="text-red-500">*</span>
-          </label>
-          <div className="checkbox-columns">
-            {housingTypeOptions.map(type => (
-              <label key={type} className="checkbox-label">
-                <input
-                  type="checkbox"
-                  checked={formData.housingType.includes(type)}
-                  onChange={(e) => handleArrayChange('housingType', type, e.target.checked)}
-                  disabled={loading}
-                />
-                <span className="checkbox-text">{type}</span>
-              </label>
-            ))}
-          </div>
-          {errors.housingType && (
-            <div className="text-red-500 mt-1">{errors.housingType}</div>
-          )}
-        </div>
-
-        <div className="grid-2 mb-4">
-          <div className="form-group">
-            <label className="label">
-              Move-in Date <span className="text-red-500">*</span>
-            </label>
-            <input
-              className={`input ${errors.moveInDate ? 'border-red-500' : ''}`}
-              type="date"
-              value={formData.moveInDate}
-              onChange={(e) => handleInputChange('moveInDate', e.target.value)}
-              disabled={loading}
-              required
-            />
-            {errors.moveInDate && (
-              <div className="text-red-500 mt-1">{errors.moveInDate}</div>
-            )}
-          </div>
-          
-          <div className="form-group">
-            <label className="label">Preferred Lease Duration</label>
-            <select
-              className="input"
-              value={formData.leaseDuration}
-              onChange={(e) => handleInputChange('leaseDuration', e.target.value)}
-              disabled={loading}
-            >
-              <option value="">Select duration</option>
-              <option value="month-to-month">Month-to-month</option>
-              <option value="6-months">6 months</option>
-              <option value="12-months">12 months</option>
-              <option value="18-months">18 months</option>
-              <option value="24-months">24 months</option>
-            </select>
-          </div>
-        </div>
-
-        {/* Personal Preferences & Demographics */}
+        {/* Roommate Preferences */}
         <h3 className="card-title mb-4">Roommate Preferences</h3>
         
         <div className="grid-2 mb-4">
@@ -1162,422 +616,41 @@ const EnhancedMatchingProfileForm = ({ editMode = false, onComplete, onCancel })
           </div>
         </div>
 
-        {/* Recovery Information - Enhanced */}
-        <h3 className="card-title mb-4">Recovery Information</h3>
-        
-        <div className="grid-2 mb-4">
-          <div className="form-group">
-            <label className="label">
-              Recovery Stage <span className="text-red-500">*</span>
-            </label>
-            <select
-              className={`input ${errors.recoveryStage ? 'border-red-500' : ''}`}
-              value={formData.recoveryStage}
-              onChange={(e) => handleInputChange('recoveryStage', e.target.value)}
-              disabled={loading}
-              required
-            >
-              {recoveryStageOptions.map(option => (
-                <option key={option.value} value={option.value}>
-                  {option.label}
-                </option>
-              ))}
-            </select>
-            {errors.recoveryStage && (
-              <div className="text-red-500 mt-1">{errors.recoveryStage}</div>
-            )}
-          </div>
-          
-          <div className="form-group">
-            <label className="label">
-              Spiritual Affiliation <span className="text-red-500">*</span>
-            </label>
-            <select
-              className={`input ${errors.spiritualAffiliation ? 'border-red-500' : ''}`}
-              value={formData.spiritualAffiliation}
-              onChange={(e) => handleInputChange('spiritualAffiliation', e.target.value)}
-              disabled={loading}
-              required
-            >
-              {spiritualAffiliationOptions.map(option => (
-                <option key={option.value} value={option.value}>
-                  {option.label}
-                </option>
-              ))}
-            </select>
-            {errors.spiritualAffiliation && (
-              <div className="text-red-500 mt-1">{errors.spiritualAffiliation}</div>
-            )}
-          </div>
-        </div>
+        {/* Location & Housing Preferences Section */}
+        <LocationPreferencesSection
+          formData={formData}
+          errors={errors}
+          loading={loading}
+          onInputChange={handleInputChange}
+          onArrayChange={handleArrayChange}
+        />
 
-        {/* Primary Issues - Enhanced with Columns */}
-        <div className="form-group mb-4">
-          <label className="label">
-            Primary Issues <span className="text-red-500">*</span>
-          </label>
-          <div className="checkbox-columns-compact">
-            {primaryIssuesOptions.map(issue => (
-              <label key={issue} className="checkbox-label">
-                <input
-                  type="checkbox"
-                  checked={formData.primaryIssues.includes(issue)}
-                  onChange={(e) => handleArrayChange('primaryIssues', issue, e.target.checked)}
-                  disabled={loading}
-                />
-                <span className="checkbox-text">
-                  {issue.replace(/-/g, ' ').replace(/\b\w/g, l => l.toUpperCase())}
-                </span>
-              </label>
-            ))}
-          </div>
-          {errors.primaryIssues && (
-            <div className="text-red-500 mt-1">{errors.primaryIssues}</div>
-          )}
-        </div>
+        {/* Recovery Information Section */}
+        <RecoveryInfoSection
+          formData={formData}
+          errors={errors}
+          loading={loading}
+          onInputChange={handleInputChange}
+          onArrayChange={handleArrayChange}
+        />
 
-        {/* Recovery Methods - Enhanced with Columns */}
-        <div className="form-group mb-4">
-          <label className="label">
-            Recovery Methods <span className="text-red-500">*</span>
-          </label>
-          <div className="checkbox-columns-compact">
-            {recoveryMethodsOptions.map(method => (
-              <label key={method} className="checkbox-label">
-                <input
-                  type="checkbox"
-                  checked={formData.recoveryMethods.includes(method)}
-                  onChange={(e) => handleArrayChange('recoveryMethods', method, e.target.checked)}
-                  disabled={loading}
-                />
-                <span className="checkbox-text">
-                  {method.replace(/-/g, ' ').replace(/\b\w/g, l => l.toUpperCase())}
-                </span>
-              </label>
-            ))}
-          </div>
-          {errors.recoveryMethods && (
-            <div className="text-red-500 mt-1">{errors.recoveryMethods}</div>
-          )}
-        </div>
+        {/* Lifestyle Preferences Section */}
+        <LifestylePreferencesSection
+          formData={formData}
+          errors={errors}
+          loading={loading}
+          onInputChange={handleInputChange}
+          onRangeChange={handleRangeChange}
+        />
 
-        {/* Program Types - Enhanced with Columns */}
-        <div className="form-group mb-4">
-          <label className="label">
-            Recovery Program Types <span className="text-red-500">*</span>
-          </label>
-          <div className="checkbox-columns">
-            {programTypeOptions.map(program => (
-              <label key={program} className="checkbox-label">
-                <input
-                  type="checkbox"
-                  checked={formData.programType.includes(program)}
-                  onChange={(e) => handleArrayChange('programType', program, e.target.checked)}
-                  disabled={loading}
-                />
-                <span className="checkbox-text">{program}</span>
-              </label>
-            ))}
-          </div>
-          {errors.programType && (
-            <div className="text-red-500 mt-1">{errors.programType}</div>
-          )}
-        </div>
-
-        {/* Lifestyle Preferences - Enhanced with New Range Sliders */}
-        <h3 className="card-title mb-4">Lifestyle Preferences</h3>
-        
-        <div className="form-group mb-4">
-          <label className="label">
-            Work Schedule <span className="text-red-500">*</span>
-          </label>
-          <select
-            className={`input ${errors.workSchedule ? 'border-red-500' : ''}`}
-            value={formData.workSchedule}
-            onChange={(e) => handleInputChange('workSchedule', e.target.value)}
-            disabled={loading}
-            required
-          >
-            {workScheduleOptions.map(option => (
-              <option key={option.value} value={option.value}>
-                {option.label}
-              </option>
-            ))}
-          </select>
-          {errors.workSchedule && (
-            <div className="text-red-500 mt-1">{errors.workSchedule}</div>
-          )}
-        </div>
-
-        {/* Enhanced 1-5 Scale Preferences */}
-        <div className="grid-3 mb-4">
-          <div className="form-group">
-            <div className="enhanced-range-container">
-              <div className="range-description">Social Level</div>
-              <div className="range-slider-wrapper">
-                <input
-                  type="range"
-                  min="1"
-                  max="5"
-                  value={formData.socialLevel}
-                  onChange={(e) => handleRangeChange('socialLevel', e.target.value)}
-                  className="range-slider"
-                  disabled={loading}
-                />
-                <div className="enhanced-range-labels">
-                  <div className="range-endpoint">Quiet (1)</div>
-                  <div className="range-arrow">←→</div>
-                  <div className="range-endpoint">Very Social (5)</div>
-                </div>
-              </div>
-              <div className="current-value-display">
-                <span className="current-value-number">{formData.socialLevel}</span>
-                <span className="current-value-label">Current Level</span>
-              </div>
-            </div>
-          </div>
-          
-          <div className="form-group">
-            <div className="enhanced-range-container">
-              <div className="range-description">Cleanliness Level</div>
-              <div className="range-slider-wrapper">
-                <input
-                  type="range"
-                  min="1"
-                  max="5"
-                  value={formData.cleanlinessLevel}
-                  onChange={(e) => handleRangeChange('cleanlinessLevel', e.target.value)}
-                  className="range-slider"
-                  disabled={loading}
-                />
-                <div className="enhanced-range-labels">
-                  <div className="range-endpoint">Relaxed (1)</div>
-                  <div className="range-arrow">←→</div>
-                  <div className="range-endpoint">Very Clean (5)</div>
-                </div>
-              </div>
-              <div className="current-value-display">
-                <span className="current-value-number">{formData.cleanlinessLevel}</span>
-                <span className="current-value-label">Current Level</span>
-              </div>
-            </div>
-          </div>
-          
-          <div className="form-group">
-            <div className="enhanced-range-container">
-              <div className="range-description">Noise Level</div>
-              <div className="range-slider-wrapper">
-                <input
-                  type="range"
-                  min="1"
-                  max="5"
-                  value={formData.noiseLevel}
-                  onChange={(e) => handleRangeChange('noiseLevel', e.target.value)}
-                  className="range-slider"
-                  disabled={loading}
-                />
-                <div className="enhanced-range-labels">
-                  <div className="range-endpoint">Very Quiet (1)</div>
-                  <div className="range-arrow">←→</div>
-                  <div className="range-endpoint">Loud OK (5)</div>
-                </div>
-              </div>
-              <div className="current-value-display">
-                <span className="current-value-number">{formData.noiseLevel}</span>
-                <span className="current-value-label">Current Level</span>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <div className="grid-2 mb-4">
-          <div className="form-group">
-            <label className="label">Bedtime Preference</label>
-            <select
-              className="input"
-              value={formData.bedtimePreference}
-              onChange={(e) => handleInputChange('bedtimePreference', e.target.value)}
-              disabled={loading}
-            >
-              {bedtimePreferenceOptions.map(option => (
-                <option key={option.value} value={option.value}>
-                  {option.label}
-                </option>
-              ))}
-            </select>
-          </div>
-          
-          <div className="form-group">
-            <label className="label">Guest Policy</label>
-            <select
-              className="input"
-              value={formData.guestsPolicy}
-              onChange={(e) => handleInputChange('guestsPolicy', e.target.value)}
-              disabled={loading}
-            >
-              {guestsPolicyOptions.map(option => (
-                <option key={option.value} value={option.value}>
-                  {option.label}
-                </option>
-              ))}
-            </select>
-          </div>
-        </div>
-
-        {/* Living Situation Preferences - Enhanced with Columns */}
-        <h3 className="card-title mb-4">Living Situation Preferences</h3>
-        
-        <div className="checkbox-columns-compact mb-4">
-          <label className="checkbox-label">
-            <input
-              type="checkbox"
-              checked={formData.petsOwned}
-              onChange={(e) => handleInputChange('petsOwned', e.target.checked)}
-              disabled={loading}
-            />
-            <span className="checkbox-text">I own pets</span>
-          </label>
-          
-          <label className="checkbox-label">
-            <input
-              type="checkbox"
-              checked={formData.petsComfortable}
-              onChange={(e) => handleInputChange('petsComfortable', e.target.checked)}
-              disabled={loading}
-            />
-            <span className="checkbox-text">I'm comfortable with roommate's pets</span>
-          </label>
-          
-          <label className="checkbox-label">
-            <input
-              type="checkbox"
-              checked={formData.overnightGuestsOk}
-              onChange={(e) => handleInputChange('overnightGuestsOk', e.target.checked)}
-              disabled={loading}
-            />
-            <span className="checkbox-text">Overnight guests are OK</span>
-          </label>
-          
-          <label className="checkbox-label">
-            <input
-              type="checkbox"
-              checked={formData.sharedGroceries}
-              onChange={(e) => handleInputChange('sharedGroceries', e.target.checked)}
-              disabled={loading}
-            />
-            <span className="checkbox-text">I'm open to sharing groceries</span>
-          </label>
-        </div>
-
-        {/* Housing Assistance - Enhanced with Subtitle and Columns */}
-        <h3 className="card-title mb-4">Housing Assistance</h3>
-        <div className="housing-assistance-subtitle">
-          Housing assistance programs that will provide some or all of your monthly rent.
-        </div>
-        
-        <div className="form-group mb-4">
-          <div className="checkbox-columns-compact">
-            {housingSubsidyOptions.map(subsidy => (
-              <label key={subsidy.value} className="checkbox-label">
-                <input
-                  type="checkbox"
-                  checked={formData.housingSubsidy.includes(subsidy.value)}
-                  onChange={(e) => handleArrayChange('housingSubsidy', subsidy.value, e.target.checked)}
-                  disabled={loading}
-                />
-                <span className="checkbox-text">{subsidy.label}</span>
-              </label>
-            ))}
-          </div>
-        </div>
-
-        {/* Compatibility Factors - Enhanced with Columns */}
-        <h3 className="card-title mb-4">Compatibility Factors</h3>
-        
-        <div className="form-group mb-4">
-          <label className="label">
-            Interests & Hobbies <span className="text-red-500">*</span>
-          </label>
-          <div className="checkbox-columns">
-            {interestOptions.map(interest => (
-              <label key={interest} className="checkbox-label">
-                <input
-                  type="checkbox"
-                  checked={formData.interests.includes(interest)}
-                  onChange={(e) => handleArrayChange('interests', interest, e.target.checked)}
-                  disabled={loading}
-                />
-                <span className="checkbox-text">{interest}</span>
-              </label>
-            ))}
-          </div>
-          {errors.interests && (
-            <div className="text-red-500 mt-1">{errors.interests}</div>
-          )}
-        </div>
-
-        {/* Open-ended Responses */}
-        <h3 className="card-title mb-4">About You</h3>
-        
-        <div className="form-group mb-4">
-          <label className="label">
-            About Me <span className="text-red-500">*</span>
-          </label>
-          <textarea
-            className={`input ${errors.aboutMe ? 'border-red-500' : ''}`}
-            value={formData.aboutMe}
-            onChange={(e) => handleInputChange('aboutMe', e.target.value)}
-            placeholder="Tell potential roommates about yourself, your recovery journey, and what makes you a good roommate..."
-            rows="4"
-            disabled={loading}
-            maxLength="500"
-            required
-          />
-          <div className="text-gray-500 mt-1 text-sm">
-            {formData.aboutMe.length}/500 characters
-          </div>
-          {errors.aboutMe && (
-            <div className="text-red-500 mt-1">{errors.aboutMe}</div>
-          )}
-        </div>
-
-        <div className="form-group mb-4">
-          <label className="label">
-            What I'm Looking For <span className="text-red-500">*</span>
-          </label>
-          <textarea
-            className={`input ${errors.lookingFor ? 'border-red-500' : ''}`}
-            value={formData.lookingFor}
-            onChange={(e) => handleInputChange('lookingFor', e.target.value)}
-            placeholder="Describe what you're looking for in a roommate and living situation..."
-            rows="4"
-            disabled={loading}
-            maxLength="500"
-            required
-          />
-          <div className="text-gray-500 mt-1 text-sm">
-            {formData.lookingFor.length}/500 characters
-          </div>
-          {errors.lookingFor && (
-            <div className="text-red-500 mt-1">{errors.lookingFor}</div>
-          )}
-        </div>
-
-        {/* Profile Status */}
-        <div className="form-group mb-4">
-          <label className="checkbox-label">
-            <input
-              type="checkbox"
-              checked={formData.isActive}
-              onChange={(e) => handleInputChange('isActive', e.target.checked)}
-              disabled={loading}
-            />
-            <span className="checkbox-text">Keep my profile active for matching</span>
-          </label>
-          <div className="text-gray-500 mt-1 text-sm">
-            You can deactivate your profile at any time to stop receiving new matches
-          </div>
-        </div>
+        {/* Compatibility Section */}
+        <CompatibilitySection
+          formData={formData}
+          errors={errors}
+          loading={loading}
+          onInputChange={handleInputChange}
+          onArrayChange={handleArrayChange}
+        />
 
         {/* Submit Button */}
         <div className="form-actions">
@@ -1598,7 +671,7 @@ const EnhancedMatchingProfileForm = ({ editMode = false, onComplete, onCancel })
             >
               Cancel
             </button>
-          )}
+            )}
         </div>
       </form>
     </div>
