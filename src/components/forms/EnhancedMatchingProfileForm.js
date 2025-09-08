@@ -213,8 +213,12 @@ const EnhancedMatchingProfileForm = ({ editMode = false, onComplete, onCancel })
   ];
   
   const housingSubsidyOptions = [
-    'section_8', 'nonprofit_community_org', 'va_benefits', 'disability_assistance', 
-    'lihtc', 'other'
+    { value: 'section_8', label: 'Section 8' },
+    { value: 'nonprofit_community_org', label: 'Nonprofit Community Org' },
+    { value: 'va_benefits', label: 'VA Benefits' },
+    { value: 'disability_assistance', label: 'Disability Assistance' },
+    { value: 'lihtc', label: 'LIHTC' },
+    { value: 'other', label: 'Other' }
   ];
 
   const spiritualAffiliationOptions = [
@@ -531,7 +535,7 @@ const EnhancedMatchingProfileForm = ({ editMode = false, onComplete, onCancel })
         primary_issues: formData.primaryIssues,
         recovery_methods: formData.recoveryMethods,
         
-        // Lifestyle Preferences
+        // Lifestyle Preferences - Ensure integers for 1-5 scales
         work_schedule: formData.workSchedule,
         social_level: parseInt(formData.socialLevel),
         cleanliness_level: parseInt(formData.cleanlinessLevel),
@@ -613,6 +617,118 @@ const EnhancedMatchingProfileForm = ({ editMode = false, onComplete, onCancel })
   
   return (
     <div className="card" style={{ maxWidth: '900px', margin: '0 auto' }}>
+      {/* Custom Styles for Enhanced Formatting */}
+      <style>{`
+        .checkbox-columns {
+          display: grid;
+          grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+          gap: 12px;
+          margin-top: 8px;
+        }
+        
+        .checkbox-columns-compact {
+          display: grid;
+          grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+          gap: 10px;
+          margin-top: 8px;
+        }
+        
+        .enhanced-range-container {
+          margin-top: 12px;
+        }
+        
+        .range-description {
+          font-weight: 600;
+          margin-bottom: 8px;
+          color: var(--text-primary);
+        }
+        
+        .range-slider-wrapper {
+          position: relative;
+          margin: 16px 0;
+        }
+        
+        .range-slider {
+          width: 100%;
+          height: 6px;
+          background: var(--border-beige);
+          border-radius: 3px;
+          outline: none;
+          -webkit-appearance: none;
+        }
+        
+        .range-slider::-webkit-slider-thumb {
+          -webkit-appearance: none;
+          appearance: none;
+          width: 20px;
+          height: 20px;
+          background: var(--primary-teal);
+          border-radius: 50%;
+          cursor: pointer;
+        }
+        
+        .range-slider::-moz-range-thumb {
+          width: 20px;
+          height: 20px;
+          background: var(--primary-teal);
+          border-radius: 50%;
+          cursor: pointer;
+          border: none;
+        }
+        
+        .enhanced-range-labels {
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
+          margin-top: 8px;
+          font-size: 14px;
+          color: var(--text-secondary);
+        }
+        
+        .range-endpoint {
+          flex: 1;
+          text-align: center;
+        }
+        
+        .range-arrow {
+          flex: 0 0 auto;
+          font-size: 18px;
+          color: var(--secondary-teal);
+          margin: 0 10px;
+        }
+        
+        .current-value-display {
+          text-align: center;
+          margin-top: 12px;
+          padding: 8px;
+          background: var(--background-cream);
+          border-radius: 6px;
+          border: 1px solid var(--border-beige);
+        }
+        
+        .current-value-number {
+          font-size: 24px;
+          font-weight: bold;
+          color: var(--primary-teal);
+          display: block;
+        }
+        
+        .current-value-label {
+          font-size: 12px;
+          color: var(--text-secondary);
+          text-transform: uppercase;
+          letter-spacing: 0.5px;
+        }
+        
+        .housing-assistance-subtitle {
+          font-size: 14px;
+          color: var(--text-secondary);
+          margin-top: 4px;
+          margin-bottom: 12px;
+          font-style: italic;
+        }
+      `}</style>
+
       {/* Header */}
       <div className="text-center mb-4">
         <h2 className="form-title">
@@ -938,12 +1054,12 @@ const EnhancedMatchingProfileForm = ({ editMode = false, onComplete, onCancel })
           </div>
         </div>
 
-        {/* Housing Type Selection */}
+        {/* Housing Type Selection - Enhanced with Columns */}
         <div className="form-group mb-4">
           <label className="label">
             Housing Type Preferences <span className="text-red-500">*</span>
           </label>
-          <div className="checkbox-grid">
+          <div className="checkbox-columns">
             {housingTypeOptions.map(type => (
               <label key={type} className="checkbox-label">
                 <input
@@ -1095,12 +1211,12 @@ const EnhancedMatchingProfileForm = ({ editMode = false, onComplete, onCancel })
           </div>
         </div>
 
-        {/* Primary Issues */}
+        {/* Primary Issues - Enhanced with Columns */}
         <div className="form-group mb-4">
           <label className="label">
             Primary Issues <span className="text-red-500">*</span>
           </label>
-          <div className="checkbox-grid">
+          <div className="checkbox-columns-compact">
             {primaryIssuesOptions.map(issue => (
               <label key={issue} className="checkbox-label">
                 <input
@@ -1120,12 +1236,12 @@ const EnhancedMatchingProfileForm = ({ editMode = false, onComplete, onCancel })
           )}
         </div>
 
-        {/* Recovery Methods */}
+        {/* Recovery Methods - Enhanced with Columns */}
         <div className="form-group mb-4">
           <label className="label">
             Recovery Methods <span className="text-red-500">*</span>
           </label>
-          <div className="checkbox-grid">
+          <div className="checkbox-columns-compact">
             {recoveryMethodsOptions.map(method => (
               <label key={method} className="checkbox-label">
                 <input
@@ -1145,12 +1261,12 @@ const EnhancedMatchingProfileForm = ({ editMode = false, onComplete, onCancel })
           )}
         </div>
 
-        {/* Program Types */}
+        {/* Program Types - Enhanced with Columns */}
         <div className="form-group mb-4">
           <label className="label">
             Recovery Program Types <span className="text-red-500">*</span>
           </label>
-          <div className="checkbox-grid">
+          <div className="checkbox-columns">
             {programTypeOptions.map(program => (
               <label key={program} className="checkbox-label">
                 <input
@@ -1168,7 +1284,7 @@ const EnhancedMatchingProfileForm = ({ editMode = false, onComplete, onCancel })
           )}
         </div>
 
-        {/* Lifestyle Preferences - Enhanced with Scales */}
+        {/* Lifestyle Preferences - Enhanced with New Range Sliders */}
         <h3 className="card-title mb-4">Lifestyle Preferences</h3>
         
         <div className="form-group mb-4">
@@ -1193,64 +1309,82 @@ const EnhancedMatchingProfileForm = ({ editMode = false, onComplete, onCancel })
           )}
         </div>
 
-        {/* 1-5 Scale Preferences */}
+        {/* Enhanced 1-5 Scale Preferences */}
         <div className="grid-3 mb-4">
           <div className="form-group">
-            <label className="label">Social Level (1-5)</label>
-            <div className="range-container">
-              <input
-                type="range"
-                min="1"
-                max="5"
-                value={formData.socialLevel}
-                onChange={(e) => handleRangeChange('socialLevel', e.target.value)}
-                className="range-slider"
-                disabled={loading}
-              />
-              <div className="range-labels">
-                <span>Quiet</span>
-                <span className="range-value">{formData.socialLevel}</span>
-                <span>Very Social</span>
+            <div className="enhanced-range-container">
+              <div className="range-description">Social Level</div>
+              <div className="range-slider-wrapper">
+                <input
+                  type="range"
+                  min="1"
+                  max="5"
+                  value={formData.socialLevel}
+                  onChange={(e) => handleRangeChange('socialLevel', e.target.value)}
+                  className="range-slider"
+                  disabled={loading}
+                />
+                <div className="enhanced-range-labels">
+                  <div className="range-endpoint">Quiet (1)</div>
+                  <div className="range-arrow">←→</div>
+                  <div className="range-endpoint">Very Social (5)</div>
+                </div>
+              </div>
+              <div className="current-value-display">
+                <span className="current-value-number">{formData.socialLevel}</span>
+                <span className="current-value-label">Current Level</span>
               </div>
             </div>
           </div>
           
           <div className="form-group">
-            <label className="label">Cleanliness Level (1-5)</label>
-            <div className="range-container">
-              <input
-                type="range"
-                min="1"
-                max="5"
-                value={formData.cleanlinessLevel}
-                onChange={(e) => handleRangeChange('cleanlinessLevel', e.target.value)}
-                className="range-slider"
-                disabled={loading}
-              />
-              <div className="range-labels">
-                <span>Relaxed</span>
-                <span className="range-value">{formData.cleanlinessLevel}</span>
-                <span>Very Clean</span>
+            <div className="enhanced-range-container">
+              <div className="range-description">Cleanliness Level</div>
+              <div className="range-slider-wrapper">
+                <input
+                  type="range"
+                  min="1"
+                  max="5"
+                  value={formData.cleanlinessLevel}
+                  onChange={(e) => handleRangeChange('cleanlinessLevel', e.target.value)}
+                  className="range-slider"
+                  disabled={loading}
+                />
+                <div className="enhanced-range-labels">
+                  <div className="range-endpoint">Relaxed (1)</div>
+                  <div className="range-arrow">←→</div>
+                  <div className="range-endpoint">Very Clean (5)</div>
+                </div>
+              </div>
+              <div className="current-value-display">
+                <span className="current-value-number">{formData.cleanlinessLevel}</span>
+                <span className="current-value-label">Current Level</span>
               </div>
             </div>
           </div>
           
           <div className="form-group">
-            <label className="label">Noise Level (1-5)</label>
-            <div className="range-container">
-              <input
-                type="range"
-                min="1"
-                max="5"
-                value={formData.noiseLevel}
-                onChange={(e) => handleRangeChange('noiseLevel', e.target.value)}
-                className="range-slider"
-                disabled={loading}
-              />
-              <div className="range-labels">
-                <span>Very Quiet</span>
-                <span className="range-value">{formData.noiseLevel}</span>
-                <span>Loud OK</span>
+            <div className="enhanced-range-container">
+              <div className="range-description">Noise Level</div>
+              <div className="range-slider-wrapper">
+                <input
+                  type="range"
+                  min="1"
+                  max="5"
+                  value={formData.noiseLevel}
+                  onChange={(e) => handleRangeChange('noiseLevel', e.target.value)}
+                  className="range-slider"
+                  disabled={loading}
+                />
+                <div className="enhanced-range-labels">
+                  <div className="range-endpoint">Very Quiet (1)</div>
+                  <div className="range-arrow">←→</div>
+                  <div className="range-endpoint">Loud OK (5)</div>
+                </div>
+              </div>
+              <div className="current-value-display">
+                <span className="current-value-number">{formData.noiseLevel}</span>
+                <span className="current-value-label">Current Level</span>
               </div>
             </div>
           </div>
@@ -1290,85 +1424,81 @@ const EnhancedMatchingProfileForm = ({ editMode = false, onComplete, onCancel })
           </div>
         </div>
 
-        {/* Living Situation Preferences */}
+        {/* Living Situation Preferences - Enhanced with Columns */}
         <h3 className="card-title mb-4">Living Situation Preferences</h3>
         
-        <div className="grid-2 mb-4">
-          <div className="form-group">
-            <label className="checkbox-label">
-              <input
-                type="checkbox"
-                checked={formData.petsOwned}
-                onChange={(e) => handleInputChange('petsOwned', e.target.checked)}
-                disabled={loading}
-              />
-              <span className="checkbox-text">I own pets</span>
-            </label>
-            
-            <label className="checkbox-label">
-              <input
-                type="checkbox"
-                checked={formData.petsComfortable}
-                onChange={(e) => handleInputChange('petsComfortable', e.target.checked)}
-                disabled={loading}
-              />
-              <span className="checkbox-text">I'm comfortable with roommate's pets</span>
-            </label>
-          </div>
+        <div className="checkbox-columns-compact mb-4">
+          <label className="checkbox-label">
+            <input
+              type="checkbox"
+              checked={formData.petsOwned}
+              onChange={(e) => handleInputChange('petsOwned', e.target.checked)}
+              disabled={loading}
+            />
+            <span className="checkbox-text">I own pets</span>
+          </label>
           
-          <div className="form-group">
-            <label className="checkbox-label">
-              <input
-                type="checkbox"
-                checked={formData.overnightGuestsOk}
-                onChange={(e) => handleInputChange('overnightGuestsOk', e.target.checked)}
-                disabled={loading}
-              />
-              <span className="checkbox-text">Overnight guests are OK</span>
-            </label>
-            
-            <label className="checkbox-label">
-              <input
-                type="checkbox"
-                checked={formData.sharedGroceries}
-                onChange={(e) => handleInputChange('sharedGroceries', e.target.checked)}
-                disabled={loading}
-              />
-              <span className="checkbox-text">I'm open to sharing groceries</span>
-            </label>
-          </div>
+          <label className="checkbox-label">
+            <input
+              type="checkbox"
+              checked={formData.petsComfortable}
+              onChange={(e) => handleInputChange('petsComfortable', e.target.checked)}
+              disabled={loading}
+            />
+            <span className="checkbox-text">I'm comfortable with roommate's pets</span>
+          </label>
+          
+          <label className="checkbox-label">
+            <input
+              type="checkbox"
+              checked={formData.overnightGuestsOk}
+              onChange={(e) => handleInputChange('overnightGuestsOk', e.target.checked)}
+              disabled={loading}
+            />
+            <span className="checkbox-text">Overnight guests are OK</span>
+          </label>
+          
+          <label className="checkbox-label">
+            <input
+              type="checkbox"
+              checked={formData.sharedGroceries}
+              onChange={(e) => handleInputChange('sharedGroceries', e.target.checked)}
+              disabled={loading}
+            />
+            <span className="checkbox-text">I'm open to sharing groceries</span>
+          </label>
         </div>
 
-        {/* Housing Assistance */}
+        {/* Housing Assistance - Enhanced with Subtitle and Columns */}
         <h3 className="card-title mb-4">Housing Assistance</h3>
+        <div className="housing-assistance-subtitle">
+          Housing assistance programs that will provide some or all of your monthly rent.
+        </div>
         
         <div className="form-group mb-4">
-          <label className="label">Housing Assistance Programs</label>
-          <div className="checkbox-grid">
+          <div className="checkbox-columns-compact">
             {housingSubsidyOptions.map(subsidy => (
-              <label key={subsidy} className="checkbox-label">
+              <label key={subsidy.value} className="checkbox-label">
                 <input
                   type="checkbox"
-                  checked={formData.housingSubsidy.includes(subsidy)}
-                  onChange={(e) => handleArrayChange('housingSubsidy', subsidy, e.target.checked)}
+                  checked={formData.housingSubsidy.includes(subsidy.value)}
+                  onChange={(e) => handleArrayChange('housingSubsidy', subsidy.value, e.target.checked)}
                   disabled={loading}
                 />
-                <span className="checkbox-text">
-                  {subsidy.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase())}
-                </span>
+                <span className="checkbox-text">{subsidy.label}</span>
               </label>
             ))}
           </div>
         </div>
 
-        {/* Compatibility Factors */}
+        {/* Compatibility Factors - Enhanced with Columns */}
         <h3 className="card-title mb-4">Compatibility Factors</h3>
         
         <div className="form-group mb-4">
           <label className="label">
             Interests & Hobbies <span className="text-red-500">*</span>
           </label>
-          <div className="checkbox-grid">
+          <div className="checkbox-columns">
             {interestOptions.map(interest => (
               <label key={interest} className="checkbox-label">
                 <input
