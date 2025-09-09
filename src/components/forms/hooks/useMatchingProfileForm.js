@@ -259,7 +259,7 @@ export const useMatchingProfileForm = () => {
     handleInputChange(field, parseInt(value));
   };
 
-  // ✅ IMPROVED: Submit form with better error handling
+  // ✅ FIXED: Submit form using proper upsert logic
   const submitForm = async () => {
     console.log('🔍 Form submission started');
     
@@ -288,6 +288,9 @@ export const useMatchingProfileForm = () => {
         .filter(zip => zip && /^\d{5}$/.test(zip));
 
       const applicantFormData = {
+        // Ensure user_id is set for upsert
+        user_id: user.id,
+        
         // Personal Demographics
         date_of_birth: formData.dateOfBirth,
         phone: formData.phone,
@@ -377,13 +380,13 @@ export const useMatchingProfileForm = () => {
         profile_completed: true
       };
       
-      console.log('🔧 Submitting to database...', { 
+      console.log('🔧 Submitting to database using upsert logic...', { 
         userId: user.id, 
         dataKeys: Object.keys(applicantFormData) 
       });
       
-      // ✅ IMPROVED: Better error handling for database operations
-      const { error } = await db.applicantForms.update(user.id, applicantFormData);
+      // ✅ FIXED: Use matchingProfiles.create which has proper upsert logic
+      const { data, error } = await db.matchingProfiles.create(applicantFormData);
       
       if (error) {
         console.error('❌ Database error:', error);
@@ -406,7 +409,7 @@ export const useMatchingProfileForm = () => {
         return false;
       }
       
-      console.log('✅ Database update successful');
+      console.log('✅ Database upsert successful', { data });
       setSuccessMessage('Comprehensive matching profile saved successfully!');
       
       return true;
