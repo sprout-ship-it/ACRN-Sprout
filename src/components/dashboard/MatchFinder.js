@@ -1,8 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../../context/AuthContext';
 import { useMatchingProfile } from '../../hooks/useSupabase';
-import { calculateDetailedCompatibility } from '../utils/matching/algorithm';
-import { generateDetailedFlags } from '../utils/matching/compatibility';
+import { calculateDetailedCompatibility } from '../../utils/matching/algorithm';
+import { generateDetailedFlags } from '../../utils/matching/compatibility';
 import '../../styles/global.css';
 
 // ==================== DATA TRANSFORMATION HELPERS ====================
