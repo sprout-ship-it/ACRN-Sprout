@@ -4,7 +4,7 @@ import React, { createContext, useContext, useEffect, useState } from 'react'
 import { auth, db } from '../utils/supabase'
 
 const AuthContext = createContext({})
-
+export { AuthContext };
 export const useAuth = () => {
   const context = useContext(AuthContext)
   if (!context) {
