@@ -412,7 +412,7 @@ const EnhancedMatchingProfileForm = () => {
             <button 
               type="button"
               className="btn btn-outline btn-sm"
-              onClick={() => onCancel ? onCancel() : navigate('/app')}
+              onClick={() => navigate('/dashboard')}
               disabled={loading || isSubmitting}
             >
               Return to Dashboard
