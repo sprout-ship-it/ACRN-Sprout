@@ -3,7 +3,11 @@
 /**
  * Core matching algorithm for Recovery Housing Connect
  * Based on the advanced matching system with weighted compatibility factors
+ * Updated to work with actual Supabase database schema
  */
+
+// Import the location compatibility function
+import { calculateLocationCompatibility as baseLocationCompatibility } from './dataTransform';
 
 /**
  * Calculate detailed compatibility between two users
@@ -155,9 +159,13 @@ export const calculateAgeCompatibility = (user1, user2) => {
  * @returns {number} Budget compatibility score (0-100)
  */
 export const calculateBudgetCompatibility = (user1, user2) => {
-  if (!user1.budget_max || !user2.budget_max) return 50;
+  // Handle both budget_max and price_range formats
+  const budget1 = user1.budget_max || user1.price_range?.max || user1.priceRange?.max;
+  const budget2 = user2.budget_max || user2.price_range?.max || user2.priceRange?.max;
   
-  const budgetDiff = Math.abs(user1.budget_max - user2.budget_max);
+  if (!budget1 || !budget2) return 50;
+  
+  const budgetDiff = Math.abs(budget1 - budget2);
   
   if (budgetDiff === 0) return 100; // Perfect match
   
@@ -186,12 +194,12 @@ export const calculateRecoveryCompatibility = (user1, user2) => {
     factors++;
   }
   
-  // Recovery methods overlap
-  if (user1.recovery_methods && user2.recovery_methods) {
-    const methodsScore = calculateArrayOverlapScore(
-      user1.recovery_methods, 
-      user2.recovery_methods
-    );
+  // Recovery methods overlap (handle both field names)
+  const methods1 = user1.recovery_methods || user1.program_type || [];
+  const methods2 = user2.recovery_methods || user2.program_type || [];
+  
+  if (methods1.length > 0 && methods2.length > 0) {
+    const methodsScore = calculateArrayOverlapScore(methods1, methods2);
     totalScore += methodsScore;
     factors++;
   }
@@ -273,9 +281,13 @@ export const calculateInterestsCompatibility = (user1, user2) => {
  * @returns {number} Housing compatibility score (0-100)
  */
 export const calculateHousingCompatibility = (user1, user2) => {
-  if (!user1.housing_subsidy || !user2.housing_subsidy) return 75;
+  // Handle both field names for housing subsidy
+  const subsidy1 = user1.housing_subsidy || [];
+  const subsidy2 = user2.housing_subsidy || [];
   
-  const overlap = calculateArrayOverlapScore(user1.housing_subsidy, user2.housing_subsidy);
+  if (subsidy1.length === 0 && subsidy2.length === 0) return 75;
+  
+  const overlap = calculateArrayOverlapScore(subsidy1, subsidy2);
   return Math.max(50, overlap); // Minimum 50 even if no overlap
 };
 
@@ -288,8 +300,10 @@ export const calculateHousingCompatibility = (user1, user2) => {
 export const calculateGenderCompatibility = (user1, user2) => {
   const user1Gender = user1.gender;
   const user2Gender = user2.gender;
-  const user1Pref = user1.preferred_roommate_gender;
-  const user2Pref = user2.preferred_roommate_gender;
+  
+  // Handle both field names for gender preference
+  const user1Pref = user1.preferred_roommate_gender || user1.gender_preference;
+  const user2Pref = user2.preferred_roommate_gender || user2.gender_preference;
   
   // If no preferences specified, assume compatibility
   if (!user1Pref && !user2Pref) return 100;
@@ -333,9 +347,12 @@ export const calculatePreferencesCompatibility = (user1, user2) => {
     factors++;
   }
   
-  // Guest policy compatibility
-  if (user1.guests_policy && user2.guests_policy) {
-    const guestScore = calculateGuestCompatibility(user1.guests_policy, user2.guests_policy);
+  // Guest policy compatibility (handle both field names)
+  const guestPolicy1 = user1.guests_policy || user1.guest_policy;
+  const guestPolicy2 = user2.guests_policy || user2.guest_policy;
+  
+  if (guestPolicy1 && guestPolicy2) {
+    const guestScore = calculateGuestCompatibility(guestPolicy1, guestPolicy2);
     totalScore += guestScore;
     factors++;
   }
@@ -344,18 +361,23 @@ export const calculatePreferencesCompatibility = (user1, user2) => {
 };
 
 /**
- * Calculate location compatibility (placeholder for now)
+ * Calculate location compatibility using enhanced method
  * @param {Object} user1 - First user's data
  * @param {Object} user2 - Second user's data
  * @returns {number} Location compatibility score (0-100)
  */
 export const calculateLocationCompatibility = (user1, user2) => {
-  // This would integrate with a ZIP code compatibility function
-  // For now, return a default moderate score
-  if (window.calculateZipCodeCompatibility) {
-    return window.calculateZipCodeCompatibility(user1, user2);
+  // Use the enhanced location compatibility if users have a custom function
+  if (user1.calculateLocationCompatibility) {
+    return user1.calculateLocationCompatibility(user1, user2);
   }
-  return 50;
+  
+  if (user2.calculateLocationCompatibility) {
+    return user2.calculateLocationCompatibility(user1, user2);
+  }
+  
+  // Fall back to the base location compatibility function
+  return baseLocationCompatibility(user1, user2);
 };
 
 // ===== HELPER FUNCTIONS =====
@@ -393,6 +415,7 @@ const isCompatibleWorkSchedule = (schedule1, schedule2) => {
 const calculateRecoveryStageCompatibility = (stage1, stage2) => {
   if (stage1 === stage2) return 100;
   
+  // Updated to match your database schema
   const stageOrder = ['early', 'stabilizing', 'stable', 'long-term'];
   const index1 = stageOrder.indexOf(stage1);
   const index2 = stageOrder.indexOf(stage2);
@@ -425,11 +448,21 @@ const calculatePrimaryIssuesCompatibility = (issues1, issues2) => {
 const checkGenderPreference = (preference, userGender, otherGender) => {
   switch (preference) {
     case 'no_preference':
+    case 'any':
       return 100;
     case 'same_gender':
+    case 'same':
       return userGender === otherGender ? 100 : 0; // Hard incompatibility
     case 'different_gender':
+    case 'different':
       return userGender !== otherGender ? 100 : 0; // Hard incompatibility
+    case 'male':
+      return otherGender === 'male' ? 100 : 0;
+    case 'female':
+      return otherGender === 'female' ? 100 : 0;
+    case 'non_binary':
+    case 'non-binary':
+      return otherGender === 'non_binary' || otherGender === 'non-binary' ? 100 : 0;
     default:
       return 100;
   }

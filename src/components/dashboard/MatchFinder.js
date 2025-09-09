@@ -1,311 +1,305 @@
 import React, { useState, useEffect } from 'react';
+import { useAuth } from '../context/AuthContext';
+import { useMatchingProfile } from '../hooks/useSupabase';
+import { calculateDetailedCompatibility } from '../utils/matching/algorithm';
+import { generateDetailedFlags } from '../utils/matching/compatibility';
 import '../../styles/global.css';
 
-// ==================== MOCK DATA AND MATCHING ALGORITHM ====================
+// ==================== DATA TRANSFORMATION HELPERS ====================
 
-// Mock applicant data for demonstration
-const mockApplicants = [
-  {
-    id: 1,
-    firstName: 'Sarah',
-    age: 28,
-    location: 'Austin, TX',
-    recoveryStage: 'stable',
-    programType: ['AA', 'Outpatient therapy'],
-    interests: ['Fitness/Exercise', 'Cooking', 'Reading'],
-    housingType: ['Apartment', 'House'],
-    priceRange: { min: 800, max: 1500 },
-    sobrietyDate: '2023-01-15',
-    aboutMe: 'I\'m a graphic designer who loves yoga and cooking healthy meals. I value honest communication and mutual respect.',
-    lookingFor: 'Someone who shares similar recovery values and enjoys a peaceful, supportive living environment.',
-    genderPreference: 'female',
-    smokingPreference: 'non-smoking',
-    cleanlinessLevel: 'very-clean',
-    isActive: true
-  },
-  {
-    id: 2,
-    firstName: 'Mike',
-    age: 32,
-    location: 'Austin, TX',
-    recoveryStage: 'maintained',
-    programType: ['NA', 'SMART Recovery'],
-    interests: ['Outdoor activities', 'Music', 'Volunteering'],
-    housingType: ['House', 'Townhouse'],
-    priceRange: { min: 1000, max: 2000 },
-    sobrietyDate: '2021-08-20',
-    aboutMe: 'Musician and outdoor enthusiast. I work from home and enjoy a quiet, organized living space.',
-    lookingFor: 'A responsible roommate who respects boundaries and shares recovery goals.',
-    genderPreference: 'any',
-    smokingPreference: 'non-smoking',
-    cleanlinessLevel: 'clean',
-    isActive: true
-  },
-  {
-    id: 3,
-    firstName: 'Emma',
-    age: 25,
-    location: 'Austin, TX',
-    recoveryStage: 'early',
-    programType: ['AA', 'Celebrate Recovery'],
-    interests: ['Art/Crafts', 'Movies/TV', 'Pets/Animals'],
-    housingType: ['Apartment', 'Room in house'],
-    priceRange: { min: 600, max: 1200 },
-    sobrietyDate: '2024-06-01',
-    aboutMe: 'Art student and dog lover. I\'m new to recovery but very committed to my sobriety.',
-    lookingFor: 'Someone understanding and supportive who can help me stay on track.',
-    genderPreference: 'female',
-    smokingPreference: 'non-smoking',
-    cleanlinessLevel: 'moderate',
-    isActive: true
-  },
-  {
-    id: 4,
-    firstName: 'David',
-    age: 35,
-    location: 'Austin, TX',
-    recoveryStage: 'long-term',
-    programType: ['AA', 'Peer support groups'],
-    interests: ['Fitness/Exercise', 'Technology', 'Learning/Education'],
-    housingType: ['Condo', 'House'],
-    priceRange: { min: 1200, max: 2500 },
-    sobrietyDate: '2018-03-10',
-    aboutMe: 'Software engineer with 6+ years of sobriety. I mentor others in recovery.',
-    lookingFor: 'A mature roommate who values structure and personal growth.',
-    genderPreference: 'any',
-    smokingPreference: 'non-smoking',
-    cleanlinessLevel: 'very-clean',
-    isActive: true
-  },
-  {
-    id: 5,
-    firstName: 'Jessica',
-    age: 29,
-    location: 'Austin, TX',
-    recoveryStage: 'stable',
-    programType: ['NA', 'Meditation/Spirituality'],
-    interests: ['Meditation/Spirituality', 'Cooking', 'Travel'],
-    housingType: ['Apartment', 'Condo'],
-    priceRange: { min: 900, max: 1800 },
-    sobrietyDate: '2022-11-12',
-    aboutMe: 'Yoga instructor focused on mindful living and spiritual growth.',
-    lookingFor: 'Someone who appreciates mindfulness and supports each other\'s recovery journey.',
-    genderPreference: 'female',
-    smokingPreference: 'non-smoking',
-    cleanlinessLevel: 'very-clean',
-    isActive: true
-  },
-  {
-    id: 6,
-    firstName: 'Alex',
-    age: 27,
-    location: 'Austin, TX',
-    recoveryStage: 'maintained',
-    programType: ['SMART Recovery', 'Secular recovery'],
-    interests: ['Gaming', 'Technology', 'Sports'],
-    housingType: ['Apartment', 'Room in house'],
-    priceRange: { min: 700, max: 1400 },
-    sobrietyDate: '2021-05-30',
-    aboutMe: 'Tech worker who enjoys gaming and sports. I\'m introverted but friendly.',
-    lookingFor: 'A respectful roommate who gives me space but is available for support when needed.',
-    genderPreference: 'any',
-    smokingPreference: 'non-smoking',
-    cleanlinessLevel: 'moderate',
-    isActive: true
-  }
-];
+/**
+ * Transform database record to algorithm-compatible format
+ */
+const transformProfileForAlgorithm = (dbProfile) => {
+  if (!dbProfile) return null;
 
-// Matching algorithm
-const calculateMatchScore = (user, candidate) => {
-  let score = 0;
-  let maxScore = 0;
-  
-  // Recovery stage compatibility (25 points)
-  maxScore += 25;
-  const recoveryStages = ['early', 'stable', 'maintained', 'long-term'];
-  const userStageIndex = recoveryStages.indexOf(user.recoveryStage);
-  const candidateStageIndex = recoveryStages.indexOf(candidate.recoveryStage);
-  const stageDiff = Math.abs(userStageIndex - candidateStageIndex);
-  if (stageDiff === 0) score += 25;
-  else if (stageDiff === 1) score += 20;
-  else if (stageDiff === 2) score += 10;
-  
-  // Program type overlap (20 points)
-  maxScore += 20;
-  const programOverlap = user.programType.filter(p => candidate.programType.includes(p)).length;
-  score += Math.min(20, programOverlap * 7);
-  
-  // Interest overlap (15 points)
-  maxScore += 15;
-  const interestOverlap = user.interests.filter(i => candidate.interests.includes(i)).length;
-  score += Math.min(15, interestOverlap * 3);
-  
-  // Housing type compatibility (10 points)
-  maxScore += 10;
-  const housingOverlap = user.housingType.filter(h => candidate.housingType.includes(h)).length;
-  if (housingOverlap > 0) score += 10;
-  
-  // Price range compatibility (10 points)
-  maxScore += 10;
-  const priceOverlap = Math.max(0, Math.min(user.priceRange.max, candidate.priceRange.max) - 
-                               Math.max(user.priceRange.min, candidate.priceRange.min));
-  if (priceOverlap > 0) score += 10;
-  
-  // Gender preference (10 points)
-  maxScore += 10;
-  if (user.genderPreference === 'any' || candidate.genderPreference === 'any' || 
-      user.genderPreference === candidate.gender) score += 10;
-  
-  // Lifestyle compatibility (10 points)
-  maxScore += 10;
-  if (user.smokingPreference === candidate.smokingPreference) score += 5;
-  if (user.cleanlinessLevel === candidate.cleanlinessLevel) score += 5;
-  
-  return Math.round((score / maxScore) * 100);
+  // Calculate age from date_of_birth
+  const calculateAge = (dateOfBirth) => {
+    if (!dateOfBirth) return null;
+    const today = new Date();
+    const birthDate = new Date(dateOfBirth);
+    let age = today.getFullYear() - birthDate.getFullYear();
+    const monthDiff = today.getMonth() - birthDate.getMonth();
+    if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birthDate.getDate())) {
+      age--;
+    }
+    return age;
+  };
+
+  // Create the transformed profile
+  const transformed = {
+    // Basic info
+    id: dbProfile.id,
+    user_id: dbProfile.user_id,
+    
+    // Personal details
+    age: calculateAge(dbProfile.date_of_birth),
+    gender: dbProfile.gender,
+    
+    // Location - use preferred_location or city as fallback
+    location: dbProfile.preferred_location || dbProfile.city || 'Not specified',
+    
+    // Budget
+    budget_max: dbProfile.budget_max,
+    price_range: {
+      min: dbProfile.price_range_min || 0,
+      max: dbProfile.price_range_max || dbProfile.budget_max || 5000
+    },
+    
+    // Recovery info
+    recovery_stage: dbProfile.recovery_stage,
+    recovery_methods: dbProfile.recovery_methods || [],
+    program_type: dbProfile.program_type || [],
+    primary_issues: dbProfile.primary_issues || [],
+    sobriety_date: dbProfile.sobriety_date,
+    
+    // Lifestyle
+    cleanliness_level: dbProfile.cleanliness_level || 3,
+    noise_level: dbProfile.noise_level || 3,
+    social_level: dbProfile.social_level || 3,
+    work_schedule: dbProfile.work_schedule,
+    bedtime_preference: dbProfile.bedtime_preference,
+    
+    // Preferences
+    preferred_roommate_gender: dbProfile.preferred_roommate_gender,
+    gender_preference: dbProfile.gender_preference,
+    smoking_status: dbProfile.smoking_status,
+    smoking_preference: dbProfile.smoking_preference,
+    
+    // Housing
+    housing_type: dbProfile.housing_type || [],
+    housing_subsidy: dbProfile.housing_subsidy || [],
+    
+    // Social preferences
+    pets_owned: dbProfile.pets_owned,
+    pets_comfortable: dbProfile.pets_comfortable,
+    overnight_guests_ok: dbProfile.overnight_guests_ok,
+    shared_groceries: dbProfile.shared_groceries,
+    guests_policy: dbProfile.guests_policy,
+    
+    // Personal
+    interests: dbProfile.interests || [],
+    spiritual_affiliation: dbProfile.spiritual_affiliation,
+    about_me: dbProfile.about_me,
+    looking_for: dbProfile.looking_for,
+    
+    // Profile metadata
+    is_active: dbProfile.is_active,
+    profile_completed: dbProfile.profile_completed,
+    
+    // Include registrant_profiles data if available
+    first_name: dbProfile.registrant_profiles?.first_name || 'Anonymous',
+    email: dbProfile.registrant_profiles?.email
+  };
+
+  return transformed;
 };
 
-// Generate compatibility flags
-const generateCompatibilityFlags = (user, candidate, score) => {
-  const greenFlags = [];
-  const redFlags = [];
+/**
+ * Generate display-friendly compatibility information
+ */
+const generateDisplayInfo = (userProfile, candidateProfile) => {
+  const compatibility = calculateDetailedCompatibility(userProfile, candidateProfile);
+  const flags = generateDetailedFlags(userProfile, candidateProfile, compatibility.score_breakdown);
   
-  // Program overlap
-  const programOverlap = user.programType.filter(p => candidate.programType.includes(p));
-  if (programOverlap.length > 0) {
-    greenFlags.push(`Shared programs: ${programOverlap.join(', ')}`);
-  }
-  
-  // Interest overlap
-  const interestOverlap = user.interests.filter(i => candidate.interests.includes(i));
-  if (interestOverlap.length >= 2) {
-    greenFlags.push(`Common interests: ${interestOverlap.slice(0, 2).join(', ')}`);
-  }
-  
-  // Recovery stage
-  if (user.recoveryStage === candidate.recoveryStage) {
-    greenFlags.push('Similar recovery stage');
-  }
-  
-  // Lifestyle
-  if (user.smokingPreference === candidate.smokingPreference && user.smokingPreference === 'non-smoking') {
-    greenFlags.push('Both non-smoking');
-  }
-  
-  if (user.cleanlinessLevel === candidate.cleanlinessLevel) {
-    greenFlags.push('Compatible cleanliness standards');
-  }
-  
-  // Red flags
-  if (score < 60) {
-    redFlags.push('Lower overall compatibility');
-  }
-  
-  if (user.priceRange.max < candidate.priceRange.min || candidate.priceRange.max < user.priceRange.min) {
-    redFlags.push('Price range mismatch');
-  }
-  
-  const recoveryStages = ['early', 'stable', 'maintained', 'long-term'];
-  const userStageIndex = recoveryStages.indexOf(user.recoveryStage);
-  const candidateStageIndex = recoveryStages.indexOf(candidate.recoveryStage);
-  if (Math.abs(userStageIndex - candidateStageIndex) > 2) {
-    redFlags.push('Very different recovery stages');
-  }
-  
-  return { greenFlags, redFlags };
+  return {
+    matchScore: compatibility.compatibility_score,
+    breakdown: compatibility.score_breakdown,
+    greenFlags: flags.green || [],
+    redFlags: flags.red || [],
+    compatibility
+  };
 };
 
 // ==================== MATCH FINDER COMPONENT ====================
 
-const MatchFinder = ({ user, onRequestMatch, onBack }) => {
+const MatchFinder = ({ onRequestMatch, onBack }) => {
+  const { user, profile } = useAuth();
+  const { getActiveProfiles, getMatchingProfile } = useMatchingProfile();
+  
   const [matches, setMatches] = useState([]);
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState(null);
   const [selectedMatch, setSelectedMatch] = useState(null);
   const [showDetails, setShowDetails] = useState(false);
+  const [userMatchingProfile, setUserMatchingProfile] = useState(null);
   const [filters, setFilters] = useState({
     recoveryStage: '',
     ageRange: '',
-    location: ''
+    minScore: 40
   });
   
-  // Mock user profile for demonstration
-  const mockUserProfile = {
-    recoveryStage: 'stable',
-    programType: ['AA', 'Outpatient therapy'],
-    interests: ['Fitness/Exercise', 'Cooking', 'Reading'],
-    housingType: ['Apartment', 'House'],
-    priceRange: { min: 800, max: 1600 },
-    genderPreference: 'any',
-    smokingPreference: 'non-smoking',
-    cleanlinessLevel: 'clean'
-  };
+  // Load user's own matching profile on component mount
+  useEffect(() => {
+    loadUserProfile();
+  }, []);
   
-  // Find matches function
-  const findMatches = async () => {
-    setLoading(true);
+  // Load matches when user profile is available
+  useEffect(() => {
+    if (userMatchingProfile) {
+      findMatches();
+    }
+  }, [userMatchingProfile, filters]);
+  
+  /**
+   * Load current user's matching profile
+   */
+  const loadUserProfile = async () => {
+    if (!user?.id) {
+      setError('No authenticated user found');
+      return;
+    }
     
     try {
-      // Simulate API delay
-      await new Promise(resolve => setTimeout(resolve, 1500));
+      console.log('🔍 Loading user matching profile...');
+      const result = await getMatchingProfile(user.id);
       
-      // Filter active applicants (exclude self)
-      let candidates = mockApplicants.filter(applicant => 
-        applicant.isActive && applicant.id !== user?.id
-      );
+      if (result.success && result.data) {
+        const transformedProfile = transformProfileForAlgorithm(result.data);
+        setUserMatchingProfile(transformedProfile);
+        console.log('✅ User profile loaded:', transformedProfile);
+      } else {
+        setError('Please complete your matching profile first');
+        console.warn('❌ No matching profile found for user');
+      }
+    } catch (err) {
+      console.error('💥 Error loading user profile:', err);
+      setError('Failed to load your profile');
+    }
+  };
+  
+  /**
+   * Find compatible matches from Supabase
+   */
+  const findMatches = async () => {
+    if (!userMatchingProfile) {
+      console.warn('⚠️ No user profile available for matching');
+      return;
+    }
+    
+    setLoading(true);
+    setError(null);
+    
+    try {
+      console.log('🔍 Finding matches...');
+      
+      // Get active profiles from Supabase (excluding current user)
+      const result = await getActiveProfiles();
+      
+      if (!result.success) {
+        throw new Error(result.error || 'Failed to load profiles');
+      }
+      
+      const rawCandidates = result.data || [];
+      console.log(`📊 Found ${rawCandidates.length} active profiles`);
+      
+      if (rawCandidates.length === 0) {
+        setMatches([]);
+        return;
+      }
+      
+      // Transform all candidates to algorithm format
+      const transformedCandidates = rawCandidates
+        .map(transformProfileForAlgorithm)
+        .filter(candidate => candidate && candidate.profile_completed);
+      
+      console.log(`🔄 Transformed ${transformedCandidates.length} completed profiles`);
       
       // Apply filters
+      let filteredCandidates = transformedCandidates;
+      
       if (filters.recoveryStage) {
-        candidates = candidates.filter(c => c.recoveryStage === filters.recoveryStage);
+        filteredCandidates = filteredCandidates.filter(c => 
+          c.recovery_stage === filters.recoveryStage
+        );
       }
       
       if (filters.ageRange) {
         const [minAge, maxAge] = filters.ageRange.split('-').map(Number);
-        candidates = candidates.filter(c => c.age >= minAge && c.age <= maxAge);
+        filteredCandidates = filteredCandidates.filter(c => 
+          c.age && c.age >= minAge && (maxAge ? c.age <= maxAge : true)
+        );
       }
       
-      // Calculate match scores
-      const matchesWithScores = candidates.map(candidate => {
-        const score = calculateMatchScore(mockUserProfile, candidate);
-        const flags = generateCompatibilityFlags(mockUserProfile, candidate, score);
+      console.log(`🔍 ${filteredCandidates.length} profiles after filtering`);
+      
+      // Calculate compatibility scores
+      const matchesWithScores = filteredCandidates.map(candidate => {
+        const displayInfo = generateDisplayInfo(userMatchingProfile, candidate);
         
         return {
           ...candidate,
-          matchScore: score,
-          ...flags
+          ...displayInfo
         };
       });
       
-      // Sort by score and take top 6
-      const topMatches = matchesWithScores
+      // Filter by minimum score and sort by compatibility
+      const qualifiedMatches = matchesWithScores
+        .filter(match => match.matchScore >= filters.minScore)
         .sort((a, b) => b.matchScore - a.matchScore)
-        .slice(0, 6);
+        .slice(0, 20); // Limit to top 20 matches
       
-      setMatches(topMatches);
+      console.log(`✅ Found ${qualifiedMatches.length} qualified matches`);
+      setMatches(qualifiedMatches);
       
-    } catch (error) {
-      console.error('Error finding matches:', error);
+    } catch (err) {
+      console.error('💥 Error finding matches:', err);
+      setError(err.message || 'Failed to find matches');
     } finally {
       setLoading(false);
     }
   };
   
-  // Load matches on component mount
-  useEffect(() => {
-    findMatches();
-  }, []);
-  
-  // Handle show details
+  /**
+   * Handle showing match details
+   */
   const handleShowDetails = (match) => {
     setSelectedMatch(match);
     setShowDetails(true);
   };
   
-  // Handle request match
-  const handleRequestMatch = (match) => {
-    if (onRequestMatch) {
-      onRequestMatch(match);
+  /**
+   * Handle match request
+   */
+  const handleRequestMatch = async (match) => {
+    try {
+      if (onRequestMatch) {
+        await onRequestMatch(match);
+      }
+      
+      // Show success message
+      alert(`Match request sent to ${match.first_name}!`);
+      
+    } catch (err) {
+      console.error('💥 Error sending match request:', err);
+      alert('Failed to send match request. Please try again.');
     }
-    alert(`Match request sent to ${match.firstName}!`);
   };
+  
+  /**
+   * Update filters and refresh matches
+   */
+  const handleFilterChange = (newFilters) => {
+    setFilters(prev => ({ ...prev, ...newFilters }));
+  };
+  
+  // Show error if no user profile
+  if (!userMatchingProfile && !loading) {
+    return (
+      <div className="content">
+        <div className="card text-center">
+          <h3>Profile Required</h3>
+          <p>Please complete your matching profile before finding roommates.</p>
+          <button
+            className="btn btn-primary"
+            onClick={() => window.location.href = '/profile/matching'}
+          >
+            Complete Matching Profile
+          </button>
+        </div>
+      </div>
+    );
+  }
   
   return (
     <>
@@ -325,12 +319,12 @@ const MatchFinder = ({ user, onRequestMatch, onBack }) => {
               <select
                 className="input"
                 value={filters.recoveryStage}
-                onChange={(e) => setFilters(prev => ({ ...prev, recoveryStage: e.target.value }))}
+                onChange={(e) => handleFilterChange({ recoveryStage: e.target.value })}
               >
                 <option value="">Any stage</option>
                 <option value="early">Early recovery</option>
+                <option value="stabilizing">Stabilizing recovery</option>
                 <option value="stable">Stable recovery</option>
-                <option value="maintained">Maintained recovery</option>
                 <option value="long-term">Long-term recovery</option>
               </select>
             </div>
@@ -340,7 +334,7 @@ const MatchFinder = ({ user, onRequestMatch, onBack }) => {
               <select
                 className="input"
                 value={filters.ageRange}
-                onChange={(e) => setFilters(prev => ({ ...prev, ageRange: e.target.value }))}
+                onChange={(e) => handleFilterChange({ ageRange: e.target.value })}
               >
                 <option value="">Any age</option>
                 <option value="18-25">18-25</option>
@@ -351,16 +345,50 @@ const MatchFinder = ({ user, onRequestMatch, onBack }) => {
             </div>
             
             <div className="form-group">
+              <label className="label">Min Compatibility</label>
+              <select
+                className="input"
+                value={filters.minScore}
+                onChange={(e) => handleFilterChange({ minScore: Number(e.target.value) })}
+              >
+                <option value="30">30% or higher</option>
+                <option value="40">40% or higher</option>
+                <option value="50">50% or higher</option>
+                <option value="60">60% or higher</option>
+                <option value="70">70% or higher</option>
+              </select>
+            </div>
+            
+            <div className="form-group">
               <button
                 className="btn btn-primary"
                 onClick={findMatches}
-                disabled={loading}
+                disabled={loading || !userMatchingProfile}
               >
-                {loading ? 'Searching...' : 'Update Matches'}
+                {loading ? 'Searching...' : 'Refresh Matches'}
               </button>
             </div>
           </div>
         </div>
+        
+        {/* Error State */}
+        {error && (
+          <div className="card mb-5">
+            <div className="alert alert-error">
+              <h4>Error Loading Matches</h4>
+              <p>{error}</p>
+              <button 
+                className="btn btn-outline"
+                onClick={() => {
+                  setError(null);
+                  findMatches();
+                }}
+              >
+                Try Again
+              </button>
+            </div>
+          </div>
+        )}
         
         {/* Loading State */}
         {loading && (
@@ -371,21 +399,24 @@ const MatchFinder = ({ user, onRequestMatch, onBack }) => {
         )}
         
         {/* No Matches State */}
-        {!loading && matches.length === 0 && (
+        {!loading && !error && matches.length === 0 && userMatchingProfile && (
           <div className="card text-center">
             <h3>No matches found</h3>
             <p>Try adjusting your filters or check back later for new applicants.</p>
+            <p className="text-sm text-gray-600">
+              Current filters: {filters.recoveryStage || 'Any recovery stage'}, {filters.ageRange || 'Any age'}, {filters.minScore}%+ compatibility
+            </p>
           </div>
         )}
         
         {/* Matches Grid */}
-        {!loading && matches.length > 0 && (
+        {!loading && !error && matches.length > 0 && (
           <div className="grid-auto mb-5">
-            {matches.map((match, index) => (
-              <div key={match.id} className="card">
+            {matches.map((match) => (
+              <div key={match.user_id} className="card">
                 <div className="card-header">
                   <div>
-                    <div className="card-title">{match.firstName}</div>
+                    <div className="card-title">{match.first_name}</div>
                     <div className="card-subtitle">{match.matchScore}% Match</div>
                   </div>
                 </div>
@@ -393,37 +424,47 @@ const MatchFinder = ({ user, onRequestMatch, onBack }) => {
                 <div>
                   <div className="mb-4">
                     <div className="grid-2 text-gray-600">
-                      <div><span className="text-gray-600">Age:</span> <span className="text-gray-800">{match.age}</span></div>
+                      <div><span className="text-gray-600">Age:</span> <span className="text-gray-800">{match.age || 'Not specified'}</span></div>
                       <div><span className="text-gray-600">Location:</span> <span className="text-gray-800">{match.location}</span></div>
-                      <div><span className="text-gray-600">Recovery Stage:</span> <span className="text-gray-800">{match.recoveryStage.charAt(0).toUpperCase() + match.recoveryStage.slice(1)}</span></div>
-                      <div><span className="text-gray-600">Price Range:</span> <span className="text-gray-800">${match.priceRange.min} - ${match.priceRange.max}</span></div>
+                      <div><span className="text-gray-600">Recovery Stage:</span> <span className="text-gray-800">{match.recovery_stage?.charAt(0).toUpperCase() + match.recovery_stage?.slice(1) || 'Not specified'}</span></div>
+                      <div><span className="text-gray-600">Budget:</span> <span className="text-gray-800">${match.price_range?.min || 0} - ${match.price_range?.max || match.budget_max}</span></div>
                     </div>
                   </div>
                   
                   {/* Green Flags */}
-                  {match.greenFlags.length > 0 && (
+                  {match.greenFlags?.length > 0 && (
                     <div className="mb-4">
                       <div className="label mb-2">✓ Compatibility Highlights</div>
                       <div className="mb-2">
-                        {match.greenFlags.map((flag, i) => (
+                        {match.greenFlags.slice(0, 3).map((flag, i) => (
                           <span key={i} className="badge badge-success mr-1 mb-1">
                             {flag}
                           </span>
                         ))}
+                        {match.greenFlags.length > 3 && (
+                          <span className="text-sm text-gray-600">
+                            +{match.greenFlags.length - 3} more
+                          </span>
+                        )}
                       </div>
                     </div>
                   )}
                   
                   {/* Red Flags */}
-                  {match.redFlags.length > 0 && (
+                  {match.redFlags?.length > 0 && (
                     <div className="mb-4">
                       <div className="label mb-2">⚠ Potential Concerns</div>
                       <div className="mb-2">
-                        {match.redFlags.map((flag, i) => (
+                        {match.redFlags.slice(0, 2).map((flag, i) => (
                           <span key={i} className="badge badge-warning mr-1 mb-1">
                             {flag}
                           </span>
                         ))}
+                        {match.redFlags.length > 2 && (
+                          <span className="text-sm text-gray-600">
+                            +{match.redFlags.length - 2} more
+                          </span>
+                        )}
                       </div>
                     </div>
                   )}
@@ -468,7 +509,7 @@ const MatchFinder = ({ user, onRequestMatch, onBack }) => {
           <div className="modal-content" onClick={(e) => e.stopPropagation()}>
             <div className="modal-header">
               <h2 className="modal-title">
-                {selectedMatch.firstName} - {selectedMatch.matchScore}% Match
+                {selectedMatch.first_name} - {selectedMatch.matchScore}% Match
               </h2>
               <button
                 className="modal-close"
@@ -478,33 +519,56 @@ const MatchFinder = ({ user, onRequestMatch, onBack }) => {
               </button>
             </div>
             
-            <div className="mb-4">
-              <h4 className="card-title">About {selectedMatch.firstName}</h4>
-              <p className="card-text">{selectedMatch.aboutMe}</p>
-            </div>
-            
-            <div className="mb-4">
-              <h4 className="card-title">What they're looking for</h4>
-              <p className="card-text">{selectedMatch.lookingFor}</p>
-            </div>
-            
-            <div className="mb-4">
-              <h4 className="card-title">Recovery Programs</h4>
-              <div className="mb-2">
-                {selectedMatch.programType.map((program, i) => (
-                  <span key={i} className="badge badge-success mr-1 mb-1">{program}</span>
-                ))}
+            {selectedMatch.about_me && (
+              <div className="mb-4">
+                <h4 className="card-title">About {selectedMatch.first_name}</h4>
+                <p className="card-text">{selectedMatch.about_me}</p>
               </div>
-            </div>
+            )}
             
-            <div className="mb-4">
-              <h4 className="card-title">Interests</h4>
-              <div className="mb-2">
-                {selectedMatch.interests.map((interest, i) => (
-                  <span key={i} className="badge badge-info mr-1 mb-1">{interest}</span>
-                ))}
+            {selectedMatch.looking_for && (
+              <div className="mb-4">
+                <h4 className="card-title">What they're looking for</h4>
+                <p className="card-text">{selectedMatch.looking_for}</p>
               </div>
-            </div>
+            )}
+            
+            {selectedMatch.recovery_methods?.length > 0 && (
+              <div className="mb-4">
+                <h4 className="card-title">Recovery Methods</h4>
+                <div className="mb-2">
+                  {selectedMatch.recovery_methods.map((method, i) => (
+                    <span key={i} className="badge badge-success mr-1 mb-1">{method}</span>
+                  ))}
+                </div>
+              </div>
+            )}
+            
+            {selectedMatch.interests?.length > 0 && (
+              <div className="mb-4">
+                <h4 className="card-title">Interests</h4>
+                <div className="mb-2">
+                  {selectedMatch.interests.map((interest, i) => (
+                    <span key={i} className="badge badge-info mr-1 mb-1">{interest}</span>
+                  ))}
+                </div>
+              </div>
+            )}
+            
+            {/* Detailed Compatibility Breakdown */}
+            {selectedMatch.breakdown && (
+              <div className="mb-4">
+                <h4 className="card-title">Compatibility Breakdown</h4>
+                <div className="grid-2 text-sm">
+                  <div><strong>Recovery:</strong> {selectedMatch.breakdown.recovery || 0}%</div>
+                  <div><strong>Lifestyle:</strong> {selectedMatch.breakdown.lifestyle || 0}%</div>
+                  <div><strong>Budget:</strong> {selectedMatch.breakdown.budget || 0}%</div>
+                  <div><strong>Location:</strong> {selectedMatch.breakdown.location || 0}%</div>
+                  <div><strong>Age:</strong> {selectedMatch.breakdown.age || 0}%</div>
+                  <div><strong>Gender Pref:</strong> {selectedMatch.breakdown.gender || 0}%</div>
+                </div>
+              </div>
+            )}
             
             <div className="grid-2">
               <button
