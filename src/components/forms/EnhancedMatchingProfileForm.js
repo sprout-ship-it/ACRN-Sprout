@@ -4,6 +4,10 @@ import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import { useMatchingProfileForm } from './hooks/useMatchingProfileForm';
 
+// Import form components
+import FormActions from './components/FormActions';
+import ProgressBar from './components/ProgressBar';
+
 // Import all section components
 import PersonalInfoSection from './sections/PersonalInfoSection';
 import LocationPreferencesSection from './sections/LocationPreferencesSection';
@@ -53,88 +57,6 @@ const FORM_SECTIONS = [
     icon: '💫'
   }
 ];
-
-const ProgressBar = ({ percentage, currentSection, totalSections }) => (
-  <div className="progress-container">
-    <div className="progress-bar">
-      <div 
-        className="progress-fill" 
-        style={{ width: `${percentage}%` }}
-      />
-    </div>
-    <div className="progress-text">
-      {percentage}% Complete • Section {currentSection} of {totalSections}
-    </div>
-  </div>
-);
-
-const FormActions = ({ 
-  onSave, 
-  onSubmit, 
-  onPrevious, 
-  onNext,
-  loading, 
-  canSubmit,
-  isFirstSection,
-  isLastSection,
-  hasErrors
-}) => (
-  <div className="form-actions">
-    <button
-      type="button"
-      onClick={onSave}
-      className="btn btn-outline"
-      disabled={loading}
-    >
-      {loading ? (
-        <>
-          <span className="loading-spinner small"></span>
-          Saving...
-        </>
-      ) : (
-        'Save Progress'
-      )}
-    </button>
-    
-    {!isFirstSection && (
-      <button
-        type="button"
-        onClick={onPrevious}
-        className="btn btn-secondary"
-        disabled={loading}
-      >
-        Previous
-      </button>
-    )}
-    
-    {!isLastSection ? (
-      <button
-        type="button"
-        onClick={onNext}
-        className="btn btn-primary"
-        disabled={loading}
-      >
-        Next
-      </button>
-    ) : (
-      <button
-        type="submit"
-        onClick={onSubmit}
-        className="btn btn-primary"
-        disabled={loading || !canSubmit || hasErrors}
-      >
-        {loading ? (
-          <>
-            <span className="loading-spinner small"></span>
-            Submitting...
-          </>
-        ) : (
-          'Complete Profile'
-        )}
-      </button>
-    )}
-  </div>
-);
 
 const EnhancedMatchingProfileForm = () => {
   const navigate = useNavigate();
@@ -261,8 +183,9 @@ const EnhancedMatchingProfileForm = () => {
         {/* Progress Indicator */}
         <ProgressBar 
           percentage={completionPercentage}
-          currentSection={currentSectionIndex + 1}
-          totalSections={FORM_SECTIONS.length}
+          showText={true}
+          editMode={false}
+          label={`Section ${currentSectionIndex + 1} of ${FORM_SECTIONS.length}`}
         />
 
         {/* Section Navigation */}
@@ -325,17 +248,61 @@ const EnhancedMatchingProfileForm = () => {
             />
 
             {/* Form Actions */}
-            <FormActions
-              onSave={handleSave}
-              onSubmit={handleSubmit}
-              onPrevious={handlePrevious}
-              onNext={handleNext}
-              loading={loading}
-              canSubmit={canSubmit}
-              isFirstSection={isFirstSection}
-              isLastSection={isLastSection}
-              hasErrors={hasErrors}
-            />
+            <div className="form-actions">
+              <button
+                type="button"
+                onClick={handleSave}
+                className="btn btn-outline"
+                disabled={loading}
+              >
+                {loading ? (
+                  <>
+                    <span className="loading-spinner small"></span>
+                    Saving...
+                  </>
+                ) : (
+                  'Save Progress'
+                )}
+              </button>
+              
+              {!isFirstSection && (
+                <button
+                  type="button"
+                  onClick={handlePrevious}
+                  className="btn btn-secondary"
+                  disabled={loading}
+                >
+                  Previous
+                </button>
+              )}
+              
+              {!isLastSection ? (
+                <button
+                  type="button"
+                  onClick={handleNext}
+                  className="btn btn-primary"
+                  disabled={loading}
+                >
+                  Next
+                </button>
+              ) : (
+                <button
+                  type="submit"
+                  onClick={handleSubmit}
+                  className="btn btn-primary"
+                  disabled={loading || !canSubmit || hasErrors}
+                >
+                  {loading ? (
+                    <>
+                      <span className="loading-spinner small"></span>
+                      Submitting...
+                    </>
+                  ) : (
+                    'Complete Profile'
+                  )}
+                </button>
+              )}
+            </div>
           </div>
         </form>
 

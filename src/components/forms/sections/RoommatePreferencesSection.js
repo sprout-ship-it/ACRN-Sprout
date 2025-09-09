@@ -10,7 +10,10 @@ const RoommatePreferencesSection = ({
   formData,
   errors,
   loading,
-  onInputChange
+  profile,      // Added for interface consistency
+  onInputChange,
+  onArrayChange, // Added for interface consistency
+  onRangeChange  // Added for interface consistency
 }) => {
   return (
     <>
@@ -184,7 +187,18 @@ RoommatePreferencesSection.propTypes = {
   }).isRequired,
   errors: PropTypes.object.isRequired,
   loading: PropTypes.bool.isRequired,
-  onInputChange: PropTypes.func.isRequired
+  profile: PropTypes.shape({               // Added for interface consistency
+    first_name: PropTypes.string,
+    last_name: PropTypes.string,
+    email: PropTypes.string
+  }),
+  onInputChange: PropTypes.func.isRequired,
+  onArrayChange: PropTypes.func.isRequired, // Added for interface consistency
+  onRangeChange: PropTypes.func.isRequired  // Added for interface consistency
+};
+
+RoommatePreferencesSection.defaultProps = {
+  profile: null
 };
 
 export default RoommatePreferencesSection;

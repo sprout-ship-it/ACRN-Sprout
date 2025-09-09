@@ -8,7 +8,9 @@ const PersonalInfoSection = ({
   errors,
   loading,
   profile,
-  onInputChange
+  onInputChange,
+  onArrayChange, // Added for interface consistency
+  onRangeChange   // Added for interface consistency
 }) => {
   return (
     <>
@@ -250,7 +252,9 @@ PersonalInfoSection.propTypes = {
     last_name: PropTypes.string,
     email: PropTypes.string
   }),
-  onInputChange: PropTypes.func.isRequired
+  onInputChange: PropTypes.func.isRequired,
+  onArrayChange: PropTypes.func.isRequired,  // Added for interface consistency
+  onRangeChange: PropTypes.func.isRequired   // Added for interface consistency
 };
 
 PersonalInfoSection.defaultProps = {

@@ -10,8 +10,10 @@ const CompatibilitySection = ({
   formData,
   errors,
   loading,
+  profile,      // Added for interface consistency
   onInputChange,
-  onArrayChange
+  onArrayChange,
+  onRangeChange // Added for interface consistency
 }) => {
   return (
     <>
@@ -187,8 +189,18 @@ CompatibilitySection.propTypes = {
   }).isRequired,
   errors: PropTypes.object.isRequired,
   loading: PropTypes.bool.isRequired,
+  profile: PropTypes.shape({               // Added for interface consistency
+    first_name: PropTypes.string,
+    last_name: PropTypes.string,
+    email: PropTypes.string
+  }),
   onInputChange: PropTypes.func.isRequired,
-  onArrayChange: PropTypes.func.isRequired
+  onArrayChange: PropTypes.func.isRequired,
+  onRangeChange: PropTypes.func.isRequired  // Added for interface consistency
+};
+
+CompatibilitySection.defaultProps = {
+  profile: null
 };
 
 export default CompatibilitySection;

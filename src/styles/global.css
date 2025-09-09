@@ -1011,3 +1011,11 @@ select.input {
     font-size: 0.75rem;
   }
 }
+
+.content {
+  padding: var(--spacing-xl);
+}
+
+.text-sm {
+  font-size: 0.875rem; /* 14px */
+}

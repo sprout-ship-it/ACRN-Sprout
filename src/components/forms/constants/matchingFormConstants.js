@@ -36,7 +36,7 @@ export const housingTypeOptions = [
   'Duplex', 'Sober living facility', 'Transitional housing'
 ];
 
-// Gender preference options - FIXED: Added this export
+// Gender preference options
 export const genderPreferenceOptions = [
   { value: '', label: 'No preference' },
   { value: 'no_preference', label: 'No preference' },
@@ -44,7 +44,7 @@ export const genderPreferenceOptions = [
   { value: 'different_gender', label: 'Different gender only' }
 ];
 
-// Smoking status options - FIXED: Added this export
+// Smoking status options
 export const smokingStatusOptions = [
   { value: '', label: 'Select smoking status' },
   { value: 'non_smoker', label: 'Non-smoker' },
@@ -169,7 +169,7 @@ export const REQUIRED_ARRAY_FIELDS = [
   'housingType', 'programType', 'interests', 'primaryIssues', 'recoveryMethods'
 ];
 
-// Default form values - FIXED: Added this export
+// Default form values
 export const defaultFormData = {
   // Personal Demographics
   dateOfBirth: '',

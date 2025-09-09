@@ -1,7 +1,7 @@
 // src/components/forms/hooks/useMatchingProfileForm.js
 import { useState, useEffect } from 'react';
-import { useAuth } from '../../../context/AuthContext';
-import { db } from '../../../utils/supabase';
+import { useAuth } from '../../../../context/AuthContext';
+import { db } from '../../../../utils/supabase';
 import { 
   defaultFormData, 
   REQUIRED_FIELDS, 

@@ -11,7 +11,9 @@ const LifestylePreferencesSection = ({
   formData,
   errors,
   loading,
+  profile,      // Added for interface consistency
   onInputChange,
+  onArrayChange, // Added for interface consistency
   onRangeChange
 }) => {
   return (
@@ -170,8 +172,18 @@ LifestylePreferencesSection.propTypes = {
   }).isRequired,
   errors: PropTypes.object.isRequired,
   loading: PropTypes.bool.isRequired,
+  profile: PropTypes.shape({               // Added for interface consistency
+    first_name: PropTypes.string,
+    last_name: PropTypes.string,
+    email: PropTypes.string
+  }),
   onInputChange: PropTypes.func.isRequired,
+  onArrayChange: PropTypes.func.isRequired, // Added for interface consistency
   onRangeChange: PropTypes.func.isRequired
+};
+
+LifestylePreferencesSection.defaultProps = {
+  profile: null
 };
 
 export default LifestylePreferencesSection;

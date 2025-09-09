@@ -43,7 +43,7 @@ const ProgressBar = ({
       {/* Progress Text */}
       {showText && (
         <p className="progress-text">
-          {label}: {safePercentage}%
+          {label} • {safePercentage}% Complete
           {safePercentage < 100 && (
             <span className="text-gray-500"> - Keep going!</span>
           )}
@@ -72,6 +72,46 @@ const ProgressBar = ({
       )}
       
       <style jsx>{`
+        .progress-container {
+          margin-bottom: 25px;
+        }
+
+        .progress-bar {
+          width: 100%;
+          height: 8px;
+          background: var(--border-beige, #E6D5C3);
+          border-radius: 4px;
+          overflow: hidden;
+          position: relative;
+        }
+
+        .progress-fill {
+          height: 100%;
+          transition: width 0.3s ease;
+          border-radius: 4px;
+        }
+
+        .progress-text {
+          text-align: center;
+          color: var(--gray-600, #6c757d);
+          font-size: 14px;
+          margin-top: 8px;
+          margin-bottom: 0;
+          font-weight: 500;
+        }
+
+        .text-gray-500 {
+          color: var(--gray-500, #6c757d);
+        }
+
+        .text-green-600 {
+          color: var(--success-text, #155724);
+        }
+
+        .mb-2 {
+          margin-bottom: 8px;
+        }
+        
         .progress-steps-mini {
           margin-top: 12px;
           display: flex;
@@ -134,6 +174,10 @@ const ProgressBar = ({
           .step-connector {
             width: 12px;
             height: 1px;
+          }
+
+          .progress-text {
+            font-size: 13px;
           }
         }
       `}</style>
