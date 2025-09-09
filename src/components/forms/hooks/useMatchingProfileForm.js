@@ -259,10 +259,17 @@ export const useMatchingProfileForm = () => {
     handleInputChange(field, parseInt(value));
   };
 
-  // Submit form
-  const submitForm = async (onComplete) => {
+  // ✅ IMPROVED: Submit form with better error handling
+  const submitForm = async () => {
     console.log('🔍 Form submission started');
     
+    // Clear previous errors
+    setErrors(prev => {
+      const { submit, ...otherErrors } = prev;
+      return otherErrors;
+    });
+    
+    // Validate form first
     if (!validateForm()) {
       console.log('🔍 Form validation failed');
       return false;
@@ -272,6 +279,8 @@ export const useMatchingProfileForm = () => {
     setSuccessMessage('');
     
     try {
+      console.log('📊 Preparing form data for submission...');
+      
       // Parse target zip codes
       const targetZipCodes = formData.targetZipCodes
         .split(',')
@@ -368,26 +377,49 @@ export const useMatchingProfileForm = () => {
         profile_completed: true
       };
       
-      console.log('🔧 Updating applicant form with data:', applicantFormData);
+      console.log('🔧 Submitting to database...', { 
+        userId: user.id, 
+        dataKeys: Object.keys(applicantFormData) 
+      });
+      
+      // ✅ IMPROVED: Better error handling for database operations
       const { error } = await db.applicantForms.update(user.id, applicantFormData);
       
       if (error) {
         console.error('❌ Database error:', error);
-        throw error;
+        
+        // Set specific error message based on error type
+        let errorMessage = 'Failed to save matching profile. Please try again.';
+        if (error.message) {
+          if (error.message.includes('connection')) {
+            errorMessage = 'Connection error. Please check your internet and try again.';
+          } else if (error.message.includes('timeout')) {
+            errorMessage = 'Request timed out. Please try again.';
+          } else if (error.message.includes('validation')) {
+            errorMessage = 'Data validation error. Please check your entries and try again.';
+          } else {
+            errorMessage = `Database error: ${error.message}`;
+          }
+        }
+        
+        setErrors({ submit: errorMessage });
+        return false;
       }
       
-      console.log('✅ Form submitted successfully');
+      console.log('✅ Database update successful');
       setSuccessMessage('Comprehensive matching profile saved successfully!');
-      
-      if (onComplete) {
-        setTimeout(() => onComplete(), 1500);
-      }
       
       return true;
       
     } catch (error) {
-      console.error('💥 Submission error:', error);
-      setErrors({ submit: 'Failed to save matching profile. Please try again.' });
+      console.error('💥 Unexpected submission error:', error);
+      
+      let errorMessage = 'An unexpected error occurred. Please try again.';
+      if (error.message) {
+        errorMessage = `Error: ${error.message}`;
+      }
+      
+      setErrors({ submit: errorMessage });
       return false;
     } finally {
       setLoading(false);

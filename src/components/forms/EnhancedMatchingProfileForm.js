@@ -62,6 +62,7 @@ const EnhancedMatchingProfileForm = () => {
   const navigate = useNavigate();
   const { profile, hasRole } = useAuth();
   const [currentSectionIndex, setCurrentSectionIndex] = useState(0);
+  const [isSubmitting, setIsSubmitting] = useState(false);
   
   const {
     formData,
@@ -141,31 +142,76 @@ const EnhancedMatchingProfileForm = () => {
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
-  // Form submission handlers
-  const handleSave = async () => {
+  // ✅ FIXED: Form submission handlers with proper error handling
+  const handleSave = async (e) => {
+    e.preventDefault();
+    if (loading || isSubmitting) return;
+    
     setSuccessMessage('');
-    const success = await submitForm();
-    if (success) {
-      setSuccessMessage('Progress saved successfully!');
+    console.log('🔄 Saving progress...');
+    
+    try {
+      const success = await submitForm();
+      if (success) {
+        setSuccessMessage('Progress saved successfully!');
+        console.log('✅ Progress saved successfully');
+      } else {
+        console.log('❌ Save failed - errors should be displayed');
+      }
+    } catch (error) {
+      console.error('❌ Save error:', error);
     }
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    if (loading || isSubmitting) return;
+    
+    console.log('🔄 Starting final form submission...');
+    setIsSubmitting(true);
     setSuccessMessage('');
     
-    const success = await submitForm(() => {
-      navigate('/dashboard', { 
-        state: { message: 'Matching profile completed successfully!' }
-      });
-    });
-    
-    if (!success) {
-      // Scroll to first error
-      const firstError = document.querySelector('.border-red-500, .text-red-500');
-      if (firstError) {
-        firstError.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    try {
+      // First validate the form
+      if (!validateForm()) {
+        console.log('❌ Form validation failed');
+        setIsSubmitting(false);
+        // Scroll to first error
+        const firstError = document.querySelector('.border-red-500, .text-red-500');
+        if (firstError) {
+          firstError.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }
+        return;
       }
+
+      console.log('✅ Form validation passed, submitting to database...');
+      
+      // Submit the form with navigation callback
+      const success = await submitForm();
+      
+      if (success) {
+        console.log('✅ Database submission successful, navigating...');
+        setSuccessMessage('Matching profile completed successfully!');
+        
+        // Delay navigation to show success message
+        setTimeout(() => {
+          navigate('/dashboard', { 
+            state: { message: 'Matching profile completed successfully!' }
+          });
+        }, 1500);
+      } else {
+        console.log('❌ Database submission failed');
+        setIsSubmitting(false);
+        
+        // Scroll to first error
+        const firstError = document.querySelector('.border-red-500, .text-red-500');
+        if (firstError) {
+          firstError.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }
+      }
+    } catch (error) {
+      console.error('💥 Submission error:', error);
+      setIsSubmitting(false);
     }
   };
 
@@ -197,7 +243,7 @@ const EnhancedMatchingProfileForm = () => {
                   type="button"
                   className={`nav-button ${index === currentSectionIndex ? 'active' : ''}`}
                   onClick={() => handleSectionClick(index)}
-                  disabled={loading}
+                  disabled={loading || isSubmitting}
                 >
                   <span className="nav-icon">{section.icon}</span>
                   <span>{section.title}</span>
@@ -227,7 +273,7 @@ const EnhancedMatchingProfileForm = () => {
           </div>
         )}
 
-        {/* Form Content */}
+        {/* ✅ FIXED: Form with proper event handling */}
         <form onSubmit={handleSubmit}>
           <div className="card">
             <div className="card-header">
@@ -240,22 +286,22 @@ const EnhancedMatchingProfileForm = () => {
             <CurrentSectionComponent
               formData={formData}
               errors={errors}
-              loading={loading}
+              loading={loading || isSubmitting}
               profile={profile}
               onInputChange={handleInputChange}
               onArrayChange={handleArrayChange}
               onRangeChange={handleRangeChange}
             />
 
-            {/* Form Actions */}
+            {/* ✅ FIXED: Form Actions without onClick on submit button */}
             <div className="form-actions">
               <button
                 type="button"
                 onClick={handleSave}
                 className="btn btn-outline"
-                disabled={loading}
+                disabled={loading || isSubmitting}
               >
-                {loading ? (
+                {(loading && !isSubmitting) ? (
                   <>
                     <span className="loading-spinner small"></span>
                     Saving...
@@ -270,7 +316,7 @@ const EnhancedMatchingProfileForm = () => {
                   type="button"
                   onClick={handlePrevious}
                   className="btn btn-secondary"
-                  disabled={loading}
+                  disabled={loading || isSubmitting}
                 >
                   Previous
                 </button>
@@ -281,21 +327,20 @@ const EnhancedMatchingProfileForm = () => {
                   type="button"
                   onClick={handleNext}
                   className="btn btn-primary"
-                  disabled={loading}
+                  disabled={loading || isSubmitting}
                 >
                   Next
                 </button>
               ) : (
                 <button
                   type="submit"
-                  onClick={handleSubmit}
                   className="btn btn-primary"
-                  disabled={loading || !canSubmit || hasErrors}
+                  disabled={loading || isSubmitting || !canSubmit || hasErrors}
                 >
-                  {loading ? (
+                  {isSubmitting ? (
                     <>
                       <span className="loading-spinner small"></span>
-                      Submitting...
+                      Completing Profile...
                     </>
                   ) : (
                     'Complete Profile'
@@ -360,6 +405,7 @@ const EnhancedMatchingProfileForm = () => {
               type="button"
               className="btn btn-outline btn-sm"
               onClick={() => navigate('/help/matching-profile')}
+              disabled={loading || isSubmitting}
             >
               View Help Guide
             </button>
@@ -367,6 +413,7 @@ const EnhancedMatchingProfileForm = () => {
               type="button"
               className="btn btn-outline btn-sm"
               onClick={() => navigate('/dashboard')}
+              disabled={loading || isSubmitting}
             >
               Return to Dashboard
             </button>
