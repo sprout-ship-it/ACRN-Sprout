@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../../context/AuthContext';
+import { db } from '../../utils/supabase';
 import { useMatchingProfile } from '../../hooks/useSupabase';
 import { calculateDetailedCompatibility } from '../../utils/matching/algorithm';
 import { generateDetailedFlags } from '../../utils/matching/compatibility';
@@ -261,20 +262,44 @@ const MatchFinder = ({ onRequestMatch, onBack }) => {
   /**
    * Handle match request
    */
-  const handleRequestMatch = async (match) => {
-    try {
-      if (onRequestMatch) {
-        await onRequestMatch(match);
-      }
-      
-      // Show success message
-      alert(`Match request sent to ${match.first_name}!`);
-      
-    } catch (err) {
-      console.error('💥 Error sending match request:', err);
-      alert('Failed to send match request. Please try again.');
+/**
+ * Handle match request - actually send the request to database
+ */
+const handleRequestMatch = async (match) => {
+  try {
+    console.log('🤝 Sending match request to:', match.first_name);
+    
+    // You'll need to import your database functions at the top
+    // import { db } from '../../utils/supabase';
+    
+    const requestData = {
+      requester_id: user.id,
+      target_id: match.user_id,
+      match_score: match.matchScore,
+      message: `Hi ${match.first_name}! I think we could be great roommates based on our ${match.matchScore}% compatibility. Would you like to connect?`,
+      status: 'pending'
+    };
+    
+    // Call your database function to create the match request
+    const { data, error } = await db.matchRequests.create(requestData);
+    
+    if (error) {
+      throw new Error(error.message || 'Failed to send match request');
     }
-  };
+    
+    console.log('✅ Match request sent successfully:', data);
+    alert(`Match request sent to ${match.first_name}!`);
+    
+    // Optionally call the parent's onRequestMatch if it exists
+    if (onRequestMatch) {
+      await onRequestMatch(match);
+    }
+    
+  } catch (err) {
+    console.error('💥 Error sending match request:', err);
+    alert('Failed to send match request. Please try again.');
+  }
+};
   
   /**
    * Update filters and refresh matches
