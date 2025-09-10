@@ -607,7 +607,200 @@ export const db = {
       }
     }
   },
+// Replace the matchGroups section in your supabase.js with this unified version:
 
+matchGroups: {
+  create: async (groupData) => {
+    console.log('📊 DB: matchGroups.create called', { groupData })
+    try {
+      const { data, error } = await supabase
+        .from('match_groups')
+        .insert(groupData)
+        .select()
+      console.log('📊 DB: matchGroups.create result', { hasData: !!data, hasError: !!error, error: error?.message })
+      return { data, error }
+    } catch (err) {
+      console.error('💥 DB: matchGroups.create failed', err)
+      throw err
+    }
+  },
+
+  getByUserId: async (userId) => {
+    console.log('📊 DB: matchGroups.getByUserId called', { userId })
+    try {
+      const { data, error } = await supabase
+        .from('match_groups')
+        .select(`
+          *,
+          applicant_1:registrant_profiles!applicant_1_id(id, first_name, email),
+          applicant_2:registrant_profiles!applicant_2_id(id, first_name, email),
+          landlord:registrant_profiles!landlord_id(id, first_name, email),
+          peer_support:registrant_profiles!peer_support_id(id, first_name, email),
+          property:properties!property_id(id, title, city, monthly_rent)
+        `)
+        .or(`applicant_1_id.eq.${userId},applicant_2_id.eq.${userId},landlord_id.eq.${userId},peer_support_id.eq.${userId}`)
+        .order('created_at', { ascending: false })
+      console.log('📊 DB: matchGroups.getByUserId result', { hasData: !!data, hasError: !!error, error: error?.message })
+      return { data, error }
+    } catch (err) {
+      console.error('💥 DB: matchGroups.getByUserId failed', err)
+      throw err
+    }
+  },
+
+  getById: async (id) => {
+    console.log('📊 DB: matchGroups.getById called', { id })
+    try {
+      const { data, error } = await supabase
+        .from('match_groups')
+        .select(`
+          *,
+          applicant_1:registrant_profiles!applicant_1_id(id, first_name, email, phone),
+          applicant_2:registrant_profiles!applicant_2_id(id, first_name, email, phone),
+          landlord:registrant_profiles!landlord_id(id, first_name, email, phone),
+          peer_support:registrant_profiles!peer_support_id(id, first_name, email, phone),
+          property:properties!property_id(id, title, address, city, monthly_rent)
+        `)
+        .eq('id', id)
+        .single()
+      console.log('📊 DB: matchGroups.getById result', { hasData: !!data, hasError: !!error, error: error?.message })
+      return { data, error }
+    } catch (err) {
+      console.error('💥 DB: matchGroups.getById failed', err)
+      throw err
+    }
+  },
+
+  update: async (id, updates) => {
+    console.log('📊 DB: matchGroups.update called', { id, updates })
+    try {
+      const { data, error } = await supabase
+        .from('match_groups')
+        .update(updates)
+        .eq('id', id)
+        .select()
+      console.log('📊 DB: matchGroups.update result', { hasData: !!data, hasError: !!error, error: error?.message })
+      return { data, error }
+    } catch (err) {
+      console.error('💥 DB: matchGroups.update failed', err)
+      throw err
+    }
+  },
+
+  getActiveGroups: async (userId) => {
+    console.log('📊 DB: matchGroups.getActiveGroups called', { userId })
+    try {
+      const { data, error } = await supabase
+        .from('match_groups')
+        .select(`
+          *,
+          applicant_1:registrant_profiles!applicant_1_id(id, first_name, email),
+          applicant_2:registrant_profiles!applicant_2_id(id, first_name, email),
+          landlord:registrant_profiles!landlord_id(id, first_name, email),
+          peer_support:registrant_profiles!peer_support_id(id, first_name, email),
+          property:properties!property_id(id, title, city)
+        `)
+        .or(`applicant_1_id.eq.${userId},applicant_2_id.eq.${userId},landlord_id.eq.${userId},peer_support_id.eq.${userId}`)
+        .in('status', ['active', 'forming'])
+        .order('formed_at', { ascending: false, nullsFirst: false })
+      console.log('📊 DB: matchGroups.getActiveGroups result', { hasData: !!data, hasError: !!error, error: error?.message })
+      return { data, error }
+    } catch (err) {
+      console.error('💥 DB: matchGroups.getActiveGroups failed', err)
+      throw err
+    }
+  },
+
+  // Helper to determine match type
+  getMatchType: (matchGroup) => {
+    if (matchGroup.property_id && matchGroup.landlord_id) {
+      return 'housing'
+    } else if (matchGroup.peer_support_id) {
+      return 'peer_support'
+    } else if (matchGroup.applicant_1_id && matchGroup.applicant_2_id) {
+      return 'applicant_peer'
+    }
+    return 'unknown'
+  },
+
+  // Helper to get the other person in the match
+  getOtherPerson: (matchGroup, currentUserId) => {
+    const matchType = db.matchGroups.getMatchType(matchGroup)
+    
+    switch (matchType) {
+      case 'housing':
+        if (matchGroup.landlord_id === currentUserId) {
+          return matchGroup.applicant_1 || matchGroup.applicant_2
+        } else {
+          return matchGroup.landlord
+        }
+      
+      case 'peer_support':
+        if (matchGroup.peer_support_id === currentUserId) {
+          return matchGroup.applicant_1 || matchGroup.applicant_2
+        } else {
+          return matchGroup.peer_support
+        }
+      
+      case 'applicant_peer':
+        if (matchGroup.applicant_1_id === currentUserId) {
+          return matchGroup.applicant_2
+        } else {
+          return matchGroup.applicant_1
+        }
+      
+      default:
+        return null
+    }
+  },
+
+  // End a match group (works for all types)
+  endGroup: async (groupId, endedBy, reason = null) => {
+    console.log('📊 DB: matchGroups.endGroup called', { groupId, endedBy, reason })
+    try {
+      const updates = {
+        status: 'dissolved',
+        dissolved_at: new Date().toISOString(),
+        dissolved_reason: reason,
+        updated_at: new Date().toISOString()
+      }
+      
+      const { data, error } = await supabase
+        .from('match_groups')
+        .update(updates)
+        .eq('id', groupId)
+        .select()
+      console.log('📊 DB: matchGroups.endGroup result', { hasData: !!data, hasError: !!error, error: error?.message })
+      return { data, error }
+    } catch (err) {
+      console.error('💥 DB: matchGroups.endGroup failed', err)
+      throw err
+    }
+  },
+
+  // Activate a forming group (moves from 'forming' to 'active')
+  activateGroup: async (groupId) => {
+    console.log('📊 DB: matchGroups.activateGroup called', { groupId })
+    try {
+      const updates = {
+        status: 'active',
+        formed_at: new Date().toISOString(),
+        updated_at: new Date().toISOString()
+      }
+      
+      const { data, error } = await supabase
+        .from('match_groups')
+        .update(updates)
+        .eq('id', groupId)
+        .select()
+      console.log('📊 DB: matchGroups.activateGroup result', { hasData: !!data, hasError: !!error, error: error?.message })
+      return { data, error }
+    } catch (err) {
+      console.error('💥 DB: matchGroups.activateGroup failed', err)
+      throw err
+    }
+  }
+},
   // ✅ ADDED: Keep legacy alias for backward compatibility
   peerSupport: {
     create: async (profileData) => {

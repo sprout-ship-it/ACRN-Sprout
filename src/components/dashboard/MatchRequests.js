@@ -69,27 +69,154 @@ const MatchRequests = () => {
     setActionLoading(true);
     
     try {
-      const updates = {
+      // Get the full request details
+      const request = requests.find(r => r.id === requestId);
+      if (!request) {
+        throw new Error('Request not found');
+      }
+
+      console.log('📋 Approving match request:', {
+        requestId,
+        requester: request.requester_id,
+        target: request.target_id,
+        requestType: request.request_type
+      });
+
+      // Step 1: Update match request to approved
+      const { error: updateError } = await db.matchRequests.update(requestId, {
         status: 'approved',
         target_approved: true
-      };
-
-      const { error } = await db.matchRequests.update(requestId, updates);
+      });
       
-      if (error) throw error;
+      if (updateError) {
+        console.error('❌ Failed to update match request:', updateError);
+        throw updateError;
+      }
 
-      // Update local state
-      setRequests(prev => prev.map(request => 
-        request.id === requestId ? { ...request, ...updates } : request
+      console.log('✅ Match request updated to approved');
+
+      // Step 2: Determine match group structure based on request type and user roles
+      const matchGroupData = await determineMatchGroupStructure(request);
+
+      const { data: matchGroup, error: groupError } = await db.matchGroups.create(matchGroupData);
+
+      if (groupError) {
+        console.error('❌ Failed to create match group:', groupError);
+        throw groupError;
+      }
+
+      console.log('✅ Match group created:', matchGroup);
+
+      // Step 3: Update match request to matched status
+      const { error: matchedError } = await db.matchRequests.update(requestId, {
+        status: 'matched',
+        match_group_id: matchGroup[0].id,
+        matched_at: new Date().toISOString()
+      });
+
+      if (matchedError) {
+        console.error('❌ Failed to update to matched status:', matchedError);
+        throw matchedError;
+      }
+
+      console.log('✅ Match request updated to matched status');
+
+      // Step 4: Update local state
+      setRequests(prev => prev.map(req => 
+        req.id === requestId ? { 
+          ...req, 
+          status: 'matched',
+          target_approved: true,
+          match_group_id: matchGroup[0].id,
+          matched_at: new Date().toISOString()
+        } : req
       ));
       
-      alert('Match request approved!');
+      alert('Match approved and created successfully!');
       
     } catch (error) {
-      console.error('Error approving request:', error);
-      alert('Failed to approve request. Please try again.');
+      console.error('💥 Error approving request:', error);
+      alert(`Failed to approve request: ${error.message}`);
     } finally {
       setActionLoading(false);
+    }
+  };
+
+  // Helper function to determine correct table structure
+  const determineMatchGroupStructure = async (request) => {
+    try {
+      // Get user profiles to determine roles
+      const { data: requesterProfile } = await db.profiles.getById(request.requester_id);
+      const { data: targetProfile } = await db.profiles.getById(request.target_id);
+
+      const requesterRoles = requesterProfile?.roles || [];
+      const targetRoles = targetProfile?.roles || [];
+
+      // Base match group data
+      const baseData = {
+        status: 'forming', // Start as forming, activate later if needed
+        created_at: new Date().toISOString()
+      };
+
+      // Determine structure based on request type and roles
+      if (request.request_type === 'peer_support' || !request.request_type) {
+        
+        // Case 1: Applicant requesting peer support specialist
+        if (requesterRoles.includes('applicant') && targetRoles.includes('peer')) {
+          return {
+            ...baseData,
+            applicant_1_id: request.requester_id,
+            peer_support_id: request.target_id
+          };
+        }
+        
+        // Case 2: Peer support specialist connecting with applicant
+        if (requesterRoles.includes('peer') && targetRoles.includes('applicant')) {
+          return {
+            ...baseData,
+            applicant_1_id: request.target_id,
+            peer_support_id: request.requester_id
+          };
+        }
+        
+        // Case 3: Two applicants doing peer support
+        if (requesterRoles.includes('applicant') && targetRoles.includes('applicant')) {
+          return {
+            ...baseData,
+            applicant_1_id: request.requester_id,
+            applicant_2_id: request.target_id
+          };
+        }
+      }
+
+      // Case 4: Housing request (for future)
+      if (request.request_type === 'housing') {
+        if (requesterRoles.includes('applicant') && targetRoles.includes('landlord')) {
+          return {
+            ...baseData,
+            applicant_1_id: request.requester_id,
+            landlord_id: request.target_id,
+            // property_id would be set when landlord selects a property
+          };
+        }
+      }
+
+      // Default fallback - treat as applicant peer support
+      return {
+        ...baseData,
+        applicant_1_id: request.requester_id,
+        applicant_2_id: request.target_id
+      };
+
+    } catch (error) {
+      console.error('Error determining match group structure:', error);
+      // Fallback structure
+      return {
+        status: 'forming',
+        applicant_1_id: request.requester_id,
+        applicant_2_id: request.target_id,
+        created_at: new Date().toISOString()
+      };
     }
   };
   
@@ -146,28 +273,120 @@ const MatchRequests = () => {
     setActionLoading(true);
     
     try {
+      const request = requests.find(r => r.id === requestId);
+      if (!request) {
+        throw new Error('Request not found');
+      }
+
+      console.log('📋 Unmatching request:', {
+        requestId,
+        matchGroupId: request.match_group_id
+      });
+
+      // Step 1: End the match group if it exists
+      if (request.match_group_id) {
+        const { error: groupError } = await db.matchGroups.endGroup(
+          request.match_group_id,
+          user.id,
+          'User initiated unmatch'
+        );
+        
+        if (groupError) {
+          console.error('❌ Failed to end match group:', groupError);
+          throw groupError;
+        }
+
+        console.log('✅ Match group ended');
+      }
+
+      // Step 2: Update match request to unmatched
       const updates = {
         status: 'unmatched',
         unmatched_at: new Date().toISOString(),
         unmatched_by: user.id
       };
 
-      const { error } = await db.matchRequests.update(requestId, updates);
+      const { error: updateError } = await db.matchRequests.update(requestId, updates);
       
-      if (error) throw error;
+      if (updateError) {
+        console.error('❌ Failed to update match request:', updateError);
+        throw updateError;
+      }
 
-      // Update local state
-      setRequests(prev => prev.map(request => 
-        request.id === requestId ? { ...request, ...updates } : request
+      console.log('✅ Match request updated to unmatched');
+
+      // Step 3: Update local state
+      setRequests(prev => prev.map(req => 
+        req.id === requestId ? { ...req, ...updates } : req
       ));
       
       alert('Successfully unmatched.');
       
     } catch (error) {
-      console.error('Error unmatching:', error);
-      alert('Failed to unmatch. Please try again.');
+      console.error('💥 Error unmatching:', error);
+      alert(`Failed to unmatch: ${error.message}`);
     } finally {
       setActionLoading(false);
+    }
+  };
+
+  // FIXED: Single handleViewContactInfo function with proper error handling
+  const handleViewContactInfo = async (request) => {
+    try {
+      if (!request.match_group_id) {
+        alert('No match group found for this request.');
+        return;
+      }
+
+      // Get full match group details with contact info
+      const { data: matchGroup, error } = await db.matchGroups.getById(request.match_group_id);
+      
+      if (error) {
+        console.error('Error fetching match group:', error);
+        alert('Failed to load contact information.');
+        return;
+      }
+
+      // Use the helper function to get the other person
+      const otherPerson = db.matchGroups.getOtherPerson(matchGroup, user.id);
+
+      if (!otherPerson) {
+        alert('Could not determine contact information.');
+        return;
+      }
+
+      // Determine match type for context
+      const matchType = db.matchGroups.getMatchType(matchGroup);
+      const matchTypeLabel = {
+        'housing': 'housing match',
+        'peer_support': 'peer support connection',
+        'applicant_peer': 'peer support connection'
+      }[matchType] || 'connection';
+
+      // Create contact info display
+      const contactInfo = `
+Contact Information for ${otherPerson.first_name}:
+
+Email: ${otherPerson.email}
+${otherPerson.phone ? `Phone: ${otherPerson.phone}` : 'Phone: Not provided'}
+
+You can now reach out to start your ${matchTypeLabel}!
+      `;
+
+      alert(contactInfo);
+
+      // Optional: Mark as contact shared and update activity
+      try {
+        await db.matchGroups.update(request.match_group_id, {
+          updated_at: new Date().toISOString()
+        });
+      } catch (updateError) {
+        console.warn('Could not update match group activity:', updateError);
+      }
+
+    } catch (error) {
+      console.error('Error viewing contact info:', error);
+      alert('Failed to load contact information.');
     }
   };
   
@@ -221,7 +440,7 @@ const MatchRequests = () => {
         <div className="grid-2">
           <button
             className="btn btn-primary btn-sm"
-            onClick={() => alert('Opening contact information...')}
+            onClick={() => handleViewContactInfo(request)}
           >
             View Contact Info
           </button>
