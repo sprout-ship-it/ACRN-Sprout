@@ -206,7 +206,7 @@ const Dashboard = () => {
           label: 'Browse Properties', 
           description: 'Search for recovery-friendly housing options', 
           color: 'var(--secondary-purple)',
-          path: '/app/properties',
+          path: '/app/property-search', // ✅ UPDATED: Changed from '/app/properties' to '/app/property-search'
           icon: '🏠'
         }
       )
@@ -248,7 +248,7 @@ const Dashboard = () => {
           label: 'Manage Properties', 
           description: 'Add, edit, and manage your rental properties', 
           color: 'var(--secondary-purple)',
-          path: '/app/properties',
+          path: '/app/properties', // ✅ NOTE: This stays the same - landlords manage properties, applicants search them
           icon: '🏢'
         },
         { 

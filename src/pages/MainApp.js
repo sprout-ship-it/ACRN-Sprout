@@ -22,6 +22,9 @@ import MatchFinder from '../components/dashboard/MatchFinder'
 import MatchRequests from '../components/dashboard/MatchRequests'
 import PropertyManagement from '../components/dashboard/PropertyManagement'
 
+// ✅ NEW: Import the real PropertySearch component
+import PropertySearch from '../components/PropertySearch'
+
 import '../styles/global.css';
 
 // Placeholder components for features not yet implemented
@@ -33,18 +36,6 @@ const PeerSupportDashboard = () => (
     </p>
     <div className="alert alert-info">
       <p>Peer support specialist features coming soon...</p>
-    </div>
-  </div>
-)
-
-const PropertySearch = () => (
-  <div className="card">
-    <h1 className="card-title">Property Search</h1>
-    <p className="card-text mb-4">
-      Search for recovery-friendly housing options in your area.
-    </p>
-    <div className="alert alert-info">
-      <p>Property search features coming soon...</p>
     </div>
   </div>
 )
@@ -294,7 +285,8 @@ const MainApp = () => {
                 
                 <Route path="/find-matches" element={<MatchFinder />} />
                 <Route path="/match-requests" element={<MatchRequests />} />
-                <Route path="/properties" element={<PropertySearch />} />
+                {/* ✅ UPDATED: Changed from placeholder to new route */}
+                <Route path="/property-search" element={<PropertySearch />} />
               </>
             )}
 
@@ -319,10 +311,14 @@ const MainApp = () => {
             {/* Landlord Routes */}
             {hasRole('landlord') && (
               <>
+                {/* ✅ UNCHANGED: Landlords still use PropertyManagement for /properties */}
                 <Route path="/properties" element={<PropertyManagement />} />
                 <Route path="/tenants" element={<MatchRequests />} />
               </>
             )}
+
+            {/* ✅ NEW: Universal PropertySearch route accessible to all roles */}
+            <Route path="/property-search" element={<PropertySearch />} />
 
             {/* Common Routes for All Users */}
             <Route path="/messages" element={<Messages />} />
@@ -388,7 +384,7 @@ const MainApp = () => {
                     >
                       Back to Dashboard
                     </button>
-                  </div>
+                    </div>
                 </div>
               </div>
             } />
