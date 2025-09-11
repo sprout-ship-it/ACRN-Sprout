@@ -228,6 +228,37 @@ const PeerSupportFinder = ({ onBack }) => {
                 {loading ? 'Searching...' : 'Search'}
               </button>
             </div>
+
+            <div className="form-group">
+              <button
+                className="btn btn-outline"
+                onClick={() => {
+                  console.log('🔍 Show All clicked - bypassing all filters');
+                  setLoading(true);
+                  setError(null);
+                  
+                  // Call database with no filters to see all available specialists
+                  db.peerSupportProfiles.getAvailable({})
+                    .then(result => {
+                      console.log('📊 Show All result:', result);
+                      if (result.error) {
+                        setError(result.error.message);
+                      } else {
+                        console.log('📊 Raw data from Show All:', result.data);
+                        setSpecialists(result.data || []);
+                      }
+                    })
+                    .catch(err => {
+                      console.error('💥 Show All error:', err);
+                      setError(err.message);
+                    })
+                    .finally(() => setLoading(false));
+                }}
+                disabled={loading}
+              >
+                Show All Specialists
+              </button>
+            </div>
           </div>
 
           {/* Specialties Filter */}
