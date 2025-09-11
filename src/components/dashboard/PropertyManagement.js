@@ -9,6 +9,10 @@ import PropertyFinancialSection from '../property/sections/PropertyFinancialSect
 import PropertyRecoverySection from '../property/sections/PropertyRecoverySection';
 import PropertyAmenitiesSection from '../property/sections/PropertyAmenitiesSection';
 
+// Import the new bifurcation components
+import PropertyTypeSelector from '../property/PropertyTypeSelector';
+import SimplifiedPropertyForm from '../property/SimplifiedPropertyForm';
+
 const PropertyManagement = () => {
   const { user } = useAuth();
   const [loading, setLoading] = useState(false);
@@ -17,6 +21,10 @@ const PropertyManagement = () => {
   const [editingProperty, setEditingProperty] = useState(null);
   const [currentSection, setCurrentSection] = useState(0);
   const [errors, setErrors] = useState({});
+
+  // ✅ NEW: Bifurcation state variables
+  const [propertyFormType, setPropertyFormType] = useState(null); // 'general_rental' or 'recovery_housing'
+  const [showTypeSelector, setShowTypeSelector] = useState(false);
 
   // ✅ CORRECTED: Enhanced form data structure with schema-compliant fields
   const [formData, setFormData] = useState({
@@ -83,7 +91,7 @@ const PropertyManagement = () => {
     'SD', 'TN', 'TX', 'UT', 'VT', 'VA', 'WA', 'WV', 'WI', 'WY'
   ];
 
-  // Form sections for navigation
+  // Form sections for navigation (recovery housing only)
   const formSections = [
     { id: 'basic', title: 'Basic Info', component: PropertyBasicInfoSection, icon: '🏠' },
     { id: 'financial', title: 'Financial & Housing', component: PropertyFinancialSection, icon: '💰' },
@@ -107,6 +115,59 @@ const PropertyManagement = () => {
       setProperties(data || []);
     } catch (error) {
       console.error('Error fetching properties:', error);
+    }
+  };
+
+  // ✅ MODIFIED: New "Add Property" button handler
+  const handleAddProperty = () => {
+    setShowTypeSelector(true);
+    setShowForm(false);
+  };
+
+  // ✅ NEW: Handler for property type selection
+  const handlePropertyTypeSelection = (type) => {
+    setPropertyFormType(type);
+    setShowTypeSelector(false);
+    setShowForm(true);
+   
+    // Reset form data based on type
+    if (type === 'general_rental') {
+      // Set simplified form defaults
+      setFormData({
+        property_name: '', 
+        property_type: 'apartment', 
+        address: '', 
+        city: '', 
+        state: '',
+        zip_code: '', 
+        phone: '', 
+        contact_email: '', 
+        description: '', 
+        total_beds: '',
+        bathrooms: '1', 
+        rent_amount: '', 
+        security_deposit: '', 
+        application_fee: '',
+        furnished: false, 
+        pets_allowed: false, 
+        smoking_allowed: false, 
+        amenities: []
+      });
+    } else {
+      // Keep existing complex form defaults
+      setFormData({
+        property_name: '', property_type: 'sober_living_level_1', address: '', city: '', state: '', 
+        zip_code: '', phone: '', contact_email: '', description: '', total_beds: '', available_beds: '', 
+        bathrooms: '', rent_amount: '', security_deposit: '', application_fee: '', weekly_rate: '',
+        utilities_included: [], furnished: false, meals_included: false, linens_provided: false,
+        accepted_subsidies: [], required_programs: [], min_sobriety_time: '', treatment_completion_required: '',
+        house_rules: [], additional_house_rules: '', gender_restrictions: 'any', age_restrictions: '',
+        pets_allowed: false, smoking_allowed: false, criminal_background_ok: false, sex_offender_restrictions: false,
+        amenities: [], accessibility_features: [], neighborhood_features: [], case_management: false,
+        counseling_services: false, job_training: false, medical_services: false, transportation_services: false,
+        life_skills_training: false, license_number: '', accreditation: '', accepting_applications: true,
+        property_status: 'available', additional_notes: ''
+      });
     }
   };
 
@@ -139,17 +200,17 @@ const PropertyManagement = () => {
     }
   };
 
-  // Form validation
+  // ✅ UPDATED: Form validation with type-specific requirements
   const validateForm = () => {
     const newErrors = {};
     
-    // Required fields
-    const requiredFields = [
+    // Base required fields for both types
+    const baseRequiredFields = [
       'property_name', 'property_type', 'address', 'city', 
       'state', 'zip_code', 'phone', 'total_beds', 'rent_amount'
     ];
     
-    requiredFields.forEach(field => {
+    baseRequiredFields.forEach(field => {
       if (!formData[field] || formData[field].toString().trim() === '') {
         newErrors[field] = 'This field is required';
       }
@@ -164,8 +225,8 @@ const PropertyManagement = () => {
       newErrors.rent_amount = 'Must be a positive amount';
     }
 
-    // Validate available beds doesn't exceed total beds
-    if (formData.available_beds && formData.total_beds && 
+    // Validate available beds doesn't exceed total beds (recovery housing only)
+    if (propertyFormType === 'recovery_housing' && formData.available_beds && formData.total_beds && 
         parseInt(formData.available_beds) > parseInt(formData.total_beds)) {
       newErrors.available_beds = 'Cannot exceed total bedrooms';
     }
@@ -174,88 +235,117 @@ const PropertyManagement = () => {
     return Object.keys(newErrors).length === 0;
   };
 
+  // ✅ UPDATED: Handle submit with different property data based on type
   const handleSubmit = async (e) => {
     e.preventDefault();
     
     if (!validateForm()) {
-      // Scroll to first error section
-      const errorFields = Object.keys(errors);
-      if (errorFields.length > 0) {
-        // Find which section contains the first error and navigate to it
-        const fieldSectionMap = {
-          property_name: 0, property_type: 0, address: 0, city: 0, state: 0, zip_code: 0, phone: 0,
-          total_beds: 1, rent_amount: 1, security_deposit: 1,
-          required_programs: 2, house_rules: 2, gender_restrictions: 2,
-          amenities: 3, accessibility_features: 3
-        };
-        
-        const firstErrorField = errorFields[0];
-        const sectionIndex = fieldSectionMap[firstErrorField] || 0;
-        setCurrentSection(sectionIndex);
+      // Scroll to first error section (recovery housing only)
+      if (propertyFormType === 'recovery_housing') {
+        const errorFields = Object.keys(errors);
+        if (errorFields.length > 0) {
+          const fieldSectionMap = {
+            property_name: 0, property_type: 0, address: 0, city: 0, state: 0, zip_code: 0, phone: 0,
+            total_beds: 1, rent_amount: 1, security_deposit: 1,
+            required_programs: 2, house_rules: 2, gender_restrictions: 2,
+            amenities: 3, accessibility_features: 3
+          };
+          
+          const firstErrorField = errorFields[0];
+          const sectionIndex = fieldSectionMap[firstErrorField] || 0;
+          setCurrentSection(sectionIndex);
+        }
       }
       return;
     }
 
     setLoading(true);
     try {
-      // ✅ CORRECTED: Map form data to database structure with proper types
-      const propertyData = {
-        landlord_id: user.id,
-        title: formData.property_name,
-        property_type: formData.property_type,
-        address: formData.address,
-        city: formData.city,
-        state: formData.state,
-        zip_code: formData.zip_code,
-        phone: formData.phone,
-        contact_email: formData.contact_email || null,
-        description: formData.description || null,
-        
-        // ✅ CORRECTED: Match your existing schema
-        bedrooms: parseInt(formData.total_beds) || 0,
-        bathrooms: parseFloat(formData.bathrooms) || 1,
-        available_beds: parseInt(formData.available_beds) || 0,
-        monthly_rent: parseInt(formData.rent_amount), // Your schema uses integer
-        security_deposit: formData.security_deposit ? parseInt(formData.security_deposit) : null,
-        application_fee: formData.application_fee ? parseInt(formData.application_fee) : 0, // Your schema has default 0
-        weekly_rate: formData.weekly_rate ? parseInt(formData.weekly_rate) : null,
-        
-        // ✅ CORRECTED: utilities_included as array
-        utilities_included: formData.utilities_included || [],
-        furnished: formData.furnished,
-        pets_allowed: formData.pets_allowed,
-        smoking_allowed: formData.smoking_allowed,
-        
-        // ✅ NEW: All the new fields from migration
-        accepted_subsidies: formData.accepted_subsidies,
-        required_programs: formData.required_programs,
-        min_sobriety_time: formData.min_sobriety_time || null,
-        treatment_completion_required: formData.treatment_completion_required || null,
-        house_rules: formData.house_rules,
-        additional_house_rules: formData.additional_house_rules || null,
-        gender_restrictions: formData.gender_restrictions,
-        age_restrictions: formData.age_restrictions || null,
-        criminal_background_ok: formData.criminal_background_ok,
-        sex_offender_restrictions: formData.sex_offender_restrictions,
-        accessibility_features: formData.accessibility_features,
-        neighborhood_features: formData.neighborhood_features,
-        case_management: formData.case_management,
-        counseling_services: formData.counseling_services,
-        job_training: formData.job_training,
-        medical_services: formData.medical_services,
-        transportation_services: formData.transportation_services,
-        life_skills_training: formData.life_skills_training,
-        license_number: formData.license_number || null,
-        accreditation: formData.accreditation || null,
-        accepting_applications: formData.accepting_applications,
-        meals_included: formData.meals_included,
-        linens_provided: formData.linens_provided,
-        status: formData.property_status || 'available',
-        additional_notes: formData.additional_notes || null,
-        
-        // ✅ KEEP: Your existing amenities field (already array)
-        amenities: formData.amenities
-      };
+      // ✅ NEW: Create different property data objects based on type
+      const propertyData = propertyFormType === 'general_rental'
+        ? {
+            // Simplified property data mapping
+            landlord_id: user.id,
+            title: formData.property_name,
+            property_type: formData.property_type,
+            address: formData.address,
+            city: formData.city,
+            state: formData.state,
+            zip_code: formData.zip_code,
+            phone: formData.phone,
+            contact_email: formData.contact_email || null,
+            description: formData.description || null,
+            bedrooms: parseInt(formData.total_beds) || 0,
+            bathrooms: parseFloat(formData.bathrooms) || 1,
+            monthly_rent: parseInt(formData.rent_amount),
+            security_deposit: formData.security_deposit ? parseInt(formData.security_deposit) : null,
+            application_fee: formData.application_fee ? parseInt(formData.application_fee) : 0,
+            furnished: formData.furnished,
+            pets_allowed: formData.pets_allowed,
+            smoking_allowed: formData.smoking_allowed,
+            amenities: formData.amenities,
+            status: 'available',
+            is_recovery_housing: false // Add this flag to distinguish property types
+          }
+        : {
+            // ✅ CORRECTED: Map form data to database structure with proper types (recovery housing)
+            landlord_id: user.id,
+            title: formData.property_name,
+            property_type: formData.property_type,
+            address: formData.address,
+            city: formData.city,
+            state: formData.state,
+            zip_code: formData.zip_code,
+            phone: formData.phone,
+            contact_email: formData.contact_email || null,
+            description: formData.description || null,
+            
+            // ✅ CORRECTED: Match your existing schema
+            bedrooms: parseInt(formData.total_beds) || 0,
+            bathrooms: parseFloat(formData.bathrooms) || 1,
+            available_beds: parseInt(formData.available_beds) || 0,
+            monthly_rent: parseInt(formData.rent_amount), // Your schema uses integer
+            security_deposit: formData.security_deposit ? parseInt(formData.security_deposit) : null,
+            application_fee: formData.application_fee ? parseInt(formData.application_fee) : 0, // Your schema has default 0
+            weekly_rate: formData.weekly_rate ? parseInt(formData.weekly_rate) : null,
+            
+            // ✅ CORRECTED: utilities_included as array
+            utilities_included: formData.utilities_included || [],
+            furnished: formData.furnished,
+            pets_allowed: formData.pets_allowed,
+            smoking_allowed: formData.smoking_allowed,
+            
+            // ✅ NEW: All the new fields from migration
+            accepted_subsidies: formData.accepted_subsidies,
+            required_programs: formData.required_programs,
+            min_sobriety_time: formData.min_sobriety_time || null,
+            treatment_completion_required: formData.treatment_completion_required || null,
+            house_rules: formData.house_rules,
+            additional_house_rules: formData.additional_house_rules || null,
+            gender_restrictions: formData.gender_restrictions,
+            age_restrictions: formData.age_restrictions || null,
+            criminal_background_ok: formData.criminal_background_ok,
+            sex_offender_restrictions: formData.sex_offender_restrictions,
+            accessibility_features: formData.accessibility_features,
+            neighborhood_features: formData.neighborhood_features,
+            case_management: formData.case_management,
+            counseling_services: formData.counseling_services,
+            job_training: formData.job_training,
+            medical_services: formData.medical_services,
+            transportation_services: formData.transportation_services,
+            life_skills_training: formData.life_skills_training,
+            license_number: formData.license_number || null,
+            accreditation: formData.accreditation || null,
+            accepting_applications: formData.accepting_applications,
+            meals_included: formData.meals_included,
+            linens_provided: formData.linens_provided,
+            status: formData.property_status || 'available',
+            additional_notes: formData.additional_notes || null,
+            
+            // ✅ KEEP: Your existing amenities field (already array)
+            amenities: formData.amenities,
+            is_recovery_housing: true
+          };
 
       let result;
       if (editingProperty) {
@@ -299,64 +389,100 @@ const PropertyManagement = () => {
     });
     setEditingProperty(null);
     setShowForm(false);
+    setShowTypeSelector(false);
+    setPropertyFormType(null);
     setCurrentSection(0);
     setErrors({});
   };
 
-  // ✅ CORRECTED: Load property data for editing with proper array handling
+  // ✅ UPDATED: Load property data for editing with type detection
   const editProperty = (property) => {
-    setFormData({
-      property_name: property.title || '',
-      property_type: property.property_type || 'sober_living_level_1',
-      address: property.address || '',
-      city: property.city || '',
-      state: property.state || '',
-      zip_code: property.zip_code || '',
-      phone: property.phone || '',
-      contact_email: property.contact_email || '',
-      description: property.description || '',
-      total_beds: property.bedrooms?.toString() || '',
-      available_beds: property.available_beds?.toString() || '',
-      bathrooms: property.bathrooms?.toString() || '',
-      rent_amount: property.monthly_rent?.toString() || '',
-      security_deposit: property.security_deposit?.toString() || '',
-      application_fee: property.application_fee?.toString() || '',
-      weekly_rate: property.weekly_rate?.toString() || '',
-      
-      // ✅ CORRECTED: Handle utilities_included as array
-      utilities_included: property.utilities_included || [],
-      furnished: property.furnished || false,
-      pets_allowed: property.pets_allowed || false,
-      smoking_allowed: property.smoking_allowed || false,
-      
-      // ✅ NEW: Load all the new fields
-      accepted_subsidies: property.accepted_subsidies || [],
-      required_programs: property.required_programs || [],
-      min_sobriety_time: property.min_sobriety_time || '',
-      treatment_completion_required: property.treatment_completion_required || '',
-      house_rules: property.house_rules || [],
-      additional_house_rules: property.additional_house_rules || '',
-      gender_restrictions: property.gender_restrictions || 'any',
-      age_restrictions: property.age_restrictions || '',
-      criminal_background_ok: property.criminal_background_ok || false,
-      sex_offender_restrictions: property.sex_offender_restrictions || false,
-      accessibility_features: property.accessibility_features || [],
-      neighborhood_features: property.neighborhood_features || [],
-      case_management: property.case_management || false,
-      counseling_services: property.counseling_services || false,
-      job_training: property.job_training || false,
-      medical_services: property.medical_services || false,
-      transportation_services: property.transportation_services || false,
-      life_skills_training: property.life_skills_training || false,
-      license_number: property.license_number || '',
-      accreditation: property.accreditation || '',
-      accepting_applications: property.accepting_applications !== false,
-      meals_included: property.meals_included || false,
-      linens_provided: property.linens_provided || false,
-      property_status: property.status || 'available',
-      additional_notes: property.additional_notes || '',
-      amenities: property.amenities || []
-    });
+    // Detect property type from existing data
+    const isRecoveryHousing = property.is_recovery_housing || 
+                             property.property_type?.includes('sober_living') || 
+                             property.accepted_subsidies?.length > 0 ||
+                             property.required_programs?.length > 0;
+    
+    setPropertyFormType(isRecoveryHousing ? 'recovery_housing' : 'general_rental');
+
+    if (isRecoveryHousing) {
+      // Load full recovery housing data
+      setFormData({
+        property_name: property.title || '',
+        property_type: property.property_type || 'sober_living_level_1',
+        address: property.address || '',
+        city: property.city || '',
+        state: property.state || '',
+        zip_code: property.zip_code || '',
+        phone: property.phone || '',
+        contact_email: property.contact_email || '',
+        description: property.description || '',
+        total_beds: property.bedrooms?.toString() || '',
+        available_beds: property.available_beds?.toString() || '',
+        bathrooms: property.bathrooms?.toString() || '',
+        rent_amount: property.monthly_rent?.toString() || '',
+        security_deposit: property.security_deposit?.toString() || '',
+        application_fee: property.application_fee?.toString() || '',
+        weekly_rate: property.weekly_rate?.toString() || '',
+        
+        // ✅ CORRECTED: Handle utilities_included as array
+        utilities_included: property.utilities_included || [],
+        furnished: property.furnished || false,
+        pets_allowed: property.pets_allowed || false,
+        smoking_allowed: property.smoking_allowed || false,
+        
+        // ✅ NEW: Load all the new fields
+        accepted_subsidies: property.accepted_subsidies || [],
+        required_programs: property.required_programs || [],
+        min_sobriety_time: property.min_sobriety_time || '',
+        treatment_completion_required: property.treatment_completion_required || '',
+        house_rules: property.house_rules || [],
+        additional_house_rules: property.additional_house_rules || '',
+        gender_restrictions: property.gender_restrictions || 'any',
+        age_restrictions: property.age_restrictions || '',
+        criminal_background_ok: property.criminal_background_ok || false,
+        sex_offender_restrictions: property.sex_offender_restrictions || false,
+        accessibility_features: property.accessibility_features || [],
+        neighborhood_features: property.neighborhood_features || [],
+        case_management: property.case_management || false,
+        counseling_services: property.counseling_services || false,
+        job_training: property.job_training || false,
+        medical_services: property.medical_services || false,
+        transportation_services: property.transportation_services || false,
+        life_skills_training: property.life_skills_training || false,
+        license_number: property.license_number || '',
+        accreditation: property.accreditation || '',
+        accepting_applications: property.accepting_applications !== false,
+        meals_included: property.meals_included || false,
+        linens_provided: property.linens_provided || false,
+        property_status: property.status || 'available',
+        additional_notes: property.additional_notes || '',
+        amenities: property.amenities || []
+      });
+    } else {
+      // Load simplified general rental data
+      setFormData({
+        property_name: property.title || '',
+        property_type: property.property_type || 'apartment',
+        address: property.address || '',
+        city: property.city || '',
+        state: property.state || '',
+        zip_code: property.zip_code || '',
+        phone: property.phone || '',
+        contact_email: property.contact_email || '',
+        description: property.description || '',
+        total_beds: property.bedrooms?.toString() || '',
+        bathrooms: property.bathrooms?.toString() || '1',
+        rent_amount: property.monthly_rent?.toString() || '',
+        security_deposit: property.security_deposit?.toString() || '',
+        application_fee: property.application_fee?.toString() || '',
+        furnished: property.furnished || false,
+        pets_allowed: property.pets_allowed || false,
+        smoking_allowed: property.smoking_allowed || false,
+        amenities: property.amenities || []
+      });
+    }
+
     setEditingProperty(property);
     setShowForm(true);
     setCurrentSection(0);
@@ -383,7 +509,7 @@ const PropertyManagement = () => {
     }
   };
 
-  // Section navigation
+  // Section navigation (recovery housing only)
   const nextSection = () => {
     if (currentSection < formSections.length - 1) {
       setCurrentSection(currentSection + 1);
@@ -400,7 +526,7 @@ const PropertyManagement = () => {
     setCurrentSection(index);
   };
 
-  const CurrentSectionComponent = formSections[currentSection].component;
+  const CurrentSectionComponent = formSections[currentSection]?.component;
 
   return (
     <div className="content">
@@ -413,7 +539,7 @@ const PropertyManagement = () => {
         
         <button
           className="btn btn-primary"
-          onClick={() => setShowForm(true)}
+          onClick={handleAddProperty}
         >
           + Add Property
         </button>
@@ -424,7 +550,7 @@ const PropertyManagement = () => {
         <div className="empty-state">
           <div className="empty-state-icon">🏠</div>
           <h3 className="empty-state-title">No properties yet</h3>
-          <p>Add your first recovery-friendly property to get started.</p>
+          <p>Add your first property to get started.</p>
         </div>
       ) : (
         <div className="grid-auto">
@@ -435,9 +561,14 @@ const PropertyManagement = () => {
                   <h3 className="card-title">{property.title}</h3>
                   <p className="card-subtitle">{property.address}</p>
                 </div>
-                <span className={`badge ${property.status === 'available' ? 'badge-success' : 'badge-warning'}`}>
-                  {property.status}
-                </span>
+                <div>
+                  <span className={`badge ${property.status === 'available' ? 'badge-success' : 'badge-warning'}`}>
+                    {property.status}
+                  </span>
+                  {property.is_recovery_housing && (
+                    <span className="badge badge-info ml-2">Recovery Housing</span>
+                  )}
+                </div>
               </div>
               
               <div className="grid-2 mb-3">
@@ -453,10 +584,12 @@ const PropertyManagement = () => {
                   <span>Beds:</span>
                   <span className="text-gray-800 ml-1">{property.bedrooms || 'Studio'}</span>
                 </div>
-                <div className="text-gray-600">
-                  <span>Available:</span>
-                  <span className="text-gray-800 ml-1">{property.available_beds || 0} beds</span>
-                </div>
+                {property.is_recovery_housing && (
+                  <div className="text-gray-600">
+                    <span>Available:</span>
+                    <span className="text-gray-800 ml-1">{property.available_beds || 0} beds</span>
+                  </div>
+                )}
               </div>
               
               <div className="grid-2">
@@ -479,13 +612,27 @@ const PropertyManagement = () => {
         </div>
       )}
 
-      {/* Enhanced Add/Edit Property Modal with Sections */}
+      {/* ✅ NEW: Property Type Selector Modal */}
+      {showTypeSelector && (
+        <div className="modal-overlay" onClick={() => setShowTypeSelector(false)}>
+          <div className="modal-content" onClick={(e) => e.stopPropagation()}>
+            <PropertyTypeSelector onSelection={handlePropertyTypeSelection} />
+          </div>
+        </div>
+      )}
+
+      {/* ✅ UPDATED: Add/Edit Property Modal with Conditional Forms */}
       {showForm && (
         <div className="modal-overlay" onClick={() => setShowForm(false)}>
           <div className="modal-content large" onClick={(e) => e.stopPropagation()}>
             <div className="modal-header">
               <h2 className="modal-title">
                 {editingProperty ? 'Edit Property' : 'Add New Property'}
+                {propertyFormType && (
+                  <span className="text-sm text-gray-500 ml-2">
+                    ({propertyFormType === 'general_rental' ? 'General Rental' : 'Recovery Housing'})
+                  </span>
+                )}
               </h2>
               <button
                 className="modal-close"
@@ -495,34 +642,49 @@ const PropertyManagement = () => {
               </button>
             </div>
             
-            {/* Section Navigation */}
-            <nav className="section-nav mb-4">
-              {formSections.map((section, index) => (
-                <button
-                  key={section.id}
-                  type="button"
-                  className={`section-nav-btn ${index === currentSection ? 'active' : ''}`}
-                  onClick={() => goToSection(index)}
-                  disabled={loading}
-                >
-                  <span className="section-icon">{section.icon}</span>
-                  <span className="section-title">{section.title}</span>
-                </button>
-              ))}
-            </nav>
-            
             <form onSubmit={handleSubmit}>
-              {/* Current Section */}
-              <CurrentSectionComponent
-                formData={formData}
-                errors={errors}
-                loading={loading}
-                onInputChange={handleInputChange}
-                onArrayChange={handleArrayChange}
-                stateOptions={stateOptions}
-              />
+              {propertyFormType === 'general_rental' ? (
+                // ✅ NEW: Simplified form for general rentals
+                <SimplifiedPropertyForm
+                  formData={formData}
+                  errors={errors}
+                  loading={loading}
+                  onInputChange={handleInputChange}
+                  onArrayChange={handleArrayChange}
+                  stateOptions={stateOptions}
+                />
+              ) : (
+                // ✅ EXISTING: Complex form with sections for recovery housing
+                <>
+                  {/* Section Navigation */}
+                  <nav className="section-nav mb-4">
+                    {formSections.map((section, index) => (
+                      <button
+                        key={section.id}
+                        type="button"
+                        className={`section-nav-btn ${index === currentSection ? 'active' : ''}`}
+                        onClick={() => goToSection(index)}
+                        disabled={loading}
+                      >
+                        <span className="section-icon">{section.icon}</span>
+                        <span className="section-title">{section.title}</span>
+                      </button>
+                    ))}
+                  </nav>
+                  
+                  {/* Current Section */}
+                  <CurrentSectionComponent
+                    formData={formData}
+                    errors={errors}
+                    loading={loading}
+                    onInputChange={handleInputChange}
+                    onArrayChange={handleArrayChange}
+                    stateOptions={stateOptions}
+                  />
+                </>
+              )}
               
-              {/* Navigation Buttons */}
+              {/* ✅ UPDATED: Action buttons with different layouts for different form types */}
               <div className="form-actions">
                 <button
                   type="button"
@@ -533,27 +695,41 @@ const PropertyManagement = () => {
                   Cancel
                 </button>
                 
-                {currentSection > 0 && (
-                  <button
-                    type="button"
-                    className="btn btn-secondary"
-                    onClick={prevSection}
-                    disabled={loading}
-                  >
-                    Previous
-                  </button>
+                {propertyFormType === 'recovery_housing' && (
+                  <>
+                    {currentSection > 0 && (
+                      <button
+                        type="button"
+                        className="btn btn-secondary"
+                        onClick={prevSection}
+                        disabled={loading}
+                      >
+                        Previous
+                      </button>
+                    )}
+                    
+                    {currentSection < formSections.length - 1 ? (
+                      <button
+                        type="button"
+                        className="btn btn-primary"
+                        onClick={nextSection}
+                        disabled={loading}
+                      >
+                        Next
+                      </button>
+                    ) : (
+                      <button
+                        type="submit"
+                        className="btn btn-primary"
+                        disabled={loading}
+                      >
+                        {loading ? 'Saving...' : (editingProperty ? 'Update Property' : 'Add Property')}
+                      </button>
+                    )}
+                  </>
                 )}
                 
-                {currentSection < formSections.length - 1 ? (
-                  <button
-                    type="button"
-                    className="btn btn-primary"
-                    onClick={nextSection}
-                    disabled={loading}
-                  >
-                    Next
-                  </button>
-                ) : (
+                {propertyFormType === 'general_rental' && (
                   <button
                     type="submit"
                     className="btn btn-primary"
@@ -627,6 +803,11 @@ const PropertyManagement = () => {
           margin-top: 2rem;
           padding-top: 1rem;
           border-top: 1px solid var(--border-beige);
+        }
+        
+        .badge.badge-info {
+          background-color: #3b82f6;
+          color: white;
         }
         
         @media (max-width: 768px) {
