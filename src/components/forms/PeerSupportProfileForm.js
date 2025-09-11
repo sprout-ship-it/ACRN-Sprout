@@ -11,7 +11,6 @@ import AboutSection from './sections/peer-support/AboutSection';
 import ServiceSettingsSection from './sections/peer-support/ServiceSettingsSection';
 
 // Import shared components
-import FormActions from './components/FormActions';
 import LoadingSpinner from '../common/LoadingSpinner';
 
 const FORM_SECTIONS = [
@@ -50,6 +49,7 @@ const FORM_SECTIONS = [
 const PeerSupportProfileForm = ({ editMode = false, onComplete, onCancel }) => {
   const { hasRole } = useAuth();
   const [currentSectionIndex, setCurrentSectionIndex] = useState(0);
+  const [isSubmitting, setIsSubmitting] = useState(false);
   
   const {
     formData,
@@ -58,6 +58,7 @@ const PeerSupportProfileForm = ({ editMode = false, onComplete, onCancel }) => {
     initialLoading,
     successMessage,
     completionPercentage,
+    canSubmit,
     handleInputChange,
     handleArrayChange,
     submitForm,
@@ -86,6 +87,7 @@ const PeerSupportProfileForm = ({ editMode = false, onComplete, onCancel }) => {
   const CurrentSectionComponent = currentSection.component;
   const isFirstSection = currentSectionIndex === 0;
   const isLastSection = currentSectionIndex === FORM_SECTIONS.length - 1;
+  const hasErrors = Object.keys(errors).length > 0;
 
   // Navigation handlers
   const handleNext = () => {
@@ -109,7 +111,7 @@ const PeerSupportProfileForm = ({ editMode = false, onComplete, onCancel }) => {
 
   const handleSave = async (e) => {
     e.preventDefault();
-    if (loading) return;
+    if (loading || isSubmitting) return;
     
     setSuccessMessage('');
     const success = await submitForm(false); // false = save progress
@@ -120,12 +122,18 @@ const PeerSupportProfileForm = ({ editMode = false, onComplete, onCancel }) => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    if (loading) return;
+    if (loading || isSubmitting) return;
     
+    setIsSubmitting(true);
     setSuccessMessage('');
-    const success = await submitForm(true); // true = final submit
-    if (success && onComplete) {
-      setTimeout(() => onComplete(), 1500);
+    
+    try {
+      const success = await submitForm(true); // true = final submit
+      if (success && onComplete) {
+        setTimeout(() => onComplete(), 1500);
+      }
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -163,7 +171,7 @@ const PeerSupportProfileForm = ({ editMode = false, onComplete, onCancel }) => {
                 type="button"
                 className={`nav-button ${index === currentSectionIndex ? 'active' : ''}`}
                 onClick={() => handleSectionClick(index)}
-                disabled={loading}
+                disabled={loading || isSubmitting}
               >
                 <span className="nav-icon">{section.icon}</span>
                 <span>{section.title}</span>
@@ -195,24 +203,117 @@ const PeerSupportProfileForm = ({ editMode = false, onComplete, onCancel }) => {
           <CurrentSectionComponent
             formData={formData}
             errors={errors}
-            loading={loading}
+            loading={loading || isSubmitting}
             onInputChange={handleInputChange}
             onArrayChange={handleArrayChange}
           />
 
-          {/* Form Actions */}
-          <FormActions
-            onSave={handleSave}
-            onPrevious={!isFirstSection ? handlePrevious : null}
-            onNext={!isLastSection ? handleNext : null}
-            onSubmit={isLastSection ? handleSubmit : null}
-            onCancel={onCancel}
-            loading={loading}
-            submitText={editMode ? 'Update Profile' : 'Complete Profile'}
-            canSubmit={completionPercentage >= 80}
-          />
+          {/* Form Actions - Inline like EnhancedMatchingProfileForm */}
+          <div className="form-actions">
+            <button
+              type="button"
+              onClick={handleSave}
+              className="btn btn-outline"
+              disabled={loading || isSubmitting}
+            >
+              {(loading && !isSubmitting) ? (
+                <>
+                  <span className="loading-spinner small"></span>
+                  Saving...
+                </>
+              ) : (
+                'Save Progress'
+              )}
+            </button>
+            
+            {!isFirstSection && (
+              <button
+                type="button"
+                onClick={handlePrevious}
+                className="btn btn-secondary"
+                disabled={loading || isSubmitting}
+              >
+                Previous
+              </button>
+            )}
+            
+            {!isLastSection ? (
+              <button
+                type="button"
+                onClick={handleNext}
+                className="btn btn-primary"
+                disabled={loading || isSubmitting}
+              >
+                Next
+              </button>
+            ) : (
+              <button
+                type="submit"
+                className="btn btn-primary"
+                disabled={loading || isSubmitting || !canSubmit || hasErrors}
+              >
+                {isSubmitting ? (
+                  <>
+                    <span className="loading-spinner small"></span>
+                    Completing Profile...
+                  </>
+                ) : (
+                  editMode ? 'Update Profile' : 'Complete Profile'
+                )}
+              </button>
+            )}
+
+            {onCancel && (
+              <button
+                type="button"
+                className="btn btn-outline"
+                onClick={onCancel}
+                disabled={loading || isSubmitting}
+              >
+                Cancel
+              </button>
+            )}
+          </div>
         </div>
       </form>
+
+      {/* Form Status */}
+      <div className="card">
+        <div className="card-header">
+          <h3 className="card-title">Profile Status</h3>
+        </div>
+        
+        <div className="grid-2">
+          <div>
+            <strong>Completion:</strong> {completionPercentage}%
+            <div className="progress-bar mt-2">
+              <div 
+                className="progress-fill" 
+                style={{ width: `${completionPercentage}%` }}
+              />
+            </div>
+          </div>
+          
+          <div>
+            <strong>Accepting Clients:</strong>{' '}
+            <span className={`badge ${formData.is_accepting_clients ? 'badge-success' : 'badge-warning'}`}>
+              {formData.is_accepting_clients ? 'Yes' : 'No'}
+            </span>
+          </div>
+        </div>
+
+        {hasErrors && (
+          <div className="alert alert-warning mt-4">
+            <strong>Validation Issues:</strong> Please review and correct the highlighted fields before submitting.
+          </div>
+        )}
+
+        {completionPercentage < 80 && (
+          <div className="alert alert-info mt-4">
+            <strong>Almost there!</strong> Complete all required fields to activate your profile for client matching.
+          </div>
+        )}
+      </div>
     </div>
   );
 };
