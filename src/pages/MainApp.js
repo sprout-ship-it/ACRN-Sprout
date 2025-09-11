@@ -24,6 +24,7 @@ import PropertyManagement from '../components/dashboard/PropertyManagement'
 import PeerSupportFinder from '../components/dashboard/PeerSupportFinder'
 // ✅ NEW: Import EmployerManagement component
 import EmployerManagement from '../components/dashboard/EmployerManagement'
+import EmployerFinder from '../components/dashboard/EmployerFinder'
 
 // Search Components
 import PropertySearch from '../components/PropertySearch'
@@ -39,19 +40,6 @@ const PeerSupportDashboard = () => (
     </p>
     <div className="alert alert-info">
       <p>Peer support specialist features coming soon...</p>
-    </div>
-  </div>
-)
-
-// ✅ NEW: Employer Finder component placeholder
-const EmployerFinder = () => (
-  <div className="card">
-    <h1 className="card-title">Find Recovery-Friendly Employers</h1>
-    <p className="card-text mb-4">
-      Discover employers committed to supporting individuals in recovery and hiring with second-chance policies.
-    </p>
-    <div className="alert alert-info">
-      <p>Employer finder coming soon...</p>
     </div>
   </div>
 )
