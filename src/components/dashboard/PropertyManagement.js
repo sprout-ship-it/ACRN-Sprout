@@ -120,6 +120,7 @@ const PropertyManagement = () => {
 
   // ✅ MODIFIED: New "Add Property" button handler
   const handleAddProperty = () => {
+    setEditingProperty(null); // ✅ FIX: Clear editing state for new property
     setShowTypeSelector(true);
     setShowForm(false);
   };
