@@ -20,10 +20,12 @@ const RegisterForm = ({ onBackToLanding }) => {
   const { signUp, loading, error, clearError } = useAuth();
   const navigate = useNavigate();
 
+  // ✅ UPDATED: Added employer role option
   const roles = [
-    { id: 'applicant', label: 'Applicant', description: 'Seeking housing and roommates' },
-    { id: 'peer', label: 'Peer Support', description: 'Providing peer support services' },
-    { id: 'landlord', label: 'Landlord', description: 'Offering recovery-friendly housing' }
+    { id: 'applicant', label: 'Housing Seeker', description: 'Seeking housing and compatible roommates' },
+    { id: 'peer', label: 'Peer Support Specialist', description: 'Providing peer support services' },
+    { id: 'landlord', label: 'Property Owner', description: 'Offering recovery-friendly housing' },
+    { id: 'employer', label: 'Recovery-Friendly Employer', description: 'Offering second-chance employment opportunities' }
   ];
 
   const toggleRole = (roleId) => {
@@ -258,7 +260,7 @@ const RegisterForm = ({ onBackToLanding }) => {
             <div className="form-group">
               <label className="label">Select Your Role(s)</label>
               <p style={{ fontSize: '0.9rem', color: 'var(--gray-600)', marginBottom: '15px' }}>
-                Choose the role(s) that best describe how you'll use the platform:
+                Choose the role(s) that best describe how you'll use the platform. You can select multiple roles:
               </p>
               <div className="grid-auto">
                 {roles.map(role => (
@@ -288,7 +290,7 @@ const RegisterForm = ({ onBackToLanding }) => {
               {loading ? (
                 <div className="flex-center">
                   <LoadingSpinner size="small" />
-                  <span className="ml-2">Creating Account...</span>
+                  <span style={{ marginLeft: '8px' }}>Creating Account...</span>
                 </div>
               ) : (
                 'Create Account'
