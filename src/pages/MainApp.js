@@ -21,6 +21,8 @@ import Dashboard from '../components/dashboard/Dashboard'
 import MatchFinder from '../components/dashboard/MatchFinder'
 import MatchRequests from '../components/dashboard/MatchRequests'
 import PropertyManagement from '../components/dashboard/PropertyManagement'
+// ✅ NEW: Import the PeerSupportFinder component
+import PeerSupportFinder from '../components/dashboard/PeerSupportFinder'
 
 // ✅ NEW: Import the real PropertySearch component
 import PropertySearch from '../components/PropertySearch'
@@ -282,6 +284,8 @@ const MainApp = () => {
                 } />
                 
                 <Route path="/find-matches" element={<MatchFinder />} />
+                {/* ✅ NEW: Added peer support finder route for applicants */}
+                <Route path="/find-peer-support" element={<PeerSupportFinder />} />
                 <Route path="/match-requests" element={<MatchRequests />} />
                 {/* ✅ UPDATED: Changed from placeholder to new route */}
                 <Route path="/property-search" element={<PropertySearch />} />

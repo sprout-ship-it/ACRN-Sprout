@@ -65,6 +65,16 @@ const Dashboard = () => {
                 priority: 'medium',
                 icon: '🔍'
               })
+              
+              // ✅ NEW: Add peer support recommendation for completed applicants
+              nextSteps.push({
+                title: 'Connect with Peer Support',
+                description: 'Find experienced peer support specialists to guide your recovery journey',
+                action: 'find-peer-support',
+                path: '/app/find-peer-support',
+                priority: 'medium',
+                icon: '🤝'
+              })
             }
           } else {
             nextSteps.push({
@@ -201,12 +211,21 @@ const Dashboard = () => {
           path: '/app/find-matches',
           icon: '🔍'
         },
+        // ✅ NEW: Added peer support finder card for applicants
+        { 
+          id: 'find-peer-support', 
+          label: 'Find Peer Support', 
+          description: 'Connect with experienced peer support specialists for guidance', 
+          color: 'var(--gold)',
+          path: '/app/find-peer-support',
+          icon: '🤝'
+        },
         { 
           id: 'browse-properties', 
           label: 'Browse Properties', 
           description: 'Search for recovery-friendly housing options', 
           color: 'var(--secondary-purple)',
-          path: '/app/property-search', // ✅ UPDATED: Changed from '/app/properties' to '/app/property-search'
+          path: '/app/property-search',
           icon: '🏠'
         }
       )
@@ -248,7 +267,7 @@ const Dashboard = () => {
           label: 'Manage Properties', 
           description: 'Add, edit, and manage your rental properties', 
           color: 'var(--secondary-purple)',
-          path: '/app/properties', // ✅ NOTE: This stays the same - landlords manage properties, applicants search them
+          path: '/app/properties',
           icon: '🏢'
         },
         { 
@@ -413,7 +432,7 @@ const Dashboard = () => {
             {profile.roles.map(role => (
               <div key={role} className="alert alert-success">
                 <strong>{role.charAt(0).toUpperCase() + role.slice(1)} Access:</strong>
-                {role === 'applicant' && ' Find roommates, browse properties, manage matches'}
+                {role === 'applicant' && ' Find roommates, browse properties, manage matches, connect with peer support'}
                 {role === 'peer' && ' Offer peer support, manage clients, provide services'}
                 {role === 'landlord' && ' List properties, review applications, manage rentals'}
               </div>
