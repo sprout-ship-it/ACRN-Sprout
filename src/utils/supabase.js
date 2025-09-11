@@ -651,20 +651,43 @@ export const db = {
           const beforeFilter = filteredData.length
           const searchArea = filters.serviceArea.trim().toLowerCase()
           
+          // Extract key location terms for flexible matching
+          const searchTerms = searchArea.split(/[,\s]+/).filter(term => term.length > 2)
+          console.log('🔍 Search terms extracted:', searchTerms)
+          
           filteredData = filteredData.filter(profile => {
-            if (!profile.service_area) return false
+            if (!profile.service_area) {
+              console.log('❌ Profile has no service_area:', profile.user_id)
+              return false
+            }
+            
+            console.log('🔍 Checking profile service_area:', profile.service_area)
             
             // Handle both array and string service areas
+            let serviceAreas = []
             if (Array.isArray(profile.service_area)) {
-              return profile.service_area.some(area => 
-                area.toLowerCase().includes(searchArea) || 
-                searchArea.includes(area.toLowerCase())
-              )
+              serviceAreas = profile.service_area
             } else if (typeof profile.service_area === 'string') {
-              return profile.service_area.toLowerCase().includes(searchArea) ||
-                     searchArea.includes(profile.service_area.toLowerCase())
+              serviceAreas = [profile.service_area]
+            } else {
+              console.log('❌ Invalid service_area type:', typeof profile.service_area)
+              return false
             }
-            return false
+            
+            // Check if any search term matches any service area
+            const matches = serviceAreas.some(area => {
+              const areaLower = area.toLowerCase()
+              return searchTerms.some(term => {
+                const match = areaLower.includes(term) || term.includes(areaLower)
+                if (match) {
+                  console.log(`✅ Match found: "${term}" <-> "${area}"`)
+                }
+                return match
+              })
+            })
+            
+            console.log(`🔍 Profile ${profile.user_id} match result:`, matches)
+            return matches
           })
           console.log(`📊 Service area filter: ${beforeFilter} -> ${filteredData.length}`)
         }
