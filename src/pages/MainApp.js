@@ -115,21 +115,19 @@ const MainApp = () => {
           console.log('🤝 Checking peer support comprehensive profile...')
           const { data: peerProfile } = await db.peerSupportProfiles.getByUserId(user.id)
           
-          // ✅ PHASE 4: Check for comprehensive peer profile completion
+          // ✅ FIXED: Check for comprehensive peer profile completion using actual schema fields
           hasCompleteProfile = !!(
-            peerProfile?.age && 
             peerProfile?.phone && 
             peerProfile?.bio && 
             peerProfile?.specialties &&
-            peerProfile?.profile_completed
+            peerProfile?.specialties?.length > 0  // Check that specialties array has items
           )
           
           console.log('🤝 Peer profile check:', { 
             hasProfile: !!peerProfile,
-            hasDemographics: !!(peerProfile?.age && peerProfile?.phone),
-            hasContent: !!peerProfile?.bio,
-            hasSpecialties: !!peerProfile?.specialties,
-            isCompleted: !!peerProfile?.profile_completed,
+            hasPhone: !!peerProfile?.phone,
+            hasBio: !!peerProfile?.bio,
+            hasSpecialties: !!(peerProfile?.specialties && peerProfile?.specialties?.length > 0),
             overallComplete: hasCompleteProfile
           })
         }
@@ -384,7 +382,7 @@ const MainApp = () => {
                     >
                       Back to Dashboard
                     </button>
-                    </div>
+                  </div>
                 </div>
               </div>
             } />
