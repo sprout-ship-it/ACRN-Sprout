@@ -625,51 +625,92 @@ matchGroups: {
     }
   },
 
-  getByUserId: async (userId) => {
-    console.log('📊 DB: matchGroups.getByUserId called', { userId })
-    try {
-      const { data, error } = await supabase
-        .from('match_groups')
-        .select(`
-          *,
-          applicant_1:registrant_profiles!applicant_1_id(id, first_name, email),
-          applicant_2:registrant_profiles!applicant_2_id(id, first_name, email),
-          landlord:registrant_profiles!landlord_id(id, first_name, email),
-          peer_support:registrant_profiles!peer_support_id(id, first_name, email),
-          property:properties!property_id(id, title, city, monthly_rent)
-        `)
-        .or(`applicant_1_id.eq.${userId},applicant_2_id.eq.${userId},landlord_id.eq.${userId},peer_support_id.eq.${userId}`)
-        .order('created_at', { ascending: false })
-      console.log('📊 DB: matchGroups.getByUserId result', { hasData: !!data, hasError: !!error, error: error?.message })
-      return { data, error }
-    } catch (err) {
-      console.error('💥 DB: matchGroups.getByUserId failed', err)
-      throw err
-    }
-  },
+getByUserId: async (userId) => {
+  console.log('📊 DB: matchGroups.getByUserId called', { userId })
+  try {
+    const { data, error } = await supabase
+      .from('match_groups')
+      .select(`
+        *,
+        applicant_1:registrant_profiles!applicant_1_id(
+          id, 
+          first_name, 
+          email,
+          applicant_forms(phone)
+        ),
+        applicant_2:registrant_profiles!applicant_2_id(
+          id, 
+          first_name, 
+          email,
+          applicant_forms(phone)
+        ),
+        landlord:registrant_profiles!landlord_id(
+          id, 
+          first_name, 
+          email,
+          properties(phone)
+        ),
+        peer_support:registrant_profiles!peer_support_id(
+          id, 
+          first_name, 
+          email,
+          peer_support_profiles(phone)
+        ),
+        property:properties!property_id(id, title, city, monthly_rent)
+      `)
+      .or(`applicant_1_id.eq.${userId},applicant_2_id.eq.${userId},landlord_id.eq.${userId},peer_support_id.eq.${userId}`)
+      .order('created_at', { ascending: false })
+    console.log('📊 DB: matchGroups.getByUserId result', { hasData: !!data, hasError: !!error, error: error?.message })
+    return { data, error }
+  } catch (err) {
+    console.error('💥 DB: matchGroups.getByUserId failed', err)
+    throw err
+  }
+},
 
-  getById: async (id) => {
-    console.log('📊 DB: matchGroups.getById called', { id })
-    try {
-      const { data, error } = await supabase
-        .from('match_groups')
-        .select(`
-          *,
-          applicant_1:registrant_profiles!applicant_1_id(id, first_name, email, phone),
-          applicant_2:registrant_profiles!applicant_2_id(id, first_name, email, phone),
-          landlord:registrant_profiles!landlord_id(id, first_name, email, phone),
-          peer_support:registrant_profiles!peer_support_id(id, first_name, email, phone),
-          property:properties!property_id(id, title, address, city, monthly_rent)
-        `)
-        .eq('id', id)
-        .single()
-      console.log('📊 DB: matchGroups.getById result', { hasData: !!data, hasError: !!error, error: error?.message })
-      return { data, error }
-    } catch (err) {
-      console.error('💥 DB: matchGroups.getById failed', err)
-      throw err
-    }
-  },
+
+getById: async (id) => {
+  console.log('📊 DB: matchGroups.getById called', { id })
+  try {
+    const { data, error } = await supabase
+      .from('match_groups')
+      .select(`
+        *,
+        applicant_1:registrant_profiles!applicant_1_id(
+          id, 
+          first_name, 
+          email,
+          applicant_forms(phone)
+        ),
+        applicant_2:registrant_profiles!applicant_2_id(
+          id, 
+          first_name, 
+          email,
+          applicant_forms(phone)
+        ),
+        landlord:registrant_profiles!landlord_id(
+          id, 
+          first_name, 
+          email,
+          properties(phone)
+        ),
+        peer_support:registrant_profiles!peer_support_id(
+          id, 
+          first_name, 
+          email,
+          peer_support_profiles(phone)
+        ),
+        property:properties!property_id(id, title, address, city, monthly_rent, phone)
+      `)
+      .eq('id', id)
+      .single()
+    console.log('📊 DB: matchGroups.getById result', { hasData: !!data, hasError: !!error, error: error?.message })
+    return { data, error }
+  } catch (err) {
+    console.error('💥 DB: matchGroups.getById failed', err)
+    throw err
+  }
+},
 
   update: async (id, updates) => {
     console.log('📊 DB: matchGroups.update called', { id, updates })

@@ -330,7 +330,7 @@ const MatchRequests = () => {
     }
   };
 
-  // FIXED: Single handleViewContactInfo function with proper error handling
+  // UPDATED: Enhanced handleViewContactInfo function with proper phone extraction
   const handleViewContactInfo = async (request) => {
     try {
       if (!request.match_group_id) {
@@ -355,6 +355,26 @@ const MatchRequests = () => {
         return;
       }
 
+      // Extract phone number from nested data structure based on user type
+      let phoneNumber = 'Not provided';
+      
+      // For applicants: phone is in applicant_forms array
+      if (otherPerson.applicant_forms && otherPerson.applicant_forms.length > 0 && otherPerson.applicant_forms[0].phone) {
+        phoneNumber = otherPerson.applicant_forms[0].phone;
+      }
+      // For peer supporters: phone is in peer_support_profiles array  
+      else if (otherPerson.peer_support_profiles && otherPerson.peer_support_profiles.length > 0 && otherPerson.peer_support_profiles[0].phone) {
+        phoneNumber = otherPerson.peer_support_profiles[0].phone;
+      }
+      // For landlords: phone is in properties array
+      else if (otherPerson.properties && otherPerson.properties.length > 0 && otherPerson.properties[0].phone) {
+        phoneNumber = otherPerson.properties[0].phone;
+      }
+      // Fallback: check if phone is directly on the person object
+      else if (otherPerson.phone) {
+        phoneNumber = otherPerson.phone;
+      }
+
       // Determine match type for context
       const matchType = db.matchGroups.getMatchType(matchGroup);
       const matchTypeLabel = {
@@ -367,15 +387,15 @@ const MatchRequests = () => {
       const contactInfo = `
 Contact Information for ${otherPerson.first_name}:
 
-Email: ${otherPerson.email}
-${otherPerson.phone ? `Phone: ${otherPerson.phone}` : 'Phone: Not provided'}
+Email: ${otherPerson.email || 'Not provided'}
+Phone: ${phoneNumber}
 
 You can now reach out to start your ${matchTypeLabel}!
       `;
 
       alert(contactInfo);
 
-      // Optional: Mark as contact shared and update activity
+      // Optional: Update activity timestamp
       try {
         await db.matchGroups.update(request.match_group_id, {
           updated_at: new Date().toISOString()
