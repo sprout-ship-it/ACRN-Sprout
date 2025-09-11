@@ -21,10 +21,11 @@ import Dashboard from '../components/dashboard/Dashboard'
 import MatchFinder from '../components/dashboard/MatchFinder'
 import MatchRequests from '../components/dashboard/MatchRequests'
 import PropertyManagement from '../components/dashboard/PropertyManagement'
-// ✅ NEW: Import the PeerSupportFinder component
 import PeerSupportFinder from '../components/dashboard/PeerSupportFinder'
+// ✅ NEW: Import EmployerManagement component
+import EmployerManagement from '../components/dashboard/EmployerManagement'
 
-// ✅ NEW: Import the real PropertySearch component
+// Search Components
 import PropertySearch from '../components/PropertySearch'
 
 import '../styles/global.css';
@@ -42,11 +43,37 @@ const PeerSupportDashboard = () => (
   </div>
 )
 
+// ✅ NEW: Employer Finder component placeholder
+const EmployerFinder = () => (
+  <div className="card">
+    <h1 className="card-title">Find Recovery-Friendly Employers</h1>
+    <p className="card-text mb-4">
+      Discover employers committed to supporting individuals in recovery and hiring with second-chance policies.
+    </p>
+    <div className="alert alert-info">
+      <p>Employer finder coming soon...</p>
+    </div>
+  </div>
+)
+
+// ✅ NEW: Job Applications/Candidates management placeholder
+const CandidateManagement = () => (
+  <div className="card">
+    <h1 className="card-title">Candidate Management</h1>
+    <p className="card-text mb-4">
+      Review job applications and manage candidates for your open positions.
+    </p>
+    <div className="alert alert-info">
+      <p>Candidate management features coming soon...</p>
+    </div>
+  </div>
+)
+
 const Messages = () => (
   <div className="card">
     <h1 className="card-title">Messages</h1>
     <p className="card-text mb-4">
-      Communicate with your matches, landlords, and peer support specialists.
+      Communicate with your matches, landlords, peer support specialists, and employers.
     </p>
     <div className="alert alert-info">
       <p>Messaging system coming soon...</p>
@@ -67,11 +94,11 @@ const Settings = () => (
 )
 
 const MainApp = () => {
-  console.log('🏠 MainApp rendering with simplified onboarding flow, current URL:', window.location.pathname);
+  console.log('🏠 MainApp rendering with employer support, current URL:', window.location.pathname);
   const { user, profile, isAuthenticated, hasRole } = useAuth()
   const navigate = useNavigate()
   
-  // ✅ PHASE 4: Simplified profile setup tracking - no more separate basic profile step
+  // ✅ PHASE 4: Simplified profile setup tracking - now includes employer role
   const [profileSetup, setProfileSetup] = useState({
     hasComprehensiveProfile: false, // Single check for role-specific comprehensive form
     loading: true
@@ -144,6 +171,36 @@ const MainApp = () => {
             hasPhone: !!profile?.phone,
             overallComplete: hasCompleteProfile
           })
+        }
+
+        // ✅ NEW: Add employer role profile completion check
+        else if (hasRole('employer')) {
+          console.log('💼 Checking employer comprehensive profile...')
+          const { data: employerProfiles } = await db.employerProfiles.getByUserId(user.id)
+          
+          if (employerProfiles && employerProfiles.length > 0) {
+            const employerProfile = employerProfiles[0]
+            // Check for comprehensive employer profile completion
+            hasCompleteProfile = !!(
+              employerProfile?.company_name && 
+              employerProfile?.industry && 
+              employerProfile?.description && 
+              employerProfile?.recovery_friendly_features?.length > 0 &&
+              employerProfile?.profile_completed
+            )
+            
+            console.log('💼 Employer profile check:', { 
+              hasProfile: !!employerProfile,
+              hasBasicInfo: !!(employerProfile?.company_name && employerProfile?.industry),
+              hasDescription: !!employerProfile?.description,
+              hasRecoveryFeatures: !!(employerProfile?.recovery_friendly_features?.length > 0),
+              isCompleted: !!employerProfile?.profile_completed,
+              overallComplete: hasCompleteProfile
+            })
+          } else {
+            console.log('💼 No employer profile found')
+            hasCompleteProfile = false
+          }
         }
 
         setProfileSetup({
@@ -242,6 +299,27 @@ const MainApp = () => {
       )
     }
     
+    // ✅ NEW: For EMPLOYERS - redirect to employer management to create profile
+    else if (hasRole('employer')) {
+      console.log('💼 Redirecting employer to create employer profile')
+      return (
+        <div className="app-background" style={{ minHeight: '100vh', padding: '20px 0' }}>
+          <div className="container">
+            <Header />
+            <div className="content">
+              <div style={{ maxWidth: '900px', margin: '0 auto' }}>
+                <div className="alert alert-info mb-4">
+                  <h4>Create Your Employer Profile</h4>
+                  <p>Please create your company profile to start connecting with recovery-focused talent and posting job opportunities.</p>
+                </div>
+                <EmployerManagement />
+              </div>
+            </div>
+          </div>
+        </div>
+      )
+    }
+    
     // For LANDLORDS - they should already have phone from registration, so go to dashboard
     else if (hasRole('landlord')) {
       console.log('🏢 Landlord missing phone, updating profile setup')
@@ -259,7 +337,7 @@ const MainApp = () => {
 
   console.log('✅ User has comprehensive profile, rendering main app routes')
   
-  // ✅ PHASE 4: Main app routes with simplified navigation
+  // ✅ PHASE 4: Main app routes with employer support
   return (
     <div className="app-background" style={{ minHeight: '100vh', padding: '20px 0' }}>
       <div className="container">
@@ -284,10 +362,10 @@ const MainApp = () => {
                 } />
                 
                 <Route path="/find-matches" element={<MatchFinder />} />
-                {/* ✅ NEW: Added peer support finder route for applicants */}
                 <Route path="/find-peer-support" element={<PeerSupportFinder />} />
+                {/* ✅ NEW: Added employer finder route for applicants */}
+                <Route path="/find-employers" element={<EmployerFinder />} />
                 <Route path="/match-requests" element={<MatchRequests />} />
-                {/* ✅ UPDATED: Changed from placeholder to new route */}
                 <Route path="/property-search" element={<PropertySearch />} />
               </>
             )}
@@ -313,16 +391,22 @@ const MainApp = () => {
             {/* Landlord Routes */}
             {hasRole('landlord') && (
               <>
-                {/* ✅ UNCHANGED: Landlords still use PropertyManagement for /properties */}
                 <Route path="/properties" element={<PropertyManagement />} />
                 <Route path="/tenants" element={<MatchRequests />} />
               </>
             )}
 
-            {/* ✅ NEW: Universal PropertySearch route accessible to all roles */}
-            <Route path="/property-search" element={<PropertySearch />} />
+            {/* ✅ NEW: Employer Routes */}
+            {hasRole('employer') && (
+              <>
+                <Route path="/employers" element={<EmployerManagement />} />
+                <Route path="/candidates" element={<CandidateManagement />} />
+                <Route path="/job-applications" element={<MatchRequests />} />
+              </>
+            )}
 
-            {/* Common Routes for All Users */}
+            {/* Universal Routes for All Users */}
+            <Route path="/property-search" element={<PropertySearch />} />
             <Route path="/messages" element={<Messages />} />
             <Route path="/settings" element={<Settings />} />
             <Route path="/match-requests" element={<MatchRequests />} />
@@ -361,7 +445,15 @@ const MainApp = () => {
                     <input
                       className="input"
                       type="text"
-                      value={profile?.roles?.map(role => role.charAt(0).toUpperCase() + role.slice(1)).join(', ') || ''}
+                      value={profile?.roles?.map(role => {
+                        switch(role) {
+                          case 'applicant': return 'Housing Seeker'
+                          case 'peer': return 'Peer Specialist'
+                          case 'landlord': return 'Property Owner'
+                          case 'employer': return 'Recovery-Friendly Employer'
+                          default: return role.charAt(0).toUpperCase() + role.slice(1)
+                        }
+                      }).join(', ') || ''}
                       disabled
                     />
                   </div>

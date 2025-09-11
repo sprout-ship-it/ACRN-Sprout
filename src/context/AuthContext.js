@@ -1,6 +1,6 @@
 // src/contexts/AuthContext.js
-// PHASE 2: Simplified auth - no basic profile creation, direct to role dashboard
-import React, { createContext, useContext, useEffect, useState } from 'react'
+// INTEGRATED: Optimized role checking + employer role support
+import React, { createContext, useContext, useEffect, useState, useMemo, useCallback } from 'react'
 import { auth, db } from '../utils/supabase'
 
 const AuthContext = createContext({})
@@ -21,6 +21,74 @@ export const AuthProvider = ({ children }) => {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
 
+  // ✅ OPTIMIZED: Memoized role checking functions to prevent excessive calls
+  const hasRole = useCallback((role) => {
+    const result = Array.isArray(profile?.roles) && profile.roles.includes(role)
+    
+    // ✅ OPTIMIZED: Only log in development and when explicitly needed
+    if (process.env.NODE_ENV === 'development' && window.debugRoles) {
+      console.log('🔍 hasRole check:', { role, result, userRoles: profile?.roles })
+    }
+    
+    return result
+  }, [profile?.roles]) // Only re-create when roles actually change
+
+  const hasAnyRole = useCallback((roles) => {
+    if (!Array.isArray(profile?.roles)) return false
+    return roles.some(role => profile.roles.includes(role))
+  }, [profile?.roles])
+
+  const getPrimaryRole = useCallback(() => {
+    return Array.isArray(profile?.roles) && profile.roles.length > 0 ? profile.roles[0] : null
+  }, [profile?.roles])
+
+  // ✅ NEW: Add employer-specific helper function
+  const getEmployerProfile = useCallback(async () => {
+    if (!user?.id || !hasRole('employer')) {
+      return { data: null, error: 'User is not an employer or not authenticated' }
+    }
+    
+    try {
+      const result = await db.employerProfiles.getByUserId(user.id)
+      return result
+    } catch (err) {
+      console.error('💥 Error getting employer profile:', err)
+      return { data: null, error: err.message }
+    }
+  }, [user?.id, hasRole])
+
+  // ✅ INTEGRATED: Computed values with employer support - memoized for performance
+  const computedValues = useMemo(() => {
+    const roles = profile?.roles || []
+    const isArrayRoles = Array.isArray(roles)
+    
+    return {
+      // Basic auth state
+      isAuthenticated: !!user,
+      
+      // Individual role checks
+      isApplicant: isArrayRoles && roles.includes('applicant'),
+      isLandlord: isArrayRoles && roles.includes('landlord'),
+      isPeerSupport: isArrayRoles && roles.includes('peer'),
+      isEmployer: isArrayRoles && roles.includes('employer'), // ✅ NEW
+      
+      // ✅ NEW: Multi-role helpers
+      isMultiRole: isArrayRoles && roles.length > 1,
+      allRoles: roles,
+      
+      // ✅ NEW: Role combinations
+      canPostJobs: isArrayRoles && roles.includes('employer'),
+      canListProperties: isArrayRoles && roles.includes('landlord'),
+      canOfferPeerSupport: isArrayRoles && roles.includes('peer'),
+      canSearchHousing: isArrayRoles && roles.includes('applicant'),
+      canSearchJobs: isArrayRoles && roles.includes('applicant'),
+      
+      // ✅ NEW: Platform engagement helpers
+      hasServiceProvider: isArrayRoles && roles.some(role => ['landlord', 'peer', 'employer'].includes(role)),
+      hasServiceSeeker: isArrayRoles && roles.includes('applicant')
+    }
+  }, [user, profile?.roles]) // Only recalculate when user or roles change
+
   // Initialize auth state
   useEffect(() => {
     console.log('🔄 AuthContext useEffect starting')
@@ -31,12 +99,8 @@ export const AuthProvider = ({ children }) => {
       try {
         console.log('📡 Getting initial session...')
         
-        const sessionPromise = auth.getSession()
-        const timeoutPromise = new Promise((_, reject) => 
-          setTimeout(() => reject(new Error('Session timeout')), 10000)
-        )
-        
-        const { session, error } = await Promise.race([sessionPromise, timeoutPromise])
+        // ✅ OPTIMIZED: Simplified timeout handling
+        const { session, error } = await auth.getSession()
         
         console.log('📡 Session result:', { 
           hasSession: !!session, 
@@ -61,7 +125,7 @@ export const AuthProvider = ({ children }) => {
         }
         
         if (isMounted) {
-          console.log('✅ Auth initialization complete, setting loading to false')
+          console.log('✅ Auth initialization complete')
           setLoading(false)
         }
       } catch (err) {
@@ -108,8 +172,8 @@ export const AuthProvider = ({ children }) => {
     }
   }, [])
 
-  // SIMPLIFIED: Load only registrant_profiles (no basic profile logic)
-  const loadUserProfile = async (userId) => {
+  // ✅ OPTIMIZED: Memoized profile loading to prevent unnecessary calls
+  const loadUserProfile = useCallback(async (userId) => {
     console.log('📄 Loading profile for user:', userId)
     
     try {
@@ -181,7 +245,7 @@ export const AuthProvider = ({ children }) => {
       setProfile(emergencyProfile)
       setError('Profile loading failed - using minimal profile')
     }
-  }
+  }, [user?.email])
 
   // SIMPLIFIED: Enhanced signup (only creates registrant_profiles entry)
   const signUp = async (email, password, userData) => {
@@ -350,34 +414,12 @@ export const AuthProvider = ({ children }) => {
     }
   }
 
-  // Role checking functions
-  const hasRole = (role) => {
-    const result = Array.isArray(profile?.roles) && profile.roles.includes(role)
-    console.log('🔍 hasRole check:', { 
-      role, 
-      result, 
-      userRoles: profile?.roles,
-      rolesType: typeof profile?.roles,
-      isArray: Array.isArray(profile?.roles),
-      hasProfile: !!profile
-    })
-    return result
-  }
-
-  const hasAnyRole = (roles) => {
-    if (!Array.isArray(profile?.roles)) return false
-    return roles.some(role => profile.roles.includes(role))
-  }
-
-  const getPrimaryRole = () => {
-    return Array.isArray(profile?.roles) && profile.roles.length > 0 ? profile.roles[0] : null
-  }
-
   const clearError = () => {
     setError(null)
   }
 
-  const value = {
+  // ✅ OPTIMIZED: Memoize the context value to prevent unnecessary re-renders
+  const value = useMemo(() => ({
     // State
     user,
     profile,
@@ -396,20 +438,31 @@ export const AuthProvider = ({ children }) => {
     hasAnyRole,
     getPrimaryRole,
     clearError,
+    getEmployerProfile, // ✅ NEW: Employer helper
     
-    // Computed values
-    isAuthenticated: !!user,
-    isApplicant: hasRole('applicant'),
-    isLandlord: hasRole('landlord'),
-    isPeerSupport: hasRole('peer')
-  }
+    // Computed values (now memoized and includes employer support)
+    ...computedValues
+  }), [
+    user, 
+    profile, 
+    loading, 
+    error, 
+    hasRole, 
+    hasAnyRole, 
+    getPrimaryRole, 
+    getEmployerProfile,
+    computedValues,
+    // Note: auth methods are stable and don't need to be in deps
+  ])
 
   console.log('🎯 AuthProvider rendering with state:', {
     hasUser: !!user,
     hasProfile: !!profile,
     loading,
     error: !!error,
-    userRoles: profile?.roles
+    userRoles: profile?.roles,
+    isEmployer: computedValues.isEmployer,
+    isMultiRole: computedValues.isMultiRole
   })
 
   return (
@@ -417,4 +470,10 @@ export const AuthProvider = ({ children }) => {
       {children}
     </AuthContext.Provider>
   )
+}
+
+// ✅ BONUS: Enable detailed role logging in dev tools
+// Run `window.debugRoles = true` in console to see detailed role checks
+if (process.env.NODE_ENV === 'development') {
+  window.debugRoles = false
 }

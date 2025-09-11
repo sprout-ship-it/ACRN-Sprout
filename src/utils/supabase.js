@@ -528,7 +528,334 @@ export const db = {
       }
     }
   },
+// Add this to your existing db object in src/utils/supabase.js
 
+// Employer operations (employer_profiles table)
+employerProfiles: {
+  create: async (employerData) => {
+    console.log('📊 DB: employerProfiles.create called', { employerData })
+    try {
+      const { data, error } = await supabase
+        .from('employer_profiles')
+        .insert(employerData)
+        .select()
+      console.log('📊 DB: employerProfiles.create result', { hasData: !!data, hasError: !!error, error: error?.message })
+      return { data, error }
+    } catch (err) {
+      console.error('💥 DB: employerProfiles.create failed', err)
+      throw err
+    }
+  },
+
+  getByUserId: async (userId) => {
+    console.log('📊 DB: employerProfiles.getByUserId called', { userId })
+    try {
+      const { data, error } = await supabase
+        .from('employer_profiles')
+        .select('*')
+        .eq('user_id', userId)
+        .order('created_at', { ascending: false })
+      
+      console.log('📊 DB: employerProfiles.getByUserId result', { 
+        hasData: !!data, 
+        dataLength: data?.length,
+        hasError: !!error, 
+        error: error?.message 
+      })
+
+      return { data, error }
+    } catch (err) {
+      console.error('💥 DB: employerProfiles.getByUserId failed', err)
+      throw err
+    }
+  },
+
+  getAvailable: async (filters = {}) => {
+    console.log('📊 DB: employerProfiles.getAvailable called', { filters })
+    try {
+      let query = supabase
+        .from('employer_profiles')
+        .select(`
+          *,
+          registrant_profiles!inner(id, first_name, email)
+        `)
+        .eq('is_active', true)
+
+      // Apply filters
+      if (filters.industry) {
+        query = query.eq('industry', filters.industry)
+      }
+
+      if (filters.city) {
+        query = query.ilike('city', `%${filters.city}%`)
+      }
+
+      if (filters.state) {
+        query = query.eq('state', filters.state)
+      }
+
+      if (filters.businessType) {
+        query = query.eq('business_type', filters.businessType)
+      }
+
+      if (filters.isActivelyHiring !== undefined) {
+        query = query.eq('is_actively_hiring', filters.isActivelyHiring)
+      }
+
+      if (filters.recoveryFeatures && filters.recoveryFeatures.length > 0) {
+        // Use overlaps operator to find profiles that have any of the specified features
+        query = query.overlaps('recovery_friendly_features', filters.recoveryFeatures)
+      }
+
+      if (filters.jobTypes && filters.jobTypes.length > 0) {
+        // Use overlaps operator to find profiles that offer any of the specified job types
+        query = query.overlaps('job_types_available', filters.jobTypes)
+      }
+
+      if (filters.remoteWork) {
+        query = query.eq('remote_work_options', filters.remoteWork)
+      }
+
+      // Sort by actively hiring first, then by creation date
+      const { data, error } = await query
+        .order('is_actively_hiring', { ascending: false })
+        .order('created_at', { ascending: false })
+
+      console.log('📊 DB: employerProfiles.getAvailable result', { hasData: !!data, hasError: !!error, error: error?.message })
+      return { data, error }
+    } catch (err) {
+      console.error('💥 DB: employerProfiles.getAvailable failed', err)
+      throw err
+    }
+  },
+
+  getById: async (id) => {
+    console.log('📊 DB: employerProfiles.getById called', { id })
+    try {
+      const { data, error } = await supabase
+        .from('employer_profiles')
+        .select(`
+          *,
+          registrant_profiles!inner(id, first_name, email, phone)
+        `)
+        .eq('id', id)
+        .single()
+      
+      console.log('📊 DB: employerProfiles.getById result', { hasData: !!data, hasError: !!error, error: error?.message })
+      return { data, error }
+    } catch (err) {
+      console.error('💥 DB: employerProfiles.getById failed', err)
+      throw err
+    }
+  },
+
+  update: async (id, updates) => {
+    console.log('📊 DB: employerProfiles.update called', { id, updates })
+    try {
+      const { data, error } = await supabase
+        .from('employer_profiles')
+        .update({
+          ...updates,
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', id)
+        .select()
+      console.log('📊 DB: employerProfiles.update result', { hasData: !!data, hasError: !!error, error: error?.message })
+      return { data, error }
+    } catch (err) {
+      console.error('💥 DB: employerProfiles.update failed', err)
+      throw err
+    }
+  },
+
+  updateByUserId: async (userId, updates) => {
+    console.log('📊 DB: employerProfiles.updateByUserId called', { userId, updates })
+    try {
+      const { data, error } = await supabase
+        .from('employer_profiles')
+        .update({
+          ...updates,
+          updated_at: new Date().toISOString()
+        })
+        .eq('user_id', userId)
+        .select()
+      console.log('📊 DB: employerProfiles.updateByUserId result', { hasData: !!data, hasError: !!error, error: error?.message })
+      return { data, error }
+    } catch (err) {
+      console.error('💥 DB: employerProfiles.updateByUserId failed', err)
+      throw err
+    }
+  },
+
+  delete: async (id) => {
+    console.log('📊 DB: employerProfiles.delete called', { id })
+    try {
+      const { data, error } = await supabase
+        .from('employer_profiles')
+        .delete()
+        .eq('id', id)
+      console.log('📊 DB: employerProfiles.delete result', { hasData: !!data, hasError: !!error, error: error?.message })
+      return { data, error }
+    } catch (err) {
+      console.error('💥 DB: employerProfiles.delete failed', err)
+      throw err
+    }
+  },
+
+  // Get employers by location for local job search
+  getByLocation: async (city, state, radius = null) => {
+    console.log('📊 DB: employerProfiles.getByLocation called', { city, state, radius })
+    try {
+      let query = supabase
+        .from('employer_profiles')
+        .select(`
+          *,
+          registrant_profiles!inner(id, first_name, email)
+        `)
+        .eq('is_active', true)
+        .eq('is_actively_hiring', true)
+
+      if (city) {
+        query = query.ilike('city', `%${city}%`)
+      }
+
+      if (state) {
+        query = query.eq('state', state)
+      }
+
+      const { data, error } = await query
+        .order('created_at', { ascending: false })
+
+      console.log('📊 DB: employerProfiles.getByLocation result', { hasData: !!data, hasError: !!error, error: error?.message })
+      return { data, error }
+    } catch (err) {
+      console.error('💥 DB: employerProfiles.getByLocation failed', err)
+      throw err
+    }
+  },
+
+  // Get employers by industry
+  getByIndustry: async (industry) => {
+    console.log('📊 DB: employerProfiles.getByIndustry called', { industry })
+    try {
+      const { data, error } = await supabase
+        .from('employer_profiles')
+        .select(`
+          *,
+          registrant_profiles!inner(id, first_name, email)
+        `)
+        .eq('is_active', true)
+        .eq('industry', industry)
+        .order('is_actively_hiring', { ascending: false })
+        .order('created_at', { ascending: false })
+
+      console.log('📊 DB: employerProfiles.getByIndustry result', { hasData: !!data, hasError: !!error, error: error?.message })
+      return { data, error }
+    } catch (err) {
+      console.error('💥 DB: employerProfiles.getByIndustry failed', err)
+      throw err
+    }
+  },
+
+  // Search employers by recovery-friendly features
+  getByRecoveryFeatures: async (features) => {
+    console.log('📊 DB: employerProfiles.getByRecoveryFeatures called', { features })
+    try {
+      const { data, error } = await supabase
+        .from('employer_profiles')
+        .select(`
+          *,
+          registrant_profiles!inner(id, first_name, email)
+        `)
+        .eq('is_active', true)
+        .overlaps('recovery_friendly_features', features)
+        .order('is_actively_hiring', { ascending: false })
+        .order('created_at', { ascending: false })
+
+      console.log('📊 DB: employerProfiles.getByRecoveryFeatures result', { hasData: !!data, hasError: !!error, error: error?.message })
+      return { data, error }
+    } catch (err) {
+      console.error('💥 DB: employerProfiles.getByRecoveryFeatures failed', err)
+      throw err
+    }
+  },
+
+  // Get employers with current job openings
+  getWithOpenings: async () => {
+    console.log('📊 DB: employerProfiles.getWithOpenings called')
+    try {
+      const { data, error } = await supabase
+        .from('employer_profiles')
+        .select(`
+          *,
+          registrant_profiles!inner(id, first_name, email)
+        `)
+        .eq('is_active', true)
+        .eq('is_actively_hiring', true)
+        .not('current_openings', 'is', null)
+        .order('created_at', { ascending: false })
+
+      console.log('📊 DB: employerProfiles.getWithOpenings result', { hasData: !!data, hasError: !!error, error: error?.message })
+      return { data, error }
+    } catch (err) {
+      console.error('💥 DB: employerProfiles.getWithOpenings failed', err)
+      throw err
+    }
+  },
+
+  // Count profiles by criteria (for analytics)
+  getStats: async () => {
+    console.log('📊 DB: employerProfiles.getStats called')
+    try {
+      // Get total active employers
+      const { count: totalActive, error: totalError } = await supabase
+        .from('employer_profiles')
+        .select('*', { count: 'exact' })
+        .eq('is_active', true)
+
+      // Get actively hiring employers
+      const { count: activelyHiring, error: hiringError } = await supabase
+        .from('employer_profiles')
+        .select('*', { count: 'exact' })
+        .eq('is_active', true)
+        .eq('is_actively_hiring', true)
+
+      // Get employers by industry
+      const { data: industryData, error: industryError } = await supabase
+        .from('employer_profiles')
+        .select('industry')
+        .eq('is_active', true)
+
+      const industryStats = {}
+      if (industryData) {
+        industryData.forEach(emp => {
+          if (emp.industry) {
+            industryStats[emp.industry] = (industryStats[emp.industry] || 0) + 1
+          }
+        })
+      }
+
+      const stats = {
+        totalActive: totalActive || 0,
+        activelyHiring: activelyHiring || 0,
+        byIndustry: industryStats
+      }
+
+      console.log('📊 DB: employerProfiles.getStats result', { stats })
+      
+      if (totalError || hiringError || industryError) {
+        const error = totalError || hiringError || industryError
+        console.error('📊 DB: employerProfiles.getStats partial error', error)
+        return { data: stats, error }
+      }
+
+      return { data: stats, error: null }
+    } catch (err) {
+      console.error('💥 DB: employerProfiles.getStats failed', err)
+      throw err
+    }
+  }
+},
   // ✅ ENHANCED: Peer support operations with comprehensive debugging
   peerSupportProfiles: {
     create: async (profileData) => {

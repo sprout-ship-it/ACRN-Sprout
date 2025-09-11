@@ -1,4 +1,4 @@
-// src/components/dashboard/Dashboard.js
+// src/components/dashboard/Dashboard.js - Updated with Employer Support
 import React, { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../../context/AuthContext'
@@ -66,7 +66,6 @@ const Dashboard = () => {
                 icon: '🔍'
               })
               
-              // ✅ NEW: Add peer support recommendation for completed applicants
               nextSteps.push({
                 title: 'Connect with Peer Support',
                 description: 'Find experienced peer support specialists to guide your recovery journey',
@@ -74,6 +73,16 @@ const Dashboard = () => {
                 path: '/app/find-peer-support',
                 priority: 'medium',
                 icon: '🤝'
+              })
+
+              // ✅ NEW: Add employer finder recommendation
+              nextSteps.push({
+                title: 'Find Recovery-Friendly Employment',
+                description: 'Discover employers committed to supporting individuals in recovery',
+                action: 'find-employers',
+                path: '/app/find-employers',
+                priority: 'medium',
+                icon: '💼'
               })
             }
           } else {
@@ -163,6 +172,71 @@ const Dashboard = () => {
           }
         }
 
+        // ✅ NEW: Add employer role support
+        else if (hasRole('employer')) {
+          // Check for employer profiles
+          const { data: employerProfiles } = await db.employerProfiles.getByUserId(user.id)
+          
+          if (!employerProfiles || employerProfiles.length === 0) {
+            completionPercentage = profile?.phone ? 20 : 0
+            nextSteps.push({
+              title: 'Create Your Employer Profile',
+              description: 'Set up your company profile to attract recovery-focused talent',
+              action: 'create-employer-profile',
+              path: '/app/employers',
+              priority: 'high',
+              icon: '🏢'
+            })
+          } else {
+            // Calculate completion based on employer profile fields
+            const employerProfile = employerProfiles[0]
+            let completedFields = 0
+            const totalFields = 8
+            
+            if (employerProfile.company_name) completedFields++
+            if (employerProfile.industry) completedFields++
+            if (employerProfile.description) completedFields++
+            if (employerProfile.recovery_friendly_features?.length > 0) completedFields++
+            if (employerProfile.job_types_available?.length > 0) completedFields++
+            if (employerProfile.benefits_offered?.length > 0) completedFields++
+            if (employerProfile.hiring_practices) completedFields++
+            if (employerProfile.profile_completed) completedFields++
+            
+            completionPercentage = Math.round((completedFields / totalFields) * 100)
+            
+            if (!employerProfile.profile_completed) {
+              nextSteps.push({
+                title: 'Complete Your Employer Profile',
+                description: 'Finish your company profile to attract the best candidates',
+                action: 'complete-employer-profile',
+                path: '/app/employers',
+                priority: 'high',
+                icon: '🏢'
+              })
+            } else {
+              nextSteps.push({
+                title: 'Manage Job Postings',
+                description: 'Update your current openings and review applications',
+                action: 'manage-employers',
+                path: '/app/employers',
+                priority: 'medium',
+                icon: '💼'
+              })
+              
+              if (employerProfile.is_actively_hiring) {
+                nextSteps.push({
+                  title: 'Review Applications',
+                  description: 'Check for new job applicants and connection requests',
+                  action: 'review-applications',
+                  path: '/app/match-requests',
+                  priority: 'medium',
+                  icon: '📋'
+                })
+              }
+            }
+          }
+        }
+
         // Universal next steps for all roles
         nextSteps.push({
           title: 'Review Match Requests',
@@ -211,7 +285,6 @@ const Dashboard = () => {
           path: '/app/find-matches',
           icon: '🔍'
         },
-        // ✅ NEW: Added peer support finder card for applicants
         { 
           id: 'find-peer-support', 
           label: 'Find Peer Support', 
@@ -219,6 +292,15 @@ const Dashboard = () => {
           color: 'var(--gold)',
           path: '/app/find-peer-support',
           icon: '🤝'
+        },
+        // ✅ NEW: Added employer finder card for applicants
+        { 
+          id: 'find-employers', 
+          label: 'Find Employment', 
+          description: 'Discover recovery-friendly employers and job opportunities', 
+          color: 'var(--coral)',
+          path: '/app/find-employers',
+          icon: '💼'
         },
         { 
           id: 'browse-properties', 
@@ -280,6 +362,36 @@ const Dashboard = () => {
         }
       )
     }
+
+    // ✅ NEW: Add employer-specific cards
+    if (hasRole('employer')) {
+      cards.push(
+        { 
+          id: 'manage-employers', 
+          label: 'Manage Company Profiles', 
+          description: 'Add, edit, and manage your employer profiles', 
+          color: 'var(--coral)',
+          path: '/app/employers',
+          icon: '🏢'
+        },
+        { 
+          id: 'job-applications', 
+          label: 'Job Applications', 
+          description: 'Review applications and candidate requests', 
+          color: 'var(--gold)',
+          path: '/app/candidates',
+          icon: '📋'
+        },
+        { 
+          id: 'post-jobs', 
+          label: 'Post New Jobs', 
+          description: 'Create and manage job postings for recovery-focused candidates', 
+          color: 'var(--secondary-teal)',
+          path: '/app/employers',
+          icon: '💼'
+        }
+      )
+    }
     
     // Universal cards for all users
     cards.push(
@@ -333,6 +445,7 @@ const Dashboard = () => {
         case 'applicant': return 'Housing Seeker'
         case 'peer': return 'Peer Specialist'
         case 'landlord': return 'Property Owner'
+        case 'employer': return 'Recovery-Friendly Employer' // ✅ NEW
         default: return role.charAt(0).toUpperCase() + role.slice(1)
       }
     }).join(' & ')
@@ -432,9 +545,10 @@ const Dashboard = () => {
             {profile.roles.map(role => (
               <div key={role} className="alert alert-success">
                 <strong>{role.charAt(0).toUpperCase() + role.slice(1)} Access:</strong>
-                {role === 'applicant' && ' Find roommates, browse properties, manage matches, connect with peer support'}
+                {role === 'applicant' && ' Find roommates, browse properties, manage matches, connect with peer support, find employment'}
                 {role === 'peer' && ' Offer peer support, manage clients, provide services'}
                 {role === 'landlord' && ' List properties, review applications, manage rentals'}
+                {role === 'employer' && ' Post jobs, review applications, manage company profiles, hire recovery-focused talent'}
               </div>
             ))}
           </div>
