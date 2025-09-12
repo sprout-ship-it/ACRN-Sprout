@@ -122,24 +122,71 @@ const EnhancedMatchingProfileForm = ({ editMode = false, onComplete, onCancel })
   const isLastSection = currentSectionIndex === FORM_SECTIONS.length - 1;
   const hasErrors = Object.keys(errors).length > 0;
 
-  // Navigation handlers
+  // ✅ ENHANCED: Helper function to scroll to first form field
+  const scrollToFirstFormField = () => {
+    setTimeout(() => {
+      // Try to find the first form input/select/textarea in the current section
+      const formSection = document.querySelector('.card .form-group');
+      const firstInput = document.querySelector('.card input, .card select, .card textarea');
+      
+      if (firstInput) {
+        // Scroll to first input with some padding above
+        const elementTop = firstInput.getBoundingClientRect().top + window.pageYOffset;
+        const offsetTop = elementTop - 120; // 120px padding from top
+        
+        window.scrollTo({ 
+          top: Math.max(0, offsetTop), 
+          behavior: 'smooth' 
+        });
+        
+        console.log('📍 Scrolled to first form field');
+      } else if (formSection) {
+        // Fallback to first form group if no input found
+        const elementTop = formSection.getBoundingClientRect().top + window.pageYOffset;
+        const offsetTop = elementTop - 100;
+        
+        window.scrollTo({ 
+          top: Math.max(0, offsetTop), 
+          behavior: 'smooth' 
+        });
+        
+        console.log('📍 Scrolled to first form group');
+      } else {
+        // Final fallback - scroll to card content
+        const cardContent = document.querySelector('.card');
+        if (cardContent) {
+          const elementTop = cardContent.getBoundingClientRect().top + window.pageYOffset;
+          const offsetTop = elementTop - 80;
+          
+          window.scrollTo({ 
+            top: Math.max(0, offsetTop), 
+            behavior: 'smooth' 
+          });
+          
+          console.log('📍 Scrolled to card content');
+        }
+      }
+    }, 100); // Small delay to ensure content is rendered
+  };
+
+  // ✅ ENHANCED: Navigation handlers with improved scrolling
   const handleNext = () => {
     if (currentSectionIndex < FORM_SECTIONS.length - 1) {
       setCurrentSectionIndex(prev => prev + 1);
-      window.scrollTo({ top: 0, behavior: 'smooth' });
+      scrollToFirstFormField();
     }
   };
 
   const handlePrevious = () => {
     if (currentSectionIndex > 0) {
       setCurrentSectionIndex(prev => prev - 1);
-      window.scrollTo({ top: 0, behavior: 'smooth' });
+      scrollToFirstFormField();
     }
   };
 
   const handleSectionClick = (index) => {
     setCurrentSectionIndex(index);
-    window.scrollTo({ top: 0, behavior: 'smooth' });
+    scrollToFirstFormField();
   };
 
   // ✅ FIXED: Improved form submission handlers with better error handling and navigation
@@ -299,7 +346,7 @@ const EnhancedMatchingProfileForm = ({ editMode = false, onComplete, onCancel })
           label={`Section ${currentSectionIndex + 1} of ${FORM_SECTIONS.length}`}
         />
 
-        {/* Section Navigation */}
+        {/* ✅ ENHANCED: Section Navigation with improved styling */}
         <nav className="navigation">
           <ul className="nav-list">
             {FORM_SECTIONS.map((section, index) => (
@@ -522,8 +569,103 @@ const EnhancedMatchingProfileForm = ({ editMode = false, onComplete, onCancel })
   );
 };
 
-// ✅ FIXED: Add CSS for improved form validation states
+// ✅ ENHANCED: Improved CSS for tab navigation with 2-line support and borders
 const additionalStyles = `
+/* ✅ FIXED: Enhanced Section Navigation with 2-line support and borders */
+.navigation {
+  background: white;
+  border-bottom: 2px solid var(--border-beige);
+  padding: 0;
+  border-radius: var(--radius-lg) var(--radius-lg) 0 0;
+  overflow: hidden;
+}
+
+.navigation .nav-list {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.navigation .nav-item {
+  position: relative;
+}
+
+.navigation .nav-item:not(:last-child)::after {
+  content: '';
+  position: absolute;
+  top: 10px;
+  right: 0;
+  bottom: 10px;
+  width: 1px;
+  background: var(--border-beige);
+  z-index: 1;
+}
+
+.navigation .nav-button {
+  width: 100%;
+  min-height: 80px;
+  padding: 12px 16px;
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--gray-600);
+  transition: var(--transition-normal);
+  border-bottom: 3px solid transparent;
+  white-space: normal;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  line-height: 1.3;
+  text-align: center;
+  position: relative;
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.8) 0%, rgba(248, 249, 250, 0.8) 100%);
+  border-top: 1px solid transparent;
+  border-left: 1px solid transparent;
+  border-right: 1px solid transparent;
+}
+
+.navigation .nav-button:hover:not(:disabled) {
+  color: var(--primary-purple);
+  background: linear-gradient(135deg, rgba(160, 32, 240, 0.04) 0%, rgba(160, 32, 240, 0.02) 100%);
+  border-top-color: var(--primary-purple);
+  border-left-color: rgba(160, 32, 240, 0.2);
+  border-right-color: rgba(160, 32, 240, 0.2);
+  transform: translateY(-1px);
+  box-shadow: 0 2px 8px rgba(160, 32, 240, 0.1);
+}
+
+.navigation .nav-button.active {
+  color: var(--primary-purple);
+  border-bottom-color: var(--primary-purple);
+  background: linear-gradient(135deg, rgba(160, 32, 240, 0.08) 0%, rgba(160, 32, 240, 0.04) 100%);
+  border-top-color: var(--primary-purple);
+  border-left-color: var(--primary-purple);
+  border-right-color: var(--primary-purple);
+  font-weight: 700;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(160, 32, 240, 0.15);
+  z-index: 2;
+}
+
+.navigation .nav-button:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+  transform: none !important;
+  box-shadow: none !important;
+}
+
+.navigation .nav-icon {
+  font-size: 1.2rem;
+  flex-shrink: 0;
+}
+
+/* ✅ ENHANCED: Form actions styling */
 .form-actions {
   display: flex;
   gap: 1rem;
@@ -543,6 +685,7 @@ const additionalStyles = `
   margin-right: auto;
 }
 
+/* ✅ ENHANCED: Loading and error states */
 .loading-spinner.small {
   width: 14px;
   height: 14px;
@@ -571,7 +714,23 @@ details[open] summary {
   margin-bottom: 0.5rem;
 }
 
+/* ✅ RESPONSIVE: Better responsive behavior for tabs */
 @media (max-width: 768px) {
+  .navigation .nav-list {
+    grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+  }
+  
+  .navigation .nav-button {
+    min-height: 70px;
+    padding: 10px 12px;
+    font-size: 0.8rem;
+    gap: 4px;
+  }
+  
+  .navigation .nav-icon {
+    font-size: 1rem;
+  }
+
   .form-actions {
     flex-direction: column;
     align-items: stretch;
@@ -580,6 +739,22 @@ details[open] summary {
   .form-actions .btn:first-child {
     margin-right: 0;
     margin-bottom: 0.5rem;
+  }
+}
+
+@media (max-width: 480px) {
+  .navigation .nav-list {
+    grid-template-columns: repeat(2, 1fr);
+  }
+  
+  .navigation .nav-button {
+    min-height: 65px;
+    padding: 8px 10px;
+    font-size: 0.75rem;
+  }
+  
+  .navigation .nav-icon {
+    font-size: 0.9rem;
   }
 }
 `;
