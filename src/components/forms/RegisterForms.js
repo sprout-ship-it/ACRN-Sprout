@@ -1,11 +1,11 @@
 // src/components/forms/RegisterForms.js
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import LoadingSpinner from '../common/LoadingSpinner';
 import '../../styles/global.css';
 
-const RegisterForm = ({ onBackToLanding }) => {
+const RegisterForm = ({ onBackToLanding, preSelectedRole }) => {
   const [firstName, setFirstName] = useState('');
   const [lastName, setLastName] = useState('');
   const [email, setEmail] = useState('');
@@ -20,13 +20,40 @@ const RegisterForm = ({ onBackToLanding }) => {
   const { signUp, loading, error, clearError } = useAuth();
   const navigate = useNavigate();
 
-  // ✅ UPDATED: Added employer role option
+  // ✅ UPDATED: Added employer role option with role IDs matching landing page
   const roles = [
-    { id: 'applicant', label: 'Housing Seeker', description: 'Seeking housing and compatible roommates' },
-    { id: 'peer', label: 'Peer Support Specialist', description: 'Providing peer support services' },
-    { id: 'landlord', label: 'Property Owner', description: 'Offering recovery-friendly housing' },
-    { id: 'employer', label: 'Recovery-Friendly Employer', description: 'Offering second-chance employment opportunities' }
+    { 
+      id: 'applicant', 
+      label: 'Housing Seekers', 
+      description: 'Seeking housing and compatible roommates',
+      className: 'role-card-housing-seeker'
+    },
+    { 
+      id: 'peer', 
+      label: 'Peer Support Specialists', 
+      description: 'Providing peer support services',
+      className: 'role-card-peer-support'
+    },
+    { 
+      id: 'landlord', 
+      label: 'Property Owners', 
+      description: 'Offering recovery-friendly housing',
+      className: 'role-card-property-owner'
+    },
+    { 
+      id: 'employer', 
+      label: 'Recovery-Friendly Employers', 
+      description: 'Offering second-chance employment opportunities',
+      className: 'role-card-employer'
+    }
   ];
+
+  // ✅ NEW: Handle pre-selected role from landing page
+  useEffect(() => {
+    if (preSelectedRole && !selectedRoles.includes(preSelectedRole)) {
+      setSelectedRoles([preSelectedRole]);
+    }
+  }, [preSelectedRole]);
 
   const toggleRole = (roleId) => {
     setSelectedRoles(prev => 
@@ -262,21 +289,49 @@ const RegisterForm = ({ onBackToLanding }) => {
               <p style={{ fontSize: '0.9rem', color: 'var(--gray-600)', marginBottom: '15px' }}>
                 Choose the role(s) that best describe how you'll use the platform. You can select multiple roles:
               </p>
+              {preSelectedRole && (
+                <p style={{ 
+                  fontSize: '0.9rem', 
+                  color: 'var(--secondary-teal)', 
+                  marginBottom: '15px',
+                  fontWeight: 600
+                }}>
+                  ✓ Pre-selected based on your choice from the homepage
+                </p>
+              )}
               <div className="grid-auto">
                 {roles.map(role => (
                   <div
                     key={role.id}
-                    className={`checkbox-item ${selectedRoles.includes(role.id) ? 'selected' : ''}`}
+                    className={`role-card ${role.className} ${selectedRoles.includes(role.id) ? 'selected' : ''}`}
                     onClick={() => !loading && toggleRole(role.id)}
                     style={{
                       opacity: loading ? 0.6 : 1,
-                      cursor: loading ? 'not-allowed' : 'pointer'
+                      cursor: loading ? 'not-allowed' : 'pointer',
+                      position: 'relative'
                     }}
                   >
-                    <div>
-                      <h4 className="card-title">{role.label}</h4>
-                      <p className="card-text">{role.description}</p>
-                    </div>
+                    <h4 className="role-title">{role.label}</h4>
+                    <p className="role-description">{role.description}</p>
+                    {selectedRoles.includes(role.id) && (
+                      <div style={{
+                        position: 'absolute',
+                        top: '10px',
+                        right: '10px',
+                        background: 'var(--secondary-teal)',
+                        color: 'white',
+                        borderRadius: '50%',
+                        width: '24px',
+                        height: '24px',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        fontSize: '14px',
+                        fontWeight: 'bold'
+                      }}>
+                        ✓
+                      </div>
+                    )}
                   </div>
                 ))}
               </div>

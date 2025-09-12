@@ -8,6 +8,7 @@ import '../styles/global.css';
 const Landing = () => {
   const [showLogin, setShowLogin] = useState(false)
   const [showRegister, setShowRegister] = useState(false)
+  const [preSelectedRole, setPreSelectedRole] = useState(null)
   const { isAuthenticated } = useAuth()
 
   // If user is already authenticated, they shouldn't see landing page
@@ -26,8 +27,19 @@ const Landing = () => {
   // Show register form
   if (showRegister) {
     return (
-      <RegisterForm onBackToLanding={() => setShowRegister(false)} />
+      <RegisterForm 
+        onBackToLanding={() => {
+          setShowRegister(false)
+          setPreSelectedRole(null)
+        }}
+        preSelectedRole={preSelectedRole}
+      />
     )
+  }
+
+  const handleRoleClick = (roleId) => {
+    setPreSelectedRole(roleId)
+    setShowRegister(true)
   }
 
   // Show main landing page
@@ -39,58 +51,11 @@ const Landing = () => {
           Our comprehensive platform connects the entire recovery housing ecosystem: 
           individuals in recovery seeking compatible roommates, recovery-friendly landlords, 
           dedicated peer support specialists, and employers committed to second-chance hiring.
-          <br /><br />
-          <strong>Here's how it works:</strong>
-          <br />
-          First, we match you with compatible roommates based on recovery goals, lifestyle preferences, 
-          and personal compatibility. Once matched, you'll search for local housing together based on 
-          your shared criteria. We also connect your matched pair with local peer support specialists 
-          who align with your unique recovery preferences. Finally, discover employment opportunities 
-          with employers who understand and support the recovery journey.
-          <br /><br />
-          Join our community today and find the supportive housing and employment environment you deserve.
         </p>
       </div>
 
-      {/* ✅ NEW: Role-specific information cards */}
-      <div className="card mb-5">
-        <h3 className="card-title">Who Can Join Our Platform?</h3>
-        <div className="grid-auto">
-          <div className="card" style={{ background: 'var(--bg-light-purple)', border: '2px solid var(--primary-purple)' }}>
-            <div className="text-center mb-2" style={{ fontSize: '2rem' }}>🏠</div>
-            <h4 className="card-title" style={{ color: 'var(--primary-purple)' }}>Housing Seekers</h4>
-            <p className="card-text">
-              Individuals in recovery looking for compatible roommates and supportive housing environments.
-            </p>
-          </div>
-          
-          <div className="card" style={{ background: 'var(--bg-light-cream)', border: '2px solid var(--secondary-teal)' }}>
-            <div className="text-center mb-2" style={{ fontSize: '2rem' }}>🤝</div>
-            <h4 className="card-title" style={{ color: 'var(--secondary-teal)' }}>Peer Support Specialists</h4>
-            <p className="card-text">
-              Licensed professionals offering guidance and support throughout the recovery journey.
-            </p>
-          </div>
-          
-          <div className="card" style={{ background: 'var(--bg-light-cream)', border: '2px solid var(--secondary-purple)' }}>
-            <div className="text-center mb-2" style={{ fontSize: '2rem' }}>🏢</div>
-            <h4 className="card-title" style={{ color: 'var(--secondary-purple)' }}>Property Owners</h4>
-            <p className="card-text">
-              Landlords committed to providing recovery-friendly housing options and supportive rental policies.
-            </p>
-          </div>
-          
-          <div className="card" style={{ background: 'var(--bg-light-cream)', border: '2px solid var(--coral)' }}>
-            <div className="text-center mb-2" style={{ fontSize: '2rem' }}>💼</div>
-            <h4 className="card-title" style={{ color: 'var(--coral)' }}>Recovery-Friendly Employers</h4>
-            <p className="card-text">
-              Companies offering second-chance employment and creating inclusive workplaces for individuals in recovery.
-            </p>
-          </div>
-        </div>
-      </div>
-      
-      <div className="grid-2">
+      {/* ✅ MOVED: Sign In/Register cards moved up */}
+      <div className="grid-2 mb-5">
         <div className="card">
           <h3 className="card-title">Existing Users</h3>
           <p className="card-text">
@@ -107,8 +72,7 @@ const Landing = () => {
         <div className="card">
           <h3 className="card-title">New Users</h3>
           <p className="card-text">
-            Create your account and join our supportive recovery community as a housing seeker, 
-            peer support specialist, property owner, or recovery-friendly employer.
+            Create your account and join our supportive recovery community. Select your role below to get started.
           </p>
           <button 
             className="btn btn-secondary"
@@ -119,7 +83,78 @@ const Landing = () => {
         </div>
       </div>
 
-      {/* ✅ NEW: Platform benefits section */}
+      {/* ✅ UPDATED: Enhanced role cards with better styling and click functionality */}
+      <div className="card mb-5">
+        <h3 className="card-title">Who Can Join Our Platform?</h3>
+        <p className="card-text text-center mb-4">
+          <strong>Click on your role below to create an account and get started!</strong>
+        </p>
+        <div className="grid-auto">
+          <div 
+            className="role-card role-card-housing-seeker" 
+            onClick={() => handleRoleClick('applicant')}
+          >
+            <div className="role-icon">🏠</div>
+            <h4 className="role-title">Housing Seekers</h4>
+            <p className="role-description">
+              Individuals in recovery looking for compatible roommates and supportive housing environments.
+            </p>
+            <div className="role-click-hint">Click to register →</div>
+          </div>
+          
+          <div 
+            className="role-card role-card-peer-support" 
+            onClick={() => handleRoleClick('peer')}
+          >
+            <div className="role-icon">🤝</div>
+            <h4 className="role-title">Peer Support Specialists</h4>
+            <p className="role-description">
+              Licensed professionals offering guidance and support throughout the recovery journey.
+            </p>
+            <div className="role-click-hint">Click to register →</div>
+          </div>
+          
+          <div 
+            className="role-card role-card-property-owner" 
+            onClick={() => handleRoleClick('landlord')}
+          >
+            <div className="role-icon">🏢</div>
+            <h4 className="role-title">Property Owners</h4>
+            <p className="role-description">
+              Landlords committed to providing recovery-friendly housing options and supportive rental policies.
+            </p>
+            <div className="role-click-hint">Click to register →</div>
+          </div>
+          
+          <div 
+            className="role-card role-card-employer" 
+            onClick={() => handleRoleClick('employer')}
+          >
+            <div className="role-icon">💼</div>
+            <h4 className="role-title">Recovery-Friendly Employers</h4>
+            <p className="role-description">
+              Companies offering second-chance employment and creating inclusive workplaces for individuals in recovery.
+            </p>
+            <div className="role-click-hint">Click to register →</div>
+          </div>
+        </div>
+      </div>
+
+      {/* ✅ REPOSITIONED: How it works section moved down */}
+      <div className="card mb-5">
+        <h3 className="card-title">Here's How It Works:</h3>
+        <p className="card-text">
+          First, we match you with compatible roommates based on recovery goals, lifestyle preferences, 
+          and personal compatibility. Once matched, you'll search for local housing together based on 
+          your shared criteria. We also connect your matched pair with local peer support specialists 
+          who align with your unique recovery preferences. Finally, discover employment opportunities 
+          with employers who understand and support the recovery journey.
+          <br /><br />
+          Join our community today and find the supportive housing and employment environment you deserve.
+        </p>
+      </div>
+
+      {/* ✅ Platform benefits section */}
       <div className="card mt-5">
         <h3 className="card-title">Why Choose Recovery Housing Connect?</h3>
         <div className="grid-2">

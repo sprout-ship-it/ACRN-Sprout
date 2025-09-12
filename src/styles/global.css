@@ -262,6 +262,156 @@ p {
   font-size: 0.9rem;
 }
 
+/* ==================== ROLE CARD COMPONENTS ==================== */
+.role-card {
+  background: white;
+  border-radius: var(--radius-xl);
+  padding: 25px;
+  border: 3px solid var(--border-beige);
+  box-shadow: var(--shadow-md);
+  transition: var(--transition-normal);
+  cursor: pointer;
+  position: relative;
+  overflow: hidden;
+}
+
+.role-card:hover {
+  transform: translateY(-4px);
+  box-shadow: var(--shadow-lg);
+}
+
+.role-card.selected {
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-lg);
+}
+
+.role-icon {
+  text-align: center;
+  font-size: 3rem;
+  margin-bottom: var(--spacing-md);
+  line-height: 1;
+}
+
+.role-title {
+  font-family: var(--font-serif);
+  font-size: 1.25rem;
+  font-weight: 700;
+  margin-bottom: var(--spacing-sm);
+  text-align: center;
+}
+
+.role-description {
+  font-size: 0.95rem;
+  line-height: 1.5;
+  text-align: center;
+  margin-bottom: var(--spacing-md);
+}
+
+.role-click-hint {
+  font-size: 0.85rem;
+  font-weight: 600;
+  text-align: center;
+  opacity: 0.8;
+  color: var(--gray-600);
+  margin-top: var(--spacing-sm);
+}
+
+/* Housing Seeker Role Card */
+.role-card-housing-seeker {
+  background: linear-gradient(135deg, var(--primary-purple) 0%, rgba(160, 32, 240, 0.05) 100%);
+  border-color: var(--primary-purple);
+}
+
+.role-card-housing-seeker:hover,
+.role-card-housing-seeker.selected {
+  border-color: var(--primary-purple);
+  background: linear-gradient(135deg, var(--primary-purple) 0%, rgba(160, 32, 240, 0.1) 100%);
+}
+
+.role-card-housing-seeker .role-title {
+  color: white;
+}
+
+.role-card-housing-seeker .role-description {
+  color: rgba(255, 255, 255, 0.95);
+}
+
+.role-card-housing-seeker .role-click-hint {
+  color: rgba(255, 255, 255, 0.8);
+}
+
+/* Peer Support Role Card */
+.role-card-peer-support {
+  background: linear-gradient(135deg, var(--secondary-teal) 0%, rgba(32, 178, 170, 0.05) 100%);
+  border-color: var(--secondary-teal);
+}
+
+.role-card-peer-support:hover,
+.role-card-peer-support.selected {
+  border-color: var(--secondary-teal);
+  background: linear-gradient(135deg, var(--secondary-teal) 0%, rgba(32, 178, 170, 0.1) 100%);
+}
+
+.role-card-peer-support .role-title {
+  color: white;
+}
+
+.role-card-peer-support .role-description {
+  color: rgba(255, 255, 255, 0.95);
+}
+
+.role-card-peer-support .role-click-hint {
+  color: rgba(255, 255, 255, 0.8);
+}
+
+/* Property Owner Role Card */
+.role-card-property-owner {
+  background: linear-gradient(135deg, var(--secondary-purple) 0%, rgba(142, 28, 199, 0.05) 100%);
+  border-color: var(--secondary-purple);
+}
+
+.role-card-property-owner:hover,
+.role-card-property-owner.selected {
+  border-color: var(--secondary-purple);
+  background: linear-gradient(135deg, var(--secondary-purple) 0%, rgba(142, 28, 199, 0.1) 100%);
+}
+
+.role-card-property-owner .role-title {
+  color: white;
+}
+
+.role-card-property-owner .role-description {
+  color: rgba(255, 255, 255, 0.95);
+}
+
+.role-card-property-owner .role-click-hint {
+  color: rgba(255, 255, 255, 0.8);
+}
+
+/* Employer Role Card */
+.role-card-employer {
+  background: linear-gradient(135deg, var(--coral) 0%, rgba(255, 111, 97, 0.05) 100%);
+  border-color: var(--coral);
+}
+
+.role-card-employer:hover,
+.role-card-employer.selected {
+  border-color: var(--coral);
+  background: linear-gradient(135deg, var(--coral) 0%, rgba(255, 111, 97, 0.1) 100%);
+}
+
+.role-card-employer .role-title {
+  color: white;
+}
+
+.role-card-employer .role-description {
+  color: rgba(255, 255, 255, 0.95);
+}
+
+.role-card-employer .role-click-hint {
+  color: rgba(255, 255, 255, 0.8);
+}
+
 /* ==================== FORM COMPONENTS ==================== */
 .form-title {
   font-family: var(--font-serif);
@@ -841,7 +991,7 @@ select.input {
 /* ==================== DASHBOARD COMPONENTS ==================== */
 .welcome-section {
   text-align: center;
-  margin-bottom: var(--spacing-2xl);
+  margin-bottom: var(--spacing-xxl);
 }
 
 .welcome-title {
@@ -950,6 +1100,14 @@ select.input {
     margin-bottom: var(--spacing-md);
   }
   
+  .role-card {
+    padding: 20px;
+  }
+  
+  .role-icon {
+    font-size: 2.5rem;
+  }
+  
   .btn {
     padding: 12px 24px;
     font-size: 0.9rem;
@@ -1009,6 +1167,14 @@ select.input {
   .nav-button {
     padding: 10px 12px;
     font-size: 0.75rem;
+  }
+  
+  .role-card {
+    padding: 18px;
+  }
+  
+  .role-icon {
+    font-size: 2rem;
   }
 }
 
