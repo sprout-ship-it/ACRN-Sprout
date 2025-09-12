@@ -79,7 +79,7 @@ export const auth = {
     console.log('🔑 Auth: getSession called')
     try {
       const timeoutPromise = new Promise((_, reject) => 
-        setTimeout(() => reject(new Error('getSession timeout after 60 seconds')), 60000)
+        setTimeout(() => reject(new Error('getSession timeout after 30 seconds')), 30000)
       )
       
       const sessionPromise = supabase.auth.getSession()
@@ -137,7 +137,7 @@ export const db = {
       try {
         // ✅ FIXED: Increased timeout to 15 seconds
         const timeoutPromise = new Promise((_, reject) => 
-          setTimeout(() => reject(new Error('profiles.getById timeout after 5 minutes')), 300000)
+          setTimeout(() => reject(new Error('profiles.getById timeout after 2 minutes')), 120000)
         )
         
         const queryPromise = supabase
@@ -195,7 +195,7 @@ export const db = {
       try {
         // ✅ FIXED: Add timeout protection to updates
         const timeoutPromise = new Promise((_, reject) => 
-          setTimeout(() => reject(new Error('profiles.update timeout after 2 minutes')), 120000)
+          setTimeout(() => reject(new Error('profiles.update timeout after 1 minute')), 60000)
         )
         
         const updatePromise = supabase
