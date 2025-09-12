@@ -12,15 +12,17 @@ const EmployerFinder = ({ onBack }) => {
   const [error, setError] = useState(null);
   const [selectedEmployer, setSelectedEmployer] = useState(null);
   const [showDetails, setShowDetails] = useState(false);
+  const [jobInquiries, setJobInquiries] = useState(new Set()); // Track sent inquiries
   const [filters, setFilters] = useState({
     industry: '',
-    city: '',
+    location: '', // Combined city/state search
     state: '',
     businessType: '',
     recoveryFeatures: [],
     jobTypes: [],
     remoteWork: '',
-    isActivelyHiring: true
+    isActivelyHiring: true,
+    hasOpenings: false
   });
 
   // Filter options
@@ -28,18 +30,18 @@ const EmployerFinder = ({ onBack }) => {
     'Construction', 'Healthcare', 'Retail', 'Food Service', 'Manufacturing',
     'Transportation', 'Technology', 'Education', 'Nonprofit', 'Professional Services',
     'Hospitality', 'Agriculture', 'Finance', 'Real Estate', 'Arts & Entertainment',
-    'Government', 'Utilities', 'Other'
+    'Government', 'Utilities', 'Energy', 'Media & Communications', 'Other'
   ];
 
   const businessTypeOptions = [
-    { value: 'small_business', label: 'Small Business' },
-    { value: 'medium_business', label: 'Medium Business' },
-    { value: 'large_corporation', label: 'Large Corporation' },
-    { value: 'nonprofit', label: 'Nonprofit' },
+    { value: 'small_business', label: 'Small Business (1-50 employees)' },
+    { value: 'medium_business', label: 'Medium Business (51-500 employees)' },
+    { value: 'large_corporation', label: 'Large Corporation (500+ employees)' },
+    { value: 'nonprofit', label: 'Nonprofit Organization' },
     { value: 'startup', label: 'Startup' },
     { value: 'social_enterprise', label: 'Social Enterprise' },
-    { value: 'government', label: 'Government' },
-    { value: 'cooperative', label: 'Cooperative' }
+    { value: 'government', label: 'Government Agency' },
+    { value: 'cooperative', label: 'Cooperative/Employee-Owned' }
   ];
 
   const recoveryFeatureOptions = [
@@ -54,7 +56,10 @@ const EmployerFinder = ({ onBack }) => {
     'stigma_free_workplace',
     'treatment_time_off',
     'transportation_assistance',
-    'skills_training'
+    'skills_training',
+    'mentorship_programs',
+    'career_advancement',
+    'background_check_flexibility'
   ];
 
   const jobTypeOptions = [
@@ -63,14 +68,16 @@ const EmployerFinder = ({ onBack }) => {
     'contract',
     'temporary',
     'internship',
-    'apprenticeship'
+    'apprenticeship',
+    'seasonal',
+    'remote'
   ];
 
   const remoteWorkOptions = [
     { value: 'on_site', label: 'On-Site Only' },
     { value: 'fully_remote', label: 'Fully Remote' },
-    { value: 'hybrid', label: 'Hybrid' },
-    { value: 'flexible', label: 'Flexible Options' }
+    { value: 'hybrid', label: 'Hybrid (Remote + On-Site)' },
+    { value: 'flexible', label: 'Flexible Options Available' }
   ];
 
   const stateOptions = [
@@ -83,23 +90,50 @@ const EmployerFinder = ({ onBack }) => {
 
   // Load employers on component mount
   useEffect(() => {
-    findEmployers();
+    loadEmployers();
+    loadJobInquiries();
   }, []);
 
-  // Reload when filters change
+  // Reload when filters change (with debounce)
   useEffect(() => {
-    findEmployers();
+    const timeoutId = setTimeout(() => {
+      loadEmployers();
+    }, 300);
+
+    return () => clearTimeout(timeoutId);
   }, [filters]);
 
   /**
-   * Search for available employers
+   * Load existing job inquiries to avoid duplicates
    */
-  const findEmployers = async () => {
+  const loadJobInquiries = async () => {
+    if (!user?.id) return;
+
+    try {
+      const result = await db.matchRequests.getByUserId(user.id);
+      if (result.success !== false && result.data) {
+        const sentInquiries = new Set(
+          result.data
+            .filter(req => req.requester_id === user.id && req.request_type === 'employment')
+            .map(req => req.target_id)
+        );
+        setJobInquiries(sentInquiries);
+        console.log('📊 Loaded existing job inquiries:', sentInquiries.size);
+      }
+    } catch (err) {
+      console.error('💥 Error loading job inquiries:', err);
+    }
+  };
+
+  /**
+   * ✅ FIXED: Improved search for available employers
+   */
+  const loadEmployers = async () => {
     setLoading(true);
     setError(null);
 
     try {
-      console.log('🔍 Finding employers with filters:', filters);
+      console.log('🔍 Loading employers with filters:', filters);
       
       // Build filter object for database query
       const dbFilters = {
@@ -110,8 +144,21 @@ const EmployerFinder = ({ onBack }) => {
         dbFilters.industry = filters.industry;
       }
       
-      if (filters.city) {
-        dbFilters.city = filters.city;
+      if (filters.location.trim()) {
+        // Handle both city and state in location field
+        const locationParts = filters.location.split(',').map(part => part.trim());
+        if (locationParts.length === 2) {
+          dbFilters.city = locationParts[0];
+          dbFilters.state = locationParts[1].toUpperCase();
+        } else {
+          // Single location term - could be city or state
+          const singleLocation = filters.location.trim();
+          if (singleLocation.length === 2) {
+            dbFilters.state = singleLocation.toUpperCase();
+          } else {
+            dbFilters.city = singleLocation;
+          }
+        }
       }
 
       if (filters.state) {
@@ -137,12 +184,21 @@ const EmployerFinder = ({ onBack }) => {
       // Get available employers from database
       const result = await db.employerProfiles.getAvailable(dbFilters);
       
-      if (!result.success && result.error) {
+      if (result.error && !result.data) {
         throw new Error(result.error.message || 'Failed to load employers');
       }
       
       let availableEmployers = result.data || [];
-      console.log(`📊 Found ${availableEmployers.length} available employers`);
+      console.log(`📊 Found ${availableEmployers.length} employers from database`);
+
+      // ✅ FIXED: Apply additional client-side filters
+      if (filters.hasOpenings) {
+        availableEmployers = availableEmployers.filter(employer => 
+          employer.current_openings && 
+          Array.isArray(employer.current_openings) && 
+          employer.current_openings.length > 0
+        );
+      }
 
       // Exclude current user if they're also an employer
       if (user) {
@@ -151,12 +207,31 @@ const EmployerFinder = ({ onBack }) => {
         );
       }
 
-      console.log(`✅ Filtered to ${availableEmployers.length} employers`);
+      // ✅ IMPROVED: Better sorting - actively hiring first, then by recent updates
+      availableEmployers.sort((a, b) => {
+        // First priority: actively hiring
+        if (a.is_actively_hiring && !b.is_actively_hiring) return -1;
+        if (!a.is_actively_hiring && b.is_actively_hiring) return 1;
+        
+        // Second priority: has current openings
+        const aHasOpenings = a.current_openings?.length > 0;
+        const bHasOpenings = b.current_openings?.length > 0;
+        if (aHasOpenings && !bHasOpenings) return -1;
+        if (!aHasOpenings && bHasOpenings) return 1;
+        
+        // Third priority: most recently created/updated
+        const aDate = new Date(a.updated_at || a.created_at || 0);
+        const bDate = new Date(b.updated_at || b.created_at || 0);
+        return bDate - aDate;
+      });
+
+      console.log(`✅ Filtered and sorted ${availableEmployers.length} employers`);
       setEmployers(availableEmployers);
       
     } catch (err) {
-      console.error('💥 Error finding employers:', err);
-      setError(err.message || 'Failed to find employers');
+      console.error('💥 Error loading employers:', err);
+      setError(err.message || 'Failed to load employers');
+      setEmployers([]);
     } finally {
       setLoading(false);
     }
@@ -182,6 +257,45 @@ const EmployerFinder = ({ onBack }) => {
   };
 
   /**
+   * ✅ NEW: Smart location search using user's preferences
+   */
+  const handleShowNearby = async () => {
+    try {
+      // Try to get user's location from their matching profile
+      const { data: applicantProfile } = await db.applicantForms.getByUserId(user.id);
+      if (applicantProfile?.preferred_location) {
+        setFilters(prev => ({ 
+          ...prev, 
+          location: applicantProfile.preferred_location,
+          industry: '', // Clear other filters for broader search
+          businessType: '',
+          recoveryFeatures: []
+        }));
+        return;
+      }
+    } catch (err) {
+      console.error('Could not load user location preferences:', err);
+    }
+
+    // Use profile location as fallback
+    const userLocation = profile?.city && profile?.state 
+      ? `${profile.city}, ${profile.state}`
+      : profile?.state || '';
+    
+    if (userLocation) {
+      setFilters(prev => ({ 
+        ...prev, 
+        location: userLocation,
+        industry: '', // Clear other filters for broader search
+        businessType: '',
+        recoveryFeatures: []
+      }));
+    } else {
+      alert('Please set your location in filters to find nearby employers.');
+    }
+  };
+
+  /**
    * Show employer details in modal
    */
   const handleShowDetails = (employer) => {
@@ -190,32 +304,58 @@ const EmployerFinder = ({ onBack }) => {
   };
 
   /**
-   * Send connection request to employer
+   * ✅ FIXED: Completely rewritten job inquiry function with proper error handling
    */
-  const handleRequestConnection = async (employer) => {
+  const handleSendJobInquiry = async (employer) => {
+    // Check if already sent inquiry
+    if (jobInquiries.has(employer.user_id)) {
+      alert(`You've already sent a job inquiry to ${employer.company_name}.`);
+      return;
+    }
+
+    // Check if employer is actively hiring
+    if (!employer.is_actively_hiring) {
+      alert(`${employer.company_name} is not currently hiring.`);
+      return;
+    }
+
     try {
       console.log('💼 Sending job inquiry to:', employer.company_name);
       
+      // ✅ FIXED: Improved request data structure
       const requestData = {
         requester_id: user.id,
         target_id: employer.user_id,
         request_type: 'employment',
-        message: `Hi! I'm interested in potential job opportunities at ${employer.company_name}. Your commitment to recovery-friendly employment and ${employer.recovery_friendly_features?.slice(0, 2).join(' and ')} align well with what I'm looking for in my career journey.`,
+        message: `Hi! I'm interested in potential job opportunities at ${employer.company_name}. Your commitment to recovery-friendly employment${employer.recovery_friendly_features?.length > 0 ? ` and ${employer.recovery_friendly_features.slice(0, 2).join(' and ')}` : ''} align well with what I'm looking for in my career journey.${employer.current_openings?.length > 0 ? ` I'm particularly interested in your openings for ${employer.current_openings.slice(0, 2).join(' and ')}.` : ''}`,
         status: 'pending'
       };
       
+      console.log('📤 Sending job inquiry data:', requestData);
+      
+      // ✅ FIXED: Proper error handling for database call
       const result = await db.matchRequests.create(requestData);
+      
+      console.log('📥 Database response:', result);
       
       if (result.error) {
         throw new Error(result.error.message || 'Failed to send job inquiry');
       }
       
+      if (!result.data) {
+        throw new Error('No data returned from job inquiry request');
+      }
+      
       console.log('✅ Job inquiry sent successfully:', result.data);
-      alert(`Job inquiry sent to ${employer.company_name}!`);
+      
+      // Update local state to track sent inquiry
+      setJobInquiries(prev => new Set([...prev, employer.user_id]));
+      
+      alert(`Job inquiry sent to ${employer.company_name}! They will be notified and can respond through their employer dashboard.`);
       
     } catch (err) {
       console.error('💥 Error sending job inquiry:', err);
-      alert('Failed to send job inquiry. Please try again.');
+      alert(`Failed to send job inquiry: ${err.message}. Please try again.`);
     }
   };
 
@@ -225,13 +365,14 @@ const EmployerFinder = ({ onBack }) => {
   const clearFilters = () => {
     setFilters({
       industry: '',
-      city: '',
+      location: '',
       state: '',
       businessType: '',
       recoveryFeatures: [],
       jobTypes: [],
       remoteWork: '',
-      isActivelyHiring: true
+      isActivelyHiring: true,
+      hasOpenings: false
     });
   };
 
@@ -240,6 +381,22 @@ const EmployerFinder = ({ onBack }) => {
    */
   const formatFeature = (feature) => {
     return feature.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
+  };
+
+  /**
+   * Format business type for display
+   */
+  const formatBusinessType = (type) => {
+    const option = businessTypeOptions.find(opt => opt.value === type);
+    return option ? option.label : formatFeature(type);
+  };
+
+  /**
+   * Format remote work options for display
+   */
+  const formatRemoteWork = (option) => {
+    const remoteOption = remoteWorkOptions.find(opt => opt.value === option);
+    return remoteOption ? remoteOption.label : formatFeature(option);
   };
 
   return (
@@ -253,7 +410,7 @@ const EmployerFinder = ({ onBack }) => {
           </p>
         </div>
 
-        {/* Search Filters */}
+        {/* ✅ IMPROVED: Better search filters layout */}
         <div className="card mb-5">
           <h3 className="card-title">Search Filters</h3>
           
@@ -273,13 +430,13 @@ const EmployerFinder = ({ onBack }) => {
             </div>
             
             <div className="form-group">
-              <label className="label">City</label>
+              <label className="label">Location (City, State)</label>
               <input
                 className="input"
                 type="text"
-                placeholder="Enter city name"
-                value={filters.city}
-                onChange={(e) => handleFilterChange('city', e.target.value)}
+                placeholder="Austin, TX or Texas"
+                value={filters.location}
+                onChange={(e) => handleFilterChange('location', e.target.value)}
               />
             </div>
 
@@ -298,6 +455,62 @@ const EmployerFinder = ({ onBack }) => {
             </div>
             
             <div className="form-group">
+              <button
+                className="btn btn-primary"
+                onClick={loadEmployers}
+                disabled={loading}
+              >
+                {loading ? 'Searching...' : 'Search'}
+              </button>
+            </div>
+          </div>
+
+          {/* Quick Action Buttons */}
+          <div className="grid-auto mb-4">
+            <button
+              className="btn btn-outline"
+              onClick={handleShowNearby}
+              disabled={loading}
+            >
+              🗺️ Find Nearby Employers
+            </button>
+
+            <button
+              className="btn btn-outline"
+              onClick={clearFilters}
+              disabled={loading}
+            >
+              Clear Filters
+            </button>
+
+            <div className="checkbox-item">
+              <input
+                type="checkbox"
+                id="actively-hiring"
+                checked={filters.isActivelyHiring}
+                onChange={(e) => handleFilterChange('isActivelyHiring', e.target.checked)}
+              />
+              <label htmlFor="actively-hiring">
+                Only show employers currently hiring
+              </label>
+            </div>
+
+            <div className="checkbox-item">
+              <input
+                type="checkbox"
+                id="has-openings"
+                checked={filters.hasOpenings}
+                onChange={(e) => handleFilterChange('hasOpenings', e.target.checked)}
+              />
+              <label htmlFor="has-openings">
+                Must have specific job openings listed
+              </label>
+            </div>
+          </div>
+
+          {/* Additional Filters */}
+          <div className="grid-2 mb-4">
+            <div className="form-group">
               <label className="label">Business Type</label>
               <select
                 className="input"
@@ -312,7 +525,7 @@ const EmployerFinder = ({ onBack }) => {
             </div>
 
             <div className="form-group">
-              <label className="label">Remote Work</label>
+              <label className="label">Remote Work Options</label>
               <select
                 className="input"
                 value={filters.remoteWork}
@@ -323,16 +536,6 @@ const EmployerFinder = ({ onBack }) => {
                   <option key={option.value} value={option.value}>{option.label}</option>
                 ))}
               </select>
-            </div>
-
-            <div className="form-group">
-              <button
-                className="btn btn-primary"
-                onClick={findEmployers}
-                disabled={loading}
-              >
-                {loading ? 'Searching...' : 'Search'}
-              </button>
             </div>
           </div>
 
@@ -376,31 +579,20 @@ const EmployerFinder = ({ onBack }) => {
             </div>
           </div>
 
-          {/* Currently Hiring Filter */}
-          <div className="form-group mb-4">
-            <div className="checkbox-item">
-              <input
-                type="checkbox"
-                id="actively-hiring"
-                checked={filters.isActivelyHiring}
-                onChange={(e) => handleFilterChange('isActivelyHiring', e.target.checked)}
-              />
-              <label htmlFor="actively-hiring">
-                Only show employers currently hiring
-              </label>
-            </div>
-          </div>
-
-          {/* Clear Filters */}
-          {(filters.industry || filters.city || filters.state || filters.businessType || 
+          {/* Active Filters Display */}
+          {(filters.industry || filters.location || filters.state || filters.businessType || 
             filters.recoveryFeatures.length > 0 || filters.jobTypes.length > 0 || filters.remoteWork) && (
-            <div className="text-center">
-              <button
-                className="btn btn-outline"
-                onClick={clearFilters}
-              >
-                Clear All Filters
-              </button>
+            <div className="alert alert-info">
+              <strong>Active Filters:</strong> 
+              {filters.industry && ` Industry: ${filters.industry} •`}
+              {filters.location && ` Location: ${filters.location} •`}
+              {filters.state && ` State: ${filters.state} •`}
+              {filters.businessType && ` Type: ${formatBusinessType(filters.businessType)} •`}
+              {filters.remoteWork && ` Remote: ${formatRemoteWork(filters.remoteWork)} •`}
+              {filters.recoveryFeatures.length > 0 && ` Recovery Features: ${filters.recoveryFeatures.length} selected •`}
+              {filters.jobTypes.length > 0 && ` Job Types: ${filters.jobTypes.length} selected •`}
+              {filters.isActivelyHiring && ` Actively hiring only •`}
+              {filters.hasOpenings && ` Has specific openings`}
             </div>
           )}
         </div>
@@ -415,7 +607,7 @@ const EmployerFinder = ({ onBack }) => {
                 className="btn btn-outline"
                 onClick={() => {
                   setError(null);
-                  findEmployers();
+                  loadEmployers();
                 }}
               >
                 Try Again
@@ -436,122 +628,154 @@ const EmployerFinder = ({ onBack }) => {
         {!loading && !error && employers.length === 0 && (
           <div className="card text-center">
             <h3>No employers found</h3>
-            <p>Try adjusting your filters or check back later for new employer profiles.</p>
+            <p>Try adjusting your filters or expanding your search area.</p>
+            <div className="mt-3">
+              <button
+                className="btn btn-primary"
+                onClick={handleShowNearby}
+              >
+                Find Nearby Employers
+              </button>
+              <button
+                className="btn btn-outline ml-2"
+                onClick={clearFilters}
+              >
+                Clear All Filters
+              </button>
+            </div>
           </div>
         )}
 
         {/* Employers Grid */}
         {!loading && !error && employers.length > 0 && (
-          <div className="grid-auto mb-5">
-            {employers.map((employer) => (
-              <div key={employer.id} className="card">
-                <div className="card-header">
-                  <div>
-                    <div className="card-title">{employer.company_name}</div>
-                    <div className="card-subtitle">
-                      {employer.industry} • {employer.city}, {employer.state}
-                    </div>
-                  </div>
-                  <div>
-                    {employer.is_actively_hiring && (
-                      <span className="badge badge-success mb-1">Hiring</span>
-                    )}
-                    <span className="badge badge-info">
-                      {formatFeature(employer.business_type)}
-                    </span>
-                  </div>
-                </div>
-
-                <div className="mb-4">
-                  <div className="grid-2 text-gray-600 mb-3">
-                    <div>
-                      <span className="text-gray-600">Size:</span>
-                      <span className="text-gray-800 ml-1">
-                        {employer.company_size || 'Not specified'}
-                      </span>
-                    </div>
-                    <div>
-                      <span className="text-gray-600">Remote:</span>
-                      <span className="text-gray-800 ml-1">
-                        {employer.remote_work_options ? formatFeature(employer.remote_work_options) : 'Not specified'}
-                      </span>
-                    </div>
-                  </div>
-
-                  {/* Current Openings */}
-                  {employer.current_openings?.length > 0 && (
-                    <div className="mb-3">
-                      <div className="label mb-2">Current Openings</div>
-                      <div className="mb-2">
-                        {employer.current_openings.slice(0, 3).map((opening, i) => (
-                          <span key={i} className="badge badge-success mr-1 mb-1">
-                            {opening}
-                          </span>
-                        ))}
-                        {employer.current_openings.length > 3 && (
-                          <span className="text-sm text-gray-600">
-                            +{employer.current_openings.length - 3} more
-                          </span>
-                        )}
-                      </div>
-                    </div>
-                  )}
-
-                  {/* Recovery Features */}
-                  {employer.recovery_friendly_features?.length > 0 && (
-                    <div className="mb-3">
-                      <div className="label mb-2">Recovery-Friendly Features</div>
-                      <div className="mb-2">
-                        {employer.recovery_friendly_features.slice(0, 3).map((feature, i) => (
-                          <span key={i} className="badge badge-info mr-1 mb-1">
-                            {formatFeature(feature)}
-                          </span>
-                        ))}
-                        {employer.recovery_friendly_features.length > 3 && (
-                          <span className="text-sm text-gray-600">
-                            +{employer.recovery_friendly_features.length - 3} more
-                          </span>
-                        )}
-                      </div>
-                    </div>
-                  )}
-
-                  {/* Company Description Preview */}
-                  {employer.description && (
-                    <div className="mb-3">
-                      <p className="card-text">
-                        {employer.description.length > 150 
-                          ? `${employer.description.substring(0, 150)}...` 
-                          : employer.description
-                        }
-                      </p>
-                    </div>
-                  )}
-                </div>
-
-                <div className="grid-2">
-                  <button
-                    className="btn btn-outline"
-                    onClick={() => handleShowDetails(employer)}
-                  >
-                    View Details
-                  </button>
-                  
-                  <button
-                    className="btn btn-secondary"
-                    onClick={() => handleRequestConnection(employer)}
-                    disabled={!employer.is_actively_hiring}
-                    style={{ 
-                      background: employer.is_actively_hiring ? '' : 'var(--gray-400)',
-                      opacity: employer.is_actively_hiring ? 1 : 0.6
-                    }}
-                  >
-                    {employer.is_actively_hiring ? 'Send Job Inquiry' : 'Not Hiring'}
-                  </button>
+          <>
+            <div className="card mb-4">
+              <div className="flex" style={{ alignItems: 'center', justifyContent: 'space-between' }}>
+                <h3 className="card-title">
+                  {employers.length} Employer{employers.length !== 1 ? 's' : ''} Found
+                </h3>
+                <div className="text-gray-600">
+                  {employers.filter(e => e.is_actively_hiring).length} actively hiring
                 </div>
               </div>
-            ))}
-          </div>
+            </div>
+
+            <div className="grid-auto mb-5">
+              {employers.map((employer) => {
+                const alreadyInquired = jobInquiries.has(employer.user_id);
+                const isHiring = employer.is_actively_hiring;
+                
+                return (
+                  <div key={employer.id} className="card">
+                    <div className="card-header">
+                      <div>
+                        <div className="card-title">{employer.company_name}</div>
+                        <div className="card-subtitle">
+                          {employer.industry} • {employer.city}, {employer.state}
+                        </div>
+                      </div>
+                      <div>
+                        {isHiring ? (
+                          <span className="badge badge-success mb-1">Hiring</span>
+                        ) : (
+                          <span className="badge badge-warning mb-1">Not Hiring</span>
+                        )}
+                        <span className="badge badge-info">
+                          {formatBusinessType(employer.business_type)}
+                        </span>
+                      </div>
+                    </div>
+
+                    <div className="mb-4">
+                      <div className="grid-2 text-gray-600 mb-3">
+                        <div>
+                          <span className="text-gray-600">Size:</span>
+                          <span className="text-gray-800 ml-1">
+                            {employer.company_size || 'Not specified'}
+                          </span>
+                        </div>
+                        <div>
+                          <span className="text-gray-600">Remote:</span>
+                          <span className="text-gray-800 ml-1">
+                            {employer.remote_work_options ? formatRemoteWork(employer.remote_work_options) : 'Not specified'}
+                          </span>
+                        </div>
+                      </div>
+
+                      {/* Current Openings */}
+                      {employer.current_openings?.length > 0 && (
+                        <div className="mb-3">
+                          <div className="label mb-2">Current Job Openings</div>
+                          <div className="mb-2">
+                            {employer.current_openings.slice(0, 3).map((opening, i) => (
+                              <span key={i} className="badge badge-success mr-1 mb-1">
+                                {opening}
+                              </span>
+                            ))}
+                            {employer.current_openings.length > 3 && (
+                              <span className="text-sm text-gray-600">
+                                +{employer.current_openings.length - 3} more
+                              </span>
+                            )}
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Recovery Features */}
+                      {employer.recovery_friendly_features?.length > 0 && (
+                        <div className="mb-3">
+                          <div className="label mb-2">Recovery-Friendly Features</div>
+                          <div className="mb-2">
+                            {employer.recovery_friendly_features.slice(0, 3).map((feature, i) => (
+                              <span key={i} className="badge badge-info mr-1 mb-1">
+                                {formatFeature(feature)}
+                              </span>
+                            ))}
+                            {employer.recovery_friendly_features.length > 3 && (
+                              <span className="text-sm text-gray-600">
+                                +{employer.recovery_friendly_features.length - 3} more
+                              </span>
+                            )}
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Company Description Preview */}
+                      {employer.description && (
+                        <div className="mb-3">
+                          <p className="card-text">
+                            {employer.description.length > 150 
+                              ? `${employer.description.substring(0, 150)}...` 
+                              : employer.description
+                            }
+                          </p>
+                        </div>
+                      )}
+                    </div>
+
+                    <div className="grid-2">
+                      <button
+                        className="btn btn-outline"
+                        onClick={() => handleShowDetails(employer)}
+                      >
+                        View Details
+                      </button>
+                      
+                      <button
+                        className="btn btn-secondary"
+                        onClick={() => handleSendJobInquiry(employer)}
+                        disabled={!isHiring || alreadyInquired}
+                      >
+                        {alreadyInquired ? 'Inquiry Sent' : 
+                         !isHiring ? 'Not Hiring' : 
+                         'Send Job Inquiry'}
+                      </button>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </>
         )}
 
         {/* Back Button */}
@@ -588,13 +812,13 @@ const EmployerFinder = ({ onBack }) => {
               <h4 className="card-title">Company Information</h4>
               <div className="grid-2 text-sm mb-3">
                 <div><strong>Industry:</strong> {selectedEmployer.industry}</div>
-                <div><strong>Type:</strong> {formatFeature(selectedEmployer.business_type)}</div>
+                <div><strong>Type:</strong> {formatBusinessType(selectedEmployer.business_type)}</div>
                 <div><strong>Size:</strong> {selectedEmployer.company_size || 'Not specified'}</div>
                 <div><strong>Founded:</strong> {selectedEmployer.founded_year || 'Not specified'}</div>
               </div>
               <div className="grid-2 text-sm mb-3">
                 <div><strong>Location:</strong> {selectedEmployer.city}, {selectedEmployer.state}</div>
-                <div><strong>Remote Work:</strong> {selectedEmployer.remote_work_options ? formatFeature(selectedEmployer.remote_work_options) : 'Not specified'}</div>
+                <div><strong>Remote Work:</strong> {selectedEmployer.remote_work_options ? formatRemoteWork(selectedEmployer.remote_work_options) : 'Not specified'}</div>
               </div>
             </div>
 
@@ -658,8 +882,8 @@ const EmployerFinder = ({ onBack }) => {
             <div className="mb-4">
               <h4 className="card-title">Contact Information</h4>
               <div className="text-sm">
-                {selectedEmployer.phone && <div><strong>Phone:</strong> {selectedEmployer.phone}</div>}
                 {selectedEmployer.contact_email && <div><strong>Email:</strong> {selectedEmployer.contact_email}</div>}
+                {selectedEmployer.phone && <div><strong>Phone:</strong> {selectedEmployer.phone}</div>}
                 {selectedEmployer.website && (
                   <div>
                     <strong>Website:</strong>{' '}
@@ -683,12 +907,14 @@ const EmployerFinder = ({ onBack }) => {
               <button
                 className="btn btn-secondary"
                 onClick={() => {
-                  handleRequestConnection(selectedEmployer);
+                  handleSendJobInquiry(selectedEmployer);
                   setShowDetails(false);
                 }}
-                disabled={!selectedEmployer.is_actively_hiring}
+                disabled={!selectedEmployer.is_actively_hiring || jobInquiries.has(selectedEmployer.user_id)}
               >
-                {selectedEmployer.is_actively_hiring ? 'Send Job Inquiry' : 'Not Currently Hiring'}
+                {jobInquiries.has(selectedEmployer.user_id) ? 'Inquiry Sent' :
+                 !selectedEmployer.is_actively_hiring ? 'Not Currently Hiring' : 
+                 'Send Job Inquiry'}
               </button>
             </div>
           </div>

@@ -1,4 +1,4 @@
-// src/components/dashboard/Dashboard.js - Updated with Employer Support
+// src/components/dashboard/Dashboard.js - Fixed with proper navigation and reduced redundancy
 import React, { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../../context/AuthContext'
@@ -14,7 +14,7 @@ const Dashboard = () => {
     loading: true
   })
 
-  // ✅ PHASE 4: Calculate profile completeness and next steps for simplified flow
+  // ✅ FIXED: Calculate profile completeness and next steps for simplified flow
   useEffect(() => {
     const calculateProfileStats = async () => {
       if (!user || !profile?.roles?.length) {
@@ -75,7 +75,6 @@ const Dashboard = () => {
                 icon: '🤝'
               })
 
-              // ✅ NEW: Add employer finder recommendation
               nextSteps.push({
                 title: 'Find Recovery-Friendly Employment',
                 description: 'Discover employers committed to supporting individuals in recovery',
@@ -172,7 +171,6 @@ const Dashboard = () => {
           }
         }
 
-        // ✅ NEW: Add employer role support
         else if (hasRole('employer')) {
           // Check for employer profiles
           const { data: employerProfiles } = await db.employerProfiles.getByUserId(user.id)
@@ -262,17 +260,17 @@ const Dashboard = () => {
     calculateProfileStats()
   }, [user, profile, hasRole])
 
-  // ✅ PHASE 4: Updated dashboard cards for simplified flow
+  // ✅ FIXED: Streamlined dashboard cards with reduced redundancy
   const getDashboardCards = () => {
     const cards = []
     
-    // Role-specific primary actions
+    // Role-specific primary actions (reduced redundancy)
     if (hasRole('applicant')) {
       cards.push(
         { 
           id: 'matching-profile', 
-          label: 'My Matching Profile', 
-          description: 'View and update your comprehensive roommate matching profile', 
+          label: 'My Profile', 
+          description: 'View and update your roommate matching profile', 
           color: 'var(--primary-purple)',
           path: '/app/profile/matching',
           icon: '👤'
@@ -288,23 +286,22 @@ const Dashboard = () => {
         { 
           id: 'find-peer-support', 
           label: 'Find Peer Support', 
-          description: 'Connect with experienced peer support specialists for guidance', 
+          description: 'Connect with experienced peer support specialists', 
           color: 'var(--gold)',
           path: '/app/find-peer-support',
           icon: '🤝'
         },
-        // ✅ NEW: Added employer finder card for applicants
         { 
           id: 'find-employers', 
           label: 'Find Employment', 
-          description: 'Discover recovery-friendly employers and job opportunities', 
+          description: 'Discover recovery-friendly job opportunities', 
           color: 'var(--coral)',
           path: '/app/find-employers',
           icon: '💼'
         },
         { 
           id: 'browse-properties', 
-          label: 'Browse Properties', 
+          label: 'Browse Housing', 
           description: 'Search for recovery-friendly housing options', 
           color: 'var(--secondary-purple)',
           path: '/app/property-search',
@@ -336,7 +333,7 @@ const Dashboard = () => {
           label: 'Client Requests', 
           description: 'Review and manage peer support requests', 
           color: 'var(--gold)',
-          path: '/app/clients',
+          path: '/app/match-requests',
           icon: '📋'
         }
       )
@@ -357,13 +354,12 @@ const Dashboard = () => {
           label: 'Tenant Applications', 
           description: 'Review applications and tenant requests', 
           color: 'var(--coral)',
-          path: '/app/tenants',
+          path: '/app/match-requests',
           icon: '📄'
         }
       )
     }
 
-    // ✅ NEW: Add employer-specific cards
     if (hasRole('employer')) {
       cards.push(
         { 
@@ -379,41 +375,25 @@ const Dashboard = () => {
           label: 'Job Applications', 
           description: 'Review applications and candidate requests', 
           color: 'var(--gold)',
-          path: '/app/candidates',
+          path: '/app/match-requests',
           icon: '📋'
-        },
-        { 
-          id: 'post-jobs', 
-          label: 'Post New Jobs', 
-          description: 'Create and manage job postings for recovery-focused candidates', 
-          color: 'var(--secondary-teal)',
-          path: '/app/employers',
-          icon: '💼'
         }
       )
     }
     
-    // Universal cards for all users
+    // ✅ FIXED: Reduced universal cards - removed redundancy
     cards.push(
       { 
         id: 'match-requests', 
-        label: 'Match Requests', 
-        description: 'View and manage your connection requests', 
+        label: 'Connections', 
+        description: 'View and manage all your connection requests', 
         color: 'var(--primary-purple)',
         path: '/app/match-requests',
         icon: '🤝'
       },
       { 
-        id: 'messages', 
-        label: 'Messages', 
-        description: 'Communicate with your connections', 
-        color: 'var(--secondary-teal)',
-        path: '/app/messages',
-        icon: '💬'
-      },
-      { 
         id: 'account-settings', 
-        label: 'Account Settings', 
+        label: 'Settings', 
         description: 'Manage your account preferences and privacy', 
         color: 'var(--gray-600)',
         path: '/app/settings',
@@ -438,14 +418,14 @@ const Dashboard = () => {
     }
   }
 
-  // ✅ PHASE 4: Render role-specific welcome message
+  // ✅ FIXED: Render role-specific welcome message
   const getRoleSpecificWelcome = () => {
     const roleLabels = profile?.roles?.map(role => {
       switch(role) {
         case 'applicant': return 'Housing Seeker'
         case 'peer': return 'Peer Specialist'
         case 'landlord': return 'Property Owner'
-        case 'employer': return 'Recovery-Friendly Employer' // ✅ NEW
+        case 'employer': return 'Recovery-Friendly Employer'
         default: return role.charAt(0).toUpperCase() + role.slice(1)
       }
     }).join(' & ')
@@ -480,9 +460,46 @@ const Dashboard = () => {
     )
   }
 
+  // ✅ NEW: Quick Navigation Tabs for Applicants (fixes missing peer support tab)
+  const getQuickNavigationTabs = () => {
+    if (!hasRole('applicant')) return null;
+
+    const tabs = [
+      { id: 'roommates', label: 'Find Roommates', icon: '🔍', path: '/app/find-matches' },
+      { id: 'peer-support', label: 'Peer Support', icon: '🤝', path: '/app/find-peer-support' },
+      { id: 'employment', label: 'Employment', icon: '💼', path: '/app/find-employers' },
+      { id: 'housing', label: 'Browse Housing', icon: '🏠', path: '/app/property-search' },
+      { id: 'connections', label: 'Connections', icon: '📩', path: '/app/match-requests' }
+    ];
+
+    return (
+      <div className="card mb-5">
+        <h3 className="card-title">Quick Actions</h3>
+        <div className="navigation">
+          <ul className="nav-list">
+            {tabs.map(tab => (
+              <li key={tab.id} className="nav-item">
+                <button
+                  className="nav-button"
+                  onClick={() => navigate(tab.path)}
+                >
+                  <span className="nav-icon">{tab.icon}</span>
+                  <span>{tab.label}</span>
+                </button>
+              </li>
+            ))}
+          </ul>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div>
       {getRoleSpecificWelcome()}
+      
+      {/* ✅ NEW: Quick Navigation Tabs for Applicants */}
+      {getQuickNavigationTabs()}
       
       {/* Next Steps Section */}
       {!profileStats.loading && profileStats.nextSteps.length > 0 && (
@@ -514,24 +531,27 @@ const Dashboard = () => {
         </div>
       )}
       
-      {/* Main Dashboard Cards */}
-      <div className="dashboard-grid">
-        {getDashboardCards().map(card => (
-          <div
-            key={card.id}
-            className="dashboard-card"
-            style={{ borderColor: card.color }}
-            onClick={() => handleCardClick(card)}
-          >
-            <div className="text-center mb-2" style={{ fontSize: '2rem' }}>
-              {card.icon}
+      {/* ✅ FIXED: Streamlined Main Dashboard Cards */}
+      <div className="card mb-5">
+        <h3 className="card-title">Your Dashboard</h3>
+        <div className="dashboard-grid">
+          {getDashboardCards().map(card => (
+            <div
+              key={card.id}
+              className="dashboard-card"
+              style={{ borderColor: card.color }}
+              onClick={() => handleCardClick(card)}
+            >
+              <div className="text-center mb-2" style={{ fontSize: '2rem' }}>
+                {card.icon}
+              </div>
+              <h3 className="card-title" style={{ color: card.color }}>
+                {card.label}
+              </h3>
+              <p className="card-text">{card.description}</p>
             </div>
-            <h3 className="card-title" style={{ color: card.color }}>
-              {card.label}
-            </h3>
-            <p className="card-text">{card.description}</p>
-          </div>
-        ))}
+          ))}
+        </div>
       </div>
       
       {/* Quick Stats for Multiple Roles */}
@@ -554,11 +574,38 @@ const Dashboard = () => {
           </div>
         </div>
       )}
+
+      {/* ✅ NEW: Platform Stats and Activity Summary */}
+      <div className="card mt-5">
+        <h3 className="card-title">Platform Activity</h3>
+        <div className="grid-auto text-center">
+          <div className="card">
+            <div style={{ fontSize: '2rem', color: 'var(--primary-purple)' }}>👥</div>
+            <h4>Community</h4>
+            <p className="text-sm text-gray-600">Connect with others in recovery</p>
+          </div>
+          <div className="card">
+            <div style={{ fontSize: '2rem', color: 'var(--secondary-teal)' }}>🏠</div>
+            <h4>Safe Housing</h4>
+            <p className="text-sm text-gray-600">Find recovery-friendly living spaces</p>
+          </div>
+          <div className="card">
+            <div style={{ fontSize: '2rem', color: 'var(--gold)' }}>🤝</div>
+            <h4>Peer Support</h4>
+            <p className="text-sm text-gray-600">Get guidance from experienced specialists</p>
+          </div>
+          <div className="card">
+            <div style={{ fontSize: '2rem', color: 'var(--coral)' }}>💼</div>
+            <h4>Employment</h4>
+            <p className="text-sm text-gray-600">Discover recovery-friendly careers</p>
+          </div>
+        </div>
+      </div>
     </div>
   )
 }
 
-// ✅ PHASE 4: Add CSS for high priority cards
+// ✅ FIXED: Enhanced CSS for better navigation and reduced clutter
 const additionalStyles = `
 .dashboard-card.high-priority {
   background: linear-gradient(135deg, #fff9f9 0%, #fff 100%);
@@ -569,13 +616,59 @@ const additionalStyles = `
   transform: translateY(-3px);
   box-shadow: 0 8px 25px rgba(255, 111, 97, 0.25);
 }
+
+.quick-nav-tabs {
+  display: flex;
+  gap: 1rem;
+  margin-bottom: 2rem;
+  border-bottom: 1px solid var(--border-beige);
+}
+
+.quick-nav-tab {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.75rem 1rem;
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: var(--text-gray);
+  border-radius: 8px 8px 0 0;
+  transition: all 0.2s ease;
+}
+
+.quick-nav-tab:hover {
+  background: var(--bg-light-cream);
+  color: var(--primary-purple);
+}
+
+.quick-nav-tab.active {
+  background: var(--primary-purple);
+  color: white;
+}
+
+@media (max-width: 768px) {
+  .quick-nav-tabs {
+    flex-wrap: wrap;
+    gap: 0.5rem;
+  }
+  
+  .quick-nav-tab {
+    font-size: 0.9rem;
+    padding: 0.5rem 0.75rem;
+  }
+}
 `
 
 // Inject additional styles
 if (typeof document !== 'undefined') {
-  const styleElement = document.createElement('style')
-  styleElement.textContent = additionalStyles
-  document.head.appendChild(styleElement)
+  const existingStyle = document.getElementById('dashboard-styles');
+  if (!existingStyle) {
+    const styleElement = document.createElement('style')
+    styleElement.id = 'dashboard-styles';
+    styleElement.textContent = additionalStyles
+    document.head.appendChild(styleElement)
+  }
 }
 
 export default Dashboard

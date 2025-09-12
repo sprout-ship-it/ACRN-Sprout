@@ -124,10 +124,15 @@ const MatchFinder = ({ onRequestMatch, onBack }) => {
   const [selectedMatch, setSelectedMatch] = useState(null);
   const [showDetails, setShowDetails] = useState(false);
   const [userMatchingProfile, setUserMatchingProfile] = useState(null);
+  const [excludedUsers, setExcludedUsers] = useState(new Set()); // ✅ NEW: Track excluded users
+  const [sentRequests, setSentRequests] = useState(new Set()); // ✅ NEW: Track sent requests
   const [filters, setFilters] = useState({
     recoveryStage: '',
     ageRange: '',
-    minScore: 40
+    minScore: 40,
+    location: '',
+    hideAlreadyMatched: true, // ✅ NEW: Option to hide already matched users
+    hideRequestsSent: true    // ✅ NEW: Option to hide users already contacted
   });
   
   // Load user's own matching profile on component mount
@@ -135,9 +140,11 @@ const MatchFinder = ({ onRequestMatch, onBack }) => {
     loadUserProfile();
   }, []);
   
-  // Load matches when user profile is available
+  // Load exclusions and matches when user profile is available
   useEffect(() => {
     if (userMatchingProfile) {
+      loadExcludedUsers();
+      loadSentRequests();
       findMatches();
     }
   }, [userMatchingProfile, filters]);
@@ -168,9 +175,84 @@ const MatchFinder = ({ onRequestMatch, onBack }) => {
       setError('Failed to load your profile');
     }
   };
+
+  /**
+   * ✅ NEW: Load users that should be excluded from matching
+   */
+  const loadExcludedUsers = async () => {
+    if (!user?.id) return;
+
+    try {
+      console.log('🚫 Loading excluded users...');
+      
+      // Get all match requests and active match groups for current user
+      const [requestsResult, groupsResult] = await Promise.all([
+        db.matchRequests.getByUserId(user.id),
+        db.matchGroups ? db.matchGroups.getByUserId(user.id) : { data: [] }
+      ]);
+
+      const excludedUserIds = new Set();
+
+      // Exclude users from match requests
+      if (requestsResult.success !== false && requestsResult.data) {
+        requestsResult.data.forEach(request => {
+          // Exclude users with accepted roommate matches
+          if (request.request_type === 'roommate' && request.status === 'accepted') {
+            const otherUserId = request.requester_id === user.id ? request.target_id : request.requester_id;
+            excludedUserIds.add(otherUserId);
+          }
+        });
+      }
+
+      // Exclude users from active match groups
+      if (groupsResult.data) {
+        groupsResult.data.forEach(group => {
+          if (group.status === 'active' || group.status === 'forming') {
+            // Add both applicants from the group
+            if (group.applicant_1_id && group.applicant_1_id !== user.id) {
+              excludedUserIds.add(group.applicant_1_id);
+            }
+            if (group.applicant_2_id && group.applicant_2_id !== user.id) {
+              excludedUserIds.add(group.applicant_2_id);
+            }
+          }
+        });
+      }
+
+      console.log(`🚫 Found ${excludedUserIds.size} users to exclude from matching`);
+      setExcludedUsers(excludedUserIds);
+
+    } catch (err) {
+      console.error('💥 Error loading excluded users:', err);
+      // Don't fail the whole component, just log the error
+    }
+  };
+
+  /**
+   * ✅ NEW: Load sent match requests to show status
+   */
+  const loadSentRequests = async () => {
+    if (!user?.id) return;
+
+    try {
+      const result = await db.matchRequests.getByUserId(user.id);
+      
+      if (result.success !== false && result.data) {
+        const sentRequestIds = new Set(
+          result.data
+            .filter(req => req.requester_id === user.id && req.request_type === 'roommate')
+            .map(req => req.target_id)
+        );
+        setSentRequests(sentRequestIds);
+        console.log(`📤 Found ${sentRequestIds.size} sent match requests`);
+      }
+    } catch (err) {
+      console.error('💥 Error loading sent requests:', err);
+    }
+  };
   
   /**
-   * Find compatible matches from Supabase
+   * ✅ IMPROVED: Find compatible matches with exclusion logic
    */
   const findMatches = async () => {
     if (!userMatchingProfile) {
@@ -182,7 +264,7 @@ const MatchFinder = ({ onRequestMatch, onBack }) => {
     setError(null);
     
     try {
-      console.log('🔍 Finding matches...');
+      console.log('🔍 Finding matches with exclusions...');
       
       // Get active profiles from Supabase (excluding current user)
       const result = await getActiveProfiles();
@@ -200,13 +282,30 @@ const MatchFinder = ({ onRequestMatch, onBack }) => {
       }
       
       // Transform all candidates to algorithm format
-      const transformedCandidates = rawCandidates
+      let transformedCandidates = rawCandidates
         .map(transformProfileForAlgorithm)
         .filter(candidate => candidate && candidate.profile_completed);
       
       console.log(`🔄 Transformed ${transformedCandidates.length} completed profiles`);
+
+      // ✅ NEW: Apply exclusion filters
+      if (filters.hideAlreadyMatched) {
+        const beforeExclusion = transformedCandidates.length;
+        transformedCandidates = transformedCandidates.filter(candidate => 
+          !excludedUsers.has(candidate.user_id)
+        );
+        console.log(`🚫 Excluded already matched: ${beforeExclusion} -> ${transformedCandidates.length}`);
+      }
+
+      if (filters.hideRequestsSent) {
+        const beforeExclusion = transformedCandidates.length;
+        transformedCandidates = transformedCandidates.filter(candidate => 
+          !sentRequests.has(candidate.user_id)
+        );
+        console.log(`📤 Excluded sent requests: ${beforeExclusion} -> ${transformedCandidates.length}`);
+      }
       
-      // Apply filters
+      // Apply additional filters
       let filteredCandidates = transformedCandidates;
       
       if (filters.recoveryStage) {
@@ -221,6 +320,14 @@ const MatchFinder = ({ onRequestMatch, onBack }) => {
           c.age && c.age >= minAge && (maxAge ? c.age <= maxAge : true)
         );
       }
+
+      // ✅ NEW: Location filter
+      if (filters.location.trim()) {
+        const searchLocation = filters.location.trim().toLowerCase();
+        filteredCandidates = filteredCandidates.filter(c => 
+          c.location && c.location.toLowerCase().includes(searchLocation)
+        );
+      }
       
       console.log(`🔍 ${filteredCandidates.length} profiles after filtering`);
       
@@ -230,7 +337,9 @@ const MatchFinder = ({ onRequestMatch, onBack }) => {
         
         return {
           ...candidate,
-          ...displayInfo
+          ...displayInfo,
+          isAlreadyMatched: excludedUsers.has(candidate.user_id),
+          isRequestSent: sentRequests.has(candidate.user_id)
         };
       });
       
@@ -260,52 +369,79 @@ const MatchFinder = ({ onRequestMatch, onBack }) => {
   };
   
   /**
-   * Handle match request
+   * ✅ IMPROVED: Handle match request with exclusion updates
    */
-/**
- * Handle match request - actually send the request to database
- */
-const handleRequestMatch = async (match) => {
-  try {
-    console.log('🤝 Sending match request to:', match.first_name);
-    
-    // You'll need to import your database functions at the top
-    // import { db } from '../../utils/supabase';
-    
-    const requestData = {
-      requester_id: user.id,
-      target_id: match.user_id,
-      match_score: match.matchScore,
-      message: `Hi ${match.first_name}! I think we could be great roommates based on our ${match.matchScore}% compatibility. Would you like to connect?`,
-      status: 'pending'
-    };
-    
-    // Call your database function to create the match request
-    const { data, error } = await db.matchRequests.create(requestData);
-    
-    if (error) {
-      throw new Error(error.message || 'Failed to send match request');
+  const handleRequestMatch = async (match) => {
+    try {
+      console.log('🤝 Sending match request to:', match.first_name);
+      
+      const requestData = {
+        requester_id: user.id,
+        target_id: match.user_id,
+        request_type: 'roommate', // ✅ FIXED: Use 'roommate' instead of generic type
+        match_score: match.matchScore,
+        message: `Hi ${match.first_name}! I think we could be great roommates based on our ${match.matchScore}% compatibility. Would you like to connect?`,
+        status: 'pending'
+      };
+      
+      // Call database function to create the match request
+      const result = await db.matchRequests.create(requestData);
+      
+      if (result.error) {
+        throw new Error(result.error.message || 'Failed to send match request');
+      }
+      
+      console.log('✅ Match request sent successfully:', result.data);
+      
+      // ✅ NEW: Update local state to reflect sent request
+      setSentRequests(prev => new Set([...prev, match.user_id]));
+      
+      // Optionally call the parent's onRequestMatch if it exists
+      if (onRequestMatch) {
+        await onRequestMatch(match);
+      }
+      
+      alert(`Match request sent to ${match.first_name}!`);
+      
+      // ✅ NEW: Refresh matches to update display
+      if (filters.hideRequestsSent) {
+        findMatches();
+      }
+      
+    } catch (err) {
+      console.error('💥 Error sending match request:', err);
+      alert('Failed to send match request. Please try again.');
     }
-    
-    console.log('✅ Match request sent successfully:', data);
-    alert(`Match request sent to ${match.first_name}!`);
-    
-    // Optionally call the parent's onRequestMatch if it exists
-    if (onRequestMatch) {
-      await onRequestMatch(match);
-    }
-    
-  } catch (err) {
-    console.error('💥 Error sending match request:', err);
-    alert('Failed to send match request. Please try again.');
-  }
-};
+  };
   
   /**
-   * Update filters and refresh matches
+   * ✅ IMPROVED: Update filters and refresh matches
    */
   const handleFilterChange = (newFilters) => {
     setFilters(prev => ({ ...prev, ...newFilters }));
+  };
+
+  /**
+   * ✅ NEW: Refresh matches and exclusions
+   */
+  const handleRefreshMatches = async () => {
+    await loadExcludedUsers();
+    await loadSentRequests();
+    await findMatches();
+  };
+
+  /**
+   * ✅ NEW: Clear location filter and use user's preferred location
+   */
+  const handleUseMyLocation = () => {
+    if (userMatchingProfile?.location) {
+      setFilters(prev => ({ 
+        ...prev, 
+        location: userMatchingProfile.location 
+      }));
+    } else {
+      alert('No location found in your profile. Please update your matching profile with your preferred location.');
+    }
   };
   
   // Show error if no user profile
@@ -317,7 +453,7 @@ const handleRequestMatch = async (match) => {
           <p>Please complete your matching profile before finding roommates.</p>
           <button
             className="btn btn-primary"
-            onClick={() => window.location.href = '/profile/matching'}
+            onClick={() => window.location.href = '/app/profile/matching'}
           >
             Complete Matching Profile
           </button>
@@ -336,9 +472,11 @@ const handleRequestMatch = async (match) => {
           </p>
         </div>
         
-        {/* Search Controls */}
+        {/* ✅ IMPROVED: Enhanced search controls with exclusion options */}
         <div className="card mb-5">
-          <div className="grid-auto">
+          <h3 className="card-title">Search Filters</h3>
+          
+          <div className="grid-auto mb-4">
             <div className="form-group">
               <label className="label">Recovery Stage</label>
               <select
@@ -368,6 +506,17 @@ const handleRequestMatch = async (match) => {
                 <option value="46-65">46+</option>
               </select>
             </div>
+
+            <div className="form-group">
+              <label className="label">Location</label>
+              <input
+                className="input"
+                type="text"
+                placeholder="City, State"
+                value={filters.location}
+                onChange={(e) => handleFilterChange({ location: e.target.value })}
+              />
+            </div>
             
             <div className="form-group">
               <label className="label">Min Compatibility</label>
@@ -383,17 +532,74 @@ const handleRequestMatch = async (match) => {
                 <option value="70">70% or higher</option>
               </select>
             </div>
-            
-            <div className="form-group">
-              <button
-                className="btn btn-primary"
-                onClick={findMatches}
-                disabled={loading || !userMatchingProfile}
-              >
-                {loading ? 'Searching...' : 'Refresh Matches'}
-              </button>
+          </div>
+
+          {/* ✅ NEW: Exclusion and action controls */}
+          <div className="grid-auto mb-4">
+            <button
+              className="btn btn-primary"
+              onClick={findMatches}
+              disabled={loading || !userMatchingProfile}
+            >
+              {loading ? 'Searching...' : 'Search Matches'}
+            </button>
+
+            <button
+              className="btn btn-outline"
+              onClick={handleUseMyLocation}
+              disabled={loading || !userMatchingProfile?.location}
+            >
+              Use My Location
+            </button>
+
+            <button
+              className="btn btn-outline"
+              onClick={handleRefreshMatches}
+              disabled={loading}
+            >
+              Refresh Results
+            </button>
+          </div>
+
+          {/* ✅ NEW: Exclusion options */}
+          <div className="grid-2 mb-4">
+            <div className="checkbox-item">
+              <input
+                type="checkbox"
+                id="hide-matched"
+                checked={filters.hideAlreadyMatched}
+                onChange={(e) => handleFilterChange({ hideAlreadyMatched: e.target.checked })}
+              />
+              <label htmlFor="hide-matched">
+                Hide already matched users
+              </label>
+            </div>
+
+            <div className="checkbox-item">
+              <input
+                type="checkbox"
+                id="hide-requests"
+                checked={filters.hideRequestsSent}
+                onChange={(e) => handleFilterChange({ hideRequestsSent: e.target.checked })}
+              />
+              <label htmlFor="hide-requests">
+                Hide users I've already contacted
+              </label>
             </div>
           </div>
+
+          {/* Active filters display */}
+          {(filters.recoveryStage || filters.ageRange || filters.location || filters.minScore > 40) && (
+            <div className="alert alert-info">
+              <strong>Active Filters:</strong> 
+              {filters.recoveryStage && ` Recovery: ${filters.recoveryStage} •`}
+              {filters.ageRange && ` Age: ${filters.ageRange} •`}
+              {filters.location && ` Location: ${filters.location} •`}
+              {filters.minScore > 40 && ` Min Compatibility: ${filters.minScore}% •`}
+              {!filters.hideAlreadyMatched && ` Including matched users •`}
+              {!filters.hideRequestsSent && ` Including contacted users`}
+            </div>
+          )}
         </div>
         
         {/* Error State */}
@@ -428,91 +634,132 @@ const handleRequestMatch = async (match) => {
           <div className="card text-center">
             <h3>No matches found</h3>
             <p>Try adjusting your filters or check back later for new applicants.</p>
-            <p className="text-sm text-gray-600">
-              Current filters: {filters.recoveryStage || 'Any recovery stage'}, {filters.ageRange || 'Any age'}, {filters.minScore}%+ compatibility
-            </p>
+            <div className="mt-3">
+              <button
+                className="btn btn-primary"
+                onClick={() => handleFilterChange({ 
+                  minScore: 30, 
+                  recoveryStage: '', 
+                  ageRange: '', 
+                  location: '',
+                  hideAlreadyMatched: false,
+                  hideRequestsSent: false 
+                })}
+              >
+                Expand Search Criteria
+              </button>
+            </div>
           </div>
         )}
         
-        {/* Matches Grid */}
+        {/* ✅ IMPROVED: Matches Grid with status indicators */}
         {!loading && !error && matches.length > 0 && (
-          <div className="grid-auto mb-5">
-            {matches.map((match) => (
-              <div key={match.user_id} className="card">
-                <div className="card-header">
-                  <div>
-                    <div className="card-title">{match.first_name}</div>
-                    <div className="card-subtitle">{match.matchScore}% Match</div>
-                  </div>
-                </div>
-                
-                <div>
-                  <div className="mb-4">
-                    <div className="grid-2 text-gray-600">
-                      <div><span className="text-gray-600">Age:</span> <span className="text-gray-800">{match.age || 'Not specified'}</span></div>
-                      <div><span className="text-gray-600">Location:</span> <span className="text-gray-800">{match.location}</span></div>
-                      <div><span className="text-gray-600">Recovery Stage:</span> <span className="text-gray-800">{match.recovery_stage?.charAt(0).toUpperCase() + match.recovery_stage?.slice(1) || 'Not specified'}</span></div>
-                      <div><span className="text-gray-600">Budget:</span> <span className="text-gray-800">${match.price_range?.min || 0} - ${match.price_range?.max || match.budget_max}</span></div>
-                    </div>
-                  </div>
-                  
-                  {/* Green Flags */}
-                  {match.greenFlags?.length > 0 && (
-                    <div className="mb-4">
-                      <div className="label mb-2">✓ Compatibility Highlights</div>
-                      <div className="mb-2">
-                        {match.greenFlags.slice(0, 3).map((flag, i) => (
-                          <span key={i} className="badge badge-success mr-1 mb-1">
-                            {flag}
-                          </span>
-                        ))}
-                        {match.greenFlags.length > 3 && (
-                          <span className="text-sm text-gray-600">
-                            +{match.greenFlags.length - 3} more
-                          </span>
-                        )}
-                      </div>
-                    </div>
-                  )}
-                  
-                  {/* Red Flags */}
-                  {match.redFlags?.length > 0 && (
-                    <div className="mb-4">
-                      <div className="label mb-2">⚠ Potential Concerns</div>
-                      <div className="mb-2">
-                        {match.redFlags.slice(0, 2).map((flag, i) => (
-                          <span key={i} className="badge badge-warning mr-1 mb-1">
-                            {flag}
-                          </span>
-                        ))}
-                        {match.redFlags.length > 2 && (
-                          <span className="text-sm text-gray-600">
-                            +{match.redFlags.length - 2} more
-                          </span>
-                        )}
-                      </div>
-                    </div>
-                  )}
-                  
-                  <div className="grid-2">
-                    <button
-                      className="btn btn-outline"
-                      onClick={() => handleShowDetails(match)}
-                    >
-                      Show Details
-                    </button>
-                    
-                    <button
-                      className="btn btn-secondary"
-                      onClick={() => handleRequestMatch(match)}
-                    >
-                      Request Match
-                    </button>
-                  </div>
+          <>
+            <div className="card mb-4">
+              <div className="flex" style={{ alignItems: 'center', justifyContent: 'space-between' }}>
+                <h3 className="card-title">
+                  {matches.length} Compatible Match{matches.length !== 1 ? 'es' : ''} Found
+                </h3>
+                <div className="text-gray-600">
+                  {excludedUsers.size} users excluded • {sentRequests.size} requests sent
                 </div>
               </div>
-            ))}
-          </div>
+            </div>
+
+            <div className="grid-auto mb-5">
+              {matches.map((match) => {
+                const isRequestSent = match.isRequestSent;
+                const isAlreadyMatched = match.isAlreadyMatched;
+                
+                return (
+                  <div key={match.user_id} className="card">
+                    <div className="card-header">
+                      <div>
+                        <div className="card-title">{match.first_name}</div>
+                        <div className="card-subtitle">{match.matchScore}% Match</div>
+                      </div>
+                      <div>
+                        {isAlreadyMatched && (
+                          <span className="badge badge-warning mb-1">Already Matched</span>
+                        )}
+                        {isRequestSent && (
+                          <span className="badge badge-info mb-1">Request Sent</span>
+                        )}
+                      </div>
+                    </div>
+                    
+                    <div>
+                      <div className="mb-4">
+                        <div className="grid-2 text-gray-600">
+                          <div><span className="text-gray-600">Age:</span> <span className="text-gray-800">{match.age || 'Not specified'}</span></div>
+                          <div><span className="text-gray-600">Location:</span> <span className="text-gray-800">{match.location}</span></div>
+                          <div><span className="text-gray-600">Recovery Stage:</span> <span className="text-gray-800">{match.recovery_stage?.charAt(0).toUpperCase() + match.recovery_stage?.slice(1) || 'Not specified'}</span></div>
+                          <div><span className="text-gray-600">Budget:</span> <span className="text-gray-800">${match.price_range?.min || 0} - ${match.price_range?.max || match.budget_max}</span></div>
+                        </div>
+                      </div>
+                      
+                      {/* Green Flags */}
+                      {match.greenFlags?.length > 0 && (
+                        <div className="mb-4">
+                          <div className="label mb-2">✓ Compatibility Highlights</div>
+                          <div className="mb-2">
+                            {match.greenFlags.slice(0, 3).map((flag, i) => (
+                              <span key={i} className="badge badge-success mr-1 mb-1">
+                                {flag}
+                              </span>
+                            ))}
+                            {match.greenFlags.length > 3 && (
+                              <span className="text-sm text-gray-600">
+                                +{match.greenFlags.length - 3} more
+                              </span>
+                            )}
+                          </div>
+                        </div>
+                      )}
+                      
+                      {/* Red Flags */}
+                      {match.redFlags?.length > 0 && (
+                        <div className="mb-4">
+                          <div className="label mb-2">⚠ Potential Concerns</div>
+                          <div className="mb-2">
+                            {match.redFlags.slice(0, 2).map((flag, i) => (
+                              <span key={i} className="badge badge-warning mr-1 mb-1">
+                                {flag}
+                              </span>
+                            ))}
+                            {match.redFlags.length > 2 && (
+                              <span className="text-sm text-gray-600">
+                                +{match.redFlags.length - 2} more
+                              </span>
+                            )}
+                          </div>
+                        </div>
+                      )}
+                      
+                      <div className="grid-2">
+                        <button
+                          className="btn btn-outline"
+                          onClick={() => handleShowDetails(match)}
+                        >
+                          Show Details
+                        </button>
+                        
+                        <button
+                          className="btn btn-secondary"
+                          onClick={() => handleRequestMatch(match)}
+                          disabled={isRequestSent || isAlreadyMatched}
+                        >
+                          {isRequestSent ? 'Request Sent' :
+                           isAlreadyMatched ? 'Already Matched' :
+                           'Request Match'}
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </>
         )}
         
         {/* Back Button */}
@@ -543,6 +790,22 @@ const handleRequestMatch = async (match) => {
                 ×
               </button>
             </div>
+            
+            {/* ✅ NEW: Match status in modal */}
+            {(selectedMatch.isRequestSent || selectedMatch.isAlreadyMatched) && (
+              <div className="mb-4">
+                {selectedMatch.isAlreadyMatched && (
+                  <div className="alert alert-warning">
+                    <strong>Already Matched:</strong> This user is currently matched with someone else.
+                  </div>
+                )}
+                {selectedMatch.isRequestSent && (
+                  <div className="alert alert-info">
+                    <strong>Request Sent:</strong> You've already sent a match request to this user.
+                  </div>
+                )}
+              </div>
+            )}
             
             {selectedMatch.about_me && (
               <div className="mb-4">
@@ -609,8 +872,11 @@ const handleRequestMatch = async (match) => {
                   handleRequestMatch(selectedMatch);
                   setShowDetails(false);
                 }}
+                disabled={selectedMatch.isRequestSent || selectedMatch.isAlreadyMatched}
               >
-                Send Match Request
+                {selectedMatch.isRequestSent ? 'Request Sent' :
+                 selectedMatch.isAlreadyMatched ? 'Already Matched' :
+                 'Send Match Request'}
               </button>
             </div>
           </div>

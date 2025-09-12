@@ -12,13 +12,16 @@ const PeerSupportFinder = ({ onBack }) => {
   const [error, setError] = useState(null);
   const [selectedSpecialist, setSelectedSpecialist] = useState(null);
   const [showDetails, setShowDetails] = useState(false);
+  const [connectionRequests, setConnectionRequests] = useState(new Set()); // Track sent requests
   const [filters, setFilters] = useState({
     specialties: [],
-    serviceArea: '',
-    minExperience: ''
+    location: '', // Changed from serviceArea to location for better UX
+    zipCode: '',
+    minExperience: '',
+    acceptingClients: true
   });
 
-  // Available specialty options (you can expand this based on your needs)
+  // Available specialty options (expanded based on common peer support areas)
   const specialtyOptions = [
     'AA/NA Programs',
     'SMART Recovery',
@@ -27,6 +30,8 @@ const PeerSupportFinder = ({ onBack }) => {
     'Mindfulness',
     'Career Counseling',
     'Women in Recovery',
+    'Men in Recovery',
+    'LGBTQ+ Support',
     'Secular Programs',
     'Housing Support',
     'Mental Health',
@@ -34,30 +39,57 @@ const PeerSupportFinder = ({ onBack }) => {
     'Group Facilitation',
     'Crisis Intervention',
     'Relapse Prevention',
-    'Life Skills Training'
+    'Life Skills Training',
+    'Medication Assisted Treatment',
+    'Dual Diagnosis Support',
+    'Grief & Loss Counseling'
   ];
 
   // Load peer specialists on component mount
   useEffect(() => {
-    findSpecialists();
+    loadSpecialists();
+    loadConnectionRequests();
   }, []);
 
-  // Reload when filters change
+  // Reload when filters change (with debounce)
   useEffect(() => {
-    if (specialists.length > 0) {
-      findSpecialists();
-    }
+    const timeoutId = setTimeout(() => {
+      loadSpecialists();
+    }, 300);
+
+    return () => clearTimeout(timeoutId);
   }, [filters]);
 
   /**
-   * Search for available peer support specialists
+   * Load existing connection requests to avoid duplicates
    */
-  const findSpecialists = async () => {
+  const loadConnectionRequests = async () => {
+    if (!user?.id) return;
+
+    try {
+      const result = await db.matchRequests.getByUserId(user.id);
+      if (result.success !== false && result.data) {
+        const sentRequests = new Set(
+          result.data
+            .filter(req => req.requester_id === user.id && req.request_type === 'peer_support')
+            .map(req => req.target_id)
+        );
+        setConnectionRequests(sentRequests);
+      }
+    } catch (err) {
+      console.error('💥 Error loading connection requests:', err);
+    }
+  };
+
+  /**
+   * ✅ FIXED: Improved search for available peer support specialists
+   */
+  const loadSpecialists = async () => {
     setLoading(true);
     setError(null);
 
     try {
-      console.log('🔍 Finding peer support specialists with filters:', filters);
+      console.log('🔍 Loading peer support specialists with filters:', filters);
       
       // Build filter object for database query
       const dbFilters = {};
@@ -66,26 +98,46 @@ const PeerSupportFinder = ({ onBack }) => {
         dbFilters.specialties = filters.specialties;
       }
       
-      if (filters.serviceArea) {
-        dbFilters.serviceArea = filters.serviceArea;
+      // Use location for both city/state and service area matching
+      if (filters.location.trim()) {
+        dbFilters.serviceArea = filters.location.trim();
       }
 
       // Get available specialists from database
       const result = await db.peerSupportProfiles.getAvailable(dbFilters);
       
-      if (!result.success && result.error) {
+      if (result.error && !result.data) {
         throw new Error(result.error.message || 'Failed to load peer specialists');
       }
       
       let availableSpecialists = result.data || [];
-      console.log(`📊 Found ${availableSpecialists.length} available specialists`);
+      console.log(`📊 Found ${availableSpecialists.length} specialists from database`);
       
-      // Apply client-side filters
+      // ✅ FIXED: Apply client-side filters for more refined search
       if (filters.minExperience) {
         const minYears = parseInt(filters.minExperience);
         availableSpecialists = availableSpecialists.filter(specialist => 
-          specialist.years_experience >= minYears
+          (specialist.years_experience || 0) >= minYears
         );
+      }
+
+      // Filter by accepting clients status
+      if (filters.acceptingClients) {
+        availableSpecialists = availableSpecialists.filter(specialist => 
+          specialist.is_accepting_clients === true
+        );
+      }
+
+      // ✅ NEW: Zip code proximity filtering (basic implementation)
+      if (filters.zipCode && filters.zipCode.length >= 5) {
+        const searchZip = filters.zipCode.substring(0, 5);
+        availableSpecialists = availableSpecialists.filter(specialist => {
+          if (!specialist.zip_code) return false;
+          const specialistZip = specialist.zip_code.toString().substring(0, 5);
+          
+          // Simple proximity: same first 3 digits = roughly same area
+          return specialistZip.substring(0, 3) === searchZip.substring(0, 3);
+        });
       }
 
       // Exclude current user if they're also a peer specialist
@@ -93,24 +145,30 @@ const PeerSupportFinder = ({ onBack }) => {
         specialist.user_id !== user.id
       );
 
-      // Sort by experience (most experienced first)
-      availableSpecialists.sort((a, b) => 
-        (b.years_experience || 0) - (a.years_experience || 0)
-      );
+      // ✅ IMPROVED: Better sorting - accepting clients first, then by experience
+      availableSpecialists.sort((a, b) => {
+        // First priority: accepting clients
+        if (a.is_accepting_clients && !b.is_accepting_clients) return -1;
+        if (!a.is_accepting_clients && b.is_accepting_clients) return 1;
+        
+        // Second priority: experience
+        return (b.years_experience || 0) - (a.years_experience || 0);
+      });
 
       console.log(`✅ Filtered to ${availableSpecialists.length} specialists`);
       setSpecialists(availableSpecialists);
       
     } catch (err) {
-      console.error('💥 Error finding specialists:', err);
-      setError(err.message || 'Failed to find peer support specialists');
+      console.error('💥 Error loading specialists:', err);
+      setError(err.message || 'Failed to load peer support specialists');
+      setSpecialists([]);
     } finally {
       setLoading(false);
     }
   };
 
   /**
-   * Handle specialty filter changes
+   * ✅ FIXED: Improved filter change handling
    */
   const handleSpecialtyChange = (specialty, isChecked) => {
     setFilters(prev => ({
@@ -129,6 +187,45 @@ const PeerSupportFinder = ({ onBack }) => {
   };
 
   /**
+   * ✅ NEW: Smart location search that includes common areas
+   */
+  const handleShowNearby = async () => {
+    if (!profile?.city && !profile?.state) {
+      // Try to use user's location from matching profile if available
+      try {
+        const { data: applicantProfile } = await db.applicantForms.getByUserId(user.id);
+        if (applicantProfile?.preferred_location) {
+          setFilters(prev => ({ 
+            ...prev, 
+            location: applicantProfile.preferred_location,
+            specialties: [], // Clear other filters for broader search
+            minExperience: ''
+          }));
+          return;
+        }
+      } catch (err) {
+        console.error('Could not load user location preferences:', err);
+      }
+    }
+
+    // Use profile location as fallback
+    const userLocation = profile?.city && profile?.state 
+      ? `${profile.city}, ${profile.state}`
+      : profile?.state || '';
+    
+    if (userLocation) {
+      setFilters(prev => ({ 
+        ...prev, 
+        location: userLocation,
+        specialties: [], // Clear other filters for broader search
+        minExperience: ''
+      }));
+    } else {
+      alert('Please set your location in filters to find nearby specialists.');
+    }
+  };
+
+  /**
    * Show specialist details in modal
    */
   const handleShowDetails = (specialist) => {
@@ -137,32 +234,52 @@ const PeerSupportFinder = ({ onBack }) => {
   };
 
   /**
-   * Send connection request to peer specialist
+   * ✅ FIXED: Improved connection request with proper error handling
    */
   const handleRequestConnection = async (specialist) => {
+    // Check if already sent request
+    if (connectionRequests.has(specialist.user_id)) {
+      alert(`You've already sent a connection request to ${specialist.registrant_profiles?.first_name || 'this specialist'}.`);
+      return;
+    }
+
     try {
       console.log('🤝 Sending peer support request to:', specialist.registrant_profiles?.first_name);
       
+      // ✅ FIXED: Improved request data structure
       const requestData = {
         requester_id: user.id,
         target_id: specialist.user_id,
         request_type: 'peer_support',
-        message: `Hi ${specialist.registrant_profiles?.first_name}! I'm interested in your peer support services. Your specialties in ${specialist.specialties?.slice(0, 2).join(' and ')} align well with what I'm looking for in my recovery journey.`,
+        message: `Hi ${specialist.registrant_profiles?.first_name || 'there'}! I'm interested in connecting with you for peer support services. Your experience with ${specialist.specialties?.slice(0, 2).join(' and ') || 'recovery support'} aligns well with what I'm looking for in my recovery journey.`,
         status: 'pending'
       };
       
+      console.log('📤 Sending request data:', requestData);
+      
+      // ✅ FIXED: Proper error handling for database call
       const result = await db.matchRequests.create(requestData);
+      
+      console.log('📥 Database response:', result);
       
       if (result.error) {
         throw new Error(result.error.message || 'Failed to send connection request');
       }
       
+      if (!result.data) {
+        throw new Error('No data returned from connection request');
+      }
+      
       console.log('✅ Peer support request sent successfully:', result.data);
-      alert(`Connection request sent to ${specialist.registrant_profiles?.first_name}!`);
+      
+      // Update local state to track sent request
+      setConnectionRequests(prev => new Set([...prev, specialist.user_id]));
+      
+      alert(`Connection request sent to ${specialist.registrant_profiles?.first_name || 'the specialist'}! They will be notified and can respond through their dashboard.`);
       
     } catch (err) {
       console.error('💥 Error sending connection request:', err);
-      alert('Failed to send connection request. Please try again.');
+      alert(`Failed to send connection request: ${err.message}. Please try again.`);
     }
   };
 
@@ -172,9 +289,27 @@ const PeerSupportFinder = ({ onBack }) => {
   const clearFilters = () => {
     setFilters({
       specialties: [],
-      serviceArea: '',
-      minExperience: ''
+      location: '',
+      zipCode: '',
+      minExperience: '',
+      acceptingClients: true
     });
+  };
+
+  /**
+   * Format display text for various fields
+   */
+  const formatExperienceText = (years) => {
+    if (!years) return 'Experience not specified';
+    return years === 1 ? '1 year experience' : `${years} years experience`;
+  };
+
+  const formatLocationText = (serviceArea) => {
+    if (!serviceArea) return 'Location not specified';
+    if (Array.isArray(serviceArea)) {
+      return serviceArea.join(', ');
+    }
+    return serviceArea;
   };
 
   return (
@@ -187,20 +322,33 @@ const PeerSupportFinder = ({ onBack }) => {
           </p>
         </div>
 
-        {/* Search Filters */}
+        {/* ✅ IMPROVED: Better search filters layout */}
         <div className="card mb-5">
           <h3 className="card-title">Search Filters</h3>
           
           <div className="grid-auto mb-4">
             <div className="form-group">
-              <label className="label">Service Area</label>
+              <label className="label">Location (City, State)</label>
               <input
                 className="input"
                 type="text"
-                placeholder="City, State"
-                value={filters.serviceArea}
-                onChange={(e) => handleFilterChange('serviceArea', e.target.value)}
+                placeholder="Austin, TX or Texas"
+                value={filters.location}
+                onChange={(e) => handleFilterChange('location', e.target.value)}
               />
+            </div>
+
+            <div className="form-group">
+              <label className="label">Zip Code (optional)</label>
+              <input
+                className="input"
+                type="text"
+                placeholder="78701"
+                value={filters.zipCode}
+                onChange={(e) => handleFilterChange('zipCode', e.target.value)}
+                maxLength="5"
+              />
+              <small className="text-gray-600">For local area matching</small>
             </div>
             
             <div className="form-group">
@@ -222,42 +370,42 @@ const PeerSupportFinder = ({ onBack }) => {
             <div className="form-group">
               <button
                 className="btn btn-primary"
-                onClick={findSpecialists}
+                onClick={loadSpecialists}
                 disabled={loading}
               >
                 {loading ? 'Searching...' : 'Search'}
               </button>
             </div>
+          </div>
 
-            <div className="form-group">
-              <button
-                className="btn btn-outline"
-                onClick={() => {
-                  console.log('🔍 Show All clicked - bypassing all filters');
-                  setLoading(true);
-                  setError(null);
-                  
-                  // Call database with no filters to see all available specialists
-                  db.peerSupportProfiles.getAvailable({})
-                    .then(result => {
-                      console.log('📊 Show All result:', result);
-                      if (result.error) {
-                        setError(result.error.message);
-                      } else {
-                        console.log('📊 Raw data from Show All:', result.data);
-                        setSpecialists(result.data || []);
-                      }
-                    })
-                    .catch(err => {
-                      console.error('💥 Show All error:', err);
-                      setError(err.message);
-                    })
-                    .finally(() => setLoading(false));
-                }}
-                disabled={loading}
-              >
-                Show All Specialists
-              </button>
+          {/* Quick Action Buttons */}
+          <div className="grid-auto mb-4">
+            <button
+              className="btn btn-outline"
+              onClick={handleShowNearby}
+              disabled={loading}
+            >
+              🗺️ Find Nearby Specialists
+            </button>
+
+            <button
+              className="btn btn-outline"
+              onClick={clearFilters}
+              disabled={loading}
+            >
+              Clear Filters
+            </button>
+
+            <div className="checkbox-item">
+              <input
+                type="checkbox"
+                id="accepting-clients"
+                checked={filters.acceptingClients}
+                onChange={(e) => handleFilterChange('acceptingClients', e.target.checked)}
+              />
+              <label htmlFor="accepting-clients">
+                Only show specialists accepting new clients
+              </label>
             </div>
           </div>
 
@@ -281,15 +429,15 @@ const PeerSupportFinder = ({ onBack }) => {
             </div>
           </div>
 
-          {/* Clear Filters */}
-          {(filters.specialties.length > 0 || filters.serviceArea || filters.minExperience) && (
-            <div className="text-center">
-              <button
-                className="btn btn-outline"
-                onClick={clearFilters}
-              >
-                Clear All Filters
-              </button>
+          {/* Active Filters Display */}
+          {(filters.specialties.length > 0 || filters.location || filters.zipCode || filters.minExperience) && (
+            <div className="alert alert-info">
+              <strong>Active Filters:</strong> 
+              {filters.location && ` Location: ${filters.location} •`}
+              {filters.zipCode && ` Zip: ${filters.zipCode} •`}
+              {filters.minExperience && ` Min Experience: ${filters.minExperience}+ years •`}
+              {filters.specialties.length > 0 && ` Specialties: ${filters.specialties.length} selected •`}
+              {filters.acceptingClients && ` Accepting clients only`}
             </div>
           )}
         </div>
@@ -304,7 +452,7 @@ const PeerSupportFinder = ({ onBack }) => {
                 className="btn btn-outline"
                 onClick={() => {
                   setError(null);
-                  findSpecialists();
+                  loadSpecialists();
                 }}
               >
                 Try Again
@@ -325,111 +473,137 @@ const PeerSupportFinder = ({ onBack }) => {
         {!loading && !error && specialists.length === 0 && (
           <div className="card text-center">
             <h3>No specialists found</h3>
-            <p>Try adjusting your filters or check back later for new specialists.</p>
-            <p className="text-sm text-gray-600">
-              Current filters: {filters.specialties.length} specialties, {filters.serviceArea || 'Any location'}, {filters.minExperience ? `${filters.minExperience}+ years` : 'Any experience'}
-            </p>
+            <p>Try adjusting your filters or expanding your search area.</p>
+            <div className="mt-3">
+              <button
+                className="btn btn-primary"
+                onClick={handleShowNearby}
+              >
+                Find Nearby Specialists
+              </button>
+              <button
+                className="btn btn-outline ml-2"
+                onClick={clearFilters}
+              >
+                Clear All Filters
+              </button>
+            </div>
           </div>
         )}
 
         {/* Specialists Grid */}
         {!loading && !error && specialists.length > 0 && (
-          <div className="grid-auto mb-5">
-            {specialists.map((specialist) => (
-              <div key={specialist.user_id} className="card">
-                <div className="card-header">
-                  <div>
-                    <div className="card-title">
-                      {specialist.registrant_profiles?.first_name || 'Anonymous'}
-                    </div>
-                    <div className="card-subtitle">
-                      {specialist.professional_title || 'Peer Support Specialist'}
-                    </div>
-                  </div>
-                  <div>
-                    {specialist.is_licensed && (
-                      <span className="badge badge-success mb-1">Licensed</span>
-                    )}
-                    {specialist.years_experience && (
-                      <span className="badge badge-info">
-                        {specialist.years_experience} years experience
-                      </span>
-                    )}
-                  </div>
+          <>
+            <div className="card mb-4">
+              <div className="flex" style={{ alignItems: 'center', justifyContent: 'space-between' }}>
+                <h3 className="card-title">
+                  {specialists.length} Specialist{specialists.length !== 1 ? 's' : ''} Found
+                </h3>
+                <div className="text-gray-600">
+                  {specialists.filter(s => s.is_accepting_clients).length} accepting new clients
                 </div>
+              </div>
+            </div>
 
-                <div className="mb-4">
-                  <div className="grid-2 text-gray-600 mb-3">
-                    <div>
-                      <span className="text-gray-600">Experience:</span>
-                      <span className="text-gray-800 ml-1">
-                        {specialist.years_experience ? `${specialist.years_experience} years` : 'Not specified'}
-                      </span>
-                    </div>
-                    <div>
-                      <span className="text-gray-600">Service Area:</span>
-                      <span className="text-gray-800 ml-1">
-                        {specialist.service_area?.join(', ') || 'Not specified'}
-                      </span>
-                    </div>
-                  </div>
-
-                  {/* Specialties */}
-                  {specialist.specialties?.length > 0 && (
-                    <div className="mb-3">
-                      <div className="label mb-2">Specialties</div>
-                      <div className="mb-2">
-                        {specialist.specialties.slice(0, 4).map((specialty, i) => (
-                          <span key={i} className="badge badge-info mr-1 mb-1">
-                            {specialty}
-                          </span>
-                        ))}
-                        {specialist.specialties.length > 4 && (
-                          <span className="text-sm text-gray-600">
-                            +{specialist.specialties.length - 4} more
-                          </span>
+            <div className="grid-auto mb-5">
+              {specialists.map((specialist) => {
+                const alreadyRequested = connectionRequests.has(specialist.user_id);
+                const isAcceptingClients = specialist.is_accepting_clients;
+                
+                return (
+                  <div key={specialist.user_id} className="card">
+                    <div className="card-header">
+                      <div>
+                        <div className="card-title">
+                          {specialist.registrant_profiles?.first_name || 'Anonymous'}
+                        </div>
+                        <div className="card-subtitle">
+                          {specialist.professional_title || 'Peer Support Specialist'}
+                        </div>
+                      </div>
+                      <div>
+                        {specialist.is_licensed && (
+                          <span className="badge badge-success mb-1">Licensed</span>
+                        )}
+                        {isAcceptingClients ? (
+                          <span className="badge badge-success">Accepting Clients</span>
+                        ) : (
+                          <span className="badge badge-warning">Not Accepting</span>
                         )}
                       </div>
                     </div>
-                  )}
 
-                  {/* Brief Bio */}
-                  {specialist.bio && (
-                    <div className="mb-3">
-                      <p className="card-text">
-                        {specialist.bio.length > 150 
-                          ? `${specialist.bio.substring(0, 150)}...` 
-                          : specialist.bio
-                        }
-                      </p>
+                    <div className="mb-4">
+                      <div className="grid-2 text-gray-600 mb-3">
+                        <div>
+                          <span className="text-gray-600">Experience:</span>
+                          <span className="text-gray-800 ml-1">
+                            {formatExperienceText(specialist.years_experience)}
+                          </span>
+                        </div>
+                        <div>
+                          <span className="text-gray-600">Service Area:</span>
+                          <span className="text-gray-800 ml-1">
+                            {formatLocationText(specialist.service_area)}
+                          </span>
+                        </div>
+                      </div>
+
+                      {/* Specialties */}
+                      {specialist.specialties?.length > 0 && (
+                        <div className="mb-3">
+                          <div className="label mb-2">Specialties</div>
+                          <div className="mb-2">
+                            {specialist.specialties.slice(0, 4).map((specialty, i) => (
+                              <span key={i} className="badge badge-info mr-1 mb-1">
+                                {specialty}
+                              </span>
+                            ))}
+                            {specialist.specialties.length > 4 && (
+                              <span className="text-sm text-gray-600">
+                                +{specialist.specialties.length - 4} more
+                              </span>
+                            )}
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Brief Bio */}
+                      {specialist.bio && (
+                        <div className="mb-3">
+                          <p className="card-text">
+                            {specialist.bio.length > 150 
+                              ? `${specialist.bio.substring(0, 150)}...` 
+                              : specialist.bio
+                            }
+                          </p>
+                        </div>
+                      )}
                     </div>
-                  )}
 
-                  {/* Availability */}
-                  <div className="text-sm text-gray-600 mb-3">
-                    <strong>Accepting new clients:</strong> {specialist.is_accepting_clients ? 'Yes' : 'No'}
+                    <div className="grid-2">
+                      <button
+                        className="btn btn-outline"
+                        onClick={() => handleShowDetails(specialist)}
+                      >
+                        View Details
+                      </button>
+                      
+                      <button
+                        className="btn btn-secondary"
+                        onClick={() => handleRequestConnection(specialist)}
+                        disabled={!isAcceptingClients || alreadyRequested}
+                      >
+                        {alreadyRequested ? 'Request Sent' : 
+                         !isAcceptingClients ? 'Not Accepting' : 
+                         'Request Connection'}
+                      </button>
+                    </div>
                   </div>
-                </div>
-
-                <div className="grid-2">
-                  <button
-                    className="btn btn-outline"
-                    onClick={() => handleShowDetails(specialist)}
-                  >
-                    View Details
-                  </button>
-                  
-                  <button
-                    className="btn btn-secondary"
-                    onClick={() => handleRequestConnection(specialist)}
-                    disabled={!specialist.is_accepting_clients}
-                  >
-                    Request Connection
-                  </button>
-                </div>
-              </div>
-            ))}
-          </div>
+                );
+              })}
+            </div>
+          </>
         )}
 
         {/* Back Button */}
@@ -469,7 +643,7 @@ const PeerSupportFinder = ({ onBack }) => {
                   <strong>Title:</strong> {selectedSpecialist.professional_title || 'Peer Support Specialist'}
                 </div>
                 <div>
-                  <strong>Experience:</strong> {selectedSpecialist.years_experience || 'Not specified'} years
+                  <strong>Experience:</strong> {formatExperienceText(selectedSpecialist.years_experience)}
                 </div>
                 <div>
                   <strong>Licensed:</strong> {selectedSpecialist.is_licensed ? 'Yes' : 'No'}
@@ -493,7 +667,10 @@ const PeerSupportFinder = ({ onBack }) => {
               <div className="mb-4">
                 <h4 className="card-title">Service Areas</h4>
                 <div className="mb-2">
-                  {selectedSpecialist.service_area.map((area, i) => (
+                  {(Array.isArray(selectedSpecialist.service_area) 
+                    ? selectedSpecialist.service_area 
+                    : [selectedSpecialist.service_area]
+                  ).map((area, i) => (
                     <span key={i} className="badge badge-success mr-1 mb-1">{area}</span>
                   ))}
                 </div>
@@ -546,9 +723,11 @@ const PeerSupportFinder = ({ onBack }) => {
                   handleRequestConnection(selectedSpecialist);
                   setShowDetails(false);
                 }}
-                disabled={!selectedSpecialist.is_accepting_clients}
+                disabled={!selectedSpecialist.is_accepting_clients || connectionRequests.has(selectedSpecialist.user_id)}
               >
-                Request Connection
+                {connectionRequests.has(selectedSpecialist.user_id) ? 'Request Sent' :
+                 !selectedSpecialist.is_accepting_clients ? 'Not Accepting Clients' : 
+                 'Request Connection'}
               </button>
             </div>
           </div>

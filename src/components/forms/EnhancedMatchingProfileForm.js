@@ -58,7 +58,7 @@ const FORM_SECTIONS = [
   }
 ];
 
-const EnhancedMatchingProfileForm = () => {
+const EnhancedMatchingProfileForm = ({ editMode = false, onComplete, onCancel }) => {
   const navigate = useNavigate();
   const { profile, hasRole } = useAuth();
   const [currentSectionIndex, setCurrentSectionIndex] = useState(0);
@@ -90,7 +90,7 @@ const EnhancedMatchingProfileForm = () => {
             <p>You must be registered as an applicant to access the matching profile form.</p>
             <button 
               className="btn btn-primary mt-3"
-              onClick={() => navigate('/dashboard')}
+              onClick={() => navigate('/app')}
             >
               Return to Dashboard
             </button>
@@ -142,10 +142,17 @@ const EnhancedMatchingProfileForm = () => {
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
-  // ✅ FIXED: Form submission handlers with proper error handling
+  // ✅ FIXED: Improved form submission handlers with better error handling and navigation
   const handleSave = async (e) => {
-    e.preventDefault();
-    if (loading || isSubmitting) return;
+    if (e) {
+      e.preventDefault();
+      e.stopPropagation();
+    }
+    
+    if (loading || isSubmitting) {
+      console.log('🚫 Save blocked: already in progress');
+      return;
+    }
     
     setSuccessMessage('');
     console.log('🔄 Saving progress...');
@@ -160,58 +167,111 @@ const EnhancedMatchingProfileForm = () => {
       }
     } catch (error) {
       console.error('❌ Save error:', error);
+      setSuccessMessage('');
     }
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    if (loading || isSubmitting) return;
+    e.stopPropagation();
+    
+    if (loading || isSubmitting) {
+      console.log('🚫 Submit blocked: already in progress');
+      return;
+    }
     
     console.log('🔄 Starting final form submission...');
     setIsSubmitting(true);
     setSuccessMessage('');
     
     try {
-      // First validate the form
-      if (!validateForm()) {
-        console.log('❌ Form validation failed');
+      // ✅ FIXED: Better validation check with detailed logging
+      console.log('🔍 Validating form before submission...');
+      const isValid = validateForm();
+      console.log('🔍 Form validation result:', isValid);
+      console.log('🔍 Current errors:', errors);
+      console.log('🔍 Can submit:', canSubmit);
+      
+      if (!isValid || hasErrors) {
+        console.log('❌ Form validation failed or has errors');
         setIsSubmitting(false);
-        // Scroll to first error
-        const firstError = document.querySelector('.border-red-500, .text-red-500');
-        if (firstError) {
-          firstError.scrollIntoView({ behavior: 'smooth', block: 'center' });
-        }
+        
+        // Scroll to first error with better error detection
+        setTimeout(() => {
+          const firstError = document.querySelector('.border-red-500, .text-red-500, .error, .alert-error input, .alert-error select, .alert-error textarea');
+          if (firstError) {
+            console.log('📍 Scrolling to first error:', firstError);
+            firstError.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            firstError.focus();
+          } else {
+            console.log('📍 No specific error element found, scrolling to top');
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+          }
+        }, 100);
         return;
       }
 
       console.log('✅ Form validation passed, submitting to database...');
       
-      // Submit the form with navigation callback
+      // ✅ FIXED: Better submission handling with clearer success/failure logic
       const success = await submitForm();
+      console.log('🔍 Submit form result:', success);
       
       if (success) {
-        console.log('✅ Database submission successful, navigating...');
+        console.log('✅ Database submission successful');
         setSuccessMessage('Matching profile completed successfully!');
         
-        // Delay navigation to show success message
+        // ✅ FIXED: Better navigation handling with proper paths
         setTimeout(() => {
-          navigate('/dashboard', { 
-            state: { message: 'Matching profile completed successfully!' }
-          });
+          if (editMode && onComplete) {
+            console.log('📍 Edit mode: calling onComplete callback');
+            onComplete();
+          } else if (editMode) {
+            console.log('📍 Edit mode: navigating to app dashboard');
+            navigate('/app', { 
+              state: { message: 'Matching profile updated successfully!' },
+              replace: true
+            });
+          } else {
+            console.log('📍 New profile mode: navigating to app dashboard');
+            navigate('/app', { 
+              state: { message: 'Matching profile completed successfully!' },
+              replace: true
+            });
+          }
         }, 1500);
       } else {
         console.log('❌ Database submission failed');
         setIsSubmitting(false);
         
         // Scroll to first error
-        const firstError = document.querySelector('.border-red-500, .text-red-500');
-        if (firstError) {
-          firstError.scrollIntoView({ behavior: 'smooth', block: 'center' });
-        }
+        setTimeout(() => {
+          const firstError = document.querySelector('.border-red-500, .text-red-500, .alert-error');
+          if (firstError) {
+            firstError.scrollIntoView({ behavior: 'smooth', block: 'center' });
+          } else {
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+          }
+        }, 100);
       }
     } catch (error) {
       console.error('💥 Submission error:', error);
       setIsSubmitting(false);
+      setSuccessMessage('');
+      
+      // Show error to user
+      setTimeout(() => {
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+      }, 100);
+    }
+  };
+
+  // ✅ FIXED: Add cancel handler for edit mode
+  const handleCancel = () => {
+    if (onCancel) {
+      onCancel();
+    } else {
+      navigate('/app');
     }
   };
 
@@ -219,9 +279,14 @@ const EnhancedMatchingProfileForm = () => {
     <div className="container">
       {/* Header */}
       <div className="app-header">
-        <h1 className="header-title">Enhanced Matching Profile</h1>
+        <h1 className="header-title">
+          {editMode ? 'Edit' : 'Complete'} Matching Profile
+        </h1>
         <p className="header-subtitle">
-          Complete your comprehensive profile to find the perfect roommate match
+          {editMode 
+            ? 'Update your comprehensive profile information'
+            : 'Complete your comprehensive profile to find the perfect roommate match'
+          }
         </p>
       </div>
 
@@ -230,7 +295,7 @@ const EnhancedMatchingProfileForm = () => {
         <ProgressBar 
           percentage={completionPercentage}
           showText={true}
-          editMode={false}
+          editMode={editMode}
           label={`Section ${currentSectionIndex + 1} of ${FORM_SECTIONS.length}`}
         />
 
@@ -263,18 +328,20 @@ const EnhancedMatchingProfileForm = () => {
         {/* Global Errors */}
         {errors.submit && (
           <div className="alert alert-error">
-            {errors.submit}
+            <h4>Submission Error</h4>
+            <p>{errors.submit}</p>
           </div>
         )}
         
         {errors.load && (
           <div className="alert alert-error">
-            {errors.load}
+            <h4>Loading Error</h4>
+            <p>{errors.load}</p>
           </div>
         )}
 
-        {/* ✅ FIXED: Form with proper event handling */}
-        <form onSubmit={handleSubmit}>
+        {/* ✅ FIXED: Improved form structure with better event handling */}
+        <form onSubmit={handleSubmit} noValidate>
           <div className="card">
             <div className="card-header">
               <h2 className="section-header">
@@ -293,8 +360,9 @@ const EnhancedMatchingProfileForm = () => {
               onRangeChange={handleRangeChange}
             />
 
-            {/* ✅ FIXED: Form Actions without onClick on submit button */}
+            {/* ✅ FIXED: Improved form actions with better button handling */}
             <div className="form-actions">
+              {/* Save Progress Button */}
               <button
                 type="button"
                 onClick={handleSave}
@@ -311,6 +379,19 @@ const EnhancedMatchingProfileForm = () => {
                 )}
               </button>
               
+              {/* Cancel Button (Edit Mode Only) */}
+              {editMode && (
+                <button
+                  type="button"
+                  onClick={handleCancel}
+                  className="btn btn-secondary"
+                  disabled={loading || isSubmitting}
+                >
+                  Cancel
+                </button>
+              )}
+              
+              {/* Previous Button */}
               {!isFirstSection && (
                 <button
                   type="button"
@@ -322,6 +403,7 @@ const EnhancedMatchingProfileForm = () => {
                 </button>
               )}
               
+              {/* Next / Submit Button */}
               {!isLastSection ? (
                 <button
                   type="button"
@@ -335,15 +417,15 @@ const EnhancedMatchingProfileForm = () => {
                 <button
                   type="submit"
                   className="btn btn-primary"
-                  disabled={loading || isSubmitting || !canSubmit || hasErrors}
+                  disabled={loading || isSubmitting || (!canSubmit && !editMode)}
                 >
                   {isSubmitting ? (
                     <>
                       <span className="loading-spinner small"></span>
-                      Completing Profile...
+                      {editMode ? 'Updating...' : 'Completing Profile...'}
                     </>
                   ) : (
-                    'Complete Profile'
+                    editMode ? 'Update Profile' : 'Complete Profile'
                   )}
                 </button>
               )}
@@ -379,12 +461,28 @@ const EnhancedMatchingProfileForm = () => {
           {hasErrors && (
             <div className="alert alert-warning mt-4">
               <strong>Validation Issues:</strong> Please review and correct the highlighted fields before submitting.
+              <details className="mt-2">
+                <summary>Show validation errors</summary>
+                <ul className="mt-2">
+                  {Object.entries(errors).map(([field, error]) => (
+                    <li key={field} className="text-sm">
+                      <strong>{field}:</strong> {error}
+                    </li>
+                  ))}
+                </ul>
+              </details>
             </div>
           )}
 
-          {completionPercentage < 100 && (
+          {completionPercentage < 100 && !editMode && (
             <div className="alert alert-info mt-4">
               <strong>Almost there!</strong> Complete all required fields to activate your profile for matching.
+            </div>
+          )}
+
+          {editMode && (
+            <div className="alert alert-info mt-4">
+              <strong>Edit Mode:</strong> Make changes to any section and save your updates.
             </div>
           )}
         </div>
@@ -404,7 +502,7 @@ const EnhancedMatchingProfileForm = () => {
             <button 
               type="button"
               className="btn btn-outline btn-sm"
-              onClick={() => navigate('/help/matching-profile')}
+              onClick={() => window.open('/help/matching-profile', '_blank')}
               disabled={loading || isSubmitting}
             >
               View Help Guide
@@ -412,7 +510,7 @@ const EnhancedMatchingProfileForm = () => {
             <button 
               type="button"
               className="btn btn-outline btn-sm"
-              onClick={() => navigate('/dashboard')}
+              onClick={() => navigate('/app')}
               disabled={loading || isSubmitting}
             >
               Return to Dashboard
@@ -423,5 +521,78 @@ const EnhancedMatchingProfileForm = () => {
     </div>
   );
 };
+
+// ✅ FIXED: Add CSS for improved form validation states
+const additionalStyles = `
+.form-actions {
+  display: flex;
+  gap: 1rem;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: flex-end;
+  margin-top: 2rem;
+  padding-top: 1rem;
+  border-top: 1px solid var(--border-beige);
+}
+
+.form-actions .btn {
+  min-width: 120px;
+}
+
+.form-actions .btn:first-child {
+  margin-right: auto;
+}
+
+.loading-spinner.small {
+  width: 14px;
+  height: 14px;
+  margin-right: 0.5rem;
+}
+
+.error input,
+.error select,
+.error textarea {
+  border-color: var(--coral) !important;
+  background-color: #fff5f5;
+}
+
+.alert-error input,
+.alert-error select, 
+.alert-error textarea {
+  border-color: var(--coral) !important;
+}
+
+details summary {
+  cursor: pointer;
+  font-weight: 500;
+}
+
+details[open] summary {
+  margin-bottom: 0.5rem;
+}
+
+@media (max-width: 768px) {
+  .form-actions {
+    flex-direction: column;
+    align-items: stretch;
+  }
+  
+  .form-actions .btn:first-child {
+    margin-right: 0;
+    margin-bottom: 0.5rem;
+  }
+}
+`;
+
+// Inject additional styles
+if (typeof document !== 'undefined') {
+  const existingStyle = document.getElementById('enhanced-matching-form-styles');
+  if (!existingStyle) {
+    const styleElement = document.createElement('style');
+    styleElement.id = 'enhanced-matching-form-styles';
+    styleElement.textContent = additionalStyles;
+    document.head.appendChild(styleElement);
+  }
+}
 
 export default EnhancedMatchingProfileForm;

@@ -10,56 +10,139 @@ const PropertySearch = () => {
   const [properties, setProperties] = useState([]);
   const [totalResults, setTotalResults] = useState(0);
   const [currentPage, setCurrentPage] = useState(1);
-  const [showFilters, setShowFilters] = useState(false);
+  const [showAdvancedFilters, setShowAdvancedFilters] = useState(false);
+  const [userPreferences, setUserPreferences] = useState(null);
+  const [searchMode, setSearchMode] = useState('basic'); // 'basic' or 'recovery'
   
-  // Search and filter state
-  const [searchFilters, setSearchFilters] = useState({
+  // ✅ FIXED: Restructured search filters to match form criteria
+  const [basicFilters, setBasicFilters] = useState({
     location: '',
-    maxPrice: '',
+    state: '',
+    maxRent: '',
     minBedrooms: '',
-    propertyType: '',
-    recoveryFriendly: false,
+    housingType: [], // Array to match form structure
     furnished: false,
     petsAllowed: false,
-    smokingAllowed: false,
-    acceptedSubsidies: [],
-    amenities: [],
-    utilities: []
+    utilityBudget: '' // Added for better budget alignment
   });
 
-  // Available filter options based on your schema
-  const propertyTypes = [
+  // ✅ NEW: Recovery-specific search filters
+  const [recoveryFilters, setRecoveryFilters] = useState({
+    recoveryHousingOnly: true,
+    soberness: '',
+    caseManagement: false,
+    counselingServices: false,
+    supportGroups: false,
+    requiredPrograms: [],
+    recoveryStage: ''
+  });
+
+  // ✅ IMPROVED: Advanced filters for detailed search
+  const [advancedFilters, setAdvancedFilters] = useState({
+    acceptedSubsidies: [],
+    amenities: [],
+    utilitiesIncluded: [],
+    smokingPolicy: '',
+    guestPolicy: '',
+    backgroundCheck: '',
+    leaseLength: '',
+    moveInCost: ''
+  });
+
+  // ✅ NEW: External search integration flags
+  const [externalSources, setExternalSources] = useState({
+    includeZillow: false,
+    includeApartmentsDotCom: false,
+    includeRentDotCom: false,
+    enableExternalSearch: false // Master toggle for future feature
+  });
+
+  // Housing type options that match form structure
+  const housingTypeOptions = [
     { value: 'apartment', label: 'Apartment' },
     { value: 'house', label: 'House' },
     { value: 'condo', label: 'Condo' },
     { value: 'townhouse', label: 'Townhouse' },
     { value: 'studio', label: 'Studio' },
+    { value: 'shared_room', label: 'Shared Room' },
     { value: 'sober_living_level_1', label: 'Sober Living Level 1' },
     { value: 'sober_living_level_2', label: 'Sober Living Level 2' },
     { value: 'halfway_house', label: 'Halfway House' },
     { value: 'transitional_housing', label: 'Transitional Housing' }
   ];
 
+  const stateOptions = [
+    'AL', 'AK', 'AZ', 'AR', 'CA', 'CO', 'CT', 'DE', 'FL', 'GA',
+    'HI', 'ID', 'IL', 'IN', 'IA', 'KS', 'KY', 'LA', 'ME', 'MD',
+    'MA', 'MI', 'MN', 'MS', 'MO', 'MT', 'NE', 'NV', 'NH', 'NJ',
+    'NM', 'NY', 'NC', 'ND', 'OH', 'OK', 'OR', 'PA', 'RI', 'SC',
+    'SD', 'TN', 'TX', 'UT', 'VT', 'VA', 'WA', 'WV', 'WI', 'WY'
+  ];
+
   const subsidyOptions = [
     'Section 8', 'HUD-VASH', 'Veterans Benefits', 'SSI/SSDI', 
-    'State Housing Vouchers', 'Local Housing Assistance', 'Medicaid'
+    'State Housing Vouchers', 'Local Housing Assistance', 'Medicaid',
+    'SNAP Benefits', 'Housing Choice Voucher', 'Low Income Housing Tax Credit'
   ];
 
   const amenityOptions = [
-    'Parking', 'Laundry', 'Gym', 'Pool', 'Garden', 'Balcony', 
-    'Air Conditioning', 'Heating', 'Internet', 'Cable TV'
+    'Parking', 'Laundry In-Unit', 'Laundry On-Site', 'Gym/Fitness Center', 
+    'Pool', 'Garden/Yard', 'Balcony/Patio', 'Air Conditioning', 'Heating', 
+    'High-Speed Internet', 'Cable TV', 'Dishwasher', 'Microwave', 'Storage'
   ];
 
   const utilityOptions = [
-    'Electric', 'Gas', 'Water', 'Sewer', 'Trash', 'Internet', 'Cable'
+    'Electric', 'Gas', 'Water', 'Sewer', 'Trash/Recycling', 
+    'Internet', 'Cable', 'Heat', 'Hot Water'
   ];
+
+  // ✅ NEW: Load user preferences from their matching profile
+  useEffect(() => {
+    loadUserPreferences();
+  }, [user]);
 
   // Load properties on component mount and when filters change
   useEffect(() => {
     handleSearch();
-  }, []);
+  }, [basicFilters, recoveryFilters, advancedFilters, searchMode]);
 
-  // Handle search with filters
+  /**
+   * ✅ NEW: Load user's housing preferences from their profile
+   */
+  const loadUserPreferences = async () => {
+    if (!user?.id) return;
+
+    try {
+      const { data, error } = await supabase
+        .from('applicant_forms')
+        .select('*')
+        .eq('user_id', user.id)
+        .single();
+
+      if (data && !error) {
+        setUserPreferences(data);
+        
+        // ✅ NEW: Auto-populate filters from user preferences
+        const autoFilters = {
+          location: data.preferred_location || '',
+          maxRent: data.budget_max?.toString() || '',
+          minBedrooms: data.preferred_bedrooms?.toString() || '',
+          housingType: data.housing_type || [],
+          furnished: data.furnished_preference || false,
+          petsAllowed: data.pets_owned || false
+        };
+        
+        setBasicFilters(prev => ({ ...prev, ...autoFilters }));
+        console.log('✅ Auto-populated search from user preferences:', autoFilters);
+      }
+    } catch (err) {
+      console.error('Error loading user preferences:', err);
+    }
+  };
+
+  /**
+   * ✅ IMPROVED: Enhanced search with recovery housing prioritization
+   */
   const handleSearch = async (resetPage = true) => {
     if (resetPage) {
       setCurrentPage(1);
@@ -67,61 +150,94 @@ const PropertySearch = () => {
     
     setLoading(true);
     try {
-      // Build the query with filters
+      console.log('🔍 Searching with mode:', searchMode, 'Filters:', { basicFilters, recoveryFilters, advancedFilters });
+      
+      // ✅ FIXED: Build query based on search mode and aligned criteria
       let query = supabase
         .from('properties')
         .select('*', { count: 'exact' })
         .eq('status', 'available');
 
-      // Location filter (city or state)
-      if (searchFilters.location.trim()) {
-        query = query.or(`city.ilike.%${searchFilters.location}%,state.ilike.%${searchFilters.location}%,address.ilike.%${searchFilters.location}%`);
+      // Basic location and housing criteria
+      if (basicFilters.location.trim()) {
+        query = query.or(`city.ilike.%${basicFilters.location}%,state.ilike.%${basicFilters.location}%,address.ilike.%${basicFilters.location}%`);
       }
 
-      // Price filter
-      if (searchFilters.maxPrice) {
-        query = query.lte('monthly_rent', parseInt(searchFilters.maxPrice));
+      if (basicFilters.state) {
+        query = query.eq('state', basicFilters.state);
       }
 
-      // Bedrooms filter
-      if (searchFilters.minBedrooms) {
-        query = query.gte('bedrooms', parseInt(searchFilters.minBedrooms));
+      if (basicFilters.maxRent) {
+        query = query.lte('monthly_rent', parseInt(basicFilters.maxRent));
       }
 
-      // Property type filter
-      if (searchFilters.propertyType) {
-        query = query.eq('property_type', searchFilters.propertyType);
+      if (basicFilters.minBedrooms) {
+        query = query.gte('bedrooms', parseInt(basicFilters.minBedrooms));
       }
 
-      // Recovery housing filter
-      if (searchFilters.recoveryFriendly) {
-        query = query.eq('is_recovery_housing', true);
+      // ✅ IMPROVED: Housing type filtering that matches form structure
+      if (basicFilters.housingType.length > 0) {
+        const housingTypeQuery = basicFilters.housingType.map(type => `property_type.eq.${type}`).join(',');
+        query = query.or(housingTypeQuery);
+      }
+
+      // ✅ NEW: Recovery housing mode vs basic housing mode
+      if (searchMode === 'recovery') {
+        // Recovery housing specific filters
+        if (recoveryFilters.recoveryHousingOnly) {
+          query = query.eq('is_recovery_housing', true);
+        }
+        
+        if (recoveryFilters.caseManagement) {
+          query = query.eq('case_management', true);
+        }
+        
+        if (recoveryFilters.counselingServices) {
+          query = query.eq('counseling_services', true);
+        }
+        
+        if (recoveryFilters.supportGroups) {
+          query = query.eq('support_groups', true);
+        }
+
+        if (recoveryFilters.requiredPrograms.length > 0) {
+          query = query.overlaps('required_programs', recoveryFilters.requiredPrograms);
+        }
+      } else {
+        // Basic housing mode - prioritize recovery housing but don't require it
+        // (Recovery housing will be sorted to top in ordering)
       }
 
       // Basic amenity filters
-      if (searchFilters.furnished) {
+      if (basicFilters.furnished) {
         query = query.eq('furnished', true);
       }
 
-      if (searchFilters.petsAllowed) {
+      if (basicFilters.petsAllowed) {
         query = query.eq('pets_allowed', true);
       }
 
-      if (!searchFilters.smokingAllowed) {
-        query = query.eq('smoking_allowed', false);
-      }
+      // ✅ IMPROVED: Advanced filters (only when expanded)
+      if (showAdvancedFilters) {
+        if (advancedFilters.acceptedSubsidies.length > 0) {
+          query = query.overlaps('accepted_subsidies', advancedFilters.acceptedSubsidies);
+        }
 
-      // Array filters (subsidies, amenities, utilities)
-      if (searchFilters.acceptedSubsidies.length > 0) {
-        query = query.overlaps('accepted_subsidies', searchFilters.acceptedSubsidies);
-      }
+        if (advancedFilters.amenities.length > 0) {
+          query = query.overlaps('amenities', advancedFilters.amenities);
+        }
 
-      if (searchFilters.amenities.length > 0) {
-        query = query.overlaps('amenities', searchFilters.amenities);
-      }
+        if (advancedFilters.utilitiesIncluded.length > 0) {
+          query = query.overlaps('utilities_included', advancedFilters.utilitiesIncluded);
+        }
 
-      if (searchFilters.utilities.length > 0) {
-        query = query.overlaps('utilities_included', searchFilters.utilities);
+        if (advancedFilters.smokingPolicy) {
+          query = query.eq('smoking_allowed', advancedFilters.smokingPolicy === 'allowed');
+        }
+
+        if (advancedFilters.leaseLength) {
+          query = query.gte('min_lease_months', parseInt(advancedFilters.leaseLength));
+        }
       }
 
       // Pagination
@@ -131,15 +247,33 @@ const PropertySearch = () => {
       
       query = query.range(from, to);
 
-      // Order by: recovery housing first, then by price
-      query = query.order('is_recovery_housing', { ascending: false })
-                  .order('monthly_rent', { ascending: true });
+      // ✅ IMPROVED: Smart ordering based on search mode
+      if (searchMode === 'recovery') {
+        // Recovery mode: recovery housing first, then by features
+        query = query.order('is_recovery_housing', { ascending: false })
+                    .order('case_management', { ascending: false })
+                    .order('monthly_rent', { ascending: true });
+      } else {
+        // Basic mode: recovery housing first (priority), then by price
+        query = query.order('is_recovery_housing', { ascending: false })
+                    .order('monthly_rent', { ascending: true });
+      }
 
       const { data, error, count } = await query;
 
       if (error) throw error;
 
-      setProperties(data || []);
+      // ✅ NEW: Future external API integration point
+      let allProperties = data || [];
+      
+      if (externalSources.enableExternalSearch && externalSources.includeZillow) {
+        // TODO: Integrate Zillow API
+        console.log('🔮 Future: Zillow API integration would happen here');
+        // const zillowResults = await fetchFromZillow(basicFilters);
+        // allProperties = [...allProperties, ...zillowResults];
+      }
+
+      setProperties(allProperties);
       setTotalResults(count || 0);
       
     } catch (error) {
@@ -150,17 +284,47 @@ const PropertySearch = () => {
     }
   };
 
-  // Handle filter input changes
-  const handleFilterChange = (field, value) => {
-    setSearchFilters(prev => ({
+  /**
+   * ✅ NEW: Handle search mode toggle
+   */
+  const handleSearchModeChange = (mode) => {
+    setSearchMode(mode);
+    setCurrentPage(1);
+  };
+
+  /**
+   * ✅ IMPROVED: Filter change handlers for different filter groups
+   */
+  const handleBasicFilterChange = (field, value) => {
+    setBasicFilters(prev => ({
       ...prev,
       [field]: value
     }));
   };
 
-  // Handle array filter changes (checkboxes)
-  const handleArrayFilterChange = (field, value, isChecked) => {
-    setSearchFilters(prev => ({
+  const handleRecoveryFilterChange = (field, value) => {
+    setRecoveryFilters(prev => ({
+      ...prev,
+      [field]: value
+    }));
+  };
+
+  const handleAdvancedFilterChange = (field, value) => {
+    setAdvancedFilters(prev => ({
+      ...prev,
+      [field]: value
+    }));
+  };
+
+  /**
+   * Handle array filter changes (checkboxes)
+   */
+  const handleArrayFilterChange = (filterGroup, field, value, isChecked) => {
+    const setFilter = filterGroup === 'basic' ? setBasicFilters : 
+                     filterGroup === 'recovery' ? setRecoveryFilters : 
+                     setAdvancedFilters;
+    
+    setFilter(prev => ({
       ...prev,
       [field]: isChecked
         ? [...prev[field], value]
@@ -168,24 +332,67 @@ const PropertySearch = () => {
     }));
   };
 
-  // Clear all filters
-  const clearFilters = () => {
-    setSearchFilters({
+  /**
+   * ✅ NEW: Use my preferences from profile
+   */
+  const handleUseMyPreferences = () => {
+    if (userPreferences) {
+      const autoFilters = {
+        location: userPreferences.preferred_location || '',
+        maxRent: userPreferences.budget_max?.toString() || '',
+        minBedrooms: userPreferences.preferred_bedrooms?.toString() || '',
+        housingType: userPreferences.housing_type || [],
+        furnished: userPreferences.furnished_preference || false,
+        petsAllowed: userPreferences.pets_owned || false
+      };
+      
+      setBasicFilters(prev => ({ ...prev, ...autoFilters }));
+      alert('Search filters updated with your profile preferences!');
+    } else {
+      alert('No preferences found in your profile. Please complete your matching profile first.');
+    }
+  };
+
+  /**
+   * Clear all filters
+   */
+  const clearAllFilters = () => {
+    setBasicFilters({
       location: '',
-      maxPrice: '',
+      state: '',
+      maxRent: '',
       minBedrooms: '',
-      propertyType: '',
-      recoveryFriendly: false,
+      housingType: [],
       furnished: false,
       petsAllowed: false,
-      smokingAllowed: false,
+      utilityBudget: ''
+    });
+    
+    setRecoveryFilters({
+      recoveryHousingOnly: searchMode === 'recovery',
+      soberness: '',
+      caseManagement: false,
+      counselingServices: false,
+      supportGroups: false,
+      requiredPrograms: [],
+      recoveryStage: ''
+    });
+    
+    setAdvancedFilters({
       acceptedSubsidies: [],
       amenities: [],
-      utilities: []
+      utilitiesIncluded: [],
+      smokingPolicy: '',
+      guestPolicy: '',
+      backgroundCheck: '',
+      leaseLength: '',
+      moveInCost: ''
     });
   };
 
-  // Handle contact landlord
+  /**
+   * Handle contact landlord
+   */
   const handleContactLandlord = (property) => {
     const subject = `Inquiry about ${property.title}`;
     const body = `Hi,\n\nI'm interested in your property listing "${property.title}" at ${property.address}.\n\nCould you please provide more information?\n\nThank you!`;
@@ -199,7 +406,9 @@ const PropertySearch = () => {
     }
   };
 
-  // Handle save property (future feature)
+  /**
+   * Handle save property (future feature)
+   */
   const handleSaveProperty = (property) => {
     alert(`Property "${property.title}" saved to your favorites! (Feature coming soon)`);
   };
@@ -212,14 +421,59 @@ const PropertySearch = () => {
     <div className="content">
       {/* Header */}
       <div className="text-center mb-5">
-        <h1 className="welcome-title">Property Search</h1>
+        <h1 className="welcome-title">Find Recovery-Friendly Housing</h1>
         <p className="welcome-text">
-          Find recovery-friendly housing options that meet your needs
+          Search for housing options that support your recovery journey and meet your needs
         </p>
       </div>
 
-      {/* Search Bar and Quick Filters */}
+      {/* ✅ NEW: Search Mode Toggle */}
       <div className="card mb-4">
+        <h3 className="card-title">Search Type</h3>
+        <div className="navigation">
+          <ul className="nav-list">
+            <li className="nav-item">
+              <button
+                className={`nav-button ${searchMode === 'basic' ? 'active' : ''}`}
+                onClick={() => handleSearchModeChange('basic')}
+              >
+                <span className="nav-icon">🏠</span>
+                <span>All Housing</span>
+              </button>
+            </li>
+            <li className="nav-item">
+              <button
+                className={`nav-button ${searchMode === 'recovery' ? 'active' : ''}`}
+                onClick={() => handleSearchModeChange('recovery')}
+              >
+                <span className="nav-icon">🏡</span>
+                <span>Recovery Housing</span>
+              </button>
+            </li>
+          </ul>
+        </div>
+        <p className="text-gray-600 mt-2">
+          {searchMode === 'basic' 
+            ? 'Search all available housing with recovery-friendly options prioritized'
+            : 'Search specifically for recovery housing with specialized support services'
+          }
+        </p>
+      </div>
+
+      {/* ✅ IMPROVED: Basic Search Filters (Always Visible) */}
+      <div className="card mb-4">
+        <div className="card-header">
+          <h3 className="card-title">Basic Housing Criteria</h3>
+          {userPreferences && (
+            <button
+              className="btn btn-outline btn-sm"
+              onClick={handleUseMyPreferences}
+            >
+              Use My Preferences
+            </button>
+          )}
+        </div>
+        
         <div className="grid-auto mb-4">
           <div className="form-group">
             <label className="label">Location</label>
@@ -227,17 +481,31 @@ const PropertySearch = () => {
               className="input"
               type="text"
               placeholder="City, State, or Address"
-              value={searchFilters.location}
-              onChange={(e) => handleFilterChange('location', e.target.value)}
+              value={basicFilters.location}
+              onChange={(e) => handleBasicFilterChange('location', e.target.value)}
             />
+          </div>
+
+          <div className="form-group">
+            <label className="label">State</label>
+            <select
+              className="input"
+              value={basicFilters.state}
+              onChange={(e) => handleBasicFilterChange('state', e.target.value)}
+            >
+              <option value="">Any State</option>
+              {stateOptions.map(state => (
+                <option key={state} value={state}>{state}</option>
+              ))}
+            </select>
           </div>
           
           <div className="form-group">
             <label className="label">Max Monthly Rent</label>
             <select
               className="input"
-              value={searchFilters.maxPrice}
-              onChange={(e) => handleFilterChange('maxPrice', e.target.value)}
+              value={basicFilters.maxRent}
+              onChange={(e) => handleBasicFilterChange('maxRent', e.target.value)}
             >
               <option value="">Any price</option>
               <option value="500">Up to $500</option>
@@ -254,174 +522,259 @@ const PropertySearch = () => {
             <label className="label">Min Bedrooms</label>
             <select
               className="input"
-              value={searchFilters.minBedrooms}
-              onChange={(e) => handleFilterChange('minBedrooms', e.target.value)}
+              value={basicFilters.minBedrooms}
+              onChange={(e) => handleBasicFilterChange('minBedrooms', e.target.value)}
             >
               <option value="">Any</option>
+              <option value="0">Studio</option>
               <option value="1">1+</option>
               <option value="2">2+</option>
               <option value="3">3+</option>
               <option value="4">4+</option>
             </select>
           </div>
-          
-          <div className="form-group">
-            <button
-              className="btn btn-primary"
-              onClick={() => handleSearch()}
-              disabled={loading}
-              style={{ marginTop: '27px' }}
-            >
-              {loading ? 'Searching...' : 'Search'}
-            </button>
+        </div>
+
+        {/* ✅ IMPROVED: Housing type selection that matches form structure */}
+        <div className="form-group mb-4">
+          <label className="label">Housing Types (select all that work for you)</label>
+          <div className="grid-auto">
+            {housingTypeOptions.map(type => (
+              <div
+                key={type.value}
+                className={`checkbox-item ${basicFilters.housingType.includes(type.value) ? 'selected' : ''}`}
+                onClick={() => handleArrayFilterChange('basic', 'housingType', type.value, !basicFilters.housingType.includes(type.value))}
+              >
+                <input
+                  type="checkbox"
+                  checked={basicFilters.housingType.includes(type.value)}
+                  onChange={() => {}}
+                />
+                <span>{type.label}</span>
+              </div>
+            ))}
           </div>
         </div>
 
-        {/* Quick Filter Toggles */}
+        {/* Basic toggles */}
         <div className="grid-auto mb-4">
-          <div className="checkbox-item" onClick={() => handleFilterChange('recoveryFriendly', !searchFilters.recoveryFriendly)}>
+          <div className="checkbox-item" onClick={() => handleBasicFilterChange('furnished', !basicFilters.furnished)}>
             <input
               type="checkbox"
-              checked={searchFilters.recoveryFriendly}
-              onChange={() => {}}
-            />
-            <span>Recovery Housing Only</span>
-          </div>
-          
-          <div className="checkbox-item" onClick={() => handleFilterChange('furnished', !searchFilters.furnished)}>
-            <input
-              type="checkbox"
-              checked={searchFilters.furnished}
+              checked={basicFilters.furnished}
               onChange={() => {}}
             />
             <span>Furnished</span>
           </div>
           
-          <div className="checkbox-item" onClick={() => handleFilterChange('petsAllowed', !searchFilters.petsAllowed)}>
+          <div className="checkbox-item" onClick={() => handleBasicFilterChange('petsAllowed', !basicFilters.petsAllowed)}>
             <input
               type="checkbox"
-              checked={searchFilters.petsAllowed}
+              checked={basicFilters.petsAllowed}
               onChange={() => {}}
             />
             <span>Pet Friendly</span>
           </div>
-        </div>
 
-        {/* Advanced Filters Toggle */}
-        <div className="text-center">
           <button
-            className="btn btn-outline"
-            onClick={() => setShowFilters(!showFilters)}
+            className="btn btn-primary"
+            onClick={() => handleSearch()}
+            disabled={loading}
           >
-            {showFilters ? 'Hide' : 'Show'} Advanced Filters
+            {loading ? 'Searching...' : 'Search Housing'}
           </button>
-          
-          {(searchFilters.acceptedSubsidies.length > 0 || searchFilters.amenities.length > 0 || searchFilters.utilities.length > 0 || searchFilters.propertyType) && (
-            <button
-              className="btn btn-outline ml-2"
-              onClick={clearFilters}
-            >
-              Clear All Filters
-            </button>
-          )}
         </div>
       </div>
 
-      {/* Advanced Filters */}
-      {showFilters && (
+      {/* ✅ NEW: Recovery-Specific Filters (When in Recovery Mode) */}
+      {searchMode === 'recovery' && (
         <div className="card mb-4">
-          <h3 className="card-title">Advanced Filters</h3>
+          <h3 className="card-title">Recovery Support Features</h3>
           
-          <div className="grid-2 mb-4">
-            <div className="form-group">
-              <label className="label">Property Type</label>
-              <select
-                className="input"
-                value={searchFilters.propertyType}
-                onChange={(e) => handleFilterChange('propertyType', e.target.value)}
-              >
-                <option value="">All Types</option>
-                {propertyTypes.map(type => (
-                  <option key={type.value} value={type.value}>
-                    {type.label}
-                  </option>
-                ))}
-              </select>
+          <div className="grid-auto mb-4">
+            <div className="checkbox-item" onClick={() => handleRecoveryFilterChange('caseManagement', !recoveryFilters.caseManagement)}>
+              <input
+                type="checkbox"
+                checked={recoveryFilters.caseManagement}
+                onChange={() => {}}
+              />
+              <span>Case Management Available</span>
             </div>
             
+            <div className="checkbox-item" onClick={() => handleRecoveryFilterChange('counselingServices', !recoveryFilters.counselingServices)}>
+              <input
+                type="checkbox"
+                checked={recoveryFilters.counselingServices}
+                onChange={() => {}}
+              />
+              <span>Counseling Services</span>
+            </div>
+
+            <div className="checkbox-item" onClick={() => handleRecoveryFilterChange('supportGroups', !recoveryFilters.supportGroups)}>
+              <input
+                type="checkbox"
+                checked={recoveryFilters.supportGroups}
+                onChange={() => {}}
+              />
+              <span>Support Groups</span>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ✅ IMPROVED: Advanced Filters (Collapsible) */}
+      <div className="card mb-4">
+        <div className="text-center">
+          <button
+            className="btn btn-outline"
+            onClick={() => setShowAdvancedFilters(!showAdvancedFilters)}
+          >
+            {showAdvancedFilters ? 'Hide' : 'Show'} Advanced Filters
+          </button>
+          
+          <button
+            className="btn btn-outline ml-2"
+            onClick={clearAllFilters}
+          >
+            Clear All Filters
+          </button>
+        </div>
+
+        {showAdvancedFilters && (
+          <div className="mt-4">
+            <h4 className="card-title">Advanced Search Options</h4>
+            
+            {/* Accepted Subsidies */}
             <div className="form-group">
-              <label className="label">Smoking Policy</label>
-              <select
-                className="input"
-                value={searchFilters.smokingAllowed}
-                onChange={(e) => handleFilterChange('smokingAllowed', e.target.value === 'true')}
-              >
-                <option value={false}>Non-Smoking Preferred</option>
-                <option value={true}>Smoking Allowed OK</option>
-              </select>
+              <label className="label">Accepted Subsidies/Benefits</label>
+              <div className="grid-auto">
+                {subsidyOptions.map(subsidy => (
+                  <div
+                    key={subsidy}
+                    className={`checkbox-item ${advancedFilters.acceptedSubsidies.includes(subsidy) ? 'selected' : ''}`}
+                    onClick={() => handleArrayFilterChange('advanced', 'acceptedSubsidies', subsidy, !advancedFilters.acceptedSubsidies.includes(subsidy))}
+                  >
+                    <input
+                      type="checkbox"
+                      checked={advancedFilters.acceptedSubsidies.includes(subsidy)}
+                      onChange={() => {}}
+                    />
+                    <span>{subsidy}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* Required Amenities */}
+            <div className="form-group">
+              <label className="label">Required Amenities</label>
+              <div className="grid-auto">
+                {amenityOptions.map(amenity => (
+                  <div
+                    key={amenity}
+                    className={`checkbox-item ${advancedFilters.amenities.includes(amenity) ? 'selected' : ''}`}
+                    onClick={() => handleArrayFilterChange('advanced', 'amenities', amenity, !advancedFilters.amenities.includes(amenity))}
+                  >
+                    <input
+                      type="checkbox"
+                      checked={advancedFilters.amenities.includes(amenity)}
+                      onChange={() => {}}
+                    />
+                    <span>{amenity}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* Utilities Included */}
+            <div className="form-group">
+              <label className="label">Utilities Included</label>
+              <div className="grid-auto">
+                {utilityOptions.map(utility => (
+                  <div
+                    key={utility}
+                    className={`checkbox-item ${advancedFilters.utilitiesIncluded.includes(utility) ? 'selected' : ''}`}
+                    onClick={() => handleArrayFilterChange('advanced', 'utilitiesIncluded', utility, !advancedFilters.utilitiesIncluded.includes(utility))}
+                  >
+                    <input
+                      type="checkbox"
+                      checked={advancedFilters.utilitiesIncluded.includes(utility)}
+                      onChange={() => {}}
+                    />
+                    <span>{utility}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* Additional Filters */}
+            <div className="grid-2">
+              <div className="form-group">
+                <label className="label">Smoking Policy</label>
+                <select
+                  className="input"
+                  value={advancedFilters.smokingPolicy}
+                  onChange={(e) => handleAdvancedFilterChange('smokingPolicy', e.target.value)}
+                >
+                  <option value="">Any Policy</option>
+                  <option value="not_allowed">Non-Smoking Only</option>
+                  <option value="allowed">Smoking Allowed OK</option>
+                </select>
+              </div>
+
+              <div className="form-group">
+                <label className="label">Minimum Lease Length</label>
+                <select
+                  className="input"
+                  value={advancedFilters.leaseLength}
+                  onChange={(e) => handleAdvancedFilterChange('leaseLength', e.target.value)}
+                >
+                  <option value="">Any Length</option>
+                  <option value="1">1+ months</option>
+                  <option value="3">3+ months</option>
+                  <option value="6">6+ months</option>
+                  <option value="12">12+ months</option>
+                </select>
+              </div>
             </div>
           </div>
+        )}
+      </div>
 
-          {/* Accepted Subsidies */}
-          <div className="form-group">
-            <label className="label">Accepted Subsidies/Benefits</label>
-            <div className="grid-auto">
-              {subsidyOptions.map(subsidy => (
-                <div
-                  key={subsidy}
-                  className={`checkbox-item ${searchFilters.acceptedSubsidies.includes(subsidy) ? 'selected' : ''}`}
-                  onClick={() => handleArrayFilterChange('acceptedSubsidies', subsidy, !searchFilters.acceptedSubsidies.includes(subsidy))}
-                >
-                  <input
-                    type="checkbox"
-                    checked={searchFilters.acceptedSubsidies.includes(subsidy)}
-                    onChange={() => {}}
-                  />
-                  <span>{subsidy}</span>
-                </div>
-              ))}
+      {/* ✅ NEW: Future External Search Integration */}
+      {process.env.NODE_ENV === 'development' && (
+        <div className="card mb-4" style={{ background: 'var(--bg-light-cream)' }}>
+          <h4 className="card-title">🔮 External Search Integration (Coming Soon)</h4>
+          <p className="text-gray-600 mb-3">
+            We're working on integrating with national property databases to expand your search options.
+          </p>
+          <div className="grid-auto">
+            <div className="checkbox-item" onClick={() => setExternalSources(prev => ({ ...prev, includeZillow: !prev.includeZillow }))}>
+              <input
+                type="checkbox"
+                checked={externalSources.includeZillow}
+                onChange={() => {}}
+                disabled
+              />
+              <span>Include Zillow Results</span>
             </div>
-          </div>
-
-          {/* Amenities */}
-          <div className="form-group">
-            <label className="label">Required Amenities</label>
-            <div className="grid-auto">
-              {amenityOptions.map(amenity => (
-                <div
-                  key={amenity}
-                  className={`checkbox-item ${searchFilters.amenities.includes(amenity) ? 'selected' : ''}`}
-                  onClick={() => handleArrayFilterChange('amenities', amenity, !searchFilters.amenities.includes(amenity))}
-                >
-                  <input
-                    type="checkbox"
-                    checked={searchFilters.amenities.includes(amenity)}
-                    onChange={() => {}}
-                  />
-                  <span>{amenity}</span>
-                </div>
-              ))}
+            <div className="checkbox-item" onClick={() => setExternalSources(prev => ({ ...prev, includeApartmentsDotCom: !prev.includeApartmentsDotCom }))}>
+              <input
+                type="checkbox"
+                checked={externalSources.includeApartmentsDotCom}
+                onChange={() => {}}
+                disabled
+              />
+              <span>Include Apartments.com</span>
             </div>
-          </div>
-
-          {/* Utilities Included */}
-          <div className="form-group">
-            <label className="label">Utilities Included</label>
-            <div className="grid-auto">
-              {utilityOptions.map(utility => (
-                <div
-                  key={utility}
-                  className={`checkbox-item ${searchFilters.utilities.includes(utility) ? 'selected' : ''}`}
-                  onClick={() => handleArrayFilterChange('utilities', utility, !searchFilters.utilities.includes(utility))}
-                >
-                  <input
-                    type="checkbox"
-                    checked={searchFilters.utilities.includes(utility)}
-                    onChange={() => {}}
-                  />
-                  <span>{utility}</span>
-                </div>
-              ))}
+            <div className="checkbox-item" onClick={() => setExternalSources(prev => ({ ...prev, includeRentDotCom: !prev.includeRentDotCom }))}>
+              <input
+                type="checkbox"
+                checked={externalSources.includeRentDotCom}
+                onChange={() => {}}
+                disabled
+              />
+              <span>Include Rent.com</span>
             </div>
           </div>
         </div>
@@ -436,7 +789,10 @@ const PropertySearch = () => {
             </h3>
             {totalResults > 0 && (
               <p className="text-gray-600">
-                Recovery housing properties are prioritized in results
+                {searchMode === 'recovery' 
+                  ? 'Recovery housing properties with specialized support'
+                  : 'Recovery housing properties are prioritized in results'
+                }
               </p>
             )}
           </div>
@@ -459,13 +815,21 @@ const PropertySearch = () => {
         <div className="empty-state">
           <div className="empty-state-icon">🏠</div>
           <h3 className="empty-state-title">No properties found</h3>
-          <p>Try adjusting your search criteria or location.</p>
-          <button
-            className="btn btn-primary mt-3"
-            onClick={clearFilters}
-          >
-            Clear Filters
-          </button>
+          <p>Try adjusting your search criteria or switching search modes.</p>
+          <div className="mt-3">
+            <button
+              className="btn btn-primary"
+              onClick={clearAllFilters}
+            >
+              Clear Filters
+            </button>
+            <button
+              className="btn btn-outline ml-2"
+              onClick={() => handleSearchModeChange(searchMode === 'basic' ? 'recovery' : 'basic')}
+            >
+              Try {searchMode === 'basic' ? 'Recovery Housing' : 'All Housing'} Search
+            </button>
+          </div>
         </div>
       ) : (
         <>
@@ -606,17 +970,6 @@ const PropertySearch = () => {
           )}
         </>
       )}
-
-      {/* Future External Integration Note */}
-      <div className="card mt-5" style={{ background: 'var(--bg-light-cream)' }}>
-        <div className="text-center">
-          <h4 className="card-title">Not finding what you need?</h4>
-          <p className="text-gray-600">
-            We're working on integrating with national property databases to expand your search options. 
-            Properties listed directly with our recovery community will always be prioritized.
-          </p>
-        </div>
-      </div>
     </div>
   );
 };
