@@ -337,31 +337,34 @@ const RegisterForm = ({ onBackToLanding, preSelectedRole }) => {
               </div>
             </div>
             
-            <button 
-              type="submit"
-              className={`btn btn-primary ${loading ? 'disabled' : ''}`}
-              disabled={loading}
-            >
-              {loading ? (
-                <div className="flex-center">
-                  <LoadingSpinner size="small" />
-                  <span style={{ marginLeft: '8px' }}>Creating Account...</span>
-                </div>
-              ) : (
-                'Create Account'
+            {/* ✅ NEW: Side-by-side button layout using button-grid */}
+            <div className="button-grid">
+              {onBackToLanding && (
+                <button 
+                  className="btn btn-outline"
+                  onClick={onBackToLanding}
+                  disabled={loading}
+                  type="button"
+                >
+                  Back to Home
+                </button>
               )}
-            </button>
+              <button 
+                type="submit"
+                className={`btn btn-primary ${loading ? 'disabled' : ''}`}
+                disabled={loading}
+              >
+                {loading ? (
+                  <div className="flex-center">
+                    <LoadingSpinner size="small" />
+                    <span style={{ marginLeft: '8px' }}>Creating Account...</span>
+                  </div>
+                ) : (
+                  'Create Account'
+                )}
+              </button>
+            </div>
           </form>
-          
-          {onBackToLanding && (
-            <button 
-              className="btn btn-outline mt-3"
-              onClick={onBackToLanding}
-              disabled={loading}
-            >
-              Back to Home
-            </button>
-          )}
         </div>
       </div>
     </div>

@@ -1,8 +1,4 @@
-/* Housing Seeker Role Card */
-.role-card-housing-seeker {
-  background: linear-gradient(135deg, var(--primary-purple) 0%, rgba(160, 32, 240, 0.15) 100%);
-  border-color: var(--primary-purple);
-}/* Recovery Housing App - Global Styles */
+/* Recovery Housing App - Global Styles */
 
 /* ==================== CSS CUSTOM PROPERTIES ==================== */
 :root {
@@ -14,6 +10,7 @@
   --coral: #FF6F61;
   --coral-dark: #E5574B;
   --gold: #FFD700;
+  --gold-dark: #E6C200;
   
   /* Background Colors */
   --bg-gradient: linear-gradient(135deg, #F5E9DA 0%, #F0E6F7 100%);
@@ -165,10 +162,22 @@ p {
   gap: var(--spacing-lg);
 }
 
+/* Button Grid for side-by-side layout */
+.button-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--spacing-md);
+  margin-top: var(--spacing-lg);
+}
+
 /* Responsive grid adjustments */
 @media (max-width: 768px) {
   .grid-2,
   .grid-3 {
+    grid-template-columns: 1fr;
+  }
+  
+  .button-grid {
     grid-template-columns: 1fr;
   }
 }
@@ -302,6 +311,7 @@ p {
   font-weight: 700;
   margin-bottom: var(--spacing-sm);
   text-align: center;
+  color: var(--gray-900); /* Black text for better contrast */
 }
 
 .role-description {
@@ -309,6 +319,7 @@ p {
   line-height: 1.5;
   text-align: center;
   margin-bottom: var(--spacing-md);
+  color: var(--gray-800); /* Dark gray text for better contrast */
 }
 
 .role-click-hint {
@@ -316,104 +327,56 @@ p {
   font-weight: 600;
   text-align: center;
   opacity: 0.8;
-  color: var(--gray-600);
+  color: var(--gray-700);
   margin-top: var(--spacing-sm);
 }
 
-/* Housing Seeker Role Card */
+/* Housing Seeker Role Card - Purple */
 .role-card-housing-seeker {
-  background: linear-gradient(135deg, var(--primary-purple) 0%, rgba(160, 32, 240, 0.05) 100%);
+  background: linear-gradient(135deg, rgba(160, 32, 240, 0.15) 0%, rgba(160, 32, 240, 0.05) 100%);
   border-color: var(--primary-purple);
 }
 
 .role-card-housing-seeker:hover,
 .role-card-housing-seeker.selected {
   border-color: var(--primary-purple);
-  background: linear-gradient(135deg, var(--primary-purple) 0%, rgba(160, 32, 240, 0.1) 100%);
+  background: linear-gradient(135deg, rgba(160, 32, 240, 0.2) 0%, rgba(160, 32, 240, 0.08) 100%);
 }
 
-.role-card-housing-seeker .role-title {
-  color: white;
-}
-
-.role-card-housing-seeker .role-description {
-  color: rgba(255, 255, 255, 0.95);
-}
-
-.role-card-housing-seeker .role-click-hint {
-  color: rgba(255, 255, 255, 0.8);
-}
-
-/* Peer Support Role Card */
+/* Peer Support Role Card - Teal */
 .role-card-peer-support {
-  background: linear-gradient(135deg, var(--secondary-teal) 0%, rgba(32, 178, 170, 0.05) 100%);
+  background: linear-gradient(135deg, rgba(32, 178, 170, 0.15) 0%, rgba(32, 178, 170, 0.05) 100%);
   border-color: var(--secondary-teal);
 }
 
 .role-card-peer-support:hover,
 .role-card-peer-support.selected {
   border-color: var(--secondary-teal);
-  background: linear-gradient(135deg, var(--secondary-teal) 0%, rgba(32, 178, 170, 0.1) 100%);
+  background: linear-gradient(135deg, rgba(32, 178, 170, 0.2) 0%, rgba(32, 178, 170, 0.08) 100%);
 }
 
-.role-card-peer-support .role-title {
-  color: white;
-}
-
-.role-card-peer-support .role-description {
-  color: rgba(255, 255, 255, 0.95);
-}
-
-.role-card-peer-support .role-click-hint {
-  color: rgba(255, 255, 255, 0.8);
-}
-
-/* Property Owner Role Card */
+/* Property Owner Role Card - Gold/Yellow */
 .role-card-property-owner {
-  background: linear-gradient(135deg, var(--secondary-purple) 0%, rgba(142, 28, 199, 0.05) 100%);
-  border-color: var(--secondary-purple);
+  background: linear-gradient(135deg, rgba(255, 215, 0, 0.15) 0%, rgba(255, 215, 0, 0.05) 100%);
+  border-color: var(--gold);
 }
 
 .role-card-property-owner:hover,
 .role-card-property-owner.selected {
-  border-color: var(--secondary-purple);
-  background: linear-gradient(135deg, var(--secondary-purple) 0%, rgba(142, 28, 199, 0.1) 100%);
+  border-color: var(--gold-dark);
+  background: linear-gradient(135deg, rgba(255, 215, 0, 0.2) 0%, rgba(255, 215, 0, 0.08) 100%);
 }
 
-.role-card-property-owner .role-title {
-  color: white;
-}
-
-.role-card-property-owner .role-description {
-  color: rgba(255, 255, 255, 0.95);
-}
-
-.role-card-property-owner .role-click-hint {
-  color: rgba(255, 255, 255, 0.8);
-}
-
-/* Employer Role Card */
+/* Employer Role Card - Coral */
 .role-card-employer {
-  background: linear-gradient(135deg, var(--coral) 0%, rgba(255, 111, 97, 0.05) 100%);
+  background: linear-gradient(135deg, rgba(255, 111, 97, 0.15) 0%, rgba(255, 111, 97, 0.05) 100%);
   border-color: var(--coral);
 }
 
 .role-card-employer:hover,
 .role-card-employer.selected {
   border-color: var(--coral);
-  background: linear-gradient(135deg, var(--coral) 0%, rgba(255, 111, 97, 0.1) 100%);
-}
-
-.role-card-employer .role-title {
-  color: white;
-}
-
-.role-card-employer .role-description {
-  color: rgba(255, 255, 255, 0.95);
-}
-
-.role-card-employer .role-click-hint {
-  color: rgba(255, 255, 255, 0.8);
+  background: linear-gradient(135deg, rgba(255, 111, 97, 0.2) 0%, rgba(255, 111, 97, 0.08) 100%);
 }
 
 /* ==================== FORM COMPONENTS ==================== */
@@ -957,41 +920,6 @@ select.input {
   background: var(--secondary-teal);
 }
 
-/* ==================== FORMS EXTENDED ==================== */
-.form-title {
-  font-family: var(--font-serif);
-  font-size: 2rem;
-  color: var(--primary-purple);
-  text-align: center;
-  margin-bottom: var(--spacing-lg);
-}
-
-.checkbox-item {
-  display: flex;
-  align-items: center;
-  padding: var(--spacing-sm);
-  border: 2px solid var(--border-beige);
-  border-radius: var(--radius-md);
-  cursor: pointer;
-  transition: var(--transition-normal);
-  background: white;
-}
-
-.checkbox-item:hover {
-  border-color: var(--primary-purple);
-  background: rgba(160, 32, 240, 0.02);
-}
-
-.checkbox-item.selected {
-  border-color: var(--primary-purple);
-  background: rgba(160, 32, 240, 0.05);
-}
-
-.checkbox-item input[type="checkbox"] {
-  margin-right: var(--spacing-sm);
-  accent-color: var(--primary-purple);
-}
-
 /* ==================== DASHBOARD COMPONENTS ==================== */
 .welcome-section {
   text-align: center;
@@ -1122,6 +1050,10 @@ select.input {
   }
   
   .grid-2 {
+    grid-template-columns: 1fr;
+  }
+  
+  .button-grid {
     grid-template-columns: 1fr;
   }
   
