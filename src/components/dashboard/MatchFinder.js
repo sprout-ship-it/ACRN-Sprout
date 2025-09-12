@@ -124,15 +124,15 @@ const MatchFinder = ({ onRequestMatch, onBack }) => {
   const [selectedMatch, setSelectedMatch] = useState(null);
   const [showDetails, setShowDetails] = useState(false);
   const [userMatchingProfile, setUserMatchingProfile] = useState(null);
-  const [excludedUsers, setExcludedUsers] = useState(new Set()); // ✅ NEW: Track excluded users
-  const [sentRequests, setSentRequests] = useState(new Set()); // ✅ NEW: Track sent requests
+  const [excludedUsers, setExcludedUsers] = useState(new Set());
+  const [sentRequests, setSentRequests] = useState(new Set());
   const [filters, setFilters] = useState({
+    minScore: 50, // ✅ CHANGED: Start with 50% as default
     recoveryStage: '',
     ageRange: '',
-    minScore: 40,
     location: '',
-    hideAlreadyMatched: true, // ✅ NEW: Option to hide already matched users
-    hideRequestsSent: true    // ✅ NEW: Option to hide users already contacted
+    hideAlreadyMatched: true,
+    hideRequestsSent: true
   });
   
   // Load user's own matching profile on component mount
@@ -177,7 +177,7 @@ const MatchFinder = ({ onRequestMatch, onBack }) => {
   };
 
   /**
-   * ✅ NEW: Load users that should be excluded from matching
+   * Load users that should be excluded from matching
    */
   const loadExcludedUsers = async () => {
     if (!user?.id) return;
@@ -229,7 +229,7 @@ const MatchFinder = ({ onRequestMatch, onBack }) => {
   };
 
   /**
-   * ✅ NEW: Load sent match requests to show status
+   * Load sent match requests to show status
    */
   const loadSentRequests = async () => {
     if (!user?.id) return;
@@ -252,7 +252,7 @@ const MatchFinder = ({ onRequestMatch, onBack }) => {
   };
   
   /**
-   * ✅ IMPROVED: Find compatible matches with exclusion logic
+   * Find compatible matches with exclusion logic
    */
   const findMatches = async () => {
     if (!userMatchingProfile) {
@@ -288,7 +288,7 @@ const MatchFinder = ({ onRequestMatch, onBack }) => {
       
       console.log(`🔄 Transformed ${transformedCandidates.length} completed profiles`);
 
-      // ✅ NEW: Apply exclusion filters
+      // Apply exclusion filters
       if (filters.hideAlreadyMatched) {
         const beforeExclusion = transformedCandidates.length;
         transformedCandidates = transformedCandidates.filter(candidate => 
@@ -321,7 +321,7 @@ const MatchFinder = ({ onRequestMatch, onBack }) => {
         );
       }
 
-      // ✅ NEW: Location filter
+      // Location filter
       if (filters.location.trim()) {
         const searchLocation = filters.location.trim().toLowerCase();
         filteredCandidates = filteredCandidates.filter(c => 
@@ -369,7 +369,7 @@ const MatchFinder = ({ onRequestMatch, onBack }) => {
   };
   
   /**
-   * ✅ IMPROVED: Handle match request with exclusion updates
+   * Handle match request with exclusion updates
    */
   const handleRequestMatch = async (match) => {
     try {
@@ -378,7 +378,7 @@ const MatchFinder = ({ onRequestMatch, onBack }) => {
       const requestData = {
         requester_id: user.id,
         target_id: match.user_id,
-        request_type: 'roommate', // ✅ FIXED: Use 'roommate' instead of generic type
+        request_type: 'roommate',
         match_score: match.matchScore,
         message: `Hi ${match.first_name}! I think we could be great roommates based on our ${match.matchScore}% compatibility. Would you like to connect?`,
         status: 'pending'
@@ -393,7 +393,7 @@ const MatchFinder = ({ onRequestMatch, onBack }) => {
       
       console.log('✅ Match request sent successfully:', result.data);
       
-      // ✅ NEW: Update local state to reflect sent request
+      // Update local state to reflect sent request
       setSentRequests(prev => new Set([...prev, match.user_id]));
       
       // Optionally call the parent's onRequestMatch if it exists
@@ -403,7 +403,7 @@ const MatchFinder = ({ onRequestMatch, onBack }) => {
       
       alert(`Match request sent to ${match.first_name}!`);
       
-      // ✅ NEW: Refresh matches to update display
+      // Refresh matches to update display
       if (filters.hideRequestsSent) {
         findMatches();
       }
@@ -415,14 +415,14 @@ const MatchFinder = ({ onRequestMatch, onBack }) => {
   };
   
   /**
-   * ✅ IMPROVED: Update filters and refresh matches
+   * Update filters and refresh matches
    */
   const handleFilterChange = (newFilters) => {
     setFilters(prev => ({ ...prev, ...newFilters }));
   };
 
   /**
-   * ✅ NEW: Refresh matches and exclusions
+   * Refresh matches and exclusions
    */
   const handleRefreshMatches = async () => {
     await loadExcludedUsers();
@@ -431,7 +431,7 @@ const MatchFinder = ({ onRequestMatch, onBack }) => {
   };
 
   /**
-   * ✅ NEW: Clear location filter and use user's preferred location
+   * Clear location filter and use user's preferred location
    */
   const handleUseMyLocation = () => {
     if (userMatchingProfile?.location) {
@@ -472,11 +472,28 @@ const MatchFinder = ({ onRequestMatch, onBack }) => {
           </p>
         </div>
         
-        {/* ✅ IMPROVED: Enhanced search controls with exclusion options */}
+        {/* ✅ IMPROVED: Better organized filter controls */}
         <div className="card mb-5">
           <h3 className="card-title">Search Filters</h3>
           
-          <div className="grid-auto mb-4">
+          {/* ✅ Primary filters - centered layout */}
+          <div className="filter-row-primary mb-4">
+            <div className="form-group">
+              <label className="label">Min Compatibility</label>
+              <select
+                className="input"
+                value={filters.minScore}
+                onChange={(e) => handleFilterChange({ minScore: Number(e.target.value) })}
+              >
+                <option value="30">30% or higher</option>
+                <option value="40">40% or higher</option>
+                <option value="50">50% or higher</option>
+                <option value="60">60% or higher</option>
+                <option value="70">70% or higher</option>
+                <option value="80">80% or higher</option>
+              </select>
+            </div>
+            
             <div className="form-group">
               <label className="label">Recovery Stage</label>
               <select
@@ -517,25 +534,10 @@ const MatchFinder = ({ onRequestMatch, onBack }) => {
                 onChange={(e) => handleFilterChange({ location: e.target.value })}
               />
             </div>
-            
-            <div className="form-group">
-              <label className="label">Min Compatibility</label>
-              <select
-                className="input"
-                value={filters.minScore}
-                onChange={(e) => handleFilterChange({ minScore: Number(e.target.value) })}
-              >
-                <option value="30">30% or higher</option>
-                <option value="40">40% or higher</option>
-                <option value="50">50% or higher</option>
-                <option value="60">60% or higher</option>
-                <option value="70">70% or higher</option>
-              </select>
-            </div>
           </div>
 
-          {/* ✅ NEW: Exclusion and action controls */}
-          <div className="grid-auto mb-4">
+          {/* Action buttons - centered */}
+          <div className="filter-actions mb-4">
             <button
               className="btn btn-primary"
               onClick={findMatches}
@@ -561,8 +563,8 @@ const MatchFinder = ({ onRequestMatch, onBack }) => {
             </button>
           </div>
 
-          {/* ✅ NEW: Exclusion options */}
-          <div className="grid-2 mb-4">
+          {/* Exclusion options - centered checkboxes */}
+          <div className="filter-options">
             <div className="checkbox-item">
               <input
                 type="checkbox"
@@ -589,13 +591,13 @@ const MatchFinder = ({ onRequestMatch, onBack }) => {
           </div>
 
           {/* Active filters display */}
-          {(filters.recoveryStage || filters.ageRange || filters.location || filters.minScore > 40) && (
-            <div className="alert alert-info">
+          {(filters.minScore > 50 || filters.recoveryStage || filters.ageRange || filters.location) && (
+            <div className="alert alert-info mt-3">
               <strong>Active Filters:</strong> 
+              {filters.minScore > 50 && ` Min Compatibility: ${filters.minScore}% •`}
               {filters.recoveryStage && ` Recovery: ${filters.recoveryStage} •`}
               {filters.ageRange && ` Age: ${filters.ageRange} •`}
               {filters.location && ` Location: ${filters.location} •`}
-              {filters.minScore > 40 && ` Min Compatibility: ${filters.minScore}% •`}
               {!filters.hideAlreadyMatched && ` Including matched users •`}
               {!filters.hideRequestsSent && ` Including contacted users`}
             </div>
@@ -652,91 +654,97 @@ const MatchFinder = ({ onRequestMatch, onBack }) => {
           </div>
         )}
         
-        {/* ✅ IMPROVED: Matches Grid with status indicators */}
+        {/* ✅ IMPROVED: Better matches grid layout - max 2 per row */}
         {!loading && !error && matches.length > 0 && (
           <>
             <div className="card mb-4">
-              <div className="flex" style={{ alignItems: 'center', justifyContent: 'space-between' }}>
+              <div className="match-results-header">
                 <h3 className="card-title">
                   {matches.length} Compatible Match{matches.length !== 1 ? 'es' : ''} Found
                 </h3>
-                <div className="text-gray-600">
+                <div className="text-gray-600 text-sm">
                   {excludedUsers.size} users excluded • {sentRequests.size} requests sent
                 </div>
               </div>
             </div>
 
-            <div className="grid-auto mb-5">
+            {/* ✅ NEW: Improved match cards grid - max 2 per row */}
+            <div className="matches-grid mb-5">
               {matches.map((match) => {
                 const isRequestSent = match.isRequestSent;
                 const isAlreadyMatched = match.isAlreadyMatched;
                 
                 return (
-                  <div key={match.user_id} className="card">
-                    <div className="card-header">
-                      <div>
-                        <div className="card-title">{match.first_name}</div>
-                        <div className="card-subtitle">{match.matchScore}% Match</div>
+                  <div key={match.user_id} className="match-card">
+                    <div className="match-card-header">
+                      <div className="match-info">
+                        <div className="match-name">{match.first_name}</div>
+                        <div className="match-score">{match.matchScore}% Match</div>
                       </div>
-                      <div>
+                      <div className="match-badges">
                         {isAlreadyMatched && (
-                          <span className="badge badge-warning mb-1">Already Matched</span>
+                          <span className="badge badge-warning">Already Matched</span>
                         )}
                         {isRequestSent && (
-                          <span className="badge badge-info mb-1">Request Sent</span>
+                          <span className="badge badge-info">Request Sent</span>
                         )}
                       </div>
                     </div>
                     
-                    <div>
-                      <div className="mb-4">
-                        <div className="grid-2 text-gray-600">
-                          <div><span className="text-gray-600">Age:</span> <span className="text-gray-800">{match.age || 'Not specified'}</span></div>
-                          <div><span className="text-gray-600">Location:</span> <span className="text-gray-800">{match.location}</span></div>
-                          <div><span className="text-gray-600">Recovery Stage:</span> <span className="text-gray-800">{match.recovery_stage?.charAt(0).toUpperCase() + match.recovery_stage?.slice(1) || 'Not specified'}</span></div>
-                          <div><span className="text-gray-600">Budget:</span> <span className="text-gray-800">${match.price_range?.min || 0} - ${match.price_range?.max || match.budget_max}</span></div>
+                    <div className="match-details">
+                      <div className="basic-info">
+                        <div className="info-grid">
+                          <div><span className="label-text">Age:</span> <span className="value-text">{match.age || 'Not specified'}</span></div>
+                          <div><span className="label-text">Location:</span> <span className="value-text">{match.location}</span></div>
+                          <div><span className="label-text">Recovery Stage:</span> <span className="value-text">{match.recovery_stage?.charAt(0).toUpperCase() + match.recovery_stage?.slice(1) || 'Not specified'}</span></div>
+                          <div><span className="label-text">Budget:</span> <span className="value-text">${match.price_range?.min || 0} - ${match.price_range?.max || match.budget_max}</span></div>
                         </div>
                       </div>
                       
-                      {/* Green Flags */}
+                      {/* ✅ IMPROVED: Green Flags with proper styling */}
                       {match.greenFlags?.length > 0 && (
-                        <div className="mb-4">
-                          <div className="label mb-2">✓ Compatibility Highlights</div>
-                          <div className="mb-2">
-                            {match.greenFlags.slice(0, 3).map((flag, i) => (
-                              <span key={i} className="badge badge-success mr-1 mb-1">
-                                {flag}
-                              </span>
-                            ))}
-                            {match.greenFlags.length > 3 && (
-                              <span className="text-sm text-gray-600">
-                                +{match.greenFlags.length - 3} more
-                              </span>
-                            )}
+                        <div className="compatibility-section">
+                          <div className="green-flags-section">
+                            <div className="section-title">✓ Compatibility Highlights</div>
+                            <div className="flags-container">
+                              {match.greenFlags.slice(0, 3).map((flag, i) => (
+                                <span key={i} className="green-flag">
+                                  {flag}
+                                </span>
+                              ))}
+                              {match.greenFlags.length > 3 && (
+                                <span className="more-flags">
+                                  +{match.greenFlags.length - 3} more
+                                </span>
+                              )}
+                            </div>
                           </div>
                         </div>
                       )}
                       
-                      {/* Red Flags */}
+                      {/* ✅ IMPROVED: Red Flags with proper styling */}
                       {match.redFlags?.length > 0 && (
-                        <div className="mb-4">
-                          <div className="label mb-2">⚠ Potential Concerns</div>
-                          <div className="mb-2">
-                            {match.redFlags.slice(0, 2).map((flag, i) => (
-                              <span key={i} className="badge badge-warning mr-1 mb-1">
-                                {flag}
-                              </span>
-                            ))}
-                            {match.redFlags.length > 2 && (
-                              <span className="text-sm text-gray-600">
-                                +{match.redFlags.length - 2} more
-                              </span>
-                            )}
+                        <div className="compatibility-section">
+                          <div className="red-flags-section">
+                            <div className="section-title">⚠ Potential Concerns</div>
+                            <div className="flags-container">
+                              {match.redFlags.slice(0, 2).map((flag, i) => (
+                                <span key={i} className="red-flag">
+                                  {flag}
+                                </span>
+                              ))}
+                              {match.redFlags.length > 2 && (
+                                <span className="more-flags">
+                                  +{match.redFlags.length - 2} more
+                                </span>
+                              )}
+                            </div>
                           </div>
                         </div>
                       )}
                       
-                      <div className="grid-2">
+                      {/* ✅ FIXED: Improved button layout */}
+                      <div className="match-actions">
                         <button
                           className="btn btn-outline"
                           onClick={() => handleShowDetails(match)}
@@ -775,7 +783,7 @@ const MatchFinder = ({ onRequestMatch, onBack }) => {
         )}
       </div>
       
-      {/* Match Details Modal */}
+      {/* Match Details Modal - keeping existing modal code */}
       {showDetails && selectedMatch && (
         <div className="modal-overlay" onClick={() => setShowDetails(false)}>
           <div className="modal-content" onClick={(e) => e.stopPropagation()}>
@@ -791,7 +799,7 @@ const MatchFinder = ({ onRequestMatch, onBack }) => {
               </button>
             </div>
             
-            {/* ✅ NEW: Match status in modal */}
+            {/* Match status in modal */}
             {(selectedMatch.isRequestSent || selectedMatch.isAlreadyMatched) && (
               <div className="mb-4">
                 {selectedMatch.isAlreadyMatched && (
@@ -882,6 +890,232 @@ const MatchFinder = ({ onRequestMatch, onBack }) => {
           </div>
         </div>
       )}
+
+      {/* ✅ NEW: Custom CSS for improved styling */}
+      <style jsx>{`
+        /* ✅ IMPROVED: Filter controls styling */
+        .filter-row-primary {
+          display: grid;
+          grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+          gap: 1rem;
+          max-width: 1000px;
+          margin: 0 auto;
+        }
+
+        .filter-actions {
+          display: flex;
+          gap: 1rem;
+          justify-content: center;
+          flex-wrap: wrap;
+        }
+
+        .filter-options {
+          display: flex;
+          gap: 2rem;
+          justify-content: center;
+          flex-wrap: wrap;
+          max-width: 600px;
+          margin: 0 auto;
+        }
+
+        /* ✅ NEW: Match results header */
+        .match-results-header {
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          flex-wrap: wrap;
+          gap: 1rem;
+        }
+
+        /* ✅ IMPROVED: Matches grid - max 2 per row */
+        .matches-grid {
+          display: grid;
+          grid-template-columns: repeat(auto-fit, minmax(450px, 1fr));
+          gap: 2rem;
+          max-width: 1200px;
+          margin: 0 auto;
+        }
+
+        /* ✅ NEW: Match card styling */
+        .match-card {
+          background: white;
+          border-radius: var(--radius-xl);
+          padding: 1.5rem;
+          border: 2px solid var(--border-beige);
+          box-shadow: var(--shadow-md);
+          transition: var(--transition-normal);
+        }
+
+        .match-card:hover {
+          transform: translateY(-2px);
+          box-shadow: var(--shadow-lg);
+        }
+
+        .match-card-header {
+          display: flex;
+          justify-content: space-between;
+          align-items: flex-start;
+          margin-bottom: 1.5rem;
+          padding-bottom: 1rem;
+          border-bottom: 1px solid var(--border-beige);
+        }
+
+        .match-name {
+          font-size: 1.3rem;
+          font-weight: 700;
+          color: var(--gray-900);
+          margin-bottom: 0.25rem;
+        }
+
+        .match-score {
+          font-size: 1rem;
+          color: var(--primary-purple);
+          font-weight: 600;
+        }
+
+        .match-badges {
+          display: flex;
+          flex-direction: column;
+          gap: 0.25rem;
+        }
+
+        /* ✅ IMPROVED: Basic info grid */
+        .basic-info {
+          margin-bottom: 1.5rem;
+        }
+
+        .info-grid {
+          display: grid;
+          grid-template-columns: 1fr 1fr;
+          gap: 0.75rem;
+          font-size: 0.9rem;
+        }
+
+        .label-text {
+          color: var(--gray-600);
+          font-weight: 500;
+        }
+
+        .value-text {
+          color: var(--gray-800);
+          font-weight: 400;
+        }
+
+        /* ✅ NEW: Compatibility sections */
+        .compatibility-section {
+          margin-bottom: 1.5rem;
+        }
+
+        .section-title {
+          font-weight: 600;
+          margin-bottom: 0.75rem;
+          font-size: 0.9rem;
+        }
+
+        .flags-container {
+          display: flex;
+          flex-wrap: wrap;
+          gap: 0.5rem;
+        }
+
+        /* ✅ IMPROVED: Green flags styling */
+        .green-flags-section {
+          background: linear-gradient(135deg, #d4edda 0%, #e8f7ec 100%);
+          border: 1px solid #c3e6cb;
+          border-radius: var(--radius-md);
+          padding: 1rem;
+        }
+
+        .green-flag {
+          background: #28a745;
+          color: white;
+          padding: 0.25rem 0.75rem;
+          border-radius: 12px;
+          font-size: 0.8rem;
+          font-weight: 500;
+          white-space: nowrap;
+        }
+
+        /* ✅ IMPROVED: Red flags styling */
+        .red-flags-section {
+          background: linear-gradient(135deg, #f8d7da 0%, #fde2e4 100%);
+          border: 1px solid #f5c6cb;
+          border-radius: var(--radius-md);
+          padding: 1rem;
+        }
+
+        .red-flag {
+          background: #dc3545;
+          color: white;
+          padding: 0.25rem 0.75rem;
+          border-radius: 12px;
+          font-size: 0.8rem;
+          font-weight: 500;
+          white-space: nowrap;
+        }
+
+        .more-flags {
+          color: var(--gray-600);
+          font-size: 0.8rem;
+          padding: 0.25rem 0.5rem;
+        }
+
+        /* ✅ FIXED: Match actions */
+        .match-actions {
+          display: grid;
+          grid-template-columns: 1fr 1fr;
+          gap: 1rem;
+          margin-top: 1rem;
+          padding-top: 1rem;
+          border-top: 1px solid var(--border-beige);
+        }
+
+        /* ✅ RESPONSIVE: Mobile adjustments */
+        @media (max-width: 768px) {
+          .matches-grid {
+            grid-template-columns: 1fr;
+            gap: 1.5rem;
+          }
+
+          .filter-row-primary {
+            grid-template-columns: 1fr;
+          }
+
+          .filter-actions {
+            flex-direction: column;
+            align-items: stretch;
+          }
+
+          .filter-options {
+            flex-direction: column;
+            gap: 1rem;
+          }
+
+          .match-results-header {
+            flex-direction: column;
+            text-align: center;
+          }
+
+          .match-card-header {
+            flex-direction: column;
+            align-items: center;
+            text-align: center;
+          }
+
+          .match-badges {
+            flex-direction: row;
+            margin-top: 0.5rem;
+          }
+
+          .info-grid {
+            grid-template-columns: 1fr;
+          }
+
+          .match-actions {
+            grid-template-columns: 1fr;
+          }
+        }
+      `}</style>
     </>
   );
 };
