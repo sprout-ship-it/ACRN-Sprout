@@ -1,4 +1,8 @@
-/* Recovery Housing App - Global Styles */
+/* Housing Seeker Role Card */
+.role-card-housing-seeker {
+  background: linear-gradient(135deg, var(--primary-purple) 0%, rgba(160, 32, 240, 0.15) 100%);
+  border-color: var(--primary-purple);
+}/* Recovery Housing App - Global Styles */
 
 /* ==================== CSS CUSTOM PROPERTIES ==================== */
 :root {
