@@ -337,7 +337,7 @@ const RegisterForm = ({ onBackToLanding, preSelectedRole }) => {
               </div>
             </div>
             
-            {/* ✅ NEW: Side-by-side button layout using button-grid */}
+            {/* ✅ CRITICAL: Side-by-side button layout using button-grid */}
             <div className="button-grid">
               {onBackToLanding && (
                 <button 

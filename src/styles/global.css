@@ -162,7 +162,7 @@ p {
   gap: var(--spacing-lg);
 }
 
-/* Button Grid for side-by-side layout */
+/* ✅ CRITICAL: Button Grid for side-by-side layout */
 .button-grid {
   display: grid;
   grid-template-columns: 1fr 1fr;
@@ -311,7 +311,7 @@ p {
   font-weight: 700;
   margin-bottom: var(--spacing-sm);
   text-align: center;
-  color: var(--gray-900); /* Black text for better contrast */
+  color: var(--gray-900); /* ✅ BLACK TEXT for better contrast */
 }
 
 .role-description {
@@ -319,7 +319,7 @@ p {
   line-height: 1.5;
   text-align: center;
   margin-bottom: var(--spacing-md);
-  color: var(--gray-800); /* Dark gray text for better contrast */
+  color: var(--gray-800); /* ✅ DARK GRAY TEXT for better contrast */
 }
 
 .role-click-hint {
@@ -331,7 +331,7 @@ p {
   margin-top: var(--spacing-sm);
 }
 
-/* Housing Seeker Role Card - Purple */
+/* ✅ CORRECTED: Housing Seeker Role Card - Purple with BLACK text */
 .role-card-housing-seeker {
   background: linear-gradient(135deg, rgba(160, 32, 240, 0.15) 0%, rgba(160, 32, 240, 0.05) 100%);
   border-color: var(--primary-purple);
@@ -343,7 +343,7 @@ p {
   background: linear-gradient(135deg, rgba(160, 32, 240, 0.2) 0%, rgba(160, 32, 240, 0.08) 100%);
 }
 
-/* Peer Support Role Card - Teal */
+/* ✅ CORRECTED: Peer Support Role Card - Teal with BLACK text */
 .role-card-peer-support {
   background: linear-gradient(135deg, rgba(32, 178, 170, 0.15) 0%, rgba(32, 178, 170, 0.05) 100%);
   border-color: var(--secondary-teal);
@@ -355,7 +355,7 @@ p {
   background: linear-gradient(135deg, rgba(32, 178, 170, 0.2) 0%, rgba(32, 178, 170, 0.08) 100%);
 }
 
-/* Property Owner Role Card - Gold/Yellow */
+/* ✅ CORRECTED: Property Owner Role Card - GOLD/YELLOW with BLACK text */
 .role-card-property-owner {
   background: linear-gradient(135deg, rgba(255, 215, 0, 0.15) 0%, rgba(255, 215, 0, 0.05) 100%);
   border-color: var(--gold);
@@ -367,7 +367,7 @@ p {
   background: linear-gradient(135deg, rgba(255, 215, 0, 0.2) 0%, rgba(255, 215, 0, 0.08) 100%);
 }
 
-/* Employer Role Card - Coral */
+/* ✅ CORRECTED: Employer Role Card - Coral with BLACK text */
 .role-card-employer {
   background: linear-gradient(135deg, rgba(255, 111, 97, 0.15) 0%, rgba(255, 111, 97, 0.05) 100%);
   border-color: var(--coral);
@@ -794,19 +794,6 @@ select.input {
   background: white;
   border-bottom: 2px solid var(--border-beige);
   padding: 0;
-}
-
-.nav-list {
-  display: flex;
-  list-style: none;
-  margin: 0;
-  padding: 0;
-  overflow-x: auto;
-}
-
-.nav-item {
-  flex: 1 1 auto;
-  min-width: 150px;
 }
 
 .nav-button {
