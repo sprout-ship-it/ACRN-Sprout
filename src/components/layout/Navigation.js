@@ -1,4 +1,4 @@
-// src/components/layout/Navigation.js
+// src/components/layout/Navigation.js - FIXED ROUTES
 import React from 'react'
 import { useLocation, useNavigate } from 'react-router-dom'
 import { useAuth } from '../../context/AuthContext'
@@ -9,7 +9,7 @@ const Navigation = () => {
   const location = useLocation()
   const navigate = useNavigate()
 
-  // Get navigation items based on user roles - UPDATED for simplified onboarding flow
+  // Get navigation items based on user roles - FIXED ROUTE PATHS
   const getNavigationItems = () => {
     const baseItems = [
       { 
@@ -20,13 +20,13 @@ const Navigation = () => {
       }
     ]
 
-    // ✅ SIMPLIFIED: Role-specific profile management (single comprehensive forms)
+    // ✅ FIXED: Role-specific profile management with CORRECT paths
     if (hasRole('applicant')) {
       baseItems.push({
         id: 'applicant-profile',
         label: 'My Profile',
         icon: '👤', 
-        path: '/app/profile/comprehensive',
+        path: '/app/profile/matching', // ✅ FIXED: was /comprehensive, now matches MainApp route
         description: 'Complete applicant profile with matching preferences'
       })
     }
@@ -51,18 +51,28 @@ const Navigation = () => {
       })
     }
 
+    if (hasRole('employer')) {
+      baseItems.push({
+        id: 'employer-profile',
+        label: 'My Profile',
+        icon: '👤',
+        path: '/app/employers', // For employers, profile is managed through employer management
+        description: 'Manage your employer profile and company information'
+      })
+    }
+
     // Universal navigation items
     baseItems.push(
       { 
-        id: 'match-requests', 
-        label: 'Match Requests', 
+        id: 'connections', 
+        label: 'Connections', 
         icon: '🤝',
         path: '/app/match-requests',
-        description: 'View and manage match requests'
+        description: 'View and manage all your connections and requests'
       }
     )
 
-    // ✅ UPDATED: Role-specific feature navigation
+    // ✅ FIXED: Role-specific feature navigation with CORRECT paths
     if (hasRole('applicant')) {
       baseItems.push(
         { 
@@ -73,10 +83,10 @@ const Navigation = () => {
           description: 'Discover compatible roommates'
         },
         { 
-          id: 'properties', 
+          id: 'browse-housing', 
           label: 'Browse Housing', 
           icon: '🏘️',
-          path: '/app/properties',
+          path: '/app/property-search', // ✅ FIXED: was /properties, now correct for applicants
           description: 'Search for recovery-friendly housing'
         }
       )
@@ -120,13 +130,34 @@ const Navigation = () => {
       )
     }
 
+    if (hasRole('employer')) {
+      baseItems.push(
+        { 
+          id: 'employer-management', 
+          label: 'Manage Companies', 
+          icon: '🏢',
+          path: '/app/employers',
+          description: 'Manage your company profiles'
+        },
+        { 
+          id: 'candidates', 
+          label: 'Candidates', 
+          icon: '👥',
+          path: '/app/candidates',
+          description: 'Review job applications and candidates'
+        }
+      )
+    }
+
     // ✅ CONDITIONAL: Advanced features (only show if user has progressed enough)
     const shouldShowAdvancedFeatures = profile && (
       hasRole('applicant') || hasRole('peer') || hasRole('landlord')
     )
 
     if (shouldShowAdvancedFeatures) {
-      // Match Dashboard - for users with active matches
+      // ✅ REMOVED: Match Dashboard temporarily until route is implemented
+      // We'll re-add this when the route exists in MainApp.js
+      /*
       baseItems.push({ 
         id: 'match-dashboard', 
         label: 'Match Dashboard', 
@@ -134,6 +165,7 @@ const Navigation = () => {
         path: '/app/match-dashboard',
         description: 'Coordinate housing search with matched roommate'
       })
+      */
     }
 
     // Universal tools
@@ -186,6 +218,7 @@ const Navigation = () => {
     if (roles.includes('applicant')) return '🏠 Housing Seeker'
     if (roles.includes('landlord')) return '🏢 Property Owner' 
     if (roles.includes('peer')) return '🤝 Peer Specialist'
+    if (roles.includes('employer')) return '💼 Recovery-Friendly Employer'
     return '👋 Community Member'
   }
 
