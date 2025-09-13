@@ -5,9 +5,9 @@ import { db } from '../../utils/supabase';
 import LoadingSpinner from '../common/LoadingSpinner';
 import '../../styles/global.css';
 
-const MatchRequests = () => {
+const Connections = () => {
   const { user, profile, hasRole } = useAuth();
-  const [activeTab, setActiveTab] = useState('all');
+  const [activeTab, setActiveTab] = useState('active-matches'); // Changed default tab
   const [requests, setRequests] = useState([]);
   const [loading, setLoading] = useState(true);
   const [actionLoading, setActionLoading] = useState(false);
@@ -31,7 +31,7 @@ const MatchRequests = () => {
       
       setRequests(data || []);
     } catch (error) {
-      console.error('Error loading match requests:', error);
+      console.error('Error loading connections:', error);
     } finally {
       setLoading(false);
     }
@@ -40,14 +40,12 @@ const MatchRequests = () => {
   // Filter requests based on active tab
   const getFilteredRequests = () => {
     switch (activeTab) {
-      case 'received':
-        return requests.filter(r => r.target_id === user.id);
-      case 'sent':
-        return requests.filter(r => r.requester_id === user.id);
-      case 'matched':
+      case 'active-matches':
+        // Show active connections: matched status for current connections
         return requests.filter(r => r.status === 'matched');
-      case 'pending':
-        return requests.filter(r => r.status === 'pending');
+      case 'match-history':
+        // Show all previous matches including unmatched, rejected, etc.
+        return requests.filter(r => ['rejected', 'unmatched'].includes(r.status));
       default:
         return requests;
     }
@@ -56,12 +54,51 @@ const MatchRequests = () => {
   // Get tab counts
   const getTabCounts = () => {
     return {
-      all: requests.length,
-      received: requests.filter(r => r.target_id === user.id).length,
-      sent: requests.filter(r => r.requester_id === user.id).length,
-      matched: requests.filter(r => r.status === 'matched').length,
-      pending: requests.filter(r => r.status === 'pending').length
+      activeMatches: requests.filter(r => r.status === 'matched').length,
+      matchHistory: requests.filter(r => ['rejected', 'unmatched'].includes(r.status)).length
     };
+  };
+  
+  // Get connection type display name
+  const getConnectionType = (request) => {
+    const typeMap = {
+      'roommate': 'Roommate',
+      'peer_support': 'Peer Support',
+      'employment': 'Employment',
+      'housing': 'Housing'
+    };
+    return typeMap[request.request_type] || 'Connection';
+  };
+
+  // Get connection type icon
+  const getConnectionIcon = (request) => {
+    const iconMap = {
+      'roommate': '🏠',
+      'peer_support': '🤝',
+      'employment': '💼',
+      'housing': '🏢'
+    };
+    return iconMap[request.request_type] || '🔗';
+  };
+
+  // Organize active matches by type for better display
+  const getActiveMatchesByType = () => {
+    const activeMatches = requests.filter(r => r.status === 'matched');
+    const organized = {
+      roommate: [],
+      peer_support: [],
+      employment: [],
+      housing: []
+    };
+
+    activeMatches.forEach(request => {
+      const type = request.request_type || 'roommate';
+      if (organized[type]) {
+        organized[type].push(request);
+      }
+    });
+
+    return organized;
   };
   
   // Handle approve request
@@ -75,7 +112,7 @@ const MatchRequests = () => {
         throw new Error('Request not found');
       }
 
-      console.log('📋 Approving match request:', {
+      console.log('📋 Approving connection request:', {
         requestId,
         requester: request.requester_id,
         target: request.target_id,
@@ -93,7 +130,7 @@ const MatchRequests = () => {
         throw updateError;
       }
 
-      console.log('✅ Match request updated to approved');
+      console.log('✅ Connection request updated to approved');
 
       // Step 2: Determine match group structure based on request type and user roles
       const matchGroupData = await determineMatchGroupStructure(request);
@@ -119,7 +156,7 @@ const MatchRequests = () => {
         throw matchedError;
       }
 
-      console.log('✅ Match request updated to matched status');
+      console.log('✅ Connection request updated to matched status');
 
       // Step 4: Update local state
       setRequests(prev => prev.map(req => 
@@ -132,7 +169,7 @@ const MatchRequests = () => {
         } : req
       ));
       
-      alert('Match approved and created successfully!');
+      alert('Connection approved and created successfully!');
       
     } catch (error) {
       console.error('💥 Error approving request:', error);
@@ -189,7 +226,18 @@ const MatchRequests = () => {
         }
       }
 
-      // Case 4: Housing request (for future)
+      // Case 4: Employment request
+      if (request.request_type === 'employment') {
+        if (requesterRoles.includes('applicant') && targetRoles.includes('employer')) {
+          return {
+            ...baseData,
+            applicant_1_id: request.requester_id,
+            employer_id: request.target_id
+          };
+        }
+      }
+
+      // Case 5: Housing request
       if (request.request_type === 'housing') {
         if (requesterRoles.includes('applicant') && targetRoles.includes('landlord')) {
           return {
@@ -254,7 +302,7 @@ const MatchRequests = () => {
       setSelectedRequest(null);
       setRejectReason('');
       
-      alert('Match request rejected.');
+      alert('Connection request rejected.');
       
     } catch (error) {
       console.error('Error rejecting request:', error);
@@ -266,7 +314,7 @@ const MatchRequests = () => {
   
   // Handle unmatch
   const handleUnmatch = async (requestId) => {
-    if (!window.confirm('Are you sure you want to unmatch? This action cannot be undone.')) {
+    if (!window.confirm('Are you sure you want to end this connection? This action cannot be undone.')) {
       return;
     }
     
@@ -278,7 +326,7 @@ const MatchRequests = () => {
         throw new Error('Request not found');
       }
 
-      console.log('📋 Unmatching request:', {
+      console.log('📋 Ending connection:', {
         requestId,
         matchGroupId: request.match_group_id
       });
@@ -288,7 +336,7 @@ const MatchRequests = () => {
         const { error: groupError } = await db.matchGroups.endGroup(
           request.match_group_id,
           user.id,
-          'User initiated unmatch'
+          'User initiated disconnect'
         );
         
         if (groupError) {
@@ -313,18 +361,18 @@ const MatchRequests = () => {
         throw updateError;
       }
 
-      console.log('✅ Match request updated to unmatched');
+      console.log('✅ Connection updated to ended');
 
       // Step 3: Update local state
       setRequests(prev => prev.map(req => 
         req.id === requestId ? { ...req, ...updates } : req
       ));
       
-      alert('Successfully unmatched.');
+      alert('Connection ended successfully.');
       
     } catch (error) {
-      console.error('💥 Error unmatching:', error);
-      alert(`Failed to unmatch: ${error.message}`);
+      console.error('💥 Error ending connection:', error);
+      alert(`Failed to end connection: ${error.message}`);
     } finally {
       setActionLoading(false);
     }
@@ -334,7 +382,7 @@ const MatchRequests = () => {
   const handleViewContactInfo = async (request) => {
     try {
       if (!request.match_group_id) {
-        alert('No match group found for this request.');
+        alert('No match group found for this connection.');
         return;
       }
 
@@ -370,6 +418,10 @@ const MatchRequests = () => {
       else if (otherPerson.properties && otherPerson.properties.length > 0 && otherPerson.properties[0].phone) {
         phoneNumber = otherPerson.properties[0].phone;
       }
+      // For employers: phone is in employer_profiles array
+      else if (otherPerson.employer_profiles && otherPerson.employer_profiles.length > 0 && otherPerson.employer_profiles[0].phone) {
+        phoneNumber = otherPerson.employer_profiles[0].phone;
+      }
       // Fallback: check if phone is directly on the person object
       else if (otherPerson.phone) {
         phoneNumber = otherPerson.phone;
@@ -378,9 +430,10 @@ const MatchRequests = () => {
       // Determine match type for context
       const matchType = db.matchGroups.getMatchType(matchGroup);
       const matchTypeLabel = {
-        'housing': 'housing match',
+        'housing': 'housing connection',
         'peer_support': 'peer support connection',
-        'applicant_peer': 'peer support connection'
+        'applicant_peer': 'peer support connection',
+        'employment': 'employment connection'
       }[matchType] || 'connection';
 
       // Create contact info display
@@ -390,7 +443,7 @@ Contact Information for ${otherPerson.first_name}:
 Email: ${otherPerson.email || 'Not provided'}
 Phone: ${phoneNumber}
 
-You can now reach out to start your ${matchTypeLabel}!
+You can now reach out to continue your ${matchTypeLabel}!
       `;
 
       alert(contactInfo);
@@ -422,7 +475,7 @@ You can now reach out to start your ${matchTypeLabel}!
     
     return (
       <span className={`badge ${statusClass}`}>
-        {status}
+        {status === 'matched' ? 'Active' : status}
       </span>
     );
   };
@@ -441,7 +494,7 @@ You can now reach out to start your ${matchTypeLabel}!
             onClick={() => handleApprove(request.id)}
             disabled={actionLoading}
           >
-            Approve
+            Accept
           </button>
           
           <button
@@ -449,7 +502,7 @@ You can now reach out to start your ${matchTypeLabel}!
             onClick={() => handleReject(request)}
             disabled={actionLoading}
           >
-            Reject
+            Decline
           </button>
         </div>
       );
@@ -470,7 +523,7 @@ You can now reach out to start your ${matchTypeLabel}!
             onClick={() => handleUnmatch(request.id)}
             disabled={actionLoading}
           >
-            Unmatch
+            End Connection
           </button>
         </div>
       );
@@ -483,7 +536,7 @@ You can now reach out to start your ${matchTypeLabel}!
             className="btn btn-outline btn-sm"
             onClick={() => alert('Sending reconnection request...')}
           >
-            Request Rematch
+            Request Reconnection
           </button>
         </div>
       );
@@ -506,21 +559,113 @@ You can now reach out to start your ${matchTypeLabel}!
     return request.requester_id === user.id ? 'sent' : 'received';
   };
 
+  // Render Active Matches organized by type
+  const renderActiveMatches = () => {
+    const matchesByType = getActiveMatchesByType();
+    const hasAnyMatches = Object.values(matchesByType).some(matches => matches.length > 0);
+
+    if (!hasAnyMatches) {
+      return (
+        <div className="empty-state">
+          <div className="empty-state-icon">🤝</div>
+          <h3 className="empty-state-title">No Active Connections</h3>
+          <p>You don't have any active connections yet. Start by finding roommates, peer support, or other services.</p>
+        </div>
+      );
+    }
+
+    return (
+      <div className="connections-by-type">
+        {Object.entries(matchesByType).map(([type, connections]) => {
+          if (connections.length === 0) return null;
+
+          return (
+            <div key={type} className="connection-type-section mb-5">
+              <h4 className="connection-type-title">
+                {getConnectionIcon({ request_type: type })} {getConnectionType({ request_type: type }) + (connections.length > 1 ? 's' : '')}
+                <span className="connection-count">({connections.length})</span>
+              </h4>
+              
+              <div className="connections-grid">
+                {connections.map(request => (
+                  <div key={request.id} className="card">
+                    <div className="card-header">
+                      <div>
+                        <div className="card-title">
+                          {getOtherPersonName(request)}
+                        </div>
+                        <div className="card-subtitle">
+                          Connected on {new Date(request.matched_at || request.created_at).toLocaleDateString()}
+                        </div>
+                      </div>
+                      {renderStatusBadge(request.status)}
+                    </div>
+                    
+                    <div>
+                      {/* Connection Info */}
+                      <div className="grid-auto mb-4">
+                        <div>
+                          <span className="label">Connection Type</span>
+                          <span className="text-gray-800">
+                            {getConnectionType(request)}
+                          </span>
+                        </div>
+                        
+                        {request.match_score && (
+                          <div>
+                            <span className="label">Compatibility</span>
+                            <span className="text-gray-800">
+                              {request.match_score}%
+                            </span>
+                          </div>
+                        )}
+                        
+                        <div>
+                          <span className="label">Status</span>
+                          <span className="text-gray-800">
+                            Active Connection
+                          </span>
+                        </div>
+                      </div>
+                      
+                      {/* Message */}
+                      {request.message && (
+                        <div className="mb-4">
+                          <div className="label mb-2">Original Message</div>
+                          <div className="alert alert-info">
+                            {request.message}
+                          </div>
+                        </div>
+                      )}
+                      
+                      {/* Action Buttons */}
+                      {renderActionButtons(request)}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          );
+        })}
+      </div>
+    );
+  };
+
   if (loading) {
     return (
       <div className="content">
         <div className="flex-center" style={{ minHeight: '400px' }}>
-          <LoadingSpinner message="Loading your match requests..." />
+          <LoadingSpinner message="Loading your connections..." />
         </div>
       </div>
     );
   }
 
-  if (!hasRole('applicant') && !hasRole('peer')) {
+  if (!hasRole('applicant') && !hasRole('peer') && !hasRole('landlord') && !hasRole('employer')) {
     return (
       <div className="content">
         <div className="alert alert-info">
-          <p>Match requests are available for applicants and peer support specialists.</p>
+          <p>Connections are available for all platform users.</p>
         </div>
       </div>
     );
@@ -533,120 +678,119 @@ You can now reach out to start your ${matchTypeLabel}!
     <div className="content">
       {/* Header */}
       <div className="text-center mb-5">
-        <h1 className="welcome-title">Match Requests</h1>
+        <h1 className="welcome-title">Connections</h1>
         <p className="welcome-text">
-          Manage your incoming and outgoing match requests
+          Manage your active connections and view your connection history
         </p>
       </div>
       
       {/* Tabs */}
       <div className="navigation mb-5">
         <ul className="nav-list">
-          {[
-            { id: 'all', label: 'All', count: tabCounts.all },
-            { id: 'received', label: 'Received', count: tabCounts.received },
-            { id: 'sent', label: 'Sent', count: tabCounts.sent },
-            { id: 'matched', label: 'Matched', count: tabCounts.matched },
-            { id: 'pending', label: 'Pending', count: tabCounts.pending }
-          ].map(tab => (
-            <li key={tab.id} className="nav-item">
-              <button
-                className={`nav-button ${activeTab === tab.id ? 'active' : ''}`}
-                onClick={() => setActiveTab(tab.id)}
-              >
-                {tab.label} ({tab.count})
-              </button>
-            </li>
-          ))}
+          <li className="nav-item">
+            <button
+              className={`nav-button ${activeTab === 'active-matches' ? 'active' : ''}`}
+              onClick={() => setActiveTab('active-matches')}
+            >
+              <span className="nav-icon">⚡</span>
+              Active Connections ({tabCounts.activeMatches})
+            </button>
+          </li>
+          
+          <li className="nav-item">
+            <button
+              className={`nav-button ${activeTab === 'match-history' ? 'active' : ''}`}
+              onClick={() => setActiveTab('match-history')}
+            >
+              <span className="nav-icon">📋</span>
+              Connection History ({tabCounts.matchHistory})
+            </button>
+          </li>
         </ul>
       </div>
       
-      {/* Requests List */}
-      {filteredRequests.length === 0 ? (
-        <div className="empty-state">
-          <div className="empty-state-icon">🤝</div>
-          <h3 className="empty-state-title">No {activeTab === 'all' ? '' : activeTab} requests</h3>
-          <p>
-            {activeTab === 'received' && 'You haven\'t received any match requests yet.'}
-            {activeTab === 'sent' && 'You haven\'t sent any match requests yet.'}
-            {activeTab === 'matched' && 'You don\'t have any active matches yet.'}
-            {activeTab === 'pending' && 'You don\'t have any pending requests.'}
-            {activeTab === 'all' && 'You don\'t have any match requests yet.'}
-          </p>
-        </div>
+      {/* Content based on active tab */}
+      {activeTab === 'active-matches' ? (
+        renderActiveMatches()
       ) : (
-        filteredRequests.map(request => (
-          <div
-            key={request.id}
-            className="card mb-4"
-          >
-            {/* Request Header */}
-            <div className="card-header">
-              <div>
-                <div className="card-title">
-                  {getOtherPersonName(request)}
-                </div>
-                <div className="card-subtitle">
-                  {getRequestDirection(request) === 'received' ? 'Received' : 'Sent'} on{' '}
-                  {new Date(request.created_at).toLocaleDateString()}
-                </div>
-              </div>
-              {renderStatusBadge(request.status)}
-            </div>
-            
-            {/* Request Body */}
-            <div>
-              {/* Basic Info */}
-              <div className="grid-auto mb-4">
+        /* Match History */
+        filteredRequests.length === 0 ? (
+          <div className="empty-state">
+            <div className="empty-state-icon">📋</div>
+            <h3 className="empty-state-title">No Connection History</h3>
+            <p>Your past connections and rejected requests will appear here.</p>
+          </div>
+        ) : (
+          filteredRequests.map(request => (
+            <div key={request.id} className="card mb-4">
+              {/* Request Header */}
+              <div className="card-header">
                 <div>
-                  <span className="label">Request Type</span>
-                  <span className="text-gray-800">
-                    {getRequestDirection(request) === 'received' ? 'Incoming' : 'Outgoing'}
-                  </span>
+                  <div className="card-title">
+                    {getOtherPersonName(request)}
+                  </div>
+                  <div className="card-subtitle">
+                    {getConnectionType(request)} • {getRequestDirection(request) === 'received' ? 'Received' : 'Sent'} on{' '}
+                    {new Date(request.created_at).toLocaleDateString()}
+                  </div>
+                </div>
+                {renderStatusBadge(request.status)}
+              </div>
+              
+              {/* Request Body */}
+              <div>
+                {/* Basic Info */}
+                <div className="grid-auto mb-4">
+                  <div>
+                    <span className="label">Connection Type</span>
+                    <span className="text-gray-800">
+                      {getConnectionType(request)}
+                    </span>
+                  </div>
+                  
+                  {request.match_score && (
+                    <div>
+                      <span className="label">Compatibility</span>
+                      <span className="text-gray-800">
+                        {request.match_score}%
+                      </span>
+                    </div>
+                  )}
+                  
+                  <div>
+                    <span className="label">Status</span>
+                    <span className="text-gray-800">
+                      {request.status.charAt(0).toUpperCase() + request.status.slice(1)}
+                    </span>
+                  </div>
                 </div>
                 
-                {request.match_score && (
-                  <div>
-                    <span className="label">Match Score</span>
-                    <span className="text-gray-800">
-                      {request.match_score}%
-                    </span>
+                {/* Message */}
+                {request.message && (
+                  <div className="mb-4">
+                    <div className="label mb-2">Message</div>
+                    <div className="alert alert-info">
+                      {request.message}
+                    </div>
                   </div>
                 )}
                 
-                <div>
-                  <span className="label">Status</span>
-                  <span className="text-gray-800">
-                    {request.status.charAt(0).toUpperCase() + request.status.slice(1)}
-                  </span>
-                </div>
+                {/* Rejection Reason */}
+                {request.status === 'rejected' && request.rejection_reason && (
+                  <div className="mb-4">
+                    <div className="label mb-2">Reason</div>
+                    <div className="alert alert-warning">
+                      {request.rejection_reason}
+                    </div>
+                  </div>
+                )}
+                
+                {/* Action Buttons */}
+                {renderActionButtons(request)}
               </div>
-              
-              {/* Message */}
-              {request.message && (
-                <div className="mb-4">
-                  <div className="label mb-2">Message</div>
-                  <div className="alert alert-info">
-                    {request.message}
-                  </div>
-                </div>
-              )}
-              
-              {/* Rejection Reason */}
-              {request.status === 'rejected' && request.rejection_reason && (
-                <div className="mb-4">
-                  <div className="label mb-2">Rejection Reason</div>
-                  <div className="alert alert-warning">
-                    {request.rejection_reason}
-                  </div>
-                </div>
-              )}
-              
-              {/* Action Buttons */}
-              {renderActionButtons(request)}
             </div>
-          </div>
-        ))
+          ))
+        )
       )}
       
       {/* Reject Modal */}
@@ -658,7 +802,7 @@ You can now reach out to start your ${matchTypeLabel}!
             onClick={(e) => e.stopPropagation()}
           >
             <div className="modal-header">
-              <h3 className="modal-title">Reject Match Request</h3>
+              <h3 className="modal-title">Decline Connection Request</h3>
               <button
                 className="modal-close"
                 onClick={() => setShowRejectModal(false)}
@@ -668,14 +812,14 @@ You can now reach out to start your ${matchTypeLabel}!
             </div>
             
             <p className="text-gray-600 mb-4">
-              Please provide a brief reason for rejecting this match request:
+              Please provide a brief reason for declining this connection request:
             </p>
             
             <textarea
               className="input mb-4"
               value={rejectReason}
               onChange={(e) => setRejectReason(e.target.value)}
-              placeholder="e.g., Different lifestyle preferences, scheduling conflicts, etc."
+              placeholder="e.g., Different preferences, timing not right, etc."
               style={{ minHeight: '100px', resize: 'vertical' }}
             />
             
@@ -693,14 +837,64 @@ You can now reach out to start your ${matchTypeLabel}!
                 onClick={submitRejection}
                 disabled={actionLoading || !rejectReason.trim()}
               >
-                {actionLoading ? 'Rejecting...' : 'Reject Request'}
+                {actionLoading ? 'Declining...' : 'Decline Request'}
               </button>
             </div>
           </div>
         </div>
       )}
+
+      {/* Custom CSS for connection type sections */}
+      <style jsx>{`
+        .connections-by-type {
+          display: flex;
+          flex-direction: column;
+          gap: 2rem;
+        }
+
+        .connection-type-section {
+          background: white;
+          border-radius: var(--radius-xl);
+          padding: 1.5rem;
+          border: 2px solid var(--border-beige);
+        }
+
+        .connection-type-title {
+          font-size: 1.25rem;
+          font-weight: 700;
+          color: var(--gray-900);
+          margin-bottom: 1rem;
+          padding-bottom: 0.75rem;
+          border-bottom: 1px solid var(--border-beige);
+          display: flex;
+          align-items: center;
+          gap: 0.5rem;
+        }
+
+        .connection-count {
+          color: var(--gray-600);
+          font-weight: 500;
+          font-size: 1rem;
+        }
+
+        .connections-grid {
+          display: grid;
+          grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
+          gap: 1.5rem;
+        }
+
+        @media (max-width: 768px) {
+          .connections-grid {
+            grid-template-columns: 1fr;
+          }
+          
+          .connection-type-title {
+            font-size: 1.1rem;
+          }
+        }
+      `}</style>
     </div>
   );
 };
 
-export default MatchRequests;
+export default Connections;
