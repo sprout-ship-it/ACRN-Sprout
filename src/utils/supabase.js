@@ -24,6 +24,37 @@ console.log('🔧 Creating Supabase client...')
 export const supabase = createClient(supabaseUrl, supabaseAnonKey)
 console.log('✅ Supabase client created successfully')
 
+// Session validation helper - ADD THIS HERE
+const ensureValidSession = async () => {
+  console.log('🔒 Checking session validity before database query...')
+  try {
+    const { data: { session }, error } = await supabase.auth.getSession()
+    
+    if (error) {
+      console.error('❌ Session check failed:', error.message)
+      throw new Error('Session invalid')
+    }
+    
+    if (!session) {
+      console.error('❌ No active session found')
+      throw new Error('No active session')
+    }
+    
+    // Check if session is expired
+    const now = Math.floor(Date.now() / 1000)
+    if (session.expires_at && session.expires_at < now) {
+      console.error('❌ Session expired')
+      throw new Error('Session expired')
+    }
+    
+    console.log('✅ Session is valid')
+    return session
+  } catch (err) {
+    console.error('💥 Session validation failed:', err)
+    throw err
+  }
+}
+
 // Auth helpers
 export const auth = {
   // Sign up new user
@@ -75,29 +106,41 @@ export const auth = {
   },
 
   // Get current session
-  getSession: async () => {
-    console.log('🔑 Auth: getSession called')
-    try {
-      const timeoutPromise = new Promise((_, reject) => 
-        setTimeout(() => reject(new Error('getSession timeout after 30 seconds')), 30000)
-      )
-      
-      const sessionPromise = supabase.auth.getSession()
-      
-      const { data: { session }, error } = await Promise.race([sessionPromise, timeoutPromise])
-      
-      console.log('🔑 Auth: getSession result', { 
-        hasSession: !!session, 
-        hasUser: !!session?.user,
-        hasError: !!error, 
-        error: error?.message 
-      })
-      return { session, error }
-    } catch (err) {
-      console.error('💥 Auth: getSession failed', err)
-      throw err
+// Get current session
+getSession: async () => {
+  console.log('🔑 Auth: getSession called')
+  try {
+    // Try to refresh the session first
+    const { data: refreshData, error: refreshError } = await supabase.auth.refreshSession()
+    
+    if (refreshError) {
+      console.log('⚠️ Session refresh failed, trying getSession:', refreshError.message)
+    } else {
+      console.log('✅ Session refreshed successfully')
+      return { session: refreshData.session, error: null }
     }
-  },
+    
+    // Fallback to getSession
+    const timeoutPromise = new Promise((_, reject) => 
+      setTimeout(() => reject(new Error('getSession timeout after 30 seconds')), 30000)
+    )
+    
+    const sessionPromise = supabase.auth.getSession()
+    
+    const { data: { session }, error } = await Promise.race([sessionPromise, timeoutPromise])
+    
+    console.log('🔑 Auth: getSession result', { 
+      hasSession: !!session, 
+      hasUser: !!session?.user,
+      hasError: !!error, 
+      error: error?.message 
+    })
+    return { session, error }
+  } catch (err) {
+    console.error('💥 Auth: getSession failed', err)
+    throw err
+  }
+},
 
   // Listen to auth changes
   onAuthStateChange: (callback) => {
@@ -132,70 +175,85 @@ export const db = {
       }
     },
 
-    getById: async (id) => {
-      console.log('📊 DB: profiles.getById called', { id })
-      try {
-        // ✅ FIXED: Increased timeout to 15 seconds
-        const timeoutPromise = new Promise((_, reject) => 
-          setTimeout(() => reject(new Error('profiles.getById timeout after 2 minutes')), 120000)
-        )
-        
-        const queryPromise = supabase
-          .from('registrant_profiles')
-          .select('*')
-          .eq('id', id)
-        
-        const { data, error } = await Promise.race([queryPromise, timeoutPromise])
-        
-        console.log('📊 DB: profiles.getById result', { 
-          hasData: !!data, 
-          dataLength: data?.length,
-          hasError: !!error, 
-          error: error?.message,
-          errorCode: error?.code 
-        })
+getById: async (id) => {
+  console.log('📊 DB: profiles.getById called', { id })
+  
+  try {
+    // Check session first
+    await ensureValidSession()
+    
+    // Reduced timeout (back to reasonable level)
+    const timeoutPromise = new Promise((_, reject) => 
+      setTimeout(() => reject(new Error('profiles.getById timeout after 45 seconds')), 45000)
+    )
+    
+    const queryPromise = supabase
+      .from('registrant_profiles')
+      .select('*')
+      .eq('id', id)
+    
+    const { data, error } = await Promise.race([queryPromise, timeoutPromise])
+    
+    console.log('📊 DB: profiles.getById result', { 
+      hasData: !!data, 
+      dataLength: data?.length,
+      hasError: !!error, 
+      error: error?.message,
+      errorCode: error?.code 
+    })
 
-        // ✅ FIXED: Handle multiple rows or no rows gracefully
-        if (error) {
-          return { data: null, error }
-        }
-        
-        if (!data || data.length === 0) {
-          return { data: null, error: { code: 'PGRST116', message: 'No rows returned' } }
-        }
-        
-        if (data.length > 1) {
-          console.warn('⚠️ Multiple profiles found for user, using first one:', data.length)
-          return { data: data[0], error: null }
-        }
-        
-        return { data: data[0], error: null }
-        
-      } catch (err) {
-        console.error('💥 DB: profiles.getById failed', err)
-        
-        // ✅ FIXED: Better timeout error handling
-        if (err.message && err.message.includes('timeout')) {
-          console.error('🕐 Database query timed out - this may indicate connectivity issues')
-          return { 
-            data: null, 
-            error: { 
-              code: 'TIMEOUT', 
-              message: 'Database query timed out. Please check your connection and try again.' 
-            } 
-          }
-        }
-        
-        throw err
+    if (error) {
+      return { data: null, error }
+    }
+    
+    if (!data || data.length === 0) {
+      return { data: null, error: { code: 'PGRST116', message: 'No rows returned' } }
+    }
+    
+    if (data.length > 1) {
+      console.warn('⚠️ Multiple profiles found for user, using first one:', data.length)
+      return { data: data[0], error: null }
+    }
+    
+    return { data: data[0], error: null }
+    
+  } catch (err) {
+    console.error('💥 DB: profiles.getById failed', err)
+    
+    // Handle session-related errors
+    if (err.message && (err.message.includes('Session') || err.message.includes('session'))) {
+      console.error('🔒 Session issue detected - triggering auth refresh')
+      return { 
+        data: null, 
+        error: { 
+          code: 'SESSION_EXPIRED', 
+          message: 'Your session has expired. Please refresh the page.' 
+        } 
       }
-    },
+    }
+    
+    // Handle timeout errors
+    if (err.message && err.message.includes('timeout')) {
+      console.error('🕐 Database query timed out')
+      return { 
+        data: null, 
+        error: { 
+          code: 'TIMEOUT', 
+          message: 'Database query timed out. Please try again.' 
+        } 
+      }
+    }
+    
+    throw err
+  }
+},
 
     update: async (id, updates) => {
       console.log('📊 DB: profiles.update called', { id, updates })
       try {
         // ✅ FIXED: Add timeout protection to updates
         const timeoutPromise = new Promise((_, reject) => 
-          setTimeout(() => reject(new Error('profiles.update timeout after 1 minute')), 60000)
+          setTimeout(() => reject(new Error('profiles.update timeout after 30 seconds')), 30000)
         )
         
         const updatePromise = supabase

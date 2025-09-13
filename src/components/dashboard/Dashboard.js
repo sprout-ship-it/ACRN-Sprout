@@ -1,4 +1,4 @@
-// src/components/dashboard/Dashboard.js - Streamlined with global styles
+// src/components/dashboard/Dashboard.js - Updated with modified card layout
 import React, { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../../context/AuthContext'
@@ -104,7 +104,7 @@ const Dashboard = () => {
     calculateProfileStats()
   }, [user, profile, hasRole])
 
-  // Streamlined dashboard cards with updated styling
+  // Updated dashboard cards - removed Profile and Settings cards
   const getDashboardCards = () => {
     const cards = []
     
@@ -112,18 +112,10 @@ const Dashboard = () => {
     if (hasRole('applicant')) {
       cards.push(
         { 
-          id: 'matching-profile', 
-          label: 'My Profile', 
-          description: 'View and update your roommate matching profile', 
-          className: 'role-card-housing-seeker',
-          path: '/app/profile/matching',
-          icon: '👤'
-        },
-        { 
           id: 'find-matches', 
           label: 'Find Roommates', 
           description: 'Discover compatible roommates based on your preferences', 
-          className: 'role-card-peer-support',
+          className: 'role-card-housing-seeker', // Changed to purple
           path: '/app/find-matches',
           icon: '🔍'
         },
@@ -156,14 +148,6 @@ const Dashboard = () => {
     
     if (hasRole('peer')) {
       cards.push(
-        { 
-          id: 'peer-profile', 
-          label: 'My Peer Support Profile', 
-          description: 'Manage your professional peer support services profile', 
-          className: 'role-card-peer-support',
-          path: '/app/profile/peer-support',
-          icon: '🤝'
-        },
         { 
           id: 'peer-dashboard', 
           label: 'Peer Support Dashboard', 
@@ -201,23 +185,15 @@ const Dashboard = () => {
       )
     }
     
-    // Universal cards
+    // Connections card with new styling - black border, grey background
     cards.push(
       { 
         id: 'match-requests', 
         label: 'Connections', 
         description: 'View and manage all your connection requests', 
-        className: 'role-card-housing-seeker',
+        className: 'role-card-connections', // New class for black border + grey background
         path: '/app/match-requests',
         icon: '🤝'
-      },
-      { 
-        id: 'account-settings', 
-        label: 'Settings', 
-        description: 'Manage your account preferences and privacy', 
-        className: 'role-card',
-        path: '/app/settings',
-        icon: '⚙️'
       }
     )
     
@@ -273,7 +249,7 @@ const Dashboard = () => {
     <div>
       {getRoleSpecificWelcome()}
       
-      {/* Streamlined Main Dashboard Cards with Role Card Styling */}
+      {/* Main Dashboard Cards with Updated Styling */}
       <div className="card">
         <h3 className="card-title">Your Dashboard</h3>
         <div className="grid-auto">

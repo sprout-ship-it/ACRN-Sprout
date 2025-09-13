@@ -379,6 +379,18 @@ p {
   background: linear-gradient(135deg, rgba(255, 111, 97, 0.2) 0%, rgba(255, 111, 97, 0.08) 100%);
 }
 
+/* ✅ NEW: Connections Role Card - Black border with grey background */
+.role-card-connections {
+  background: linear-gradient(135deg, rgba(108, 117, 125, 0.1) 0%, rgba(108, 117, 125, 0.05) 100%);
+  border-color: #000000;
+}
+
+.role-card-connections:hover,
+.role-card-connections.selected {
+  border-color: #000000;
+  background: linear-gradient(135deg, rgba(108, 117, 125, 0.15) 0%, rgba(108, 117, 125, 0.08) 100%);
+}
+
 /* ==================== FORM COMPONENTS ==================== */
 .form-title {
   font-family: var(--font-serif);
