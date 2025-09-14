@@ -320,34 +320,39 @@ useEffect(() => {
     }
   }
 
-  const signOut = async () => {
-    console.log('🚪 Signing out user')
+const signOut = async () => {
+  console.log('🚪 Signing out user')
+  
+  try {
+    setLoading(true)
+    setError(null)
+
+    const { error } = await auth.signOut()
     
-    try {
-      setLoading(true)
-      setError(null)
-
-      const { error } = await auth.signOut()
-      
-      if (error) {
-        console.error('❌ Signout error:', error)
-        setError(error.message)
-        return { success: false, error: error.message }
-      }
-
-      setUser(null)
-      setProfile(null)
-      console.log('✅ Signout successful')
-      return { success: true }
-    } catch (err) {
-      console.error('💥 Signout failed:', err)
-      const errorMessage = err.message || 'An error occurred during signout'
-      setError(errorMessage)
-      return { success: false, error: errorMessage }
-    } finally {
-      setLoading(false)
+    if (error) {
+      console.error('❌ Signout error:', error)
+      setError(error.message)
+      return { success: false, error: error.message }
     }
+
+    // Immediately clear the state regardless of auth state change
+    setUser(null)
+    setProfile(null)
+    
+    console.log('✅ Signout successful')
+    
+    // Ensure loading is set to false regardless of auth state change
+    setLoading(false)
+    
+    return { success: true }
+  } catch (err) {
+    console.error('💥 Signout failed:', err)
+    const errorMessage = err.message || 'An error occurred during signout'
+    setError(errorMessage)
+    setLoading(false)  // Make sure loading is set to false even on error
+    return { success: false, error: errorMessage }
   }
+}
 
   // SIMPLIFIED: Update profile (only registrant_profiles table)
   const updateProfile = async (updates) => {
