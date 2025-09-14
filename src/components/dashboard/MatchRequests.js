@@ -310,6 +310,10 @@ const Connections = () => {
       setSelectedRequest(null);
       setRejectReason('');
       
+      // Clear any other modal state
+      setShowContactModal(false);
+      setContactInfo(null);
+      
       alert('Connection request rejected.');
       
     } catch (error) {
