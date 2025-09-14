@@ -232,7 +232,6 @@ export const db = {
     },
 
 // Update the profiles.getById method in your db object
-profiles: {
   getById: async (id) => {
     console.log('📊 DB: profiles.getById called', { id })
     
@@ -301,8 +300,7 @@ profiles: {
         } 
       }
     }
-  }
-},
+  },
 
     update: async (id, updates) => {
       console.log('📊 DB: profiles.update called', { id, updates })
