@@ -1,10 +1,9 @@
-// src/contexts/AuthContext.js
-// INTEGRATED: Optimized role checking + employer role support
-import React, { createContext, useContext, useEffect, useState, useMemo, useCallback } from 'react'
+// src/context/AuthContext.js - SIMPLIFIED VERSION
+import React, { createContext, useContext, useEffect, useState } from 'react'
 import { auth, db } from '../utils/supabase'
 
 const AuthContext = createContext({})
-export { AuthContext };
+
 export const useAuth = () => {
   const context = useContext(AuthContext)
   if (!context) {
@@ -14,454 +13,331 @@ export const useAuth = () => {
 }
 
 export const AuthProvider = ({ children }) => {
-  console.log('🚀 AuthProvider starting...')
-  
   const [user, setUser] = useState(null)
   const [profile, setProfile] = useState(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
 
-  // ✅ OPTIMIZED: Memoized role checking functions to prevent excessive calls
-  const hasRole = useCallback((role) => {
-    const result = Array.isArray(profile?.roles) && profile.roles.includes(role)
+  // ✅ SIMPLIFIED: Initialize auth state with timeout protection
+  useEffect(() => {
+    console.log('🔐 AuthProvider: Initializing...')
     
-    // ✅ OPTIMIZED: Only log in development and when explicitly needed
-    if (process.env.NODE_ENV === 'development' && window.debugRoles) {
-      console.log('🔍 hasRole check:', { role, result, userRoles: profile?.roles })
-    }
-    
-    return result
-  }, [profile?.roles]) // Only re-create when roles actually change
+    let mounted = true
+    let timeoutId = null
 
-  const hasAnyRole = useCallback((roles) => {
-    if (!Array.isArray(profile?.roles)) return false
-    return roles.some(role => profile.roles.includes(role))
-  }, [profile?.roles])
+    const initializeAuth = async () => {
+      try {
+        // Set a timeout to prevent infinite loading
+        timeoutId = setTimeout(() => {
+          if (mounted) {
+            console.log('⚠️ AuthProvider: Session check timed out, setting not authenticated')
+            setUser(null)
+            setProfile(null)
+            setLoading(false)
+            setError({ message: 'Session check timed out' })
+          }
+        }, 10000) // 10 second timeout
 
-  const getPrimaryRole = useCallback(() => {
-    return Array.isArray(profile?.roles) && profile.roles.length > 0 ? profile.roles[0] : null
-  }, [profile?.roles])
+        // Get initial session
+        console.log('🔐 AuthProvider: Getting initial session...')
+        const { session, error: sessionError } = await auth.getSession()
+        
+        // Clear timeout if we got a response
+        if (timeoutId) {
+          clearTimeout(timeoutId)
+          timeoutId = null
+        }
 
-  // ✅ NEW: Add employer-specific helper function
-  const getEmployerProfile = useCallback(async () => {
-    if (!user?.id || !hasRole('employer')) {
-      return { data: null, error: 'User is not an employer or not authenticated' }
-    }
-    
-    try {
-      const result = await db.employerProfiles.getByUserId(user.id)
-      return result
-    } catch (err) {
-      console.error('💥 Error getting employer profile:', err)
-      return { data: null, error: err.message }
-    }
-  }, [user?.id, hasRole])
+        if (!mounted) return
 
-  // ✅ INTEGRATED: Computed values with employer support - memoized for performance
-  const computedValues = useMemo(() => {
-    const roles = profile?.roles || []
-    const isArrayRoles = Array.isArray(roles)
-    
-    return {
-      // Basic auth state
-      isAuthenticated: !!user,
-      
-      // Individual role checks
-      isApplicant: isArrayRoles && roles.includes('applicant'),
-      isLandlord: isArrayRoles && roles.includes('landlord'),
-      isPeerSupport: isArrayRoles && roles.includes('peer'),
-      isEmployer: isArrayRoles && roles.includes('employer'), // ✅ NEW
-      
-      // ✅ NEW: Multi-role helpers
-      isMultiRole: isArrayRoles && roles.length > 1,
-      allRoles: roles,
-      
-      // ✅ NEW: Role combinations
-      canPostJobs: isArrayRoles && roles.includes('employer'),
-      canListProperties: isArrayRoles && roles.includes('landlord'),
-      canOfferPeerSupport: isArrayRoles && roles.includes('peer'),
-      canSearchHousing: isArrayRoles && roles.includes('applicant'),
-      canSearchJobs: isArrayRoles && roles.includes('applicant'),
-      
-      // ✅ NEW: Platform engagement helpers
-      hasServiceProvider: isArrayRoles && roles.some(role => ['landlord', 'peer', 'employer'].includes(role)),
-      hasServiceSeeker: isArrayRoles && roles.includes('applicant')
-    }
-  }, [user, profile?.roles]) // Only recalculate when user or roles change
+        if (sessionError) {
+          console.error('❌ AuthProvider: Session error:', sessionError)
+          setError(sessionError)
+          setUser(null)
+          setProfile(null)
+          setLoading(false)
+          return
+        }
 
-  // Initialize auth state
-// Replace the useEffect in AuthContext.js with this simplified version:
-useEffect(() => {
-  console.log('🔄 AuthContext useEffect starting')
-  
-  let isMounted = true
-  
-  // Set up auth state listener first
-  console.log('👂 Setting up auth state change listener')
-  const { data: { subscription } } = auth.onAuthStateChange(async (event, session) => {
-    console.log('🔄 Auth state changed:', event, { 
-      hasSession: !!session,
-      hasUser: !!session?.user 
-    })
-    
-    if (!isMounted) return
-    
-    setUser(session?.user ?? null)
-    
-    if (session?.user) {
-      console.log('👤 Loading profile for user:', session.user.id)
-      await loadUserProfile(session.user.id)
-    } else {
-      console.log('👤 No user, clearing profile')
-      setProfile(null)
-    }
-    
-    if (isMounted) {
-      setLoading(false)
-    }
-  })
-  
-  // Get initial session - this will trigger the auth state change listener
-  const getInitialSession = async () => {
-    try {
-      console.log('📡 Getting initial session...')
-      const { session, error } = await auth.getSession()
-      
-      if (error) {
-        console.error('❌ Error getting initial session:', error)
-        setError(error.message)
-        if (isMounted) {
+        if (session?.user) {
+          console.log('✅ AuthProvider: Found user session, loading profile...')
+          setUser(session.user)
+          await loadUserProfile(session.user.id)
+        } else {
+          console.log('ℹ️ AuthProvider: No user session found')
+          setUser(null)
+          setProfile(null)
+        }
+
+        setLoading(false)
+
+      } catch (err) {
+        if (timeoutId) {
+          clearTimeout(timeoutId)
+        }
+        
+        if (mounted) {
+          console.error('💥 AuthProvider: Initialization failed:', err)
+          setError(err)
+          setUser(null)
+          setProfile(null)
           setLoading(false)
         }
       }
-      // Note: We don't manually set user/profile here because the 
-      // onAuthStateChange listener will handle it
-      
-    } catch (err) {
-      console.error('💥 Auth initialization failed:', err)
-      if (isMounted) {
-        setError(err.message || 'Failed to initialize authentication')
-        setLoading(false)
-      }
     }
-  }
-  
-  getInitialSession()
 
-  return () => {
-    console.log('🧹 AuthContext cleanup')
-    isMounted = false
-    subscription.unsubscribe()
-  }
-}, []) // Empty dependency array
+    initializeAuth()
 
-  // ✅ OPTIMIZED: Memoized profile loading to prevent unnecessary calls
-  const loadUserProfile = useCallback(async (userId) => {
-    console.log('📄 Loading profile for user:', userId)
+    // ✅ SIMPLIFIED: Clean auth state change listener
+    const { data: { subscription } } = auth.onAuthStateChange(async (event, session) => {
+      if (!mounted) return
+
+      console.log('🔐 AuthProvider: Auth state changed:', event)
+
+      try {
+        if (event === 'SIGNED_OUT' || !session?.user) {
+          console.log('🚪 AuthProvider: User signed out')
+          setUser(null)
+          setProfile(null)
+          setError(null)
+        } else if (session.user) {
+          console.log('👤 AuthProvider: User signed in, loading profile...')
+          setUser(session.user)
+          await loadUserProfile(session.user.id)
+        }
+      } catch (err) {
+        console.error('💥 AuthProvider: Error handling auth state change:', err)
+        setError(err)
+      }
+
+      setLoading(false)
+    })
+
+    return () => {
+      mounted = false
+      if (timeoutId) {
+        clearTimeout(timeoutId)
+      }
+      subscription?.unsubscribe()
+    }
+  }, [])
+
+  // ✅ SIMPLIFIED: Load user profile with timeout protection
+  const loadUserProfile = async (userId) => {
+    console.log('👤 AuthProvider: Loading profile for user:', userId)
     
     try {
-      // Load only the registrant profile - no additional profile tables needed
-      const { data: registrantData, error: registrantError } = await db.profiles.getById(userId)
+      // Set a timeout for profile loading
+      const timeoutPromise = new Promise((_, reject) => 
+        setTimeout(() => reject(new Error('Profile loading timed out')), 8000)
+      )
 
-      console.log('📄 Profile loading result:', {
-        hasRegistrant: !!registrantData,
-        registrantError: registrantError?.message
-      })
+      const profilePromise = db.profiles.getById(userId)
 
-      if (registrantError && registrantError.code !== 'PGRST116') {
-        console.error('❌ Error loading registrant profile:', registrantError)
-        
-        // Create emergency fallback profile
-        const emergencyProfile = {
-          id: userId,
-          email: user?.email,
-          roles: [],
-          first_name: '',
-          last_name: ''
+      // Race the profile load against timeout
+      const { data: profileData, error: profileError } = await Promise.race([
+        profilePromise,
+        timeoutPromise
+      ])
+
+      if (profileError) {
+        // If profile doesn't exist, that's OK - user might be new
+        if (profileError.code === 'PGRST116') {
+          console.log('ℹ️ AuthProvider: No profile found (new user)')
+          setProfile(null)
+          return
         }
         
-        console.log('🚨 Using emergency fallback profile')
-        setProfile(emergencyProfile)
-        setError('Profile loading failed - using minimal profile')
+        console.error('❌ AuthProvider: Profile loading error:', profileError)
+        setError(profileError)
+        setProfile(null)
         return
       }
 
-      if (!registrantData) {
-        console.warn('⚠️ No registrant profile found - may not have been created by trigger')
-        
-        // Set a minimal profile to prevent app crashes
-        const fallbackProfile = {
-          id: userId,
-          email: user?.email,
-          roles: [],
-          first_name: '',
-          last_name: ''
-        }
-        
-        console.log('📄 Using fallback profile:', fallbackProfile)
-        setProfile(fallbackProfile)
-        return
+      if (profileData) {
+        console.log('✅ AuthProvider: Profile loaded successfully')
+        setProfile(profileData)
+        setError(null)
+      } else {
+        console.log('ℹ️ AuthProvider: No profile data returned')
+        setProfile(null)
       }
-
-      // Use the registrant profile directly - that's all we need for the simplified flow
-      console.log('📄 Profile loaded successfully:', { 
-        hasRoles: !!registrantData?.roles,
-        roles: registrantData?.roles,
-        fullProfile: registrantData
-      })
-
-      setProfile(registrantData)
 
     } catch (err) {
-      console.error('💥 Critical profile loading error:', err)
+      console.error('💥 AuthProvider: Profile loading failed:', err)
       
-      // Create emergency fallback profile
-      const emergencyProfile = {
-        id: userId,
-        email: user?.email,
-        roles: [],
-        first_name: '',
-        last_name: ''
+      // If it's a timeout, create a minimal profile to prevent blocking
+      if (err.message.includes('timed out')) {
+        console.log('⚠️ AuthProvider: Profile load timed out, creating fallback')
+        setProfile({
+          id: userId,
+          roles: ['applicant'], // Safe default
+          first_name: 'User',
+          loading_error: true
+        })
+        setError({ message: 'Profile loading timed out' })
+      } else {
+        setError(err)
+        setProfile(null)
       }
-      
-      console.log('🚨 Using emergency fallback profile due to error')
-      setProfile(emergencyProfile)
-      setError('Profile loading failed - using minimal profile')
     }
-  }, [user?.email])
+  }
 
-  // SIMPLIFIED: Enhanced signup (only creates registrant_profiles entry)
+  // ✅ SIMPLIFIED: Sign up function
   const signUp = async (email, password, userData) => {
-    console.log('📝 Simplified signup for user:', email)
-    
-    try {
-      setLoading(true)
-      setError(null)
-
-      // Step 1: Create the auth user
-      const { data, error } = await auth.signUp(email, password, userData)
-      
-      if (error) {
-        console.error('❌ Signup error:', error)
-        setError(error.message)
-        return { success: false, error: error.message }
-      }
-
-      if (data.user) {
-        console.log('✅ User created successfully:', data.user.id)
-        
-        // Step 2: Wait a moment for potential trigger
-        await new Promise(resolve => setTimeout(resolve, 1000));
-        
-        // Step 3: Check if profile was created by trigger
-        const { data: existingProfile } = await db.profiles.getById(data.user.id);
-        
-        if (!existingProfile) {
-          console.log('⚠️ No profile found, creating manually...');
-          
-          // Step 4: Create ONLY the registrant_profiles entry (no other tables)
-          const profileData = {
-            id: data.user.id,
-            email: email,
-            first_name: userData.firstName || '',
-            last_name: userData.lastName || '',
-            roles: userData.roles || [],
-            is_active: true
-          };
-          
-          const { error: profileError } = await db.profiles.create(profileData);
-          
-          if (profileError) {
-            console.error('❌ Failed to create profile manually:', profileError);
-            // Don't fail the signup, but log the issue
-          } else {
-            console.log('✅ Profile created manually - user can proceed to role-specific forms');
-          }
-        } else {
-          console.log('✅ Profile found - trigger worked');
-        }
-      }
-      
-      return { success: true, data }
-    } catch (err) {
-      console.error('💥 Signup failed:', err)
-      const errorMessage = err.message || 'An error occurred during signup'
-      setError(errorMessage)
-      return { success: false, error: errorMessage }
-    } finally {
-      setLoading(false)
-    }
-  }
-
-  const signIn = async (email, password) => {
-    console.log('🔑 Signing in user:', email)
-    
-    try {
-      setLoading(true)
-      setError(null)
-
-      const { data, error } = await auth.signIn(email, password)
-      
-      if (error) {
-        console.error('❌ Signin error:', error)
-        setError(error.message)
-        return { success: false, error: error.message }
-      }
-
-      console.log('✅ Signin successful')
-      return { success: true, data }
-    } catch (err) {
-      console.error('💥 Signin failed:', err)
-      const errorMessage = err.message || 'An error occurred during signin'
-      setError(errorMessage)
-      return { success: false, error: errorMessage }
-    } finally {
-      setLoading(false)
-    }
-  }
-
-const signOut = async () => {
-  console.log('🚪 Signing out user')
-  
-  try {
+    console.log('🔐 AuthProvider: signUp called')
     setLoading(true)
     setError(null)
 
-    const { error } = await auth.signOut()
-    
-    if (error) {
-      console.error('❌ Signout error:', error)
-      setError(error.message)
-      return { success: false, error: error.message }
-    }
-
-    // Immediately clear the state regardless of auth state change
-    setUser(null)
-    setProfile(null)
-    
-    console.log('✅ Signout successful')
-    
-    // Ensure loading is set to false regardless of auth state change
-    setLoading(false)
-    
-    return { success: true }
-  } catch (err) {
-    console.error('💥 Signout failed:', err)
-    const errorMessage = err.message || 'An error occurred during signout'
-    setError(errorMessage)
-    setLoading(false)  // Make sure loading is set to false even on error
-    return { success: false, error: errorMessage }
-  }
-}
-
-  // SIMPLIFIED: Update profile (only registrant_profiles table)
-  const updateProfile = async (updates) => {
-    console.log('📝 Updating profile:', updates)
-    
     try {
-      setError(null)
-
-      if (!user) {
-        throw new Error('No authenticated user')
-      }
-
-      // All updates go to registrant_profiles table
-      console.log('📝 Updating registrant_profiles table')
-      const result = await db.profiles.update(user.id, updates)
-      
-      const { data, error } = result
+      const { data, error } = await auth.signUp(email, password, userData)
       
       if (error) {
-        console.error('❌ Profile update error:', error)
-        setError(error.message)
-        return { success: false, error: error.message }
+        setError(error)
+        setLoading(false)
+        return { data: null, error }
       }
 
-      console.log('✅ Profile updated successfully')
-      
-      // Update local profile state directly instead of reloading
-      if (data && data[0]) {
-        setProfile(prev => ({
-          ...prev,
-          ...data[0]
-        }))
-      } else {
-        // Fallback: update local state with the changes we made
-        setProfile(prev => ({
-          ...prev,
-          ...updates
-        }))
-      }
-      
-      return { success: true, data: data?.[0] }
+      // Don't set loading to false here - let the auth state change handler do it
+      return { data, error: null }
+
     } catch (err) {
-      console.error('💥 Profile update failed:', err)
-      const errorMessage = err.message || 'Failed to update profile'
-      setError(errorMessage)
-      return { success: false, error: errorMessage }
+      console.error('💥 AuthProvider: signUp failed:', err)
+      setError(err)
+      setLoading(false)
+      return { data: null, error: err }
     }
   }
 
+  // ✅ SIMPLIFIED: Sign in function
+  const signIn = async (email, password) => {
+    console.log('🔐 AuthProvider: signIn called')
+    setLoading(true)
+    setError(null)
+
+    try {
+      const { data, error } = await auth.signIn(email, password)
+      
+      if (error) {
+        setError(error)
+        setLoading(false)
+        return { data: null, error }
+      }
+
+      // Don't set loading to false here - let the auth state change handler do it
+      return { data, error: null }
+
+    } catch (err) {
+      console.error('💥 AuthProvider: signIn failed:', err)
+      setError(err)
+      setLoading(false)
+      return { data: null, error: err }
+    }
+  }
+
+  // ✅ SIMPLIFIED: Sign out function with timeout protection
+  const signOut = async () => {
+    console.log('🔐 AuthProvider: signOut called')
+    setLoading(true)
+    setError(null)
+
+    try {
+      // Set a timeout for logout to prevent hanging
+      const timeoutPromise = new Promise((_, reject) => 
+        setTimeout(() => reject(new Error('Logout timed out')), 5000)
+      )
+
+      const logoutPromise = auth.signOut()
+
+      // Race logout against timeout
+      const { error } = await Promise.race([logoutPromise, timeoutPromise])
+
+      if (error) {
+        console.error('❌ AuthProvider: signOut error:', error)
+        setError(error)
+        setLoading(false)
+        return { error }
+      }
+
+      // Clear state immediately on successful logout
+      console.log('✅ AuthProvider: signOut successful')
+      setUser(null)
+      setProfile(null)
+      setError(null)
+      setLoading(false)
+
+      return { error: null }
+
+    } catch (err) {
+      console.error('💥 AuthProvider: signOut failed:', err)
+      
+      // Even if logout fails, clear local state
+      if (err.message.includes('timed out')) {
+        console.log('⚠️ AuthProvider: Logout timed out, clearing local state anyway')
+        setUser(null)
+        setProfile(null)
+        setError(null)
+        setLoading(false)
+        return { error: { message: 'Logout timed out but local session cleared' } }
+      }
+
+      setError(err)
+      setLoading(false)
+      return { error: err }
+    }
+  }
+
+  // ✅ ADDED: Helper function to refresh profile
+  const refreshProfile = async () => {
+    if (!user?.id) return
+    
+    console.log('🔄 AuthProvider: Refreshing profile...')
+    await loadUserProfile(user.id)
+  }
+
+  // ✅ ADDED: Helper function to clear error
   const clearError = () => {
     setError(null)
   }
 
-  // ✅ OPTIMIZED: Memoize the context value to prevent unnecessary re-renders
-  const value = useMemo(() => ({
+  // ✅ ADDED: Helper functions for role checking
+  const hasRole = (role) => {
+    return profile?.roles?.includes(role) || false
+  }
+
+  const hasAnyRole = (roles) => {
+    if (!profile?.roles) return false
+    return roles.some(role => profile.roles.includes(role))
+  }
+
+  // ✅ ADDED: Computed properties
+  const isAuthenticated = !!user && !!profile
+  const isNewUser = !!user && !profile
+
+  const value = {
     // State
     user,
     profile,
     loading,
     error,
-    
-    // Auth methods
+    isAuthenticated,
+    isNewUser,
+
+    // Methods
     signUp,
     signIn,
     signOut,
-    updateProfile,
-    loadUserProfile,
-    
-    // Utility methods
-    hasRole,
-    hasAnyRole,
-    getPrimaryRole,
+    refreshProfile,
     clearError,
-    getEmployerProfile, // ✅ NEW: Employer helper
-    
-    // Computed values (now memoized and includes employer support)
-    ...computedValues
-  }), [
-    user, 
-    profile, 
-    loading, 
-    error, 
-    hasRole, 
-    hasAnyRole, 
-    getPrimaryRole, 
-    getEmployerProfile,
-    computedValues,
-    // Note: auth methods are stable and don't need to be in deps
-  ])
 
-  console.log('🎯 AuthProvider rendering with state:', {
-    hasUser: !!user,
-    hasProfile: !!profile,
-    loading,
-    error: !!error,
-    userRoles: profile?.roles,
-    isEmployer: computedValues.isEmployer,
-    isMultiRole: computedValues.isMultiRole
-  })
+    // Helpers
+    hasRole,
+    hasAnyRole
+  }
 
   return (
     <AuthContext.Provider value={value}>
       {children}
     </AuthContext.Provider>
   )
-}
-
-// ✅ BONUS: Enable detailed role logging in dev tools
-// Run `window.debugRoles = true` in console to see detailed role checks
-if (process.env.NODE_ENV === 'development') {
-  window.debugRoles = false
 }
