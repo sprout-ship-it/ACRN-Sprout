@@ -125,9 +125,7 @@ const loadUserPreferences = async () => {
       // ✅ UPDATED: Auto-populate filters from separate city/state fields
       const autoFilters = {
         // Combine city and state if both exist, otherwise use what's available
-        location: data.preferred_city && data.preferred_state 
-          ? `${data.preferred_city}, ${data.preferred_state}`
-          : data.preferred_city || data.preferred_state || '',
+        location: data.preferred_city || '',
         state: data.preferred_state || '',
         maxRent: data.budget_max?.toString() || '',
         minBedrooms: data.preferred_bedrooms?.toString() || '',
@@ -354,9 +352,7 @@ const handleUseMyPreferences = () => {
   if (userPreferences) {
     const autoFilters = {
       // Combine city and state for search location field
-      location: userPreferences.preferred_city && userPreferences.preferred_state 
-        ? `${userPreferences.preferred_city}, ${userPreferences.preferred_state}`
-        : userPreferences.preferred_city || userPreferences.preferred_state || '',
+      location: userPreferences.preferred_city || '',
       state: userPreferences.preferred_state || '',
       maxRent: userPreferences.budget_max?.toString() || '',
       minBedrooms: userPreferences.preferred_bedrooms?.toString() || '',
