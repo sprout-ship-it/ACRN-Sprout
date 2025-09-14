@@ -275,13 +275,13 @@ const EnhancedMatchingProfileForm = ({ editMode = false, onComplete, onCancel })
             onComplete();
           } else if (editMode) {
             console.log('📍 Edit mode: navigating to app dashboard');
-            navigate('/app', { 
+            navigate('/app?profileComplete=true', {
               state: { message: 'Matching profile updated successfully!' },
               replace: true
             });
           } else {
             console.log('📍 New profile mode: navigating to app dashboard');
-            navigate('/app', { 
+            navigate('/app?profileComplete=true', {
               state: { message: 'Matching profile completed successfully!' },
               replace: true
             });

@@ -1,6 +1,6 @@
 // src/pages/MainApp.js
 import React, { useEffect, useState } from 'react'
-import { Routes, Route, Navigate, useNavigate } from 'react-router-dom'
+import { Routes, Route, Navigate, useNavigate, useLocation } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext';
 import { db } from '../utils/supabase'
 
@@ -85,6 +85,9 @@ const MainApp = () => {
   console.log('🏠 MainApp rendering with employer support, current URL:', window.location.pathname);
   const { user, profile, isAuthenticated, hasRole } = useAuth()
   const navigate = useNavigate()
+  const location = useLocation();
+  const queryParams = new URLSearchParams(window.location.search);
+  const profileJustCompleted = queryParams.get('profileComplete') === 'true';
   
   // ✅ PHASE 4: Simplified profile setup tracking - now includes employer role
   const [profileSetup, setProfileSetup] = useState({
@@ -238,13 +241,13 @@ const MainApp = () => {
   }
 
   // ✅ PHASE 4: Direct users to appropriate comprehensive form if not completed
-  if (!profileSetup.hasComprehensiveProfile) {
-    console.log('📝 User needs to complete comprehensive profile')
-    
-    // For APPLICANTS - show comprehensive matching profile form with demographics
-    if (hasRole('applicant')) {
-      console.log('👤 Redirecting applicant to comprehensive matching profile form')
-      return (
+if (!profileSetup.hasComprehensiveProfile && !profileJustCompleted) {
+  console.log('📝 User needs to complete comprehensive profile');
+  
+  // For APPLICANTS - show comprehensive matching profile form with demographics
+  if (hasRole('applicant')) {
+    console.log('👤 Redirecting applicant to comprehensive matching profile form');
+    return (
         <div className="app-background" style={{ minHeight: '100vh', padding: '20px 0' }}>
           <div className="container">
             <Header />
