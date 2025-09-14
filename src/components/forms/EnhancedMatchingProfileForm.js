@@ -120,7 +120,7 @@ const EnhancedMatchingProfileForm = ({ editMode = false, onComplete, onCancel })
   const CurrentSectionComponent = currentSection.component;
   const isFirstSection = currentSectionIndex === 0;
   const isLastSection = currentSectionIndex === FORM_SECTIONS.length - 1;
-  const hasErrors = Object.keys(errors).length > 0;
+  const hasErrors = Object.values(errors).some(error => error && error.trim() !== '');
 
   // ✅ ENHANCED: Helper function to scroll to first form field
   const scrollToFirstFormField = () => {
