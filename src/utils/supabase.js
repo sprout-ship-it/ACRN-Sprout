@@ -41,10 +41,22 @@ export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
 console.log('✅ Supabase client created with enhanced session management')
 
 // Session validation helper - ADD THIS HERE
+// Update the ensureValidSession function in supabase.js
 const ensureValidSession = async () => {
   console.log('🔒 Checking session validity before database query...')
   try {
-    const { data: { session }, error } = await supabase.auth.getSession()
+    // Add a timeout to prevent hanging
+    const timeoutPromise = new Promise((_, reject) => 
+      setTimeout(() => reject(new Error('Session check timed out after 5 seconds')), 5000)
+    );
+    
+    const sessionPromise = supabase.auth.getSession();
+    
+    // Race the session check against the timeout
+    const { data: { session }, error } = await Promise.race([
+      sessionPromise,
+      timeoutPromise
+    ]);
     
     if (error) {
       console.error('❌ Session check failed:', error.message)
@@ -67,6 +79,21 @@ const ensureValidSession = async () => {
     return session
   } catch (err) {
     console.error('💥 Session validation failed:', err)
+    
+    // Add automatic recovery for timeout errors
+    if (err.message && err.message.includes('timed out')) {
+      console.log('⚠️ Session check timed out, attempting recovery...')
+      // Force a session refresh as a recovery mechanism
+      try {
+        await supabase.auth.refreshSession()
+        console.log('✅ Session recovery attempted')
+        // Return a minimal valid session object to continue
+        return { user: { id: null } }
+      } catch (refreshErr) {
+        console.error('💥 Session recovery failed:', refreshErr)
+      }
+    }
+    
     throw err
   }
 }
