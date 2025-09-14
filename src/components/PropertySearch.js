@@ -160,7 +160,18 @@ const PropertySearch = () => {
 
       // Basic location and housing criteria
       if (basicFilters.location.trim()) {
-        query = query.or(`city.ilike.%${basicFilters.location}%,state.ilike.%${basicFilters.location}%,address.ilike.%${basicFilters.location}%`);
+        const searchLocation = basicFilters.location.trim();
+        // Split by comma to handle "City, State" format
+        const locationParts = searchLocation.split(',').map(part => part.trim());
+        
+        if (locationParts.length === 2) {
+          // Assume "City, State" format
+          const [city, state] = locationParts;
+          query = query.or(`city.ilike.*${city}*,state.ilike.*${state}*,address.ilike.*${searchLocation}*`);
+        } else {
+          // Single location term
+          query = query.or(`city.ilike.*${searchLocation}*,state.ilike.*${searchLocation}*,address.ilike.*${searchLocation}*`);
+        }
       }
 
       if (basicFilters.state) {
