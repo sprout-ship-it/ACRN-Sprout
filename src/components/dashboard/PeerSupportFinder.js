@@ -189,15 +189,20 @@ const PeerSupportFinder = ({ onBack }) => {
   /**
    * ✅ NEW: Smart location search that includes common areas
    */
-  const handleShowNearby = async () => {
+const handleShowNearby = async () => {
     if (!profile?.city && !profile?.state) {
       // Try to use user's location from matching profile if available
       try {
         const { data: applicantProfile } = await db.applicantForms.getByUserId(user.id);
-        if (applicantProfile?.preferred_location) {
-          setFilters(prev => ({ 
-            ...prev, 
-            location: applicantProfile.preferred_location,
+        if (applicantProfile?.preferred_city || applicantProfile?.preferred_state) {
+          // Combine city and state if both exist, otherwise use what's available
+          const location = applicantProfile.preferred_city && applicantProfile.preferred_state 
+            ? `${applicantProfile.preferred_city}, ${applicantProfile.preferred_state}`
+            : applicantProfile.preferred_city || applicantProfile.preferred_state;
+            
+          setFilters(prev => ({
+            ...prev,
+            location: location,
             specialties: [], // Clear other filters for broader search
             minExperience: ''
           }));

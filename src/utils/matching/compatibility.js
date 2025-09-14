@@ -167,12 +167,23 @@ export const generateCompatibilityFlags = (user1, user2, matchScore) => {
     greenFlags.push('Similar work schedules');
   }
 
-  // Location compatibility
-  if (user1.preferred_location && user2.preferred_location) {
-    const location1 = user1.preferred_location.toLowerCase();
-    const location2 = user2.preferred_location.toLowerCase();
-    if (location1.includes(location2) || location2.includes(location1)) {
-      greenFlags.push('Same preferred location');
+  // Check for location compatibility using new city/state fields
+  const user1HasLocation = user1.preferred_city || user1.preferred_state;
+  const user2HasLocation = user2.preferred_city || user2.preferred_state;
+  
+  if (user1HasLocation && user2HasLocation) {
+    const city1 = user1.preferred_city?.toLowerCase();
+    const state1 = user1.preferred_state?.toLowerCase();
+    const city2 = user2.preferred_city?.toLowerCase();
+    const state2 = user2.preferred_state?.toLowerCase();
+    
+    // Check for exact matches
+    if ((city1 && city2 && city1 === city2) && (state1 && state2 && state1 === state2)) {
+      greenFlags.push('Same preferred city and state');
+    } else if (city1 && city2 && city1 === city2) {
+      greenFlags.push('Same preferred city');
+    } else if (state1 && state2 && state1 === state2) {
+      greenFlags.push('Same preferred state');
     }
   }
 

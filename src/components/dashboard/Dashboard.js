@@ -38,7 +38,7 @@ const Dashboard = () => {
             if (applicantProfile.looking_for) completedFields++
             if (applicantProfile.recovery_stage) completedFields++
             if (applicantProfile.budget_max) completedFields++
-            if (applicantProfile.preferred_location) completedFields++
+            if (applicantProfile.preferred_city && applicantProfile.preferred_state) completedFields++
             if (applicantProfile.interests?.length > 0) completedFields++
             
             completionPercentage = Math.round((completedFields / totalFields) * 100)

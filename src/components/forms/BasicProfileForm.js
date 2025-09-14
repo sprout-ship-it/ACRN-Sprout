@@ -274,7 +274,8 @@ const handleSubmit = async (e) => {
           interests: [],
           
           // Optional fields with defaults
-          preferred_location: formData.city && formData.state ? `${formData.city}, ${formData.state}` : null,
+          preferred_city: formData.city || null,
+          preferred_state: formData.state || null,
           age_range_min: 18,
           age_range_max: 65,
           price_range_min: 500,

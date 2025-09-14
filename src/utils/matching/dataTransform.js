@@ -55,8 +55,10 @@ export const transformProfileForAlgorithm = (dbProfile) => {
     gender: dbProfile.gender || null,
     
     // ===== LOCATION =====
-    // Use preferred_location first, then city, then a fallback
-    location: dbProfile.preferred_location || dbProfile.city || 'Not specified',
+// Use preferred_city and preferred_state, then city, then a fallback
+    location: (dbProfile.preferred_city && dbProfile.preferred_state) 
+      ? `${dbProfile.preferred_city}, ${dbProfile.preferred_state}`
+      : dbProfile.preferred_city || dbProfile.preferred_state || dbProfile.city || 'Not specified',
     current_location: dbProfile.current_location,
     target_zip_codes: dbProfile.target_zip_codes || [],
     search_radius: dbProfile.search_radius || 25,

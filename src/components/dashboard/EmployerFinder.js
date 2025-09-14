@@ -259,14 +259,19 @@ const EmployerFinder = ({ onBack }) => {
   /**
    * ✅ NEW: Smart location search using user's preferences
    */
-  const handleShowNearby = async () => {
+const handleShowNearby = async () => {
     try {
       // Try to get user's location from their matching profile
       const { data: applicantProfile } = await db.applicantForms.getByUserId(user.id);
-      if (applicantProfile?.preferred_location) {
-        setFilters(prev => ({ 
-          ...prev, 
-          location: applicantProfile.preferred_location,
+      if (applicantProfile?.preferred_city || applicantProfile?.preferred_state) {
+        // Combine city and state if both exist, otherwise use what's available
+        const location = applicantProfile.preferred_city && applicantProfile.preferred_state 
+          ? `${applicantProfile.preferred_city}, ${applicantProfile.preferred_state}`
+          : applicantProfile.preferred_city || applicantProfile.preferred_state;
+          
+        setFilters(prev => ({
+          ...prev,
+          location: location,
           industry: '', // Clear other filters for broader search
           businessType: '',
           recoveryFeatures: []

@@ -27,7 +27,8 @@ CREATE TABLE IF NOT EXISTS applicant_forms (
   user_id UUID REFERENCES registrant_profiles(id) ON DELETE CASCADE,
   
   -- Location & Housing Preferences
-  preferred_location TEXT,
+  preferred_city TEXT,
+  preferred_state TEXT,
   max_commute INTEGER, -- in minutes
   housing_type TEXT[] DEFAULT '{}',
   price_range_min INTEGER DEFAULT 0,
@@ -243,7 +244,9 @@ CREATE INDEX IF NOT EXISTS idx_registrant_profiles_roles ON registrant_profiles 
 
 CREATE INDEX IF NOT EXISTS idx_applicant_forms_user_id ON applicant_forms(user_id);
 CREATE INDEX IF NOT EXISTS idx_applicant_forms_active ON applicant_forms(is_active) WHERE is_active = TRUE;
-CREATE INDEX IF NOT EXISTS idx_applicant_forms_location ON applicant_forms(preferred_location);
+CREATE INDEX IF NOT EXISTS idx_applicant_forms_city ON applicant_forms(preferred_city);
+CREATE INDEX IF NOT EXISTS idx_applicant_forms_state ON applicant_forms(preferred_state);
+CREATE INDEX IF NOT EXISTS idx_applicant_forms_location ON applicant_forms(preferred_city, preferred_state);
 CREATE INDEX IF NOT EXISTS idx_applicant_forms_recovery_stage ON applicant_forms(recovery_stage);
 
 CREATE INDEX IF NOT EXISTS idx_match_requests_requester ON match_requests(requester_id);

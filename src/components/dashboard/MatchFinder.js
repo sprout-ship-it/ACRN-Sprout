@@ -37,8 +37,10 @@ const transformProfileForAlgorithm = (dbProfile) => {
     age: calculateAge(dbProfile.date_of_birth),
     gender: dbProfile.gender,
     
-    // Location - use preferred_location or city as fallback
-    location: dbProfile.preferred_location || dbProfile.city || 'Not specified',
+   // Location - use preferred_city and preferred_state, or city as fallback
+    location: (dbProfile.preferred_city && dbProfile.preferred_state) 
+      ? `${dbProfile.preferred_city}, ${dbProfile.preferred_state}`
+      : dbProfile.preferred_city || dbProfile.preferred_state || dbProfile.city || 'Not specified',
     
     // Budget
     budget_max: dbProfile.budget_max,

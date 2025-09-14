@@ -1,7 +1,7 @@
 // src/components/forms/hooks/useMatchingProfileForm.js
 import { useState, useEffect } from 'react';
 import { useAuth } from '../../../context/AuthContext';
-import { db } from '../../../utils/supabase';
+import { supabase } from '../../../utils/supabase'; // ✅ FIXED: Direct import to avoid hanging db utilities
 import { 
   defaultFormData, 
   REQUIRED_FIELDS, 
@@ -18,7 +18,7 @@ export const useMatchingProfileForm = () => {
   const [initialLoading, setInitialLoading] = useState(true);
   const [successMessage, setSuccessMessage] = useState('');
 
-  // Load existing data from database
+  // ✅ FIXED: Load existing data without referencing old preferred_location column
   useEffect(() => {
     const loadExistingData = async () => {
       if (!user || !hasRole('applicant')) {
@@ -28,7 +28,20 @@ export const useMatchingProfileForm = () => {
 
       try {
         console.log('🔍 Loading existing data for user:', user.id);
-        const { data: applicantForm } = await db.applicantForms.getByUserId(user.id);
+        
+        // ✅ FIXED: Direct Supabase call to avoid hanging db utilities
+        const { data: applicantForm, error } = await supabase
+          .from('applicant_forms')
+          .select('*')
+          .eq('user_id', user.id)
+          .maybeSingle(); // Use maybeSingle instead of single to avoid errors if no record exists
+        
+        if (error) {
+          console.error('❌ Error loading applicant form:', error);
+          setErrors({ load: `Error loading data: ${error.message}` });
+          setInitialLoading(false);
+          return;
+        }
         
         if (applicantForm) {
           console.log('🔍 Loaded applicant form data:', applicantForm);
@@ -47,7 +60,7 @@ export const useMatchingProfileForm = () => {
             emergencyContactName: applicantForm.emergency_contact_name || '',
             emergencyContactPhone: applicantForm.emergency_contact_phone || '',
             
-            // ✅ UPDATED: Location & Housing - using new city/state fields
+            // ✅ FIXED: Location & Housing - ONLY using new city/state fields
             preferredCity: applicantForm.preferred_city || '',
             preferredState: applicantForm.preferred_state || '',
             targetZipCodes: applicantForm.target_zip_codes?.join(', ') || '',
@@ -121,9 +134,13 @@ export const useMatchingProfileForm = () => {
             specialNeeds: applicantForm.special_needs || '',
             isActive: applicantForm.is_active !== false
           }));
+          
+          console.log('✅ Form data populated successfully');
+        } else {
+          console.log('🔍 No existing applicant form found for user');
         }
       } catch (error) {
-        console.error('Error loading applicant form data:', error);
+        console.error('💥 Error loading applicant form data:', error);
         setErrors({ load: `Error loading data: ${error.message}` });
       } finally {
         setInitialLoading(false);
@@ -260,17 +277,15 @@ export const useMatchingProfileForm = () => {
     handleInputChange(field, parseInt(value));
   };
 
-  // ✅ UPDATED: Submit form using new city/state fields
+  // ✅ FIXED: Direct Supabase submission to avoid hanging db utilities
   const submitForm = async () => {
     console.log('🔍 Form submission started');
     
-    // Clear previous errors
     setErrors(prev => {
       const { submit, ...otherErrors } = prev;
       return otherErrors;
     });
     
-    // Validate form first
     if (!validateForm()) {
       console.log('🔍 Form validation failed');
       return false;
@@ -289,10 +304,7 @@ export const useMatchingProfileForm = () => {
         .filter(zip => zip && /^\d{5}$/.test(zip));
 
       const applicantFormData = {
-        // Ensure user_id is set for upsert
         user_id: user.id,
-        
-        // Personal Demographics
         date_of_birth: formData.dateOfBirth,
         phone: formData.phone,
         gender: formData.gender || null,
@@ -304,7 +316,7 @@ export const useMatchingProfileForm = () => {
         emergency_contact_name: formData.emergencyContactName || null,
         emergency_contact_phone: formData.emergencyContactPhone || null,
         
-        // ✅ UPDATED: Location & Housing - using new city/state fields
+        // ✅ FIXED: Only using new city/state fields
         preferred_city: formData.preferredCity,
         preferred_state: formData.preferredState,
         target_zip_codes: targetZipCodes,
@@ -319,7 +331,6 @@ export const useMatchingProfileForm = () => {
         move_in_date: formData.moveInDate,
         lease_duration: formData.leaseDuration || null,
         
-        // Personal Preferences
         age_range_min: formData.ageRangeMin,
         age_range_max: formData.ageRangeMax,
         gender_preference: formData.genderPreference || null,
@@ -328,7 +339,6 @@ export const useMatchingProfileForm = () => {
         smoking_status: formData.smokingStatus,
         pet_preference: formData.petPreference || null,
         
-        // Recovery Information
         recovery_stage: formData.recoveryStage,
         primary_substance: formData.primarySubstance || null,
         time_in_recovery: formData.timeInRecovery || null,
@@ -341,7 +351,6 @@ export const useMatchingProfileForm = () => {
         primary_issues: formData.primaryIssues,
         recovery_methods: formData.recoveryMethods,
         
-        // Lifestyle Preferences
         work_schedule: formData.workSchedule,
         social_level: parseInt(formData.socialLevel),
         cleanliness_level: parseInt(formData.cleanlinessLevel),
@@ -354,77 +363,73 @@ export const useMatchingProfileForm = () => {
         preferred_support_structure: formData.preferredSupportStructure || null,
         conflict_resolution_style: formData.conflictResolutionStyle || null,
         
-        // Living Situation
         pets_owned: formData.petsOwned,
         pets_comfortable: formData.petsComfortable,
         overnight_guests_ok: formData.overnightGuestsOk,
         shared_groceries: formData.sharedGroceries,
         cooking_frequency: formData.cookingFrequency || null,
         
-        // Housing Assistance
         housing_subsidy: formData.housingSubsidy,
         has_section8: formData.hasSection8,
         accepts_subsidy: formData.acceptsSubsidy,
         
-        // Compatibility Factors
         interests: formData.interests,
         deal_breakers: formData.dealBreakers,
         important_qualities: formData.importantQualities,
         
-        // Open-ended responses
         about_me: formData.aboutMe,
         looking_for: formData.lookingFor,
         additional_info: formData.additionalInfo || null,
         special_needs: formData.specialNeeds || null,
         
-        // Status
         is_active: formData.isActive,
         profile_completed: true
       };
       
-      console.log('🔧 Submitting to database using upsert logic...', { 
+      console.log('🔧 Direct Supabase submission starting...', { 
         userId: user.id, 
-        dataKeys: Object.keys(applicantFormData) 
+        dataKeys: Object.keys(applicantFormData),
+        preferredCity: applicantFormData.preferred_city,
+        preferredState: applicantFormData.preferred_state
       });
       
-      // Use matchingProfiles.create which has proper upsert logic
-      const { data, error } = await db.matchingProfiles.create(applicantFormData);
+      // ✅ FIXED: Direct Supabase call with timeout
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 30000);
+      
+      const { data, error } = await supabase
+        .from('applicant_forms')
+        .upsert(applicantFormData, {
+          onConflict: 'user_id'
+        })
+        .abortSignal(controller.signal);
+      
+      clearTimeout(timeoutId);
       
       if (error) {
-        console.error('❌ Database error:', error);
+        console.error('❌ Direct Supabase error:', error);
         
-        // Set specific error message based on error type
-        let errorMessage = 'Failed to save matching profile. Please try again.';
-        if (error.message) {
-          if (error.message.includes('connection')) {
-            errorMessage = 'Connection error. Please check your internet and try again.';
-          } else if (error.message.includes('timeout')) {
-            errorMessage = 'Request timed out. Please try again.';
-          } else if (error.message.includes('validation')) {
-            errorMessage = 'Data validation error. Please check your entries and try again.';
-          } else {
-            errorMessage = `Database error: ${error.message}`;
-          }
+        if (error.message.includes('aborted')) {
+          setErrors({ submit: 'Request timed out. Please check your internet connection and try again.' });
+        } else {
+          setErrors({ submit: `Database error: ${error.message}` });
         }
-        
-        setErrors({ submit: errorMessage });
         return false;
       }
       
-      console.log('✅ Database upsert successful', { data });
+      console.log('✅ Direct Supabase submission successful', { data });
       setSuccessMessage('Comprehensive matching profile saved successfully!');
       
       return true;
       
     } catch (error) {
-      console.error('💥 Unexpected submission error:', error);
+      console.error('💥 Submission error:', error);
       
-      let errorMessage = 'An unexpected error occurred. Please try again.';
-      if (error.message) {
-        errorMessage = `Error: ${error.message}`;
+      if (error.name === 'AbortError') {
+        setErrors({ submit: 'Request timed out. Please try again.' });
+      } else {
+        setErrors({ submit: `Error: ${error.message}` });
       }
-      
-      setErrors({ submit: errorMessage });
       return false;
     } finally {
       setLoading(false);
