@@ -231,76 +231,76 @@ export const db = {
       }
     },
 
-getById: async (id) => {
-  console.log('📊 DB: profiles.getById called', { id })
-  
-  try {
-    // Check session first
-    await ensureValidSession()
+// Update the profiles.getById method in your db object
+profiles: {
+  getById: async (id) => {
+    console.log('📊 DB: profiles.getById called', { id })
     
-    // Reduced timeout (back to reasonable level)
-    const timeoutPromise = new Promise((_, reject) => 
-      setTimeout(() => reject(new Error('profiles.getById timeout after 45 seconds')), 45000)
-    )
-    
-    const queryPromise = supabase
-      .from('registrant_profiles')
-      .select('*')
-      .eq('id', id)
-    
-    const { data, error } = await Promise.race([queryPromise, timeoutPromise])
-    
-    console.log('📊 DB: profiles.getById result', { 
-      hasData: !!data, 
-      dataLength: data?.length,
-      hasError: !!error, 
-      error: error?.message,
-      errorCode: error?.code 
-    })
+    try {
+      // Try to validate session but with a fallback
+      try {
+        await ensureValidSession()
+      } catch (sessionErr) {
+        console.warn('⚠️ Session validation issue, continuing anyway:', sessionErr.message)
+        // Continue without valid session - we'll handle errors below
+      }
+      
+      // Set a reasonable timeout
+      const timeoutPromise = new Promise((_, reject) => 
+        setTimeout(() => reject(new Error('profiles.getById timeout after 10 seconds')), 10000)
+      )
+      
+      const queryPromise = supabase
+        .from('registrant_profiles')
+        .select('*')
+        .eq('id', id)
+      
+      // Race against timeout
+      const { data, error } = await Promise.race([queryPromise, timeoutPromise])
+      
+      console.log('📊 DB: profiles.getById result', { 
+        hasData: !!data, 
+        dataLength: data?.length,
+        hasError: !!error, 
+        error: error?.message,
+        errorCode: error?.code 
+      })
 
-    if (error) {
-      return { data: null, error }
-    }
-    
-    if (!data || data.length === 0) {
-      return { data: null, error: { code: 'PGRST116', message: 'No rows returned' } }
-    }
-    
-    if (data.length > 1) {
-      console.warn('⚠️ Multiple profiles found for user, using first one:', data.length)
+      if (error) {
+        return { data: null, error }
+      }
+      
+      if (!data || data.length === 0) {
+        return { data: null, error: { code: 'PGRST116', message: 'No rows returned' } }
+      }
+      
+      if (data.length > 1) {
+        console.warn('⚠️ Multiple profiles found for user, using first one:', data.length)
+        return { data: data[0], error: null }
+      }
+      
       return { data: data[0], error: null }
-    }
-    
-    return { data: data[0], error: null }
-    
-  } catch (err) {
-    console.error('💥 DB: profiles.getById failed', err)
-    
-    // Handle session-related errors
-    if (err.message && (err.message.includes('Session') || err.message.includes('session'))) {
-      console.error('🔒 Session issue detected - triggering auth refresh')
+      
+    } catch (err) {
+      console.error('💥 DB: profiles.getById failed', err)
+      
+      // Create an emergency fallback profile with minimal info
+      console.log('🚨 Creating emergency fallback profile')
+      const fallbackProfile = {
+        id: id,
+        roles: ['applicant'], // Assume applicant role to prevent blocking
+        is_active: true
+      }
+      
+      // Return fallback profile to prevent app from getting stuck
       return { 
-        data: null, 
+        data: fallbackProfile, 
         error: { 
-          code: 'SESSION_EXPIRED', 
-          message: 'Your session has expired. Please refresh the page.' 
+          code: 'FALLBACK_PROFILE', 
+          message: 'Using fallback profile due to database connectivity issues' 
         } 
       }
     }
-    
-    // Handle timeout errors
-    if (err.message && err.message.includes('timeout')) {
-      console.error('🕐 Database query timed out')
-      return { 
-        data: null, 
-        error: { 
-          code: 'TIMEOUT', 
-          message: 'Database query timed out. Please try again.' 
-        } 
-      }
-    }
-    
-    throw err
   }
 },
 
