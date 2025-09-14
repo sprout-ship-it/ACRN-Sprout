@@ -7,13 +7,17 @@ import '../../styles/global.css';
 
 const Connections = () => {
   const { user, profile, hasRole } = useAuth();
-  const [activeTab, setActiveTab] = useState('pending-requests'); // Start with pending requests
+  
+  // ✅ ALL STATE DECLARATIONS AT TOP
+  const [activeTab, setActiveTab] = useState('pending-requests');
   const [requests, setRequests] = useState([]);
   const [loading, setLoading] = useState(true);
   const [actionLoading, setActionLoading] = useState(false);
   const [showRejectModal, setShowRejectModal] = useState(false);
   const [selectedRequest, setSelectedRequest] = useState(null);
   const [rejectReason, setRejectReason] = useState('');
+  const [showContactModal, setShowContactModal] = useState(false);
+  const [contactInfo, setContactInfo] = useState(null);
   
   // Load match requests
   useEffect(() => {
@@ -41,16 +45,12 @@ const Connections = () => {
   const getFilteredRequests = () => {
     switch (activeTab) {
       case 'pending-requests':
-        // Show incoming pending requests that need user's approval
         return requests.filter(r => r.status === 'pending' && r.target_id === user.id);
       case 'sent-requests':
-        // Show outgoing pending requests waiting for other person's approval
         return requests.filter(r => r.status === 'pending' && r.requester_id === user.id);
       case 'active-connections':
-        // Show active connections: matched status for current connections
         return requests.filter(r => r.status === 'matched');
       case 'connection-history':
-        // Show all previous matches including unmatched, rejected, etc.
         return requests.filter(r => ['rejected', 'unmatched'].includes(r.status));
       default:
         return requests;
@@ -114,7 +114,6 @@ const Connections = () => {
     setActionLoading(true);
     
     try {
-      // Get the full request details
       const request = requests.find(r => r.id === requestId);
       if (!request) {
         throw new Error('Request not found');
@@ -140,7 +139,7 @@ const Connections = () => {
 
       console.log('✅ Connection request updated to approved');
 
-      // Step 2: Determine match group structure based on request type and user roles
+      // Step 2: Determine match group structure
       const matchGroupData = await determineMatchGroupStructure(request);
 
       const { data: matchGroup, error: groupError } = await db.matchGroups.create(matchGroupData);
@@ -190,23 +189,18 @@ const Connections = () => {
   // Helper function to determine correct table structure
   const determineMatchGroupStructure = async (request) => {
     try {
-      // Get user profiles to determine roles
       const { data: requesterProfile } = await db.profiles.getById(request.requester_id);
       const { data: targetProfile } = await db.profiles.getById(request.target_id);
 
       const requesterRoles = requesterProfile?.roles || [];
       const targetRoles = targetProfile?.roles || [];
 
-      // Base match group data
       const baseData = {
-        status: 'forming', // Start as forming, activate later if needed
+        status: 'forming',
         created_at: new Date().toISOString()
       };
 
-      // Determine structure based on request type and roles
       if (request.request_type === 'peer_support' || !request.request_type) {
-        
-        // Case 1: Applicant requesting peer support specialist
         if (requesterRoles.includes('applicant') && targetRoles.includes('peer')) {
           return {
             ...baseData,
@@ -215,7 +209,6 @@ const Connections = () => {
           };
         }
         
-        // Case 2: Peer support specialist connecting with applicant
         if (requesterRoles.includes('peer') && targetRoles.includes('applicant')) {
           return {
             ...baseData,
@@ -224,7 +217,6 @@ const Connections = () => {
           };
         }
         
-        // Case 3: Two applicants doing peer support
         if (requesterRoles.includes('applicant') && targetRoles.includes('applicant')) {
           return {
             ...baseData,
@@ -234,7 +226,6 @@ const Connections = () => {
         }
       }
 
-      // Case 4: Employment request
       if (request.request_type === 'employment') {
         if (requesterRoles.includes('applicant') && targetRoles.includes('employer')) {
           return {
@@ -245,19 +236,16 @@ const Connections = () => {
         }
       }
 
-      // Case 5: Housing request
       if (request.request_type === 'housing') {
         if (requesterRoles.includes('applicant') && targetRoles.includes('landlord')) {
           return {
             ...baseData,
             applicant_1_id: request.requester_id,
-            landlord_id: request.target_id,
-            // property_id would be set when landlord selects a property
+            landlord_id: request.target_id
           };
         }
       }
 
-      // Default fallback - treat as applicant peer support
       return {
         ...baseData,
         applicant_1_id: request.requester_id,
@@ -266,7 +254,6 @@ const Connections = () => {
 
     } catch (error) {
       console.error('Error determining match group structure:', error);
-      // Fallback structure
       return {
         status: 'forming',
         applicant_1_id: request.requester_id,
@@ -280,6 +267,8 @@ const Connections = () => {
   const handleReject = (request) => {
     setSelectedRequest(request);
     setShowRejectModal(true);
+    setShowContactModal(false);
+    setContactInfo(null);
   };
   
   // Submit rejection
@@ -301,7 +290,6 @@ const Connections = () => {
       
       if (error) throw error;
 
-      // Update local state
       setRequests(prev => prev.map(request => 
         request.id === selectedRequest.id ? { ...request, ...updates } : request
       ));
@@ -309,8 +297,6 @@ const Connections = () => {
       setShowRejectModal(false);
       setSelectedRequest(null);
       setRejectReason('');
-      
-      // Clear any other modal state
       setShowContactModal(false);
       setContactInfo(null);
       
@@ -340,7 +326,6 @@ const Connections = () => {
       
       if (error) throw error;
 
-      // Update local state - remove cancelled requests from the list
       setRequests(prev => prev.filter(req => req.id !== requestId));
       
       alert('Request cancelled successfully.');
@@ -367,12 +352,6 @@ const Connections = () => {
         throw new Error('Request not found');
       }
 
-      console.log('📋 Ending connection:', {
-        requestId,
-        matchGroupId: request.match_group_id
-      });
-
-      // Step 1: End the match group if it exists
       if (request.match_group_id) {
         const { error: groupError } = await db.matchGroups.endGroup(
           request.match_group_id,
@@ -384,11 +363,8 @@ const Connections = () => {
           console.error('❌ Failed to end match group:', groupError);
           throw groupError;
         }
-
-        console.log('✅ Match group ended');
       }
 
-      // Step 2: Update match request to unmatched
       const updates = {
         status: 'unmatched',
         unmatched_at: new Date().toISOString(),
@@ -402,9 +378,6 @@ const Connections = () => {
         throw updateError;
       }
 
-      console.log('✅ Connection updated to ended');
-
-      // Step 3: Update local state
       setRequests(prev => prev.map(req => 
         req.id === requestId ? { ...req, ...updates } : req
       ));
@@ -419,7 +392,7 @@ const Connections = () => {
     }
   };
 
-  // UPDATED: Enhanced handleViewContactInfo function with proper phone extraction
+  // Handle view contact info with styled modal
   const handleViewContactInfo = async (request) => {
     try {
       if (!request.match_group_id) {
@@ -427,7 +400,6 @@ const Connections = () => {
         return;
       }
 
-      // Get full match group details with contact info
       const { data: matchGroup, error } = await db.matchGroups.getById(request.match_group_id);
       
       if (error) {
@@ -436,7 +408,6 @@ const Connections = () => {
         return;
       }
 
-      // Use the helper function to get the other person
       const otherPerson = db.matchGroups.getOtherPerson(matchGroup, user.id);
 
       if (!otherPerson) {
@@ -444,31 +415,24 @@ const Connections = () => {
         return;
       }
 
-      // Extract phone number from nested data structure based on user type
       let phoneNumber = 'Not provided';
       
-      // For applicants: phone is in applicant_forms array
       if (otherPerson.applicant_forms && otherPerson.applicant_forms.length > 0 && otherPerson.applicant_forms[0].phone) {
         phoneNumber = otherPerson.applicant_forms[0].phone;
       }
-      // For peer supporters: phone is in peer_support_profiles array  
       else if (otherPerson.peer_support_profiles && otherPerson.peer_support_profiles.length > 0 && otherPerson.peer_support_profiles[0].phone) {
         phoneNumber = otherPerson.peer_support_profiles[0].phone;
       }
-      // For landlords: phone is in properties array
       else if (otherPerson.properties && otherPerson.properties.length > 0 && otherPerson.properties[0].phone) {
         phoneNumber = otherPerson.properties[0].phone;
       }
-      // For employers: phone is in employer_profiles array
       else if (otherPerson.employer_profiles && otherPerson.employer_profiles.length > 0 && otherPerson.employer_profiles[0].phone) {
         phoneNumber = otherPerson.employer_profiles[0].phone;
       }
-      // Fallback: check if phone is directly on the person object
       else if (otherPerson.phone) {
         phoneNumber = otherPerson.phone;
       }
 
-      // Determine match type for context
       const matchType = db.matchGroups.getMatchType(matchGroup);
       const matchTypeLabel = {
         'housing': 'housing connection',
@@ -477,19 +441,15 @@ const Connections = () => {
         'employment': 'employment connection'
       }[matchType] || 'connection';
 
-      // Create contact info display
-      const contactInfo = `
-Contact Information for ${otherPerson.first_name}:
+      setContactInfo({
+        name: otherPerson.first_name,
+        email: otherPerson.email || 'Not provided',
+        phone: phoneNumber,
+        connectionType: matchTypeLabel
+      });
+      
+      setShowContactModal(true);
 
-Email: ${otherPerson.email || 'Not provided'}
-Phone: ${phoneNumber}
-
-You can now reach out to continue your ${matchTypeLabel}!
-      `;
-
-      alert(contactInfo);
-
-      // Optional: Update activity timestamp
       try {
         await db.matchGroups.update(request.match_group_id, {
           updated_at: new Date().toISOString()
@@ -640,7 +600,6 @@ You can now reach out to continue your ${matchTypeLabel}!
       <div className="requests-list">
         {filteredRequests.map(request => (
           <div key={request.id} className="card mb-4">
-            {/* Request Header */}
             <div className="card-header">
               <div>
                 <div className="card-title">
@@ -654,9 +613,7 @@ You can now reach out to continue your ${matchTypeLabel}!
               {renderStatusBadge(request.status)}
             </div>
             
-            {/* Request Body */}
             <div>
-              {/* Basic Info */}
               <div className="grid-auto mb-4">
                 <div>
                   <span className="label">Connection Type</span>
@@ -682,7 +639,6 @@ You can now reach out to continue your ${matchTypeLabel}!
                 </div>
               </div>
               
-              {/* Message */}
               {request.message && (
                 <div className="mb-4">
                   <div className="label mb-2">{isSentRequests ? 'Your Message' : 'Their Message'}</div>
@@ -692,7 +648,6 @@ You can now reach out to continue your ${matchTypeLabel}!
                 </div>
               )}
               
-              {/* Action Buttons */}
               {renderActionButtons(request)}
             </div>
           </div>
@@ -744,7 +699,6 @@ You can now reach out to continue your ${matchTypeLabel}!
                     </div>
                     
                     <div>
-                      {/* Connection Info */}
                       <div className="grid-auto mb-4">
                         <div>
                           <span className="label">Connection Type</span>
@@ -770,7 +724,6 @@ You can now reach out to continue your ${matchTypeLabel}!
                         </div>
                       </div>
                       
-                      {/* Message */}
                       {request.message && (
                         <div className="mb-4">
                           <div className="label mb-2">Original Message</div>
@@ -780,7 +733,6 @@ You can now reach out to continue your ${matchTypeLabel}!
                         </div>
                       )}
                       
-                      {/* Action Buttons */}
                       {renderActionButtons(request)}
                     </div>
                   </div>
@@ -875,7 +827,6 @@ You can now reach out to continue your ${matchTypeLabel}!
       {activeTab === 'sent-requests' && renderPendingRequests(true)}
       {activeTab === 'active-connections' && renderActiveMatches()}
       {activeTab === 'connection-history' && (
-        /* Connection History */
         getFilteredRequests().length === 0 ? (
           <div className="empty-state">
             <div className="empty-state-icon">📋</div>
@@ -885,7 +836,6 @@ You can now reach out to continue your ${matchTypeLabel}!
         ) : (
           getFilteredRequests().map(request => (
             <div key={request.id} className="card mb-4">
-              {/* Request Header */}
               <div className="card-header">
                 <div>
                   <div className="card-title">
@@ -899,9 +849,7 @@ You can now reach out to continue your ${matchTypeLabel}!
                 {renderStatusBadge(request.status)}
               </div>
               
-              {/* Request Body */}
               <div>
-                {/* Basic Info */}
                 <div className="grid-auto mb-4">
                   <div>
                     <span className="label">Connection Type</span>
@@ -927,7 +875,6 @@ You can now reach out to continue your ${matchTypeLabel}!
                   </div>
                 </div>
                 
-                {/* Message */}
                 {request.message && (
                   <div className="mb-4">
                     <div className="label mb-2">Message</div>
@@ -937,7 +884,6 @@ You can now reach out to continue your ${matchTypeLabel}!
                   </div>
                 )}
                 
-                {/* Rejection Reason */}
                 {request.status === 'rejected' && request.rejection_reason && (
                   <div className="mb-4">
                     <div className="label mb-2">Reason</div>
@@ -947,7 +893,6 @@ You can now reach out to continue your ${matchTypeLabel}!
                   </div>
                 )}
                 
-                {/* Action Buttons */}
                 {renderActionButtons(request)}
               </div>
             </div>
@@ -1000,6 +945,103 @@ You can now reach out to continue your ${matchTypeLabel}!
                 disabled={actionLoading || !rejectReason.trim()}
               >
                 {actionLoading ? 'Declining...' : 'Decline Request'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Contact Info Modal */}
+      {showContactModal && contactInfo && (
+        <div className="modal-overlay" onClick={() => setShowContactModal(false)}>
+          <div 
+            className="modal-content" 
+            style={{ maxWidth: '500px', width: '100%' }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="modal-header">
+              <h3 className="modal-title">📞 Contact Information</h3>
+              <button
+                className="modal-close"
+                onClick={() => setShowContactModal(false)}
+              >
+                ×
+              </button>
+            </div>
+            
+            <div className="text-center mb-4">
+              <div style={{ fontSize: '3rem', marginBottom: '1rem' }}>👤</div>
+              <h4 style={{ color: 'var(--primary-purple)', marginBottom: '0.5rem' }}>
+                {contactInfo.name}
+              </h4>
+              <p className="text-gray-600" style={{ margin: 0 }}>
+                Your {contactInfo.connectionType} contact
+              </p>
+            </div>
+            
+            <div className="contact-details" style={{ marginBottom: '2rem' }}>
+              <div className="contact-item" style={{ 
+                display: 'flex', 
+                alignItems: 'center', 
+                padding: '1rem', 
+                background: 'var(--bg-light-cream)', 
+                borderRadius: 'var(--radius-md)',
+                marginBottom: '1rem'
+              }}>
+                <div style={{ fontSize: '1.5rem', marginRight: '1rem' }}>📧</div>
+                <div>
+                  <div className="label" style={{ marginBottom: '0.25rem' }}>Email</div>
+                  <div style={{ fontWeight: '600', color: 'var(--gray-800)' }}>
+                    {contactInfo.email}
+                  </div>
+                  {contactInfo.email !== 'Not provided' && (
+                    <a 
+                      href={`mailto:${contactInfo.email}`}
+                      style={{ color: 'var(--primary-purple)', fontSize: '0.9rem' }}
+                    >
+                      Send Email →
+                    </a>
+                  )}
+                </div>
+              </div>
+              
+              <div className="contact-item" style={{ 
+                display: 'flex', 
+                alignItems: 'center', 
+                padding: '1rem', 
+                background: 'var(--bg-light-cream)', 
+                borderRadius: 'var(--radius-md)'
+              }}>
+                <div style={{ fontSize: '1.5rem', marginRight: '1rem' }}>📱</div>
+                <div>
+                  <div className="label" style={{ marginBottom: '0.25rem' }}>Phone</div>
+                  <div style={{ fontWeight: '600', color: 'var(--gray-800)' }}>
+                    {contactInfo.phone}
+                  </div>
+                  {contactInfo.phone !== 'Not provided' && (
+                    <a 
+                      href={`tel:${contactInfo.phone}`}
+                      style={{ color: 'var(--primary-purple)', fontSize: '0.9rem' }}
+                    >
+                      Call Now →
+                    </a>
+                  )}
+                </div>
+              </div>
+            </div>
+            
+            <div className="alert alert-info" style={{ marginBottom: '1.5rem' }}>
+              <strong>💡 Next Steps:</strong> Reach out to {contactInfo.name} to coordinate your {contactInfo.connectionType}. 
+              Remember to be respectful and professional in all communications.
+            </div>
+            
+            <div className="text-center">
+              <button
+                className="btn btn-primary"
+                onClick={() => setShowContactModal(false)}
+                style={{ minWidth: '150px' }}
+              >
+                Got It!
               </button>
             </div>
           </div>
