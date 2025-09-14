@@ -47,8 +47,9 @@ export const useMatchingProfileForm = () => {
             emergencyContactName: applicantForm.emergency_contact_name || '',
             emergencyContactPhone: applicantForm.emergency_contact_phone || '',
             
-            // Location & Housing
-            preferredLocation: applicantForm.preferred_location || '',
+            // ✅ UPDATED: Location & Housing - using new city/state fields
+            preferredCity: applicantForm.preferred_city || '',
+            preferredState: applicantForm.preferred_state || '',
             targetZipCodes: applicantForm.target_zip_codes?.join(', ') || '',
             searchRadius: applicantForm.search_radius?.toString() || '25',
             currentLocation: applicantForm.current_location || '',
@@ -259,7 +260,7 @@ export const useMatchingProfileForm = () => {
     handleInputChange(field, parseInt(value));
   };
 
-  // ✅ FIXED: Submit form using proper upsert logic
+  // ✅ UPDATED: Submit form using new city/state fields
   const submitForm = async () => {
     console.log('🔍 Form submission started');
     
@@ -303,8 +304,9 @@ export const useMatchingProfileForm = () => {
         emergency_contact_name: formData.emergencyContactName || null,
         emergency_contact_phone: formData.emergencyContactPhone || null,
         
-        // Location & Housing
-        preferred_location: formData.preferredLocation,
+        // ✅ UPDATED: Location & Housing - using new city/state fields
+        preferred_city: formData.preferredCity,
+        preferred_state: formData.preferredState,
         target_zip_codes: targetZipCodes,
         search_radius: parseInt(formData.searchRadius),
         current_location: formData.currentLocation || null,
@@ -385,7 +387,7 @@ export const useMatchingProfileForm = () => {
         dataKeys: Object.keys(applicantFormData) 
       });
       
-      // ✅ FIXED: Use matchingProfiles.create which has proper upsert logic
+      // Use matchingProfiles.create which has proper upsert logic
       const { data, error } = await db.matchingProfiles.create(applicantFormData);
       
       if (error) {

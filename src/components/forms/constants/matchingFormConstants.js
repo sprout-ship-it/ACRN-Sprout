@@ -154,12 +154,14 @@ export const VALIDATION_RULES = {
   MAX_ADDITIONAL_INFO_LENGTH: 300
 };
 
-// Required fields for validation
+// ✅ UPDATED: Required fields for validation - using new city/state fields
 export const REQUIRED_FIELDS = [
   // Demographic fields
   'dateOfBirth', 'phone',
+  // ✅ UPDATED: Location fields
+  'preferredCity', 'preferredState', 
   // Core matching fields
-  'preferredLocation', 'maxCommute', 'moveInDate', 'recoveryStage', 
+  'maxCommute', 'moveInDate', 'recoveryStage', 
   'workSchedule', 'aboutMe', 'lookingFor', 'budgetMax', 'preferredRoommateGender',
   'smokingStatus', 'spiritualAffiliation'
 ];
@@ -169,7 +171,7 @@ export const REQUIRED_ARRAY_FIELDS = [
   'housingType', 'programType', 'interests', 'primaryIssues', 'recoveryMethods'
 ];
 
-// Default form values
+// ✅ UPDATED: Default form values - using new city/state fields
 export const defaultFormData = {
   // Personal Demographics
   dateOfBirth: '',
@@ -183,8 +185,9 @@ export const defaultFormData = {
   emergencyContactName: '',
   emergencyContactPhone: '',
   
-  // Location & Housing Preferences
-  preferredLocation: '',
+  // ✅ UPDATED: Location & Housing Preferences - separate city/state
+  preferredCity: '',
+  preferredState: '',
   targetZipCodes: '',
   searchRadius: '25',
   currentLocation: '',
