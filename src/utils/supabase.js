@@ -20,9 +20,25 @@ if (!supabaseUrl || !supabaseAnonKey) {
   throw new Error('Missing Supabase environment variables. Please check your .env file.')
 }
 
-console.log('🔧 Creating Supabase client...')
-export const supabase = createClient(supabaseUrl, supabaseAnonKey)
-console.log('✅ Supabase client created successfully')
+// Replace your Supabase client creation in supabase.js with this:
+console.log('🔧 Creating Supabase client with session persistence...')
+export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
+  auth: {
+    autoRefreshToken: true,
+    persistSession: true,
+    detectSessionInUrl: true,
+    storage: window.localStorage, // Explicitly use localStorage
+    storageKey: 'supabase.auth.token', // Custom storage key if needed
+    flowType: 'implicit' // Use implicit flow for web apps
+  },
+  global: {
+    headers: {
+      'x-client-info': 'recovery-housing-app@1.0.0'
+    }
+  }
+})
+
+console.log('✅ Supabase client created with enhanced session management')
 
 // Session validation helper - ADD THIS HERE
 const ensureValidSession = async () => {
@@ -106,28 +122,12 @@ export const auth = {
   },
 
   // Get current session
-// Get current session
+// Replace your getSession function in supabase.js with this:
 getSession: async () => {
   console.log('🔑 Auth: getSession called')
   try {
-    // Try to refresh the session first
-    const { data: refreshData, error: refreshError } = await supabase.auth.refreshSession()
-    
-    if (refreshError) {
-      console.log('⚠️ Session refresh failed, trying getSession:', refreshError.message)
-    } else {
-      console.log('✅ Session refreshed successfully')
-      return { session: refreshData.session, error: null }
-    }
-    
-    // Fallback to getSession
-    const timeoutPromise = new Promise((_, reject) => 
-      setTimeout(() => reject(new Error('getSession timeout after 30 seconds')), 30000)
-    )
-    
-    const sessionPromise = supabase.auth.getSession()
-    
-    const { data: { session }, error } = await Promise.race([sessionPromise, timeoutPromise])
+    // First, try to get the existing session from storage
+    const { data: { session }, error } = await supabase.auth.getSession()
     
     console.log('🔑 Auth: getSession result', { 
       hasSession: !!session, 
@@ -135,10 +135,39 @@ getSession: async () => {
       hasError: !!error, 
       error: error?.message 
     })
-    return { session, error }
+    
+    if (error) {
+      console.error('❌ Error getting session:', error)
+      return { session: null, error }
+    }
+    
+    // If we have a session, check if it needs refreshing
+    if (session) {
+      const now = Math.floor(Date.now() / 1000)
+      const expiresAt = session.expires_at || 0
+      
+      // If session expires within 5 minutes, try to refresh it
+      if (expiresAt - now < 300) {
+        console.log('🔄 Session expires soon, attempting refresh...')
+        
+        const { data: refreshData, error: refreshError } = await supabase.auth.refreshSession()
+        
+        if (refreshError) {
+          console.log('⚠️ Session refresh failed:', refreshError.message)
+          // Return the original session anyway - it might still be valid
+          return { session, error: null }
+        } else {
+          console.log('✅ Session refreshed successfully')
+          return { session: refreshData.session, error: null }
+        }
+      }
+    }
+    
+    return { session, error: null }
+    
   } catch (err) {
     console.error('💥 Auth: getSession failed', err)
-    throw err
+    return { session: null, error: err }
   }
 },
 

@@ -90,87 +90,70 @@ export const AuthProvider = ({ children }) => {
   }, [user, profile?.roles]) // Only recalculate when user or roles change
 
   // Initialize auth state
-  useEffect(() => {
-    console.log('🔄 AuthContext useEffect starting')
+// Replace the useEffect in AuthContext.js with this simplified version:
+useEffect(() => {
+  console.log('🔄 AuthContext useEffect starting')
+  
+  let isMounted = true
+  
+  // Set up auth state listener first
+  console.log('👂 Setting up auth state change listener')
+  const { data: { subscription } } = auth.onAuthStateChange(async (event, session) => {
+    console.log('🔄 Auth state changed:', event, { 
+      hasSession: !!session,
+      hasUser: !!session?.user 
+    })
     
-    let isMounted = true
+    if (!isMounted) return
     
-    const initializeAuth = async () => {
-      try {
-        console.log('📡 Getting initial session...')
-        
-        // ✅ OPTIMIZED: Simplified timeout handling
-        const { session, error } = await auth.getSession()
-        
-        console.log('📡 Session result:', { 
-          hasSession: !!session, 
-          hasUser: !!session?.user,
-          error: error?.message 
-        })
-        
-        if (!isMounted) return
-        
-        if (error) {
-          console.error('❌ Error getting session:', error)
-          setError(error.message)
-        } else {
-          setUser(session?.user ?? null)
-          
-          if (session?.user) {
-            console.log('👤 User found, loading profile for:', session.user.id)
-            await loadUserProfile(session.user.id)
-          } else {
-            console.log('👤 No user session found')
-          }
-        }
-        
-        if (isMounted) {
-          console.log('✅ Auth initialization complete')
-          setLoading(false)
-        }
-      } catch (err) {
-        console.error('💥 Auth initialization failed:', err)
-        if (isMounted) {
-          setError(err.message || 'Failed to initialize authentication')
-          setLoading(false)
-        }
-      }
+    setUser(session?.user ?? null)
+    
+    if (session?.user) {
+      console.log('👤 Loading profile for user:', session.user.id)
+      await loadUserProfile(session.user.id)
+    } else {
+      console.log('👤 No user, clearing profile')
+      setProfile(null)
     }
-
-    initializeAuth()
-
-    console.log('👂 Setting up auth state change listener')
-    const { data: { subscription } } = auth.onAuthStateChange(async (event, session) => {
-      console.log('🔄 Auth state changed:', event, { hasSession: !!session })
+    
+    if (isMounted) {
+      setLoading(false)
+    }
+  })
+  
+  // Get initial session - this will trigger the auth state change listener
+  const getInitialSession = async () => {
+    try {
+      console.log('📡 Getting initial session...')
+      const { session, error } = await auth.getSession()
       
-      if (!isMounted) return
-      
-      setUser(session?.user ?? null)
-      
-      try {
-        if (session?.user) {
-          console.log('👤 Auth changed: loading profile for user:', session.user.id)
-          await loadUserProfile(session.user.id)
-        } else {
-          console.log('👤 Auth changed: no user, clearing profile')
-          setProfile(null)
+      if (error) {
+        console.error('❌ Error getting initial session:', error)
+        setError(error.message)
+        if (isMounted) {
+          setLoading(false)
         }
-      } catch (err) {
-        console.error('💥 Error in auth state change:', err)
-        setError(err.message || 'Error handling auth state change')
       }
+      // Note: We don't manually set user/profile here because the 
+      // onAuthStateChange listener will handle it
       
+    } catch (err) {
+      console.error('💥 Auth initialization failed:', err)
       if (isMounted) {
+        setError(err.message || 'Failed to initialize authentication')
         setLoading(false)
       }
-    })
-
-    return () => {
-      console.log('🧹 AuthContext cleanup')
-      isMounted = false
-      subscription.unsubscribe()
     }
-  }, [])
+  }
+  
+  getInitialSession()
+
+  return () => {
+    console.log('🧹 AuthContext cleanup')
+    isMounted = false
+    subscription.unsubscribe()
+  }
+}, []) // Empty dependency array
 
   // ✅ OPTIMIZED: Memoized profile loading to prevent unnecessary calls
   const loadUserProfile = useCallback(async (userId) => {
