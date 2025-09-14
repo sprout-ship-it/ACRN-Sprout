@@ -12,27 +12,105 @@ const LocationPreferencesSection = ({
   onArrayChange,
   onRangeChange // Added for interface consistency
 }) => {
+  // State options for dropdown
+  const stateOptions = [
+    { value: '', label: 'Select State' },
+    { value: 'AL', label: 'Alabama' },
+    { value: 'AK', label: 'Alaska' },
+    { value: 'AZ', label: 'Arizona' },
+    { value: 'AR', label: 'Arkansas' },
+    { value: 'CA', label: 'California' },
+    { value: 'CO', label: 'Colorado' },
+    { value: 'CT', label: 'Connecticut' },
+    { value: 'DE', label: 'Delaware' },
+    { value: 'FL', label: 'Florida' },
+    { value: 'GA', label: 'Georgia' },
+    { value: 'HI', label: 'Hawaii' },
+    { value: 'ID', label: 'Idaho' },
+    { value: 'IL', label: 'Illinois' },
+    { value: 'IN', label: 'Indiana' },
+    { value: 'IA', label: 'Iowa' },
+    { value: 'KS', label: 'Kansas' },
+    { value: 'KY', label: 'Kentucky' },
+    { value: 'LA', label: 'Louisiana' },
+    { value: 'ME', label: 'Maine' },
+    { value: 'MD', label: 'Maryland' },
+    { value: 'MA', label: 'Massachusetts' },
+    { value: 'MI', label: 'Michigan' },
+    { value: 'MN', label: 'Minnesota' },
+    { value: 'MS', label: 'Mississippi' },
+    { value: 'MO', label: 'Missouri' },
+    { value: 'MT', label: 'Montana' },
+    { value: 'NE', label: 'Nebraska' },
+    { value: 'NV', label: 'Nevada' },
+    { value: 'NH', label: 'New Hampshire' },
+    { value: 'NJ', label: 'New Jersey' },
+    { value: 'NM', label: 'New Mexico' },
+    { value: 'NY', label: 'New York' },
+    { value: 'NC', label: 'North Carolina' },
+    { value: 'ND', label: 'North Dakota' },
+    { value: 'OH', label: 'Ohio' },
+    { value: 'OK', label: 'Oklahoma' },
+    { value: 'OR', label: 'Oregon' },
+    { value: 'PA', label: 'Pennsylvania' },
+    { value: 'RI', label: 'Rhode Island' },
+    { value: 'SC', label: 'South Carolina' },
+    { value: 'SD', label: 'South Dakota' },
+    { value: 'TN', label: 'Tennessee' },
+    { value: 'TX', label: 'Texas' },
+    { value: 'UT', label: 'Utah' },
+    { value: 'VT', label: 'Vermont' },
+    { value: 'VA', label: 'Virginia' },
+    { value: 'WA', label: 'Washington' },
+    { value: 'WV', label: 'West Virginia' },
+    { value: 'WI', label: 'Wisconsin' },
+    { value: 'WY', label: 'Wyoming' }
+  ];
+
   return (
     <>
       {/* Location & Housing Preferences */}
       <h3 className="card-title mb-4">Location & Housing Preferences</h3>
       
-      <div className="grid-2 mb-4">
+      {/* ✅ UPDATED: Separate City and State fields */}
+      <div className="grid-3 mb-4">
         <div className="form-group">
           <label className="label">
-            Preferred Location <span className="text-red-500">*</span>
+            Preferred City <span className="text-red-500">*</span>
           </label>
           <input
-            className={`input ${errors.preferredLocation ? 'border-red-500' : ''}`}
+            className={`input ${errors.preferredCity ? 'border-red-500' : ''}`}
             type="text"
-            value={formData.preferredLocation}
-            onChange={(e) => onInputChange('preferredLocation', e.target.value)}
-            placeholder="City, State or general area"
+            value={formData.preferredCity || ''}
+            onChange={(e) => onInputChange('preferredCity', e.target.value)}
+            placeholder="City name"
             disabled={loading}
             required
           />
-          {errors.preferredLocation && (
-            <div className="text-red-500 mt-1">{errors.preferredLocation}</div>
+          {errors.preferredCity && (
+            <div className="text-red-500 mt-1">{errors.preferredCity}</div>
+          )}
+        </div>
+
+        <div className="form-group">
+          <label className="label">
+            Preferred State <span className="text-red-500">*</span>
+          </label>
+          <select
+            className={`input ${errors.preferredState ? 'border-red-500' : ''}`}
+            value={formData.preferredState || ''}
+            onChange={(e) => onInputChange('preferredState', e.target.value)}
+            disabled={loading}
+            required
+          >
+            {stateOptions.map(state => (
+              <option key={state.value} value={state.value}>
+                {state.label}
+              </option>
+            ))}
+          </select>
+          {errors.preferredState && (
+            <div className="text-red-500 mt-1">{errors.preferredState}</div>
           )}
         </div>
         
@@ -41,13 +119,13 @@ const LocationPreferencesSection = ({
           <input
             className="input"
             type="text"
-            value={formData.targetZipCodes}
+            value={formData.targetZipCodes || ''}
             onChange={(e) => onInputChange('targetZipCodes', e.target.value)}
-            placeholder="29301, 29302, 29303 (comma separated)"
+            placeholder="29301, 29302"
             disabled={loading}
           />
           <div className="text-gray-500 mt-1 text-sm">
-            Specific ZIP codes you prefer (optional but helps with location matching)
+            Specific ZIP codes (optional)
           </div>
         </div>
       </div>
@@ -60,7 +138,7 @@ const LocationPreferencesSection = ({
           <input
             className={`input ${errors.budgetMax ? 'border-red-500' : ''}`}
             type="number"
-            value={formData.budgetMax}
+            value={formData.budgetMax || ''}
             onChange={(e) => onInputChange('budgetMax', e.target.value)}
             placeholder="Your maximum monthly budget"
             disabled={loading}
@@ -82,7 +160,7 @@ const LocationPreferencesSection = ({
           </label>
           <select
             className={`input ${errors.maxCommute ? 'border-red-500' : ''}`}
-            value={formData.maxCommute}
+            value={formData.maxCommute || ''}
             onChange={(e) => onInputChange('maxCommute', e.target.value)}
             disabled={loading}
             required
@@ -111,7 +189,7 @@ const LocationPreferencesSection = ({
             <label key={type} className="checkbox-label">
               <input
                 type="checkbox"
-                checked={formData.housingType.includes(type)}
+                checked={(formData.housingType || []).includes(type)}
                 onChange={(e) => onArrayChange('housingType', type, e.target.checked)}
                 disabled={loading}
               />
@@ -132,7 +210,7 @@ const LocationPreferencesSection = ({
           <input
             className={`input ${errors.moveInDate ? 'border-red-500' : ''}`}
             type="date"
-            value={formData.moveInDate}
+            value={formData.moveInDate || ''}
             onChange={(e) => onInputChange('moveInDate', e.target.value)}
             disabled={loading}
             required
@@ -146,7 +224,7 @@ const LocationPreferencesSection = ({
           <label className="label">Preferred Lease Duration</label>
           <select
             className="input"
-            value={formData.leaseDuration}
+            value={formData.leaseDuration || ''}
             onChange={(e) => onInputChange('leaseDuration', e.target.value)}
             disabled={loading}
           >
@@ -165,7 +243,8 @@ const LocationPreferencesSection = ({
 
 LocationPreferencesSection.propTypes = {
   formData: PropTypes.shape({
-    preferredLocation: PropTypes.string,
+    preferredCity: PropTypes.string,
+    preferredState: PropTypes.string,
     targetZipCodes: PropTypes.string,
     budgetMax: PropTypes.oneOfType([PropTypes.string, PropTypes.number]),
     maxCommute: PropTypes.string,

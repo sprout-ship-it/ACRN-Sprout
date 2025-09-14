@@ -109,36 +109,40 @@ const PropertySearch = () => {
   /**
    * ✅ NEW: Load user's housing preferences from their profile
    */
-  const loadUserPreferences = async () => {
-    if (!user?.id) return;
+const loadUserPreferences = async () => {
+  if (!user?.id) return;
 
-    try {
-      const { data, error } = await supabase
-        .from('applicant_forms')
-        .select('*')
-        .eq('user_id', user.id)
-        .single();
+  try {
+    const { data, error } = await supabase
+      .from('applicant_forms')
+      .select('*')
+      .eq('user_id', user.id)
+      .single();
 
-      if (data && !error) {
-        setUserPreferences(data);
-        
-        // ✅ NEW: Auto-populate filters from user preferences
-        const autoFilters = {
-          location: data.preferred_location || '',
-          maxRent: data.budget_max?.toString() || '',
-          minBedrooms: data.preferred_bedrooms?.toString() || '',
-          housingType: data.housing_type || [],
-          furnished: data.furnished_preference || false,
-          petsAllowed: data.pets_owned || false
-        };
-        
-        setBasicFilters(prev => ({ ...prev, ...autoFilters }));
-        console.log('✅ Auto-populated search from user preferences:', autoFilters);
-      }
-    } catch (err) {
-      console.error('Error loading user preferences:', err);
+    if (data && !error) {
+      setUserPreferences(data);
+      
+      // ✅ UPDATED: Auto-populate filters from separate city/state fields
+      const autoFilters = {
+        // Combine city and state if both exist, otherwise use what's available
+        location: data.preferred_city && data.preferred_state 
+          ? `${data.preferred_city}, ${data.preferred_state}`
+          : data.preferred_city || data.preferred_state || '',
+        state: data.preferred_state || '',
+        maxRent: data.budget_max?.toString() || '',
+        minBedrooms: data.preferred_bedrooms?.toString() || '',
+        housingType: data.housing_type || [],
+        furnished: data.furnished_preference || false,
+        petsAllowed: data.pets_owned || false
+      };
+      
+      setBasicFilters(prev => ({ ...prev, ...autoFilters }));
+      console.log('✅ Auto-populated search from user preferences:', autoFilters);
     }
-  };
+  } catch (err) {
+    console.error('Error loading user preferences:', err);
+  }
+};
 
   /**
    * ✅ IMPROVED: Enhanced search with recovery housing prioritization
@@ -346,23 +350,27 @@ const PropertySearch = () => {
   /**
    * ✅ NEW: Use my preferences from profile
    */
-  const handleUseMyPreferences = () => {
-    if (userPreferences) {
-      const autoFilters = {
-        location: userPreferences.preferred_location || '',
-        maxRent: userPreferences.budget_max?.toString() || '',
-        minBedrooms: userPreferences.preferred_bedrooms?.toString() || '',
-        housingType: userPreferences.housing_type || [],
-        furnished: userPreferences.furnished_preference || false,
-        petsAllowed: userPreferences.pets_owned || false
-      };
-      
-      setBasicFilters(prev => ({ ...prev, ...autoFilters }));
-      alert('Search filters updated with your profile preferences!');
-    } else {
-      alert('No preferences found in your profile. Please complete your matching profile first.');
-    }
-  };
+const handleUseMyPreferences = () => {
+  if (userPreferences) {
+    const autoFilters = {
+      // Combine city and state for search location field
+      location: userPreferences.preferred_city && userPreferences.preferred_state 
+        ? `${userPreferences.preferred_city}, ${userPreferences.preferred_state}`
+        : userPreferences.preferred_city || userPreferences.preferred_state || '',
+      state: userPreferences.preferred_state || '',
+      maxRent: userPreferences.budget_max?.toString() || '',
+      minBedrooms: userPreferences.preferred_bedrooms?.toString() || '',
+      housingType: userPreferences.housing_type || [],
+      furnished: userPreferences.furnished_preference || false,
+      petsAllowed: userPreferences.pets_owned || false
+    };
+    
+    setBasicFilters(prev => ({ ...prev, ...autoFilters }));
+    alert('Search filters updated with your profile preferences!');
+  } else {
+    alert('No preferences found in your profile. Please complete your matching profile first.');
+  }
+};
 
   /**
    * Clear all filters
