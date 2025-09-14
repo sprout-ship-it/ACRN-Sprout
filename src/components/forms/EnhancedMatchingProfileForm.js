@@ -80,48 +80,6 @@ const EnhancedMatchingProfileForm = ({ editMode = false, onComplete, onCancel })
     setSuccessMessage
   } = useMatchingProfileForm();
 
-  // Check authorization
-  if (!hasRole('applicant')) {
-    return (
-      <div className="container">
-        <div className="content">
-          <div className="alert alert-error">
-            <h3>Access Denied</h3>
-            <p>You must be registered as an applicant to access the matching profile form.</p>
-            <button 
-              className="btn btn-primary mt-3"
-              onClick={() => navigate('/app')}
-            >
-              Return to Dashboard
-            </button>
-          </div>
-        </div>
-      </div>
-    );
-  }
-
-  // Loading state
-  if (initialLoading) {
-    return (
-      <div className="container">
-        <div className="content">
-          <div className="loading-container">
-            <div className="loading-spinner large"></div>
-            <div className="loading-text">
-              Loading your matching profile...
-            </div>
-          </div>
-        </div>
-      </div>
-    );
-  }
-
-  const currentSection = FORM_SECTIONS[currentSectionIndex];
-  const CurrentSectionComponent = currentSection.component;
-  const isFirstSection = currentSectionIndex === 0;
-  const isLastSection = currentSectionIndex === FORM_SECTIONS.length - 1;
-  const hasErrors = Object.values(errors).some(error => error && error.trim() !== '');
-
   // ✅ ENHANCED: Helper function to scroll to first form field
   const scrollToFirstFormField = () => {
     setTimeout(() => {
@@ -255,6 +213,10 @@ const EnhancedMatchingProfileForm = ({ editMode = false, onComplete, onCancel })
       e.stopPropagation();
     }
     
+    // Calculate derived values
+    const isLastSection = currentSectionIndex === FORM_SECTIONS.length - 1;
+    const hasErrors = Object.values(errors).some(error => error && error.trim() !== '');
+    
     // ✅ FIX: Additional check to prevent accidental submission
     if (!isLastSection) {
       console.log('🚫 BLOCKING SUBMISSION: Not on last section', { 
@@ -348,7 +310,7 @@ const EnhancedMatchingProfileForm = ({ editMode = false, onComplete, onCancel })
         window.scrollTo({ top: 0, behavior: 'smooth' });
       }, 100);
     }
-  }, [isLastSection, loading, isSubmitting, validateForm, errors, hasErrors, canSubmit, submitForm, editMode, onComplete, navigate, setSuccessMessage, currentSectionIndex]);
+  }, [currentSectionIndex, loading, isSubmitting, validateForm, errors, canSubmit, submitForm, editMode, onComplete, navigate, setSuccessMessage]);
 
   // ✅ FIX 4: Enhanced cancel handler
   const handleCancel = useCallback((e) => {
@@ -385,6 +347,48 @@ const EnhancedMatchingProfileForm = ({ editMode = false, onComplete, onCancel })
       }
     }
   }, []);
+
+  // Check authorization
+  if (!hasRole('applicant')) {
+    return (
+      <div className="container">
+        <div className="content">
+          <div className="alert alert-error">
+            <h3>Access Denied</h3>
+            <p>You must be registered as an applicant to access the matching profile form.</p>
+            <button 
+              className="btn btn-primary mt-3"
+              onClick={() => navigate('/app')}
+            >
+              Return to Dashboard
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // Loading state
+  if (initialLoading) {
+    return (
+      <div className="container">
+        <div className="content">
+          <div className="loading-container">
+            <div className="loading-spinner large"></div>
+            <div className="loading-text">
+              Loading your matching profile...
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  const currentSection = FORM_SECTIONS[currentSectionIndex];
+  const CurrentSectionComponent = currentSection.component;
+  const isFirstSection = currentSectionIndex === 0;
+  const isLastSection = currentSectionIndex === FORM_SECTIONS.length - 1;
+  const hasErrors = Object.values(errors).some(error => error && error.trim() !== '');
 
   return (
     <div className="container">
