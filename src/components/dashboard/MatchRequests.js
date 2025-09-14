@@ -1,4 +1,4 @@
-// src/components/dashboard/MatchRequests.js
+// src/components/dashboard/MatchRequests.js - COMPLETE WITH PENDING REQUESTS
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../../context/AuthContext';
 import { db } from '../../utils/supabase';
@@ -7,7 +7,7 @@ import '../../styles/global.css';
 
 const Connections = () => {
   const { user, profile, hasRole } = useAuth();
-  const [activeTab, setActiveTab] = useState('active-matches'); // Changed default tab
+  const [activeTab, setActiveTab] = useState('pending-requests'); // Start with pending requests
   const [requests, setRequests] = useState([]);
   const [loading, setLoading] = useState(true);
   const [actionLoading, setActionLoading] = useState(false);
@@ -40,10 +40,16 @@ const Connections = () => {
   // Filter requests based on active tab
   const getFilteredRequests = () => {
     switch (activeTab) {
-      case 'active-matches':
+      case 'pending-requests':
+        // Show incoming pending requests that need user's approval
+        return requests.filter(r => r.status === 'pending' && r.target_id === user.id);
+      case 'sent-requests':
+        // Show outgoing pending requests waiting for other person's approval
+        return requests.filter(r => r.status === 'pending' && r.requester_id === user.id);
+      case 'active-connections':
         // Show active connections: matched status for current connections
         return requests.filter(r => r.status === 'matched');
-      case 'match-history':
+      case 'connection-history':
         // Show all previous matches including unmatched, rejected, etc.
         return requests.filter(r => ['rejected', 'unmatched'].includes(r.status));
       default:
@@ -54,8 +60,10 @@ const Connections = () => {
   // Get tab counts
   const getTabCounts = () => {
     return {
-      activeMatches: requests.filter(r => r.status === 'matched').length,
-      matchHistory: requests.filter(r => ['rejected', 'unmatched'].includes(r.status)).length
+      pendingRequests: requests.filter(r => r.status === 'pending' && r.target_id === user.id).length,
+      sentRequests: requests.filter(r => r.status === 'pending' && r.requester_id === user.id).length,
+      activeConnections: requests.filter(r => r.status === 'matched').length,
+      connectionHistory: requests.filter(r => ['rejected', 'unmatched'].includes(r.status)).length
     };
   };
   
@@ -311,6 +319,35 @@ const Connections = () => {
       setActionLoading(false);
     }
   };
+
+  // Handle cancel sent request
+  const handleCancelSentRequest = async (requestId) => {
+    if (!window.confirm('Are you sure you want to cancel this request?')) {
+      return;
+    }
+    
+    setActionLoading(true);
+    
+    try {
+      const { error } = await db.matchRequests.update(requestId, {
+        status: 'cancelled',
+        cancelled_at: new Date().toISOString()
+      });
+      
+      if (error) throw error;
+
+      // Update local state - remove cancelled requests from the list
+      setRequests(prev => prev.filter(req => req.id !== requestId));
+      
+      alert('Request cancelled successfully.');
+      
+    } catch (error) {
+      console.error('Error cancelling request:', error);
+      alert('Failed to cancel request. Please try again.');
+    } finally {
+      setActionLoading(false);
+    }
+  };
   
   // Handle unmatch
   const handleUnmatch = async (requestId) => {
@@ -470,12 +507,13 @@ You can now reach out to continue your ${matchTypeLabel}!
       approved: 'badge-info',
       rejected: 'badge-error',
       matched: 'badge-success',
-      unmatched: 'badge'
+      unmatched: 'badge',
+      cancelled: 'badge'
     }[status] || 'badge';
     
     return (
       <span className={`badge ${statusClass}`}>
-        {status === 'matched' ? 'Active' : status}
+        {status === 'matched' ? 'Active' : status === 'pending' ? 'Pending' : status}
       </span>
     );
   };
@@ -503,6 +541,20 @@ You can now reach out to continue your ${matchTypeLabel}!
             disabled={actionLoading}
           >
             Decline
+          </button>
+        </div>
+      );
+    }
+    
+    if (status === 'pending' && isSent) {
+      return (
+        <div>
+          <button
+            className="btn btn-outline btn-sm"
+            onClick={() => handleCancelSentRequest(request.id)}
+            disabled={actionLoading}
+          >
+            Cancel Request
           </button>
         </div>
       );
@@ -557,6 +609,92 @@ You can now reach out to continue your ${matchTypeLabel}!
   // Get request direction
   const getRequestDirection = (request) => {
     return request.requester_id === user.id ? 'sent' : 'received';
+  };
+
+  // Render pending requests (both incoming and outgoing)
+  const renderPendingRequests = (isSentRequests = false) => {
+    const filteredRequests = getFilteredRequests();
+
+    if (filteredRequests.length === 0) {
+      const emptyMessage = isSentRequests 
+        ? "You haven't sent any pending requests."
+        : "You don't have any pending requests to review.";
+      
+      const emptyIcon = isSentRequests ? '📤' : '📥';
+      const emptyTitle = isSentRequests ? 'No Sent Requests' : 'No Pending Requests';
+
+      return (
+        <div className="empty-state">
+          <div className="empty-state-icon">{emptyIcon}</div>
+          <h3 className="empty-state-title">{emptyTitle}</h3>
+          <p>{emptyMessage}</p>
+        </div>
+      );
+    }
+
+    return (
+      <div className="requests-list">
+        {filteredRequests.map(request => (
+          <div key={request.id} className="card mb-4">
+            {/* Request Header */}
+            <div className="card-header">
+              <div>
+                <div className="card-title">
+                  {getConnectionIcon(request)} {getOtherPersonName(request)}
+                </div>
+                <div className="card-subtitle">
+                  {getConnectionType(request)} • {isSentRequests ? 'Sent to' : 'Request from'} {getOtherPersonName(request)} on{' '}
+                  {new Date(request.created_at).toLocaleDateString()}
+                </div>
+              </div>
+              {renderStatusBadge(request.status)}
+            </div>
+            
+            {/* Request Body */}
+            <div>
+              {/* Basic Info */}
+              <div className="grid-auto mb-4">
+                <div>
+                  <span className="label">Connection Type</span>
+                  <span className="text-gray-800">
+                    {getConnectionType(request)}
+                  </span>
+                </div>
+                
+                {request.match_score && (
+                  <div>
+                    <span className="label">Compatibility</span>
+                    <span className="text-gray-800">
+                      {request.match_score}%
+                    </span>
+                  </div>
+                )}
+                
+                <div>
+                  <span className="label">Status</span>
+                  <span className="text-gray-800">
+                    Pending {isSentRequests ? 'their approval' : 'your approval'}
+                  </span>
+                </div>
+              </div>
+              
+              {/* Message */}
+              {request.message && (
+                <div className="mb-4">
+                  <div className="label mb-2">{isSentRequests ? 'Your Message' : 'Their Message'}</div>
+                  <div className="alert alert-info">
+                    {request.message}
+                  </div>
+                </div>
+              )}
+              
+              {/* Action Buttons */}
+              {renderActionButtons(request)}
+            </div>
+          </div>
+        ))}
+      </div>
+    );
   };
 
   // Render Active Matches organized by type
@@ -671,7 +809,6 @@ You can now reach out to continue your ${matchTypeLabel}!
     );
   }
 
-  const filteredRequests = getFilteredRequests();
   const tabCounts = getTabCounts();
   
   return (
@@ -680,7 +817,7 @@ You can now reach out to continue your ${matchTypeLabel}!
       <div className="text-center mb-5">
         <h1 className="welcome-title">Connections</h1>
         <p className="welcome-text">
-          Manage your active connections and view your connection history
+          Manage your connection requests and active connections
         </p>
       </div>
       
@@ -689,39 +826,60 @@ You can now reach out to continue your ${matchTypeLabel}!
         <ul className="nav-list">
           <li className="nav-item">
             <button
-              className={`nav-button ${activeTab === 'active-matches' ? 'active' : ''}`}
-              onClick={() => setActiveTab('active-matches')}
+              className={`nav-button ${activeTab === 'pending-requests' ? 'active' : ''}`}
+              onClick={() => setActiveTab('pending-requests')}
             >
-              <span className="nav-icon">⚡</span>
-              Active Connections ({tabCounts.activeMatches})
+              <span className="nav-icon">📥</span>
+              Pending Requests ({tabCounts.pendingRequests})
             </button>
           </li>
           
           <li className="nav-item">
             <button
-              className={`nav-button ${activeTab === 'match-history' ? 'active' : ''}`}
-              onClick={() => setActiveTab('match-history')}
+              className={`nav-button ${activeTab === 'sent-requests' ? 'active' : ''}`}
+              onClick={() => setActiveTab('sent-requests')}
+            >
+              <span className="nav-icon">📤</span>
+              Sent Requests ({tabCounts.sentRequests})
+            </button>
+          </li>
+          
+          <li className="nav-item">
+            <button
+              className={`nav-button ${activeTab === 'active-connections' ? 'active' : ''}`}
+              onClick={() => setActiveTab('active-connections')}
+            >
+              <span className="nav-icon">⚡</span>
+              Active Connections ({tabCounts.activeConnections})
+            </button>
+          </li>
+          
+          <li className="nav-item">
+            <button
+              className={`nav-button ${activeTab === 'connection-history' ? 'active' : ''}`}
+              onClick={() => setActiveTab('connection-history')}
             >
               <span className="nav-icon">📋</span>
-              Connection History ({tabCounts.matchHistory})
+              History ({tabCounts.connectionHistory})
             </button>
           </li>
         </ul>
       </div>
       
       {/* Content based on active tab */}
-      {activeTab === 'active-matches' ? (
-        renderActiveMatches()
-      ) : (
-        /* Match History */
-        filteredRequests.length === 0 ? (
+      {activeTab === 'pending-requests' && renderPendingRequests(false)}
+      {activeTab === 'sent-requests' && renderPendingRequests(true)}
+      {activeTab === 'active-connections' && renderActiveMatches()}
+      {activeTab === 'connection-history' && (
+        /* Connection History */
+        getFilteredRequests().length === 0 ? (
           <div className="empty-state">
             <div className="empty-state-icon">📋</div>
             <h3 className="empty-state-title">No Connection History</h3>
             <p>Your past connections and rejected requests will appear here.</p>
           </div>
         ) : (
-          filteredRequests.map(request => (
+          getFilteredRequests().map(request => (
             <div key={request.id} className="card mb-4">
               {/* Request Header */}
               <div className="card-header">
@@ -883,6 +1041,11 @@ You can now reach out to continue your ${matchTypeLabel}!
           gap: 1.5rem;
         }
 
+        .requests-list {
+          max-width: 800px;
+          margin: 0 auto;
+        }
+
         @media (max-width: 768px) {
           .connections-grid {
             grid-template-columns: 1fr;
@@ -890,6 +1053,14 @@ You can now reach out to continue your ${matchTypeLabel}!
           
           .connection-type-title {
             font-size: 1.1rem;
+          }
+          
+          .nav-list {
+            flex-direction: column;
+          }
+          
+          .nav-button {
+            justify-content: flex-start;
           }
         }
       `}</style>
