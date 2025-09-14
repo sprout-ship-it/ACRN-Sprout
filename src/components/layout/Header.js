@@ -1,4 +1,4 @@
-// src/components/layout/Header.js - UPDATED VERSION
+// src/components/layout/Header.js - COMPLETE UPDATED VERSION
 import React, { useState } from 'react'
 import { useAuth } from '../../context/AuthContext'
 import '../../styles/global.css';
@@ -6,63 +6,55 @@ import '../../styles/global.css';
 const Header = () => {
   const { isAuthenticated, profile, signOut, loading } = useAuth()
   const [isLoggingOut, setIsLoggingOut] = useState(false)
-  const [logoutError, setLogoutError] = useState(null)
 
-  // ✅ IMPROVED: Better logout handling with loading state and error handling
+  // Improved logout with visual feedback and timeout handling
   const handleLogout = async () => {
-    console.log('🚪 Header: Logout button clicked')
+    console.log('🚪 Header: Logout initiated')
     
     if (isLoggingOut) {
-      console.log('⚠️ Header: Logout already in progress, ignoring click')
+      console.log('⚠️ Header: Logout already in progress')
       return
     }
 
     setIsLoggingOut(true)
-    setLogoutError(null)
 
     try {
-      console.log('🚪 Header: Calling signOut...')
       const { error } = await signOut()
       
       if (error) {
-        console.error('❌ Header: Logout error:', error)
-        setLogoutError(error.message)
-        setIsLoggingOut(false)
-        
-        // Show user-friendly error message
-        if (error.message.includes('timed out')) {
-          alert('Logout is taking longer than expected, but you have been logged out locally.')
-        } else {
-          alert(`Error signing out: ${error.message}. Please try again.`)
-        }
+        console.error('❌ Header: Logout error:', error.message)
+        alert(`Logout issue: ${error.message}`)
       } else {
-        console.log('✅ Header: Logout successful')
-        // Note: We don't need to set isLoggingOut to false here because
-        // the component will unmount when user is logged out
+        console.log('✅ Header: Logout completed successfully')
       }
     } catch (err) {
-      console.error('💥 Header: Logout failed:', err)
-      setLogoutError(err.message)
-      setIsLoggingOut(false)
-      alert('Logout failed. Please try refreshing the page.')
+      console.error('💥 Header: Logout failed:', err.message)
+      alert('Logout failed. The page will refresh to clear your session.')
+      // Force refresh as fallback
+      window.location.href = '/'
+    } finally {
+      // Note: We don't reset isLoggingOut because the component will unmount
+      // when the user is logged out
     }
   }
 
   return (
     <header className="app-header">
+      {/* User greeting */}
       {isAuthenticated && profile?.first_name && (
         <div style={{
           position: 'absolute',
           top: '20px',
           left: '20px',
           fontSize: '0.9rem',
-          opacity: '0.9'
+          opacity: '0.9',
+          color: 'white'
         }}>
           Welcome, {profile.first_name}!
           {profile.loading_error && (
             <div style={{ 
               fontSize: '0.8rem', 
-              color: '#ff6b6b', 
+              color: '#ffeb3b', 
               marginTop: '4px' 
             }}>
               ⚠️ Profile data incomplete
@@ -71,30 +63,39 @@ const Header = () => {
         </div>
       )}
       
+      {/* Main header content */}
       <h1 className="header-title">Recovery Housing Connect</h1>
       <p className="header-subtitle">Building Supportive Communities Through Meaningful Connections</p>
       
+      {/* Logout button */}
       {isAuthenticated && (
         <div style={{ position: 'absolute', top: '20px', right: '20px' }}>
-          {/* ✅ IMPROVED: Better logout button with loading state */}
           <button
             className="logout-button"
             onClick={handleLogout}
             disabled={isLoggingOut || loading}
             style={{
-              opacity: isLoggingOut ? 0.6 : 1,
-              cursor: isLoggingOut ? 'not-allowed' : 'pointer',
-              position: 'relative'
+              padding: '8px 16px',
+              background: isLoggingOut ? '#666' : 'rgba(255, 255, 255, 0.2)',
+              color: 'white',
+              border: '1px solid rgba(255, 255, 255, 0.3)',
+              borderRadius: '6px',
+              cursor: isLoggingOut || loading ? 'not-allowed' : 'pointer',
+              fontSize: '0.9rem',
+              fontWeight: '500',
+              opacity: isLoggingOut || loading ? 0.6 : 1,
+              transition: 'all 0.2s ease',
+              position: 'relative',
+              minWidth: '80px',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              gap: '6px'
             }}
           >
             {isLoggingOut ? (
               <>
-                <span style={{ opacity: 0.7 }}>Logging out...</span>
                 <div style={{
-                  position: 'absolute',
-                  right: '8px',
-                  top: '50%',
-                  transform: 'translateY(-50%)',
                   width: '12px',
                   height: '12px',
                   border: '2px solid transparent',
@@ -102,38 +103,25 @@ const Header = () => {
                   borderRadius: '50%',
                   animation: 'spin 1s linear infinite'
                 }} />
+                <span>Logging out...</span>
               </>
             ) : (
               'Logout'
             )}
           </button>
-          
-          {/* ✅ ADDED: Show logout error if it occurs */}
-          {logoutError && (
-            <div style={{
-              position: 'absolute',
-              top: '100%',
-              right: '0',
-              marginTop: '4px',
-              padding: '4px 8px',
-              background: '#ff6b6b',
-              color: 'white',
-              fontSize: '0.8rem',
-              borderRadius: '4px',
-              whiteSpace: 'nowrap',
-              zIndex: 1000
-            }}>
-              {logoutError}
-            </div>
-          )}
         </div>
       )}
       
-      {/* ✅ ADDED: Add spinner animation styles */}
+      {/* CSS for spinner animation */}
       <style jsx>{`
         @keyframes spin {
-          0% { transform: translateY(-50%) rotate(0deg); }
-          100% { transform: translateY(-50%) rotate(360deg); }
+          0% { transform: rotate(0deg); }
+          100% { transform: rotate(360deg); }
+        }
+        
+        .logout-button:hover:not(:disabled) {
+          background: rgba(255, 255, 255, 0.3) !important;
+          transform: translateY(-1px);
         }
       `}</style>
     </header>
