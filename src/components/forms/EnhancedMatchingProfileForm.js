@@ -1,5 +1,5 @@
-// src/components/forms/EnhancedMatchingProfileForm.js
-import React, { useState } from 'react';
+// src/components/forms/EnhancedMatchingProfileForm.js - COMPLETE WITH SUBMISSION FIXES
+import React, { useState, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import { useMatchingProfileForm } from './hooks/useMatchingProfileForm';
@@ -169,40 +169,61 @@ const EnhancedMatchingProfileForm = ({ editMode = false, onComplete, onCancel })
     }, 100); // Small delay to ensure content is rendered
   };
 
-  // ✅ ENHANCED: Navigation handlers with improved scrolling
-  const handleNext = () => {
+  // ✅ FIX 1: Add explicit event prevention to all navigation handlers
+  const handleNext = useCallback((e) => {
+    if (e) {
+      e.preventDefault();
+      e.stopPropagation();
+    }
+    
+    console.log('🔄 Next button clicked, current section:', currentSectionIndex);
+    
     if (currentSectionIndex < FORM_SECTIONS.length - 1) {
       setCurrentSectionIndex(prev => prev + 1);
       scrollToFirstFormField();
     }
-  };
+  }, [currentSectionIndex]);
 
-  const handlePrevious = () => {
+  const handlePrevious = useCallback((e) => {
+    if (e) {
+      e.preventDefault();
+      e.stopPropagation();
+    }
+    
+    console.log('🔄 Previous button clicked, current section:', currentSectionIndex);
+    
     if (currentSectionIndex > 0) {
       setCurrentSectionIndex(prev => prev - 1);
       scrollToFirstFormField();
     }
-  };
+  }, [currentSectionIndex]);
 
-  const handleSectionClick = (index) => {
+  const handleSectionClick = useCallback((index, e) => {
+    if (e) {
+      e.preventDefault();
+      e.stopPropagation();
+    }
+    
+    console.log('🔄 Section tab clicked:', index);
+    
     setCurrentSectionIndex(index);
     scrollToFirstFormField();
-  };
+  }, []);
 
-  // ✅ FIXED: Improved form submission handlers with better error handling and navigation
-  const handleSave = async (e) => {
+  // ✅ FIX 2: Enhanced save handler with better logging and error prevention
+  const handleSave = useCallback(async (e) => {
     if (e) {
       e.preventDefault();
       e.stopPropagation();
     }
     
     if (loading || isSubmitting) {
-      console.log('🚫 Save blocked: already in progress');
+      console.log('🚫 Save blocked: already in progress', { loading, isSubmitting });
       return;
     }
     
+    console.log('🔄 Save Progress clicked - NOT SUBMITTING FINAL FORM');
     setSuccessMessage('');
-    console.log('🔄 Saving progress...');
     
     try {
       const success = await submitForm();
@@ -216,24 +237,45 @@ const EnhancedMatchingProfileForm = ({ editMode = false, onComplete, onCancel })
       console.error('❌ Save error:', error);
       setSuccessMessage('');
     }
-  };
+  }, [loading, isSubmitting, submitForm, setSuccessMessage]);
 
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    e.stopPropagation();
+  // ✅ FIX 3: Enhanced submit handler with additional safeguards
+  const handleSubmit = useCallback(async (e) => {
+    console.log('🚨 FORM SUBMIT TRIGGERED - handleSubmit called');
+    console.log('🔍 Event details:', {
+      type: e?.type,
+      target: e?.target,
+      currentTarget: e?.currentTarget,
+      submitter: e?.submitter
+    });
     
-    if (loading || isSubmitting) {
-      console.log('🚫 Submit blocked: already in progress');
+    // ✅ CRITICAL: Always prevent default form submission
+    if (e) {
+      e.preventDefault();
+      e.stopPropagation();
+    }
+    
+    // ✅ FIX: Additional check to prevent accidental submission
+    if (!isLastSection) {
+      console.log('🚫 BLOCKING SUBMISSION: Not on last section', { 
+        currentSectionIndex, 
+        isLastSection,
+        totalSections: FORM_SECTIONS.length 
+      });
       return;
     }
     
-    console.log('🔄 Starting final form submission...');
+    if (loading || isSubmitting) {
+      console.log('🚫 BLOCKING SUBMISSION: Already in progress', { loading, isSubmitting });
+      return;
+    }
+    
+    console.log('🔄 Starting FINAL form submission...');
     setIsSubmitting(true);
     setSuccessMessage('');
     
     try {
-      // ✅ FIXED: Better validation check with detailed logging
-      console.log('🔍 Validating form before submission...');
+      console.log('🔍 Validating form before final submission...');
       const isValid = validateForm();
       console.log('🔍 Form validation result:', isValid);
       console.log('🔍 Current errors:', errors);
@@ -243,7 +285,6 @@ const EnhancedMatchingProfileForm = ({ editMode = false, onComplete, onCancel })
         console.log('❌ Form validation failed or has errors');
         setIsSubmitting(false);
         
-        // Scroll to first error with better error detection
         setTimeout(() => {
           const firstError = document.querySelector('.border-red-500, .text-red-500, .error, .alert-error input, .alert-error select, .alert-error textarea');
           if (firstError) {
@@ -260,7 +301,6 @@ const EnhancedMatchingProfileForm = ({ editMode = false, onComplete, onCancel })
 
       console.log('✅ Form validation passed, submitting to database...');
       
-      // ✅ FIXED: Better submission handling with clearer success/failure logic
       const success = await submitForm();
       console.log('🔍 Submit form result:', success);
       
@@ -268,7 +308,6 @@ const EnhancedMatchingProfileForm = ({ editMode = false, onComplete, onCancel })
         console.log('✅ Database submission successful');
         setSuccessMessage('Matching profile completed successfully!');
         
-        // ✅ FIXED: Better navigation handling with proper paths
         setTimeout(() => {
           if (editMode && onComplete) {
             console.log('📍 Edit mode: calling onComplete callback');
@@ -291,7 +330,6 @@ const EnhancedMatchingProfileForm = ({ editMode = false, onComplete, onCancel })
         console.log('❌ Database submission failed');
         setIsSubmitting(false);
         
-        // Scroll to first error
         setTimeout(() => {
           const firstError = document.querySelector('.border-red-500, .text-red-500, .alert-error');
           if (firstError) {
@@ -306,21 +344,47 @@ const EnhancedMatchingProfileForm = ({ editMode = false, onComplete, onCancel })
       setIsSubmitting(false);
       setSuccessMessage('');
       
-      // Show error to user
       setTimeout(() => {
         window.scrollTo({ top: 0, behavior: 'smooth' });
       }, 100);
     }
-  };
+  }, [isLastSection, loading, isSubmitting, validateForm, errors, hasErrors, canSubmit, submitForm, editMode, onComplete, navigate, setSuccessMessage, currentSectionIndex]);
 
-  // ✅ FIXED: Add cancel handler for edit mode
-  const handleCancel = () => {
+  // ✅ FIX 4: Enhanced cancel handler
+  const handleCancel = useCallback((e) => {
+    if (e) {
+      e.preventDefault();
+      e.stopPropagation();
+    }
+    
+    console.log('🔄 Cancel button clicked');
+    
     if (onCancel) {
       onCancel();
     } else {
       navigate('/app');
     }
-  };
+  }, [onCancel, navigate]);
+
+  // ✅ FIX 5: Add keydown handler to prevent Enter key submissions
+  const handleKeyDown = useCallback((e) => {
+    // Prevent Enter key from submitting form unless on submit button
+    if (e.key === 'Enter' && e.target.type !== 'submit' && e.target.tagName !== 'BUTTON') {
+      console.log('🚫 Preventing Enter key form submission');
+      e.preventDefault();
+      
+      // Optional: Move to next field instead
+      const form = e.target.closest('form');
+      if (form) {
+        const inputs = Array.from(form.querySelectorAll('input, select, textarea, button'));
+        const currentIndex = inputs.indexOf(e.target);
+        const nextInput = inputs[currentIndex + 1];
+        if (nextInput) {
+          nextInput.focus();
+        }
+      }
+    }
+  }, []);
 
   return (
     <div className="container">
@@ -346,7 +410,7 @@ const EnhancedMatchingProfileForm = ({ editMode = false, onComplete, onCancel })
           label={`Section ${currentSectionIndex + 1} of ${FORM_SECTIONS.length}`}
         />
 
-        {/* ✅ ENHANCED: Section Navigation with improved styling */}
+        {/* ✅ FIX 6: Enhanced Section Navigation with proper event handling */}
         <nav className="navigation">
           <ul className="nav-list">
             {FORM_SECTIONS.map((section, index) => (
@@ -354,7 +418,7 @@ const EnhancedMatchingProfileForm = ({ editMode = false, onComplete, onCancel })
                 <button
                   type="button"
                   className={`nav-button ${index === currentSectionIndex ? 'active' : ''}`}
-                  onClick={() => handleSectionClick(index)}
+                  onClick={(e) => handleSectionClick(index, e)}
                   disabled={loading || isSubmitting}
                 >
                   <span className="nav-icon">{section.icon}</span>
@@ -387,8 +451,12 @@ const EnhancedMatchingProfileForm = ({ editMode = false, onComplete, onCancel })
           </div>
         )}
 
-        {/* ✅ FIXED: Improved form structure with better event handling */}
-        <form onSubmit={handleSubmit} noValidate>
+        {/* ✅ FIX 7: Enhanced form with better event handling */}
+        <form 
+          onSubmit={handleSubmit} 
+          onKeyDown={handleKeyDown}
+          noValidate
+        >
           <div className="card">
             <div className="card-header">
               <h2 className="section-header">
@@ -407,7 +475,7 @@ const EnhancedMatchingProfileForm = ({ editMode = false, onComplete, onCancel })
               onRangeChange={handleRangeChange}
             />
 
-            {/* ✅ FIXED: Improved form actions with better button handling */}
+            {/* ✅ FIX 8: Enhanced form actions with explicit button types and event handling */}
             <div className="form-actions">
               {/* Save Progress Button */}
               <button
@@ -465,6 +533,10 @@ const EnhancedMatchingProfileForm = ({ editMode = false, onComplete, onCancel })
                   type="submit"
                   className="btn btn-primary"
                   disabled={loading || isSubmitting || (!canSubmit && !editMode)}
+                  onClick={(e) => {
+                    console.log('🚨 SUBMIT BUTTON CLICKED');
+                    // Let the form's onSubmit handle this
+                  }}
                 >
                   {isSubmitting ? (
                     <>
