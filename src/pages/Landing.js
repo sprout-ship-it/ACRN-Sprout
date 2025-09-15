@@ -2,7 +2,7 @@
 import React, { useState } from 'react'
 import { useAuth } from '../context/AuthContext';
 import LoginForm from '../components/auth/LoginForm';
-import RegisterForm from '../components/forms/RegisterForms'
+import RegisterForms from '../components/auth/RegisterForms';
 import '../styles/global.css';
 
 const Landing = () => {
