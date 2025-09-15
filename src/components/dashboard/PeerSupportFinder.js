@@ -1,4 +1,4 @@
-// src/components/dashboard/PeerSupportFinder.js
+// src/components/dashboard/PeerSupportFinder.js - FIXED FOR PROPER PEER SUPPORT CONNECTIONS
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../../context/AuthContext';
 import { db } from '../../utils/supabase';
@@ -13,6 +13,7 @@ const PeerSupportFinder = ({ onBack }) => {
   const [selectedSpecialist, setSelectedSpecialist] = useState(null);
   const [showDetails, setShowDetails] = useState(false);
   const [connectionRequests, setConnectionRequests] = useState(new Set()); // Track sent requests
+  const [activeConnections, setActiveConnections] = useState(new Set()); // Track active connections
   const [filters, setFilters] = useState({
     specialties: [],
     location: '', // Changed from serviceArea to location for better UX
@@ -61,28 +62,46 @@ const PeerSupportFinder = ({ onBack }) => {
   }, [filters]);
 
   /**
-   * Load existing connection requests to avoid duplicates
+   * ✅ FIXED: Load existing peer support connections to prevent duplicates
    */
   const loadConnectionRequests = async () => {
     if (!user?.id) return;
 
     try {
+      console.log('📊 Loading existing peer support connections...');
       const result = await db.matchRequests.getByUserId(user.id);
+      
       if (result.success !== false && result.data) {
-        const sentRequests = new Set(
-          result.data
-            .filter(req => req.requester_id === user.id && req.request_type === 'peer_support')
-            .map(req => req.target_id)
-        );
+        const sentRequests = new Set();
+        const activeConnections = new Set();
+        
+        result.data
+          .filter(req => req.request_type === 'peer_support')
+          .forEach(req => {
+            // Track the other user's ID (peer specialist)
+            const otherUserId = req.requester_id === user.id ? req.target_id : req.requester_id;
+            
+            if (req.status === 'pending' && req.requester_id === user.id) {
+              sentRequests.add(otherUserId);
+            } else if (req.status === 'matched') {
+              activeConnections.add(otherUserId);
+            }
+          });
+        
         setConnectionRequests(sentRequests);
+        setActiveConnections(activeConnections);
+        console.log('📊 Loaded peer support connections:', {
+          pending: sentRequests.size,
+          active: activeConnections.size
+        });
       }
     } catch (err) {
-      console.error('💥 Error loading connection requests:', err);
+      console.error('💥 Error loading peer support connections:', err);
     }
   };
 
   /**
-   * ✅ FIXED: Improved search for available peer support specialists
+   * ✅ IMPROVED: Enhanced search for available peer support specialists
    */
   const loadSpecialists = async () => {
     setLoading(true);
@@ -187,9 +206,9 @@ const PeerSupportFinder = ({ onBack }) => {
   };
 
   /**
-   * ✅ NEW: Smart location search that includes common areas
+   * ✅ IMPROVED: Smart location search that includes common areas
    */
-const handleShowNearby = async () => {
+  const handleShowNearby = async () => {
     if (!profile?.city && !profile?.state) {
       // Try to use user's location from matching profile if available
       try {
@@ -239,40 +258,53 @@ const handleShowNearby = async () => {
   };
 
   /**
-   * ✅ FIXED: Improved connection request with proper error handling
+   * ✅ FIXED: Peer support connection request with proper architecture
+   * Note: Peer support connections DO create match groups (unlike employment)
    */
   const handleRequestConnection = async (specialist) => {
-    // Check if already sent request
+    // Check if already sent request or have active connection
     if (connectionRequests.has(specialist.user_id)) {
-      alert(`You've already sent a connection request to ${specialist.registrant_profiles?.first_name || 'this specialist'}.`);
+      alert(`You've already sent a peer support request to ${specialist.registrant_profiles?.first_name || 'this specialist'}.`);
       return;
+    }
+
+    if (activeConnections.has(specialist.user_id)) {
+      alert(`You already have an active peer support connection with ${specialist.registrant_profiles?.first_name || 'this specialist'}.`);
+      return;
+    }
+
+    // Check if specialist is accepting clients
+    if (!specialist.is_accepting_clients) {
+      if (!confirm(`${specialist.registrant_profiles?.first_name || 'This specialist'} is not currently accepting new clients. Send request anyway?`)) {
+        return;
+      }
     }
 
     try {
       console.log('🤝 Sending peer support request to:', specialist.registrant_profiles?.first_name);
       
-      // ✅ FIXED: Improved request data structure
+      // ✅ FIXED: Peer support connections create match_requests first, then match_groups when approved
       const requestData = {
         requester_id: user.id,
         target_id: specialist.user_id,
         request_type: 'peer_support',
-        message: `Hi ${specialist.registrant_profiles?.first_name || 'there'}! I'm interested in connecting with you for peer support services. Your experience with ${specialist.specialties?.slice(0, 2).join(' and ') || 'recovery support'} aligns well with what I'm looking for in my recovery journey.`,
+        message: `Hi ${specialist.registrant_profiles?.first_name || 'there'}! I'm interested in connecting with you for peer support services. Your experience with ${specialist.specialties?.slice(0, 2).join(' and ') || 'recovery support'} aligns well with what I'm looking for in my recovery journey.
+
+I would appreciate the opportunity to discuss how your support could help me in my recovery process.`,
         status: 'pending'
       };
       
-      console.log('📤 Sending request data:', requestData);
+      console.log('📤 Sending peer support request:', requestData);
       
-      // ✅ FIXED: Proper error handling for database call
+      // ✅ CORRECT: Create match_request first (match_group created on approval via MatchRequests component)
       const result = await db.matchRequests.create(requestData);
       
-      console.log('📥 Database response:', result);
-      
       if (result.error) {
-        throw new Error(result.error.message || 'Failed to send connection request');
+        throw new Error(result.error.message || 'Failed to send peer support request');
       }
       
       if (!result.data) {
-        throw new Error('No data returned from connection request');
+        throw new Error('No response received from peer support request');
       }
       
       console.log('✅ Peer support request sent successfully:', result.data);
@@ -280,11 +312,11 @@ const handleShowNearby = async () => {
       // Update local state to track sent request
       setConnectionRequests(prev => new Set([...prev, specialist.user_id]));
       
-      alert(`Connection request sent to ${specialist.registrant_profiles?.first_name || 'the specialist'}! They will be notified and can respond through their dashboard.`);
+      alert(`Peer support request sent to ${specialist.registrant_profiles?.first_name || 'the specialist'}! They will be notified and can respond through their dashboard.`);
       
     } catch (err) {
-      console.error('💥 Error sending connection request:', err);
-      alert(`Failed to send connection request: ${err.message}. Please try again.`);
+      console.error('💥 Error sending peer support request:', err);
+      alert(`Failed to send peer support request: ${err.message}. Please try again.`);
     }
   };
 
@@ -299,6 +331,25 @@ const handleShowNearby = async () => {
       minExperience: '',
       acceptingClients: true
     });
+  };
+
+  /**
+   * ✅ NEW: Get connection status for display
+   */
+  const getConnectionStatus = (specialist) => {
+    const hasRequest = connectionRequests.has(specialist.user_id);
+    const hasConnection = activeConnections.has(specialist.user_id);
+    const isAcceptingClients = specialist.is_accepting_clients;
+    
+    if (hasConnection) {
+      return { text: 'Active Connection', disabled: true, className: 'btn-success' };
+    } else if (hasRequest) {
+      return { text: 'Request Sent', disabled: true, className: 'btn-info' };
+    } else if (!isAcceptingClients) {
+      return { text: 'Request Connection', disabled: false, className: 'btn-outline' };
+    } else {
+      return { text: 'Request Connection', disabled: false, className: 'btn-secondary' };
+    }
   };
 
   /**
@@ -505,15 +556,16 @@ const handleShowNearby = async () => {
                   {specialists.length} Specialist{specialists.length !== 1 ? 's' : ''} Found
                 </h3>
                 <div className="text-gray-600">
-                  {specialists.filter(s => s.is_accepting_clients).length} accepting new clients
+                  {specialists.filter(s => s.is_accepting_clients).length} accepting new clients •{' '}
+                  {activeConnections.size} active connections •{' '}
+                  {connectionRequests.size} pending requests
                 </div>
               </div>
             </div>
 
             <div className="grid-auto mb-5">
               {specialists.map((specialist) => {
-                const alreadyRequested = connectionRequests.has(specialist.user_id);
-                const isAcceptingClients = specialist.is_accepting_clients;
+                const connectionStatus = getConnectionStatus(specialist);
                 
                 return (
                   <div key={specialist.user_id} className="card">
@@ -530,10 +582,16 @@ const handleShowNearby = async () => {
                         {specialist.is_licensed && (
                           <span className="badge badge-success mb-1">Licensed</span>
                         )}
-                        {isAcceptingClients ? (
+                        {specialist.is_accepting_clients ? (
                           <span className="badge badge-success">Accepting Clients</span>
                         ) : (
                           <span className="badge badge-warning">Not Accepting</span>
+                        )}
+                        {activeConnections.has(specialist.user_id) && (
+                          <span className="badge badge-info">Connected</span>
+                        )}
+                        {connectionRequests.has(specialist.user_id) && !activeConnections.has(specialist.user_id) && (
+                          <span className="badge badge-warning">Request Sent</span>
                         )}
                       </div>
                     </div>
@@ -595,13 +653,11 @@ const handleShowNearby = async () => {
                       </button>
                       
                       <button
-                        className="btn btn-secondary"
+                        className={`btn ${connectionStatus.className}`}
                         onClick={() => handleRequestConnection(specialist)}
-                        disabled={!isAcceptingClients || alreadyRequested}
+                        disabled={connectionStatus.disabled}
                       >
-                        {alreadyRequested ? 'Request Sent' : 
-                         !isAcceptingClients ? 'Not Accepting' : 
-                         'Request Connection'}
+                        {connectionStatus.text}
                       </button>
                     </div>
                   </div>
@@ -639,6 +695,21 @@ const handleShowNearby = async () => {
                 ×
               </button>
             </div>
+
+            {/* Connection Status */}
+            {activeConnections.has(selectedSpecialist.user_id) && (
+              <div className="alert alert-success mb-4">
+                <strong>✅ Active Connection:</strong> You have an active peer support connection with this specialist. 
+                Check your connections page to exchange contact information and coordinate support sessions.
+              </div>
+            )}
+            
+            {connectionRequests.has(selectedSpecialist.user_id) && !activeConnections.has(selectedSpecialist.user_id) && (
+              <div className="alert alert-info mb-4">
+                <strong>📤 Request Sent:</strong> You've sent a peer support request to this specialist. 
+                They will review your request and respond through their dashboard.
+              </div>
+            )}
 
             {/* Professional Information */}
             <div className="mb-4">
@@ -714,6 +785,22 @@ const handleShowNearby = async () => {
               </div>
             )}
 
+            {/* Connection Process Explanation */}
+            {!activeConnections.has(selectedSpecialist.user_id) && !connectionRequests.has(selectedSpecialist.user_id) && (
+              <div className="mb-4">
+                <h4 className="card-title">Connection Process</h4>
+                <div className="alert alert-info">
+                  <strong>🤝 Peer Support Connection Process:</strong>
+                  <ol style={{ marginTop: '0.5rem', paddingLeft: '1.25rem' }}>
+                    <li>Send connection request to express interest in peer support</li>
+                    <li>Specialist reviews your request and your recovery goals</li>
+                    <li>If approved, you can exchange contact information and coordinate</li>
+                    <li>Work together to establish a support schedule and goals</li>
+                  </ol>
+                </div>
+              </div>
+            )}
+
             <div className="grid-2">
               <button
                 className="btn btn-outline"
@@ -722,18 +809,31 @@ const handleShowNearby = async () => {
                 Close
               </button>
               
-              <button
-                className="btn btn-secondary"
-                onClick={() => {
-                  handleRequestConnection(selectedSpecialist);
-                  setShowDetails(false);
-                }}
-                disabled={!selectedSpecialist.is_accepting_clients || connectionRequests.has(selectedSpecialist.user_id)}
-              >
-                {connectionRequests.has(selectedSpecialist.user_id) ? 'Request Sent' :
-                 !selectedSpecialist.is_accepting_clients ? 'Not Accepting Clients' : 
-                 'Request Connection'}
-              </button>
+              {!activeConnections.has(selectedSpecialist.user_id) && !connectionRequests.has(selectedSpecialist.user_id) ? (
+                <button
+                  className="btn btn-secondary"
+                  onClick={() => {
+                    handleRequestConnection(selectedSpecialist);
+                    setShowDetails(false);
+                  }}
+                  disabled={!selectedSpecialist.is_accepting_clients}
+                >
+                  {!selectedSpecialist.is_accepting_clients ? 'Not Accepting Clients' : 'Request Connection'}
+                </button>
+              ) : (
+                <div className="text-center" style={{ 
+                  display: 'flex', 
+                  alignItems: 'center', 
+                  justifyContent: 'center',
+                  padding: '10px',
+                  background: 'var(--bg-light-cream)',
+                  borderRadius: 'var(--radius-md)',
+                  color: 'var(--primary-purple)',
+                  fontWeight: '600'
+                }}>
+                  {activeConnections.has(selectedSpecialist.user_id) ? '✅ Active Connection' : '📤 Request Sent'}
+                </div>
+              )}
             </div>
           </div>
         </div>

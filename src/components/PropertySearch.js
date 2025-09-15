@@ -1,4 +1,4 @@
-// src/components/PropertySearch.js
+// src/components/PropertySearch.js - FIXED FOR ENHANCED HOUSING SEARCH
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { supabase } from '../utils/supabase';
@@ -13,20 +13,21 @@ const PropertySearch = () => {
   const [showAdvancedFilters, setShowAdvancedFilters] = useState(false);
   const [userPreferences, setUserPreferences] = useState(null);
   const [searchMode, setSearchMode] = useState('basic'); // 'basic' or 'recovery'
+  const [savedProperties, setSavedProperties] = useState(new Set()); // Track saved properties
   
-  // ✅ FIXED: Restructured search filters to match form criteria
+  // ✅ FIXED: Restructured search filters to match database schema
   const [basicFilters, setBasicFilters] = useState({
     location: '',
     state: '',
     maxRent: '',
     minBedrooms: '',
-    housingType: [], // Array to match form structure
+    housingType: [], // Array to match database structure
     furnished: false,
     petsAllowed: false,
-    utilityBudget: '' // Added for better budget alignment
+    utilityBudget: ''
   });
 
-  // ✅ NEW: Recovery-specific search filters
+  // ✅ IMPROVED: Recovery-specific search filters
   const [recoveryFilters, setRecoveryFilters] = useState({
     recoveryHousingOnly: true,
     soberness: '',
@@ -37,7 +38,7 @@ const PropertySearch = () => {
     recoveryStage: ''
   });
 
-  // ✅ IMPROVED: Advanced filters for detailed search
+  // ✅ ENHANCED: Advanced filters for detailed search
   const [advancedFilters, setAdvancedFilters] = useState({
     acceptedSubsidies: [],
     amenities: [],
@@ -49,15 +50,7 @@ const PropertySearch = () => {
     moveInCost: ''
   });
 
-  // ✅ NEW: External search integration flags
-  const [externalSources, setExternalSources] = useState({
-    includeZillow: false,
-    includeApartmentsDotCom: false,
-    includeRentDotCom: false,
-    enableExternalSearch: false // Master toggle for future feature
-  });
-
-  // Housing type options that match form structure
+  // Housing type options that match database structure
   const housingTypeOptions = [
     { value: 'apartment', label: 'Apartment' },
     { value: 'house', label: 'House' },
@@ -96,54 +89,71 @@ const PropertySearch = () => {
     'Internet', 'Cable', 'Heat', 'Hot Water'
   ];
 
-  // ✅ NEW: Load user preferences from their matching profile
+  // ✅ FIXED: Load user preferences from applicant profile
   useEffect(() => {
     loadUserPreferences();
+    loadSavedProperties();
   }, [user]);
 
-  // Load properties on component mount and when filters change
+  // Load properties on filter changes
   useEffect(() => {
     handleSearch();
-  }, [basicFilters, recoveryFilters, advancedFilters, searchMode]);
+  }, [basicFilters, recoveryFilters, advancedFilters, searchMode, currentPage]);
 
   /**
-   * ✅ NEW: Load user's housing preferences from their profile
+   * ✅ FIXED: Load user's housing preferences from applicant profile
    */
-const loadUserPreferences = async () => {
-  if (!user?.id) return;
+  const loadUserPreferences = async () => {
+    if (!user?.id) return;
 
-  try {
-    const { data, error } = await supabase
-      .from('applicant_forms')
-      .select('*')
-      .eq('user_id', user.id)
-      .single();
+    try {
+      console.log('👤 Loading user housing preferences...');
+      const { data, error } = await supabase
+        .from('applicant_forms')
+        .select('*')
+        .eq('user_id', user.id)
+        .single();
 
-    if (data && !error) {
-      setUserPreferences(data);
-      
-      // ✅ UPDATED: Auto-populate filters from separate city/state fields
-      const autoFilters = {
-        // Combine city and state if both exist, otherwise use what's available
-        location: data.preferred_city || '',
-        state: data.preferred_state || '',
-        maxRent: data.budget_max?.toString() || '',
-        minBedrooms: data.preferred_bedrooms?.toString() || '',
-        housingType: data.housing_type || [],
-        furnished: data.furnished_preference || false,
-        petsAllowed: data.pets_owned || false
-      };
-      
-      setBasicFilters(prev => ({ ...prev, ...autoFilters }));
-      console.log('✅ Auto-populated search from user preferences:', autoFilters);
+      if (error) {
+        if (error.code !== 'PGRST116') { // Not "no rows returned"
+          console.error('Error loading user preferences:', error);
+        }
+        return;
+      }
+
+      if (data) {
+        setUserPreferences(data);
+        
+        // ✅ FIXED: Auto-populate filters from user profile
+        const autoFilters = {
+          location: data.preferred_city || '',
+          state: data.preferred_state || '',
+          maxRent: data.budget_max?.toString() || '',
+          minBedrooms: data.preferred_bedrooms?.toString() || '',
+          housingType: data.housing_type || [],
+          furnished: data.furnished_preference || false,
+          petsAllowed: data.pets_owned || false
+        };
+        
+        setBasicFilters(prev => ({ ...prev, ...autoFilters }));
+        console.log('✅ Auto-populated search filters from user preferences');
+      }
+    } catch (err) {
+      console.error('Error loading user preferences:', err);
     }
-  } catch (err) {
-    console.error('Error loading user preferences:', err);
-  }
-};
+  };
 
   /**
-   * ✅ IMPROVED: Enhanced search with recovery housing prioritization
+   * ✅ NEW: Load saved properties (future feature - currently just placeholder)
+   */
+  const loadSavedProperties = async () => {
+    // Placeholder for saved properties functionality
+    // In the future, this would load from a user_saved_properties table
+    setSavedProperties(new Set());
+  };
+
+  /**
+   * ✅ IMPROVED: Enhanced property search with better error handling
    */
   const handleSearch = async (resetPage = true) => {
     if (resetPage) {
@@ -152,27 +162,26 @@ const loadUserPreferences = async () => {
     
     setLoading(true);
     try {
-      console.log('🔍 Searching with mode:', searchMode, 'Filters:', { basicFilters, recoveryFilters, advancedFilters });
+      console.log('🔍 Searching properties with mode:', searchMode, 'Page:', currentPage);
       
-      // ✅ FIXED: Build query based on search mode and aligned criteria
+      // ✅ FIXED: Build robust query based on search mode
       let query = supabase
         .from('properties')
         .select('*', { count: 'exact' })
         .eq('status', 'available');
 
-      // Basic location and housing criteria
+      // Basic location filtering with improved handling
       if (basicFilters.location.trim()) {
         const searchLocation = basicFilters.location.trim();
-        // Split by comma to handle "City, State" format
         const locationParts = searchLocation.split(',').map(part => part.trim());
         
         if (locationParts.length === 2) {
-          // Assume "City, State" format
+          // Handle "City, State" format
           const [city, state] = locationParts;
-          query = query.or(`city.ilike.*${city}*,state.ilike.*${state}*,address.ilike.*${searchLocation}*`);
+          query = query.or(`city.ilike.%${city}%,state.ilike.%${state}%,address.ilike.%${searchLocation}%`);
         } else {
-          // Single location term
-          query = query.or(`city.ilike.*${searchLocation}*,state.ilike.*${searchLocation}*,address.ilike.*${searchLocation}*`);
+          // Single location term - search across multiple fields
+          query = query.or(`city.ilike.%${searchLocation}%,state.ilike.%${searchLocation}%,address.ilike.%${searchLocation}%`);
         }
       }
 
@@ -188,15 +197,14 @@ const loadUserPreferences = async () => {
         query = query.gte('bedrooms', parseInt(basicFilters.minBedrooms));
       }
 
-      // ✅ IMPROVED: Housing type filtering that matches form structure
+      // ✅ IMPROVED: Housing type filtering
       if (basicFilters.housingType.length > 0) {
-        const housingTypeQuery = basicFilters.housingType.map(type => `property_type.eq.${type}`).join(',');
-        query = query.or(housingTypeQuery);
+        const typeConditions = basicFilters.housingType.map(type => `property_type.eq.${type}`).join(',');
+        query = query.or(typeConditions);
       }
 
-      // ✅ NEW: Recovery housing mode vs basic housing mode
+      // ✅ ENHANCED: Recovery housing mode filtering
       if (searchMode === 'recovery') {
-        // Recovery housing specific filters
         if (recoveryFilters.recoveryHousingOnly) {
           query = query.eq('is_recovery_housing', true);
         }
@@ -216,12 +224,9 @@ const loadUserPreferences = async () => {
         if (recoveryFilters.requiredPrograms.length > 0) {
           query = query.overlaps('required_programs', recoveryFilters.requiredPrograms);
         }
-      } else {
-        // Basic housing mode - prioritize recovery housing but don't require it
-        // (Recovery housing will be sorted to top in ordering)
       }
 
-      // Basic amenity filters
+      // Basic property features
       if (basicFilters.furnished) {
         query = query.eq('furnished', true);
       }
@@ -230,7 +235,7 @@ const loadUserPreferences = async () => {
         query = query.eq('pets_allowed', true);
       }
 
-      // ✅ IMPROVED: Advanced filters (only when expanded)
+      // ✅ IMPROVED: Advanced filters with proper handling
       if (showAdvancedFilters) {
         if (advancedFilters.acceptedSubsidies.length > 0) {
           query = query.overlaps('accepted_subsidies', advancedFilters.acceptedSubsidies);
@@ -262,35 +267,31 @@ const loadUserPreferences = async () => {
 
       // ✅ IMPROVED: Smart ordering based on search mode
       if (searchMode === 'recovery') {
-        // Recovery mode: recovery housing first, then by features
         query = query.order('is_recovery_housing', { ascending: false })
                     .order('case_management', { ascending: false })
                     .order('monthly_rent', { ascending: true });
       } else {
-        // Basic mode: recovery housing first (priority), then by price
         query = query.order('is_recovery_housing', { ascending: false })
                     .order('monthly_rent', { ascending: true });
       }
 
       const { data, error, count } = await query;
 
-      if (error) throw error;
-
-      // ✅ NEW: Future external API integration point
-      let allProperties = data || [];
-      
-      if (externalSources.enableExternalSearch && externalSources.includeZillow) {
-        // TODO: Integrate Zillow API
-        console.log('🔮 Future: Zillow API integration would happen here');
-        // const zillowResults = await fetchFromZillow(basicFilters);
-        // allProperties = [...allProperties, ...zillowResults];
+      if (error) {
+        console.error('Search error:', error);
+        throw new Error(error.message || 'Failed to search properties');
       }
 
-      setProperties(allProperties);
+      const results = data || [];
+      setProperties(results);
       setTotalResults(count || 0);
+      
+      console.log(`✅ Found ${results.length} properties (${count} total)`);
       
     } catch (error) {
       console.error('Error searching properties:', error);
+      setProperties([]);
+      setTotalResults(0);
       alert('Error searching properties. Please try again.');
     } finally {
       setLoading(false);
@@ -298,21 +299,30 @@ const loadUserPreferences = async () => {
   };
 
   /**
-   * ✅ NEW: Handle search mode toggle
+   * ✅ FIXED: Handle search mode toggle
    */
   const handleSearchModeChange = (mode) => {
     setSearchMode(mode);
     setCurrentPage(1);
+    
+    // Update recovery filters based on mode
+    if (mode === 'recovery') {
+      setRecoveryFilters(prev => ({
+        ...prev,
+        recoveryHousingOnly: true
+      }));
+    }
   };
 
   /**
-   * ✅ IMPROVED: Filter change handlers for different filter groups
+   * ✅ IMPROVED: Filter change handlers
    */
   const handleBasicFilterChange = (field, value) => {
     setBasicFilters(prev => ({
       ...prev,
       [field]: value
     }));
+    setCurrentPage(1); // Reset to first page
   };
 
   const handleRecoveryFilterChange = (field, value) => {
@@ -320,6 +330,7 @@ const loadUserPreferences = async () => {
       ...prev,
       [field]: value
     }));
+    setCurrentPage(1);
   };
 
   const handleAdvancedFilterChange = (field, value) => {
@@ -327,6 +338,7 @@ const loadUserPreferences = async () => {
       ...prev,
       [field]: value
     }));
+    setCurrentPage(1);
   };
 
   /**
@@ -343,30 +355,30 @@ const loadUserPreferences = async () => {
         ? [...prev[field], value]
         : prev[field].filter(item => item !== value)
     }));
+    setCurrentPage(1);
   };
 
   /**
-   * ✅ NEW: Use my preferences from profile
+   * ✅ IMPROVED: Use user preferences with better error handling
    */
-const handleUseMyPreferences = () => {
-  if (userPreferences) {
-    const autoFilters = {
-      // Combine city and state for search location field
-      location: userPreferences.preferred_city || '',
-      state: userPreferences.preferred_state || '',
-      maxRent: userPreferences.budget_max?.toString() || '',
-      minBedrooms: userPreferences.preferred_bedrooms?.toString() || '',
-      housingType: userPreferences.housing_type || [],
-      furnished: userPreferences.furnished_preference || false,
-      petsAllowed: userPreferences.pets_owned || false
-    };
-    
-    setBasicFilters(prev => ({ ...prev, ...autoFilters }));
-    alert('Search filters updated with your profile preferences!');
-  } else {
-    alert('No preferences found in your profile. Please complete your matching profile first.');
-  }
-};
+  const handleUseMyPreferences = () => {
+    if (userPreferences) {
+      const autoFilters = {
+        location: userPreferences.preferred_city || '',
+        state: userPreferences.preferred_state || '',
+        maxRent: userPreferences.budget_max?.toString() || '',
+        minBedrooms: userPreferences.preferred_bedrooms?.toString() || '',
+        housingType: userPreferences.housing_type || [],
+        furnished: userPreferences.furnished_preference || false,
+        petsAllowed: userPreferences.pets_owned || false
+      };
+      
+      setBasicFilters(prev => ({ ...prev, ...autoFilters }));
+      alert('Search filters updated with your profile preferences!');
+    } else {
+      alert('No preferences found in your profile. Please complete your matching profile first.');
+    }
+  };
 
   /**
    * Clear all filters
@@ -403,29 +415,126 @@ const handleUseMyPreferences = () => {
       leaseLength: '',
       moveInCost: ''
     });
+
+    setCurrentPage(1);
   };
 
   /**
-   * Handle contact landlord
+   * ✅ IMPROVED: Enhanced contact landlord with better UX
    */
-  const handleContactLandlord = (property) => {
-    const subject = `Inquiry about ${property.title}`;
-    const body = `Hi,\n\nI'm interested in your property listing "${property.title}" at ${property.address}.\n\nCould you please provide more information?\n\nThank you!`;
-    
-    if (property.contact_email) {
-      window.location.href = `mailto:${property.contact_email}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
-    } else if (property.phone) {
-      alert(`Please call the landlord at: ${property.phone}`);
-    } else {
-      alert('Contact information not available for this property.');
+  const handleContactLandlord = async (property) => {
+    try {
+      // Try to get landlord info for better contact experience
+      let landlordName = 'Property Owner';
+      let contactEmail = property.contact_email;
+      let contactPhone = property.phone;
+
+      // If we have a landlord_id, try to get their info
+      if (property.landlord_id) {
+        try {
+          const { data: landlordProfile } = await supabase
+            .from('registrant_profiles')
+            .select('first_name, email')
+            .eq('id', property.landlord_id)
+            .single();
+
+          if (landlordProfile) {
+            landlordName = landlordProfile.first_name || 'Property Owner';
+            contactEmail = contactEmail || landlordProfile.email;
+          }
+        } catch (err) {
+          console.warn('Could not load landlord profile:', err);
+        }
+      }
+
+      const subject = `Inquiry about ${property.title}`;
+      const body = `Hi ${landlordName},
+
+I'm interested in your property listing "${property.title}" at ${property.address}, ${property.city}, ${property.state}.
+
+Property Details:
+- Monthly Rent: $${property.monthly_rent}
+- Bedrooms: ${property.bedrooms || 'Studio'}
+- Bathrooms: ${property.bathrooms}
+${property.is_recovery_housing ? '- Recovery Housing: Yes' : ''}
+
+Could you please provide more information about:
+- Availability dates
+- Application process
+- Any specific requirements
+
+I look forward to hearing from you.
+
+Thank you!`;
+
+      if (contactEmail) {
+        const mailtoLink = `mailto:${contactEmail}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
+        window.location.href = mailtoLink;
+      } else if (contactPhone) {
+        alert(`Please call the property owner at: ${contactPhone}`);
+      } else {
+        alert('Contact information not available for this property. Please try contacting through the property listing platform or check back later.');
+      }
+    } catch (err) {
+      console.error('Error preparing contact info:', err);
+      alert('Unable to contact landlord at this time. Please try again later.');
     }
   };
 
   /**
-   * Handle save property (future feature)
+   * ✅ IMPROVED: Enhanced save property with future integration
    */
   const handleSaveProperty = (property) => {
+    // Update local state
+    setSavedProperties(prev => new Set([...prev, property.id]));
+    
+    // Future: Save to database
+    // const { error } = await supabase
+    //   .from('user_saved_properties')
+    //   .insert({ user_id: user.id, property_id: property.id });
+    
     alert(`Property "${property.title}" saved to your favorites! (Feature coming soon)`);
+  };
+
+  /**
+   * ✅ NEW: Send housing inquiry (integration with connection system)
+   */
+  const handleSendHousingInquiry = async (property) => {
+    if (!property.landlord_id) {
+      alert('Direct inquiries are not available for this property. Please use the contact owner option.');
+      return;
+    }
+
+    try {
+      const requestData = {
+        requester_id: user.id,
+        target_id: property.landlord_id,
+        request_type: 'housing',
+        message: `Hi! I'm interested in your property "${property.title}" at ${property.address}. I'm looking for ${property.is_recovery_housing ? 'recovery-friendly ' : ''}housing and this property looks like it could be a great fit for my needs.
+
+Property Details I'm interested in:
+- Monthly Rent: $${property.monthly_rent}
+- Bedrooms: ${property.bedrooms || 'Studio'}
+- Location: ${property.city}, ${property.state}
+
+I'd love to discuss availability and the application process. Thank you!`,
+        status: 'pending'
+      };
+
+      const result = await supabase
+        .from('match_requests')
+        .insert(requestData)
+        .select();
+
+      if (result.error) {
+        throw new Error(result.error.message);
+      }
+
+      alert('Housing inquiry sent! The landlord will be notified and can respond through their dashboard.');
+    } catch (err) {
+      console.error('Error sending housing inquiry:', err);
+      alert('Failed to send inquiry. Please try the contact owner option instead.');
+    }
   };
 
   // Pagination
@@ -442,7 +551,7 @@ const handleUseMyPreferences = () => {
         </p>
       </div>
 
-      {/* ✅ NEW: Search Mode Toggle */}
+      {/* ✅ IMPROVED: Search Mode Toggle */}
       <div className="card mb-4">
         <h3 className="card-title">Search Type</h3>
         <div className="navigation">
@@ -475,7 +584,7 @@ const handleUseMyPreferences = () => {
         </p>
       </div>
 
-      {/* ✅ IMPROVED: Basic Search Filters (Always Visible) */}
+      {/* ✅ IMPROVED: Basic Search Filters */}
       <div className="card mb-4">
         <div className="card-header">
           <h3 className="card-title">Basic Housing Criteria</h3>
@@ -550,7 +659,7 @@ const handleUseMyPreferences = () => {
           </div>
         </div>
 
-        {/* ✅ IMPROVED: Housing type selection that matches form structure */}
+        {/* ✅ IMPROVED: Housing type selection */}
         <div className="form-group mb-4">
           <label className="label">Housing Types (select all that work for you)</label>
           <div className="grid-auto">
@@ -571,7 +680,7 @@ const handleUseMyPreferences = () => {
           </div>
         </div>
 
-        {/* Basic toggles */}
+        {/* Basic toggles and search button */}
         <div className="grid-auto mb-4">
           <div className="checkbox-item" onClick={() => handleBasicFilterChange('furnished', !basicFilters.furnished)}>
             <input
@@ -598,10 +707,18 @@ const handleUseMyPreferences = () => {
           >
             {loading ? 'Searching...' : 'Search Housing'}
           </button>
+
+          <button
+            className="btn btn-outline"
+            onClick={clearAllFilters}
+            disabled={loading}
+          >
+            Clear Filters
+          </button>
         </div>
       </div>
 
-      {/* ✅ NEW: Recovery-Specific Filters (When in Recovery Mode) */}
+      {/* ✅ ENHANCED: Recovery-Specific Filters */}
       {searchMode === 'recovery' && (
         <div className="card mb-4">
           <h3 className="card-title">Recovery Support Features</h3>
@@ -637,7 +754,7 @@ const handleUseMyPreferences = () => {
         </div>
       )}
 
-      {/* ✅ IMPROVED: Advanced Filters (Collapsible) */}
+      {/* ✅ IMPROVED: Advanced Filters */}
       <div className="card mb-4">
         <div className="text-center">
           <button
@@ -645,13 +762,6 @@ const handleUseMyPreferences = () => {
             onClick={() => setShowAdvancedFilters(!showAdvancedFilters)}
           >
             {showAdvancedFilters ? 'Hide' : 'Show'} Advanced Filters
-          </button>
-          
-          <button
-            className="btn btn-outline ml-2"
-            onClick={clearAllFilters}
-          >
-            Clear All Filters
           </button>
         </div>
 
@@ -756,45 +866,6 @@ const handleUseMyPreferences = () => {
         )}
       </div>
 
-      {/* ✅ NEW: Future External Search Integration */}
-      {process.env.NODE_ENV === 'development' && (
-        <div className="card mb-4" style={{ background: 'var(--bg-light-cream)' }}>
-          <h4 className="card-title">🔮 External Search Integration (Coming Soon)</h4>
-          <p className="text-gray-600 mb-3">
-            We're working on integrating with national property databases to expand your search options.
-          </p>
-          <div className="grid-auto">
-            <div className="checkbox-item" onClick={() => setExternalSources(prev => ({ ...prev, includeZillow: !prev.includeZillow }))}>
-              <input
-                type="checkbox"
-                checked={externalSources.includeZillow}
-                onChange={() => {}}
-                disabled
-              />
-              <span>Include Zillow Results</span>
-            </div>
-            <div className="checkbox-item" onClick={() => setExternalSources(prev => ({ ...prev, includeApartmentsDotCom: !prev.includeApartmentsDotCom }))}>
-              <input
-                type="checkbox"
-                checked={externalSources.includeApartmentsDotCom}
-                onChange={() => {}}
-                disabled
-              />
-              <span>Include Apartments.com</span>
-            </div>
-            <div className="checkbox-item" onClick={() => setExternalSources(prev => ({ ...prev, includeRentDotCom: !prev.includeRentDotCom }))}>
-              <input
-                type="checkbox"
-                checked={externalSources.includeRentDotCom}
-                onChange={() => {}}
-                disabled
-              />
-              <span>Include Rent.com</span>
-            </div>
-          </div>
-        </div>
-      )}
-
       {/* Results Header */}
       <div className="card mb-4">
         <div className="flex" style={{ alignItems: 'center', justifyContent: 'space-between' }}>
@@ -886,6 +957,11 @@ const handleUseMyPreferences = () => {
                         Subsidies OK
                       </span>
                     )}
+                    {savedProperties.has(property.id) && (
+                      <span className="badge badge-warning mr-1">
+                        Saved
+                      </span>
+                    )}
                   </div>
                   
                   <h4 className="card-title">{property.title}</h4>
@@ -925,7 +1001,7 @@ const handleUseMyPreferences = () => {
                     </div>
                   )}
 
-                  {/* Action Buttons */}
+                  {/* ✅ IMPROVED: Action Buttons */}
                   <div className="grid-2">
                     <button
                       className="btn btn-primary btn-sm"
@@ -937,10 +1013,24 @@ const handleUseMyPreferences = () => {
                     <button
                       className="btn btn-outline btn-sm"
                       onClick={() => handleSaveProperty(property)}
+                      disabled={savedProperties.has(property.id)}
                     >
-                      Save Property
+                      {savedProperties.has(property.id) ? 'Saved' : 'Save Property'}
                     </button>
                   </div>
+
+                  {/* ✅ NEW: Housing inquiry option for registered landlords */}
+                  {property.landlord_id && (
+                    <div className="mt-2">
+                      <button
+                        className="btn btn-secondary btn-sm"
+                        onClick={() => handleSendHousingInquiry(property)}
+                        style={{ width: '100%' }}
+                      >
+                        Send Housing Inquiry
+                      </button>
+                    </div>
+                  )}
                 </div>
               </div>
             ))}
@@ -952,10 +1042,7 @@ const handleUseMyPreferences = () => {
               <div className="grid-auto" style={{ maxWidth: '400px', margin: '0 auto' }}>
                 <button
                   className="btn btn-outline"
-                  onClick={() => {
-                    setCurrentPage(currentPage - 1);
-                    handleSearch(false);
-                  }}
+                  onClick={() => setCurrentPage(currentPage - 1)}
                   disabled={currentPage === 1 || loading}
                 >
                   Previous
@@ -972,10 +1059,7 @@ const handleUseMyPreferences = () => {
                 
                 <button
                   className="btn btn-outline"
-                  onClick={() => {
-                    setCurrentPage(currentPage + 1);
-                    handleSearch(false);
-                  }}
+                  onClick={() => setCurrentPage(currentPage + 1)}
                   disabled={currentPage === totalPages || loading}
                 >
                   Next

@@ -1,4 +1,4 @@
-// src/components/dashboard/EmployerFinder.js
+// src/components/dashboard/EmployerFinder.js - FIXED FOR SIMPLIFIED EMPLOYMENT CONNECTIONS
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../../context/AuthContext';
 import { db } from '../../utils/supabase';
@@ -104,21 +104,28 @@ const EmployerFinder = ({ onBack }) => {
   }, [filters]);
 
   /**
-   * Load existing job inquiries to avoid duplicates
+   * ✅ FIXED: Load existing employment inquiries to prevent duplicates
    */
   const loadJobInquiries = async () => {
     if (!user?.id) return;
 
     try {
+      console.log('📊 Loading existing employment inquiries...');
       const result = await db.matchRequests.getByUserId(user.id);
+      
       if (result.success !== false && result.data) {
         const sentInquiries = new Set(
           result.data
-            .filter(req => req.requester_id === user.id && req.request_type === 'employment')
+            .filter(req => 
+              req.requester_id === user.id && 
+              req.request_type === 'employment' &&
+              ['pending', 'matched'].includes(req.status) // Include both pending and active employment connections
+            )
             .map(req => req.target_id)
         );
+        
         setJobInquiries(sentInquiries);
-        console.log('📊 Loaded existing job inquiries:', sentInquiries.size);
+        console.log('📊 Loaded existing employment inquiries:', sentInquiries.size);
       }
     } catch (err) {
       console.error('💥 Error loading job inquiries:', err);
@@ -126,7 +133,7 @@ const EmployerFinder = ({ onBack }) => {
   };
 
   /**
-   * ✅ FIXED: Improved search for available employers
+   * ✅ IMPROVED: Enhanced employer search with better filtering
    */
   const loadEmployers = async () => {
     setLoading(true);
@@ -257,9 +264,9 @@ const EmployerFinder = ({ onBack }) => {
   };
 
   /**
-   * ✅ NEW: Smart location search using user's preferences
+   * ✅ IMPROVED: Smart location search using user's preferences
    */
-const handleShowNearby = async () => {
+  const handleShowNearby = async () => {
     try {
       // Try to get user's location from their matching profile
       const { data: applicantProfile } = await db.applicantForms.getByUserId(user.id);
@@ -309,58 +316,59 @@ const handleShowNearby = async () => {
   };
 
   /**
-   * ✅ FIXED: Completely rewritten job inquiry function with proper error handling
+   * ✅ FIXED: Simplified employment inquiry - contact exchange only (no match groups)
    */
   const handleSendJobInquiry = async (employer) => {
-    // Check if already sent inquiry
+    // Check if already sent inquiry or have active connection
     if (jobInquiries.has(employer.user_id)) {
-      alert(`You've already sent a job inquiry to ${employer.company_name}.`);
+      alert(`You already have an active employment connection with ${employer.company_name}.`);
       return;
     }
 
     // Check if employer is actively hiring
     if (!employer.is_actively_hiring) {
-      alert(`${employer.company_name} is not currently hiring.`);
-      return;
+      if (!confirm(`${employer.company_name} is not currently marked as actively hiring. Send inquiry anyway?`)) {
+        return;
+      }
     }
 
     try {
-      console.log('💼 Sending job inquiry to:', employer.company_name);
+      console.log('💼 Sending employment inquiry to:', employer.company_name);
       
-      // ✅ FIXED: Improved request data structure
+      // ✅ SIMPLIFIED: Employment connections are just contact exchange - no match groups needed
       const requestData = {
         requester_id: user.id,
         target_id: employer.user_id,
         request_type: 'employment',
-        message: `Hi! I'm interested in potential job opportunities at ${employer.company_name}. Your commitment to recovery-friendly employment${employer.recovery_friendly_features?.length > 0 ? ` and ${employer.recovery_friendly_features.slice(0, 2).join(' and ')}` : ''} align well with what I'm looking for in my career journey.${employer.current_openings?.length > 0 ? ` I'm particularly interested in your openings for ${employer.current_openings.slice(0, 2).join(' and ')}.` : ''}`,
+        message: `Hi! I'm interested in potential job opportunities at ${employer.company_name}. Your commitment to recovery-friendly employment${employer.recovery_friendly_features?.length > 0 ? ` and ${employer.recovery_friendly_features.slice(0, 2).join(' and ')}` : ''} aligns well with what I'm looking for in my career journey.${employer.current_openings?.length > 0 ? ` I'm particularly interested in your openings for ${employer.current_openings.slice(0, 2).join(' and ')}.` : ''}
+
+I'd appreciate the opportunity to discuss how my skills and recovery experience could contribute to your team.`,
         status: 'pending'
       };
       
-      console.log('📤 Sending job inquiry data:', requestData);
+      console.log('📤 Sending employment inquiry:', requestData);
       
-      // ✅ FIXED: Proper error handling for database call
+      // ✅ FIXED: Simple match request creation for employment (no match groups)
       const result = await db.matchRequests.create(requestData);
       
-      console.log('📥 Database response:', result);
-      
       if (result.error) {
-        throw new Error(result.error.message || 'Failed to send job inquiry');
+        throw new Error(result.error.message || 'Failed to send employment inquiry');
       }
       
       if (!result.data) {
-        throw new Error('No data returned from job inquiry request');
+        throw new Error('No response received from employment inquiry request');
       }
       
-      console.log('✅ Job inquiry sent successfully:', result.data);
+      console.log('✅ Employment inquiry sent successfully:', result.data);
       
       // Update local state to track sent inquiry
       setJobInquiries(prev => new Set([...prev, employer.user_id]));
       
-      alert(`Job inquiry sent to ${employer.company_name}! They will be notified and can respond through their employer dashboard.`);
+      alert(`Employment inquiry sent to ${employer.company_name}! They will receive your message and can respond with their contact information if interested.`);
       
     } catch (err) {
-      console.error('💥 Error sending job inquiry:', err);
-      alert(`Failed to send job inquiry: ${err.message}. Please try again.`);
+      console.error('💥 Error sending employment inquiry:', err);
+      alert(`Failed to send employment inquiry: ${err.message}. Please try again.`);
     }
   };
 
@@ -404,13 +412,29 @@ const handleShowNearby = async () => {
     return remoteOption ? remoteOption.label : formatFeature(option);
   };
 
+  /**
+   * ✅ NEW: Get connection status for display
+   */
+  const getConnectionStatus = (employer) => {
+    const hasInquiry = jobInquiries.has(employer.user_id);
+    const isHiring = employer.is_actively_hiring;
+    
+    if (hasInquiry) {
+      return { text: 'Connected', disabled: true, className: 'btn-success' };
+    } else if (!isHiring) {
+      return { text: 'Send Inquiry', disabled: false, className: 'btn-outline' };
+    } else {
+      return { text: 'Send Job Inquiry', disabled: false, className: 'btn-secondary' };
+    }
+  };
+
   return (
     <>
       <div className="content">
         <div className="text-center mb-5">
           <h1 className="welcome-title">Find Recovery-Friendly Employers</h1>
           <p className="welcome-text">
-            Discover employers committed to supporting individuals in recovery with second-chance hiring, 
+            Connect with employers committed to supporting individuals in recovery with second-chance hiring, 
             flexible policies, and inclusive workplace cultures.
           </p>
         </div>
@@ -660,15 +684,15 @@ const handleShowNearby = async () => {
                   {employers.length} Employer{employers.length !== 1 ? 's' : ''} Found
                 </h3>
                 <div className="text-gray-600">
-                  {employers.filter(e => e.is_actively_hiring).length} actively hiring
+                  {employers.filter(e => e.is_actively_hiring).length} actively hiring •{' '}
+                  {jobInquiries.size} connected
                 </div>
               </div>
             </div>
 
             <div className="grid-auto mb-5">
               {employers.map((employer) => {
-                const alreadyInquired = jobInquiries.has(employer.user_id);
-                const isHiring = employer.is_actively_hiring;
+                const connectionStatus = getConnectionStatus(employer);
                 
                 return (
                   <div key={employer.id} className="card">
@@ -680,14 +704,14 @@ const handleShowNearby = async () => {
                         </div>
                       </div>
                       <div>
-                        {isHiring ? (
+                        {employer.is_actively_hiring ? (
                           <span className="badge badge-success mb-1">Hiring</span>
                         ) : (
                           <span className="badge badge-warning mb-1">Not Hiring</span>
                         )}
-                        <span className="badge badge-info">
-                          {formatBusinessType(employer.business_type)}
-                        </span>
+                        {jobInquiries.has(employer.user_id) && (
+                          <span className="badge badge-info">Connected</span>
+                        )}
                       </div>
                     </div>
 
@@ -767,13 +791,11 @@ const handleShowNearby = async () => {
                       </button>
                       
                       <button
-                        className="btn btn-secondary"
+                        className={`btn ${connectionStatus.className}`}
                         onClick={() => handleSendJobInquiry(employer)}
-                        disabled={!isHiring || alreadyInquired}
+                        disabled={connectionStatus.disabled}
                       >
-                        {alreadyInquired ? 'Inquiry Sent' : 
-                         !isHiring ? 'Not Hiring' : 
-                         'Send Job Inquiry'}
+                        {connectionStatus.text}
                       </button>
                     </div>
                   </div>
@@ -811,6 +833,14 @@ const handleShowNearby = async () => {
                 ×
               </button>
             </div>
+
+            {/* Employment Connection Status */}
+            {jobInquiries.has(selectedEmployer.user_id) && (
+              <div className="alert alert-success mb-4">
+                <strong>✅ Connected:</strong> You have an active employment connection with this employer. 
+                Check your connections page to exchange contact information.
+              </div>
+            )}
 
             {/* Company Info */}
             <div className="mb-4">
@@ -883,23 +913,21 @@ const handleShowNearby = async () => {
               </div>
             )}
 
-            {/* Contact Info */}
-            <div className="mb-4">
-              <h4 className="card-title">Contact Information</h4>
-              <div className="text-sm">
-                {selectedEmployer.contact_email && <div><strong>Email:</strong> {selectedEmployer.contact_email}</div>}
-                {selectedEmployer.phone && <div><strong>Phone:</strong> {selectedEmployer.phone}</div>}
-                {selectedEmployer.website && (
-                  <div>
-                    <strong>Website:</strong>{' '}
-                    <a href={selectedEmployer.website} target="_blank" rel="noopener noreferrer" 
-                       style={{ color: 'var(--primary-purple)' }}>
-                      {selectedEmployer.website}
-                    </a>
-                  </div>
-                )}
+            {/* Contact Info Preview */}
+            {!jobInquiries.has(selectedEmployer.user_id) && (
+              <div className="mb-4">
+                <h4 className="card-title">Next Steps</h4>
+                <div className="alert alert-info">
+                  <strong>💼 Employment Connection Process:</strong>
+                  <ol style={{ marginTop: '0.5rem', paddingLeft: '1.25rem' }}>
+                    <li>Send employment inquiry to express interest</li>
+                    <li>Employer reviews your request and decides whether to connect</li>
+                    <li>If approved, you can exchange contact information directly</li>
+                    <li>Proceed with their application process or schedule interviews</li>
+                  </ol>
+                </div>
               </div>
-            </div>
+            )}
 
             <div className="grid-2">
               <button
@@ -909,18 +937,30 @@ const handleShowNearby = async () => {
                 Close
               </button>
               
-              <button
-                className="btn btn-secondary"
-                onClick={() => {
-                  handleSendJobInquiry(selectedEmployer);
-                  setShowDetails(false);
-                }}
-                disabled={!selectedEmployer.is_actively_hiring || jobInquiries.has(selectedEmployer.user_id)}
-              >
-                {jobInquiries.has(selectedEmployer.user_id) ? 'Inquiry Sent' :
-                 !selectedEmployer.is_actively_hiring ? 'Not Currently Hiring' : 
-                 'Send Job Inquiry'}
-              </button>
+              {!jobInquiries.has(selectedEmployer.user_id) ? (
+                <button
+                  className="btn btn-secondary"
+                  onClick={() => {
+                    handleSendJobInquiry(selectedEmployer);
+                    setShowDetails(false);
+                  }}
+                >
+                  Send Employment Inquiry
+                </button>
+              ) : (
+                <div className="text-center" style={{ 
+                  display: 'flex', 
+                  alignItems: 'center', 
+                  justifyContent: 'center',
+                  padding: '10px',
+                  background: 'var(--bg-light-cream)',
+                  borderRadius: 'var(--radius-md)',
+                  color: 'var(--primary-purple)',
+                  fontWeight: '600'
+                }}>
+                  ✅ Already Connected
+                </div>
+              )}
             </div>
           </div>
         </div>

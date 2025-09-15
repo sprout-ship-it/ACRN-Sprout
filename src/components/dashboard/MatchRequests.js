@@ -1,4 +1,4 @@
-// src/components/dashboard/MatchRequests.js - COMPLETE WITH PENDING REQUESTS
+// src/components/dashboard/MatchRequests.js - FIXED CONNECTION SYSTEM
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../../context/AuthContext';
 import { db } from '../../utils/supabase';
@@ -8,8 +8,8 @@ import '../../styles/global.css';
 const Connections = () => {
   const { user, profile, hasRole } = useAuth();
   
-  // ✅ ALL STATE DECLARATIONS AT TOP
-  const [activeTab, setActiveTab] = useState('pending-requests');
+  // ✅ FIXED: Start with Active Connections as default tab
+  const [activeTab, setActiveTab] = useState('active-connections');
   const [requests, setRequests] = useState([]);
   const [loading, setLoading] = useState(true);
   const [actionLoading, setActionLoading] = useState(false);
@@ -44,14 +44,14 @@ const Connections = () => {
   // Filter requests based on active tab
   const getFilteredRequests = () => {
     switch (activeTab) {
-      case 'pending-requests':
+      case 'active-connections':
+        return requests.filter(r => r.status === 'matched');
+      case 'awaiting-response':
         return requests.filter(r => r.status === 'pending' && r.target_id === user.id);
       case 'sent-requests':
         return requests.filter(r => r.status === 'pending' && r.requester_id === user.id);
-      case 'active-connections':
-        return requests.filter(r => r.status === 'matched');
       case 'connection-history':
-        return requests.filter(r => ['rejected', 'unmatched'].includes(r.status));
+        return requests.filter(r => ['rejected', 'unmatched', 'cancelled'].includes(r.status));
       default:
         return requests;
     }
@@ -60,10 +60,10 @@ const Connections = () => {
   // Get tab counts
   const getTabCounts = () => {
     return {
-      pendingRequests: requests.filter(r => r.status === 'pending' && r.target_id === user.id).length,
-      sentRequests: requests.filter(r => r.status === 'pending' && r.requester_id === user.id).length,
       activeConnections: requests.filter(r => r.status === 'matched').length,
-      connectionHistory: requests.filter(r => ['rejected', 'unmatched'].includes(r.status)).length
+      awaitingResponse: requests.filter(r => r.status === 'pending' && r.target_id === user.id).length,
+      sentRequests: requests.filter(r => r.status === 'pending' && r.requester_id === user.id).length,
+      connectionHistory: requests.filter(r => ['rejected', 'unmatched', 'cancelled'].includes(r.status)).length
     };
   };
   
@@ -109,7 +109,7 @@ const Connections = () => {
     return organized;
   };
   
-  // Handle approve request
+  // ✅ FIXED: Improved approval workflow based on new architecture
   const handleApprove = async (requestId) => {
     setActionLoading(true);
     
@@ -126,22 +126,41 @@ const Connections = () => {
         requestType: request.request_type
       });
 
-      // Step 1: Update match request to approved
-      const { error: updateError } = await db.matchRequests.update(requestId, {
-        status: 'approved',
-        target_approved: true
-      });
-      
-      if (updateError) {
-        console.error('❌ Failed to update match request:', updateError);
-        throw updateError;
+      // ✅ SIMPLIFIED: For employment connections, just approve the request (no match group needed)
+      if (request.request_type === 'employment') {
+        const { error: updateError } = await db.matchRequests.update(requestId, {
+          status: 'matched',
+          target_approved: true,
+          matched_at: new Date().toISOString()
+        });
+        
+        if (updateError) {
+          throw updateError;
+        }
+
+        console.log('✅ Employment connection approved (no match group created)');
+        
+        // Update local state
+        setRequests(prev => prev.map(req => 
+          req.id === requestId ? { 
+            ...req, 
+            status: 'matched',
+            target_approved: true,
+            matched_at: new Date().toISOString()
+          } : req
+        ));
+        
+        alert('Employment connection approved! You can now exchange contact information.');
+        return;
       }
 
-      console.log('✅ Connection request updated to approved');
+      // ✅ FIXED: For all other connection types, create match group first
+      console.log('🏠 Creating match group for household/support connection...');
 
-      // Step 2: Determine match group structure
+      // Step 1: Determine match group structure based on connection type
       const matchGroupData = await determineMatchGroupStructure(request);
 
+      // Step 2: Create the match group
       const { data: matchGroup, error: groupError } = await db.matchGroups.create(matchGroupData);
 
       if (groupError) {
@@ -151,9 +170,10 @@ const Connections = () => {
 
       console.log('✅ Match group created:', matchGroup);
 
-      // Step 3: Update match request to matched status
+      // Step 3: Update match request to matched status with group reference
       const { error: matchedError } = await db.matchRequests.update(requestId, {
         status: 'matched',
+        target_approved: true,
         match_group_id: matchGroup[0].id,
         matched_at: new Date().toISOString()
       });
@@ -163,7 +183,7 @@ const Connections = () => {
         throw matchedError;
       }
 
-      console.log('✅ Connection request updated to matched status');
+      console.log('✅ Connection request updated to matched status with match group');
 
       // Step 4: Update local state
       setRequests(prev => prev.map(req => 
@@ -176,7 +196,7 @@ const Connections = () => {
         } : req
       ));
       
-      alert('Connection approved and created successfully!');
+      alert('Connection approved and match group created successfully!');
       
     } catch (error) {
       console.error('💥 Error approving request:', error);
@@ -186,7 +206,7 @@ const Connections = () => {
     }
   };
 
-  // Helper function to determine correct table structure
+  // ✅ IMPROVED: Better match group structure determination
   const determineMatchGroupStructure = async (request) => {
     try {
       const { data: requesterProfile } = await db.profiles.getById(request.requester_id);
@@ -197,10 +217,12 @@ const Connections = () => {
 
       const baseData = {
         status: 'forming',
-        created_at: new Date().toISOString()
+        created_at: new Date().toISOString(),
+        connection_type: request.request_type
       };
 
-      if (request.request_type === 'peer_support' || !request.request_type) {
+      // ✅ FIXED: Improved role-based match group creation
+      if (request.request_type === 'peer_support') {
         if (requesterRoles.includes('applicant') && targetRoles.includes('peer')) {
           return {
             ...baseData,
@@ -216,24 +238,6 @@ const Connections = () => {
             peer_support_id: request.requester_id
           };
         }
-        
-        if (requesterRoles.includes('applicant') && targetRoles.includes('applicant')) {
-          return {
-            ...baseData,
-            applicant_1_id: request.requester_id,
-            applicant_2_id: request.target_id
-          };
-        }
-      }
-
-      if (request.request_type === 'employment') {
-        if (requesterRoles.includes('applicant') && targetRoles.includes('employer')) {
-          return {
-            ...baseData,
-            applicant_1_id: request.requester_id,
-            employer_id: request.target_id
-          };
-        }
       }
 
       if (request.request_type === 'housing') {
@@ -244,8 +248,26 @@ const Connections = () => {
             landlord_id: request.target_id
           };
         }
+        
+        if (requesterRoles.includes('landlord') && targetRoles.includes('applicant')) {
+          return {
+            ...baseData,
+            applicant_1_id: request.target_id,
+            landlord_id: request.requester_id
+          };
+        }
       }
 
+      // ✅ NEW: Default to roommate setup (both are applicants)
+      if (request.request_type === 'roommate' || !request.request_type) {
+        return {
+          ...baseData,
+          applicant_1_id: request.requester_id,
+          applicant_2_id: request.target_id
+        };
+      }
+
+      // ✅ FALLBACK: Default structure
       return {
         ...baseData,
         applicant_1_id: request.requester_id,
@@ -254,10 +276,12 @@ const Connections = () => {
 
     } catch (error) {
       console.error('Error determining match group structure:', error);
+      // Safe fallback
       return {
         status: 'forming',
         applicant_1_id: request.requester_id,
         applicant_2_id: request.target_id,
+        connection_type: request.request_type || 'roommate',
         created_at: new Date().toISOString()
       };
     }
@@ -283,7 +307,8 @@ const Connections = () => {
     try {
       const updates = {
         status: 'rejected',
-        rejection_reason: rejectReason
+        rejection_reason: rejectReason,
+        rejected_at: new Date().toISOString()
       };
 
       const { error } = await db.matchRequests.update(selectedRequest.id, updates);
@@ -310,7 +335,7 @@ const Connections = () => {
     }
   };
 
-  // Handle cancel sent request
+  // ✅ FIXED: Handle cancel sent request with cancelled_at timestamp
   const handleCancelSentRequest = async (requestId) => {
     if (!window.confirm('Are you sure you want to cancel this request?')) {
       return;
@@ -352,7 +377,8 @@ const Connections = () => {
         throw new Error('Request not found');
       }
 
-      if (request.match_group_id) {
+      // ✅ FIXED: Only end match group for non-employment connections
+      if (request.match_group_id && request.request_type !== 'employment') {
         const { error: groupError } = await db.matchGroups.endGroup(
           request.match_group_id,
           user.id,
@@ -392,9 +418,55 @@ const Connections = () => {
     }
   };
 
-  // Handle view contact info with styled modal
+  // ✅ IMPROVED: Handle view contact info for both employment and household connections
   const handleViewContactInfo = async (request) => {
     try {
+      // ✅ NEW: For employment connections, get contact info directly from profiles
+      if (request.request_type === 'employment') {
+        const otherUserId = request.requester_id === user.id ? request.target_id : request.requester_id;
+        const { data: otherProfile, error } = await db.profiles.getById(otherUserId);
+        
+        if (error) {
+          console.error('Error fetching profile:', error);
+          alert('Failed to load contact information.');
+          return;
+        }
+
+        if (!otherProfile) {
+          alert('Could not find contact information.');
+          return;
+        }
+
+        // Get additional contact info from employer profile if available
+        let phoneNumber = 'Not provided';
+        let website = null;
+        
+        if (otherProfile.roles?.includes('employer')) {
+          try {
+            const { data: employerProfiles } = await db.employerProfiles.getByUserId(otherUserId);
+            if (employerProfiles && employerProfiles.length > 0) {
+              const employerProfile = employerProfiles[0];
+              phoneNumber = employerProfile.phone || employerProfile.contact_phone || 'Not provided';
+              website = employerProfile.website;
+            }
+          } catch (err) {
+            console.warn('Could not load employer profile:', err);
+          }
+        }
+
+        setContactInfo({
+          name: otherProfile.first_name,
+          email: otherProfile.email || 'Not provided',
+          phone: phoneNumber,
+          website: website,
+          connectionType: 'employment opportunity'
+        });
+        
+        setShowContactModal(true);
+        return;
+      }
+
+      // ✅ EXISTING: For household connections, use match group
       if (!request.match_group_id) {
         alert('No match group found for this connection.');
         return;
@@ -437,7 +509,7 @@ const Connections = () => {
       const matchTypeLabel = {
         'housing': 'housing connection',
         'peer_support': 'peer support connection',
-        'applicant_peer': 'peer support connection',
+        'applicant_peer': 'roommate connection',
         'employment': 'employment connection'
       }[matchType] || 'connection';
 
@@ -582,10 +654,10 @@ const Connections = () => {
     if (filteredRequests.length === 0) {
       const emptyMessage = isSentRequests 
         ? "You haven't sent any pending requests."
-        : "You don't have any pending requests to review.";
+        : "You don't have any requests awaiting your response.";
       
       const emptyIcon = isSentRequests ? '📤' : '📥';
-      const emptyTitle = isSentRequests ? 'No Sent Requests' : 'No Pending Requests';
+      const emptyTitle = isSentRequests ? 'No Sent Requests' : 'No Requests Awaiting Response';
 
       return (
         <div className="empty-state">
@@ -666,7 +738,7 @@ const Connections = () => {
         <div className="empty-state">
           <div className="empty-state-icon">🤝</div>
           <h3 className="empty-state-title">No Active Connections</h3>
-          <p>You don't have any active connections yet. Start by finding roommates, peer support, or other services.</p>
+          <p>You don't have any active connections yet. Start by finding roommates, peer support, housing, or employment opportunities.</p>
         </div>
       );
     }
@@ -777,16 +849,26 @@ const Connections = () => {
         </p>
       </div>
       
-      {/* Tabs */}
+      {/* ✅ FIXED: Reordered tabs with Active Connections first and renamed Pending Requests */}
       <div className="navigation mb-5">
         <ul className="nav-list">
           <li className="nav-item">
             <button
-              className={`nav-button ${activeTab === 'pending-requests' ? 'active' : ''}`}
-              onClick={() => setActiveTab('pending-requests')}
+              className={`nav-button ${activeTab === 'active-connections' ? 'active' : ''}`}
+              onClick={() => setActiveTab('active-connections')}
+            >
+              <span className="nav-icon">⚡</span>
+              Active Connections ({tabCounts.activeConnections})
+            </button>
+          </li>
+          
+          <li className="nav-item">
+            <button
+              className={`nav-button ${activeTab === 'awaiting-response' ? 'active' : ''}`}
+              onClick={() => setActiveTab('awaiting-response')}
             >
               <span className="nav-icon">📥</span>
-              Pending Requests ({tabCounts.pendingRequests})
+              Requests Awaiting Response ({tabCounts.awaitingResponse})
             </button>
           </li>
           
@@ -797,16 +879,6 @@ const Connections = () => {
             >
               <span className="nav-icon">📤</span>
               Sent Requests ({tabCounts.sentRequests})
-            </button>
-          </li>
-          
-          <li className="nav-item">
-            <button
-              className={`nav-button ${activeTab === 'active-connections' ? 'active' : ''}`}
-              onClick={() => setActiveTab('active-connections')}
-            >
-              <span className="nav-icon">⚡</span>
-              Active Connections ({tabCounts.activeConnections})
             </button>
           </li>
           
@@ -823,9 +895,9 @@ const Connections = () => {
       </div>
       
       {/* Content based on active tab */}
-      {activeTab === 'pending-requests' && renderPendingRequests(false)}
-      {activeTab === 'sent-requests' && renderPendingRequests(true)}
       {activeTab === 'active-connections' && renderActiveMatches()}
+      {activeTab === 'awaiting-response' && renderPendingRequests(false)}
+      {activeTab === 'sent-requests' && renderPendingRequests(true)}
       {activeTab === 'connection-history' && (
         getFilteredRequests().length === 0 ? (
           <div className="empty-state">
@@ -951,7 +1023,7 @@ const Connections = () => {
         </div>
       )}
 
-      {/* Contact Info Modal */}
+      {/* ✅ IMPROVED: Contact Info Modal with employment support */}
       {showContactModal && contactInfo && (
         <div className="modal-overlay" onClick={() => setShowContactModal(false)}>
           <div 
@@ -970,7 +1042,9 @@ const Connections = () => {
             </div>
             
             <div className="text-center mb-4">
-              <div style={{ fontSize: '3rem', marginBottom: '1rem' }}>👤</div>
+              <div style={{ fontSize: '3rem', marginBottom: '1rem' }}>
+                {contactInfo.connectionType === 'employment opportunity' ? '💼' : '👤'}
+              </div>
               <h4 style={{ color: 'var(--primary-purple)', marginBottom: '0.5rem' }}>
                 {contactInfo.name}
               </h4>
@@ -1010,7 +1084,8 @@ const Connections = () => {
                 alignItems: 'center', 
                 padding: '1rem', 
                 background: 'var(--bg-light-cream)', 
-                borderRadius: 'var(--radius-md)'
+                borderRadius: 'var(--radius-md)',
+                marginBottom: contactInfo.website ? '1rem' : '0'
               }}>
                 <div style={{ fontSize: '1.5rem', marginRight: '1rem' }}>📱</div>
                 <div>
@@ -1028,6 +1103,30 @@ const Connections = () => {
                   )}
                 </div>
               </div>
+
+              {/* ✅ NEW: Website link for employment connections */}
+              {contactInfo.website && (
+                <div className="contact-item" style={{ 
+                  display: 'flex', 
+                  alignItems: 'center', 
+                  padding: '1rem', 
+                  background: 'var(--bg-light-cream)', 
+                  borderRadius: 'var(--radius-md)'
+                }}>
+                  <div style={{ fontSize: '1.5rem', marginRight: '1rem' }}>🌐</div>
+                  <div>
+                    <div className="label" style={{ marginBottom: '0.25rem' }}>Website</div>
+                    <a 
+                      href={contactInfo.website}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      style={{ color: 'var(--primary-purple)', fontWeight: '600' }}
+                    >
+                      Visit Company Website →
+                    </a>
+                  </div>
+                </div>
+              )}
             </div>
             
             <div className="alert alert-info" style={{ marginBottom: '1.5rem' }}>

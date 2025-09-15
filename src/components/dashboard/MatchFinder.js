@@ -37,7 +37,7 @@ const transformProfileForAlgorithm = (dbProfile) => {
     age: calculateAge(dbProfile.date_of_birth),
     gender: dbProfile.gender,
     
-   // Location - use preferred_city and preferred_state, or city as fallback
+    // Location - use preferred_city and preferred_state, or city as fallback
     location: (dbProfile.preferred_city && dbProfile.preferred_state) 
       ? `${dbProfile.preferred_city}, ${dbProfile.preferred_state}`
       : dbProfile.preferred_city || dbProfile.preferred_state || dbProfile.city || 'Not specified',
@@ -129,11 +129,11 @@ const MatchFinder = ({ onRequestMatch, onBack }) => {
   const [excludedUsers, setExcludedUsers] = useState(new Set());
   const [sentRequests, setSentRequests] = useState(new Set());
   const [filters, setFilters] = useState({
-    minScore: 50, // ✅ CHANGED: Start with 50% as default
+    minScore: 50,
     recoveryStage: '',
     ageRange: '',
     location: '',
-    hideAlreadyMatched: true,
+    hideAlreadyMatched: true, // ✅ CHANGED: Default to true to hide matched users
     hideRequestsSent: true
   });
   
@@ -179,7 +179,7 @@ const MatchFinder = ({ onRequestMatch, onBack }) => {
   };
 
   /**
-   * Load users that should be excluded from matching
+   * ✅ IMPROVED: Enhanced exclusion logic for better match filtering
    */
   const loadExcludedUsers = async () => {
     if (!user?.id) return;
@@ -195,33 +195,39 @@ const MatchFinder = ({ onRequestMatch, onBack }) => {
 
       const excludedUserIds = new Set();
 
-      // Exclude users from match requests
+      // ✅ IMPROVED: More comprehensive exclusion from match requests
       if (requestsResult.success !== false && requestsResult.data) {
         requestsResult.data.forEach(request => {
-          // Exclude users with accepted roommate matches
-          if (request.request_type === 'roommate' && request.status === 'accepted') {
+          // Only exclude for roommate-type connections 
+          if (request.request_type === 'roommate' || !request.request_type) {
             const otherUserId = request.requester_id === user.id ? request.target_id : request.requester_id;
-            excludedUserIds.add(otherUserId);
+            
+            // ✅ FIXED: Exclude users with ANY active roommate connection
+            if (['matched', 'approved'].includes(request.status)) {
+              excludedUserIds.add(otherUserId);
+              console.log(`🚫 Excluding user ${otherUserId} - active roommate connection (${request.status})`);
+            }
           }
         });
       }
 
-      // Exclude users from active match groups
-      if (groupsResult.data) {
+      // ✅ IMPROVED: Exclude users from active match groups (any role)
+      if (groupsResult.data && Array.isArray(groupsResult.data)) {
         groupsResult.data.forEach(group => {
-          if (group.status === 'active' || group.status === 'forming') {
-            // Add both applicants from the group
-            if (group.applicant_1_id && group.applicant_1_id !== user.id) {
-              excludedUserIds.add(group.applicant_1_id);
-            }
-            if (group.applicant_2_id && group.applicant_2_id !== user.id) {
-              excludedUserIds.add(group.applicant_2_id);
-            }
+          // Exclude from active/forming household groups
+          if (['active', 'forming'].includes(group.status)) {
+            // Add all participants except current user
+            [group.applicant_1_id, group.applicant_2_id, group.peer_support_id, group.landlord_id]
+              .filter(id => id && id !== user.id)
+              .forEach(id => {
+                excludedUserIds.add(id);
+                console.log(`🚫 Excluding user ${id} - active match group member`);
+              });
           }
         });
       }
 
-      console.log(`🚫 Found ${excludedUserIds.size} users to exclude from matching`);
+      console.log(`🚫 Total excluded users: ${excludedUserIds.size}`);
       setExcludedUsers(excludedUserIds);
 
     } catch (err) {
@@ -231,7 +237,7 @@ const MatchFinder = ({ onRequestMatch, onBack }) => {
   };
 
   /**
-   * Load sent match requests to show status
+   * ✅ IMPROVED: Better sent request tracking for roommate connections
    */
   const loadSentRequests = async () => {
     if (!user?.id) return;
@@ -242,11 +248,15 @@ const MatchFinder = ({ onRequestMatch, onBack }) => {
       if (result.success !== false && result.data) {
         const sentRequestIds = new Set(
           result.data
-            .filter(req => req.requester_id === user.id && req.request_type === 'roommate')
+            .filter(req => 
+              req.requester_id === user.id && 
+              (req.request_type === 'roommate' || !req.request_type) &&
+              req.status === 'pending' // Only count pending requests
+            )
             .map(req => req.target_id)
         );
         setSentRequests(sentRequestIds);
-        console.log(`📤 Found ${sentRequestIds.size} sent match requests`);
+        console.log(`📤 Found ${sentRequestIds.size} pending roommate requests sent`);
       }
     } catch (err) {
       console.error('💥 Error loading sent requests:', err);
@@ -254,7 +264,7 @@ const MatchFinder = ({ onRequestMatch, onBack }) => {
   };
   
   /**
-   * Find compatible matches with exclusion logic
+   * ✅ IMPROVED: Enhanced match finding with better exclusion logic
    */
   const findMatches = async () => {
     if (!userMatchingProfile) {
@@ -266,7 +276,7 @@ const MatchFinder = ({ onRequestMatch, onBack }) => {
     setError(null);
     
     try {
-      console.log('🔍 Finding matches with exclusions...');
+      console.log('🔍 Finding roommate matches with exclusions...');
       
       // Get active profiles from Supabase (excluding current user)
       const result = await getActiveProfiles();
@@ -290,20 +300,28 @@ const MatchFinder = ({ onRequestMatch, onBack }) => {
       
       console.log(`🔄 Transformed ${transformedCandidates.length} completed profiles`);
 
-      // Apply exclusion filters
+      // ✅ IMPROVED: Apply exclusion filters with better logic
       if (filters.hideAlreadyMatched) {
         const beforeExclusion = transformedCandidates.length;
-        transformedCandidates = transformedCandidates.filter(candidate => 
-          !excludedUsers.has(candidate.user_id)
-        );
+        transformedCandidates = transformedCandidates.filter(candidate => {
+          const isExcluded = excludedUsers.has(candidate.user_id);
+          if (isExcluded) {
+            console.log(`🚫 Hiding ${candidate.first_name} - already matched/connected`);
+          }
+          return !isExcluded;
+        });
         console.log(`🚫 Excluded already matched: ${beforeExclusion} -> ${transformedCandidates.length}`);
       }
 
       if (filters.hideRequestsSent) {
         const beforeExclusion = transformedCandidates.length;
-        transformedCandidates = transformedCandidates.filter(candidate => 
-          !sentRequests.has(candidate.user_id)
-        );
+        transformedCandidates = transformedCandidates.filter(candidate => {
+          const isRequestSent = sentRequests.has(candidate.user_id);
+          if (isRequestSent) {
+            console.log(`📤 Hiding ${candidate.first_name} - request already sent`);
+          }
+          return !isRequestSent;
+        });
         console.log(`📤 Excluded sent requests: ${beforeExclusion} -> ${transformedCandidates.length}`);
       }
       
@@ -351,7 +369,7 @@ const MatchFinder = ({ onRequestMatch, onBack }) => {
         .sort((a, b) => b.matchScore - a.matchScore)
         .slice(0, 20); // Limit to top 20 matches
       
-      console.log(`✅ Found ${qualifiedMatches.length} qualified matches`);
+      console.log(`✅ Found ${qualifiedMatches.length} qualified matches (excluded: ${excludedUsers.size})`);
       setMatches(qualifiedMatches);
       
     } catch (err) {
@@ -371,16 +389,16 @@ const MatchFinder = ({ onRequestMatch, onBack }) => {
   };
   
   /**
-   * Handle match request with exclusion updates
+   * ✅ IMPROVED: Handle match request with better exclusion updates
    */
   const handleRequestMatch = async (match) => {
     try {
-      console.log('🤝 Sending match request to:', match.first_name);
+      console.log('🤝 Sending roommate match request to:', match.first_name);
       
       const requestData = {
         requester_id: user.id,
         target_id: match.user_id,
-        request_type: 'roommate',
+        request_type: 'roommate', // ✅ FIXED: Explicitly set as roommate request
         match_score: match.matchScore,
         message: `Hi ${match.first_name}! I think we could be great roommates based on our ${match.matchScore}% compatibility. Would you like to connect?`,
         status: 'pending'
@@ -393,7 +411,7 @@ const MatchFinder = ({ onRequestMatch, onBack }) => {
         throw new Error(result.error.message || 'Failed to send match request');
       }
       
-      console.log('✅ Match request sent successfully:', result.data);
+      console.log('✅ Roommate match request sent successfully:', result.data);
       
       // Update local state to reflect sent request
       setSentRequests(prev => new Set([...prev, match.user_id]));
@@ -403,9 +421,9 @@ const MatchFinder = ({ onRequestMatch, onBack }) => {
         await onRequestMatch(match);
       }
       
-      alert(`Match request sent to ${match.first_name}!`);
+      alert(`Roommate request sent to ${match.first_name}!`);
       
-      // Refresh matches to update display
+      // Refresh matches to update display if hiding sent requests
       if (filters.hideRequestsSent) {
         findMatches();
       }
@@ -424,9 +442,10 @@ const MatchFinder = ({ onRequestMatch, onBack }) => {
   };
 
   /**
-   * Refresh matches and exclusions
+   * ✅ NEW: Force refresh matches and exclusions
    */
   const handleRefreshMatches = async () => {
+    console.log('🔄 Force refreshing matches and exclusions...');
     await loadExcludedUsers();
     await loadSentRequests();
     await findMatches();
@@ -478,7 +497,7 @@ const MatchFinder = ({ onRequestMatch, onBack }) => {
         <div className="card mb-5">
           <h3 className="card-title">Search Filters</h3>
           
-          {/* ✅ Primary filters - centered layout */}
+          {/* Primary filters - centered layout */}
           <div className="filter-row-primary mb-4">
             <div className="form-group">
               <label className="label">Min Compatibility</label>
@@ -545,7 +564,7 @@ const MatchFinder = ({ onRequestMatch, onBack }) => {
               onClick={findMatches}
               disabled={loading || !userMatchingProfile}
             >
-              {loading ? 'Searching...' : 'Search Matches'}
+              {loading ? 'Searching...' : 'Search Roommates'}
             </button>
 
             <button
@@ -565,7 +584,7 @@ const MatchFinder = ({ onRequestMatch, onBack }) => {
             </button>
           </div>
 
-          {/* Exclusion options - centered checkboxes */}
+          {/* ✅ IMPROVED: Exclusion options with better explanations */}
           <div className="filter-options">
             <div className="checkbox-item">
               <input
@@ -575,7 +594,7 @@ const MatchFinder = ({ onRequestMatch, onBack }) => {
                 onChange={(e) => handleFilterChange({ hideAlreadyMatched: e.target.checked })}
               />
               <label htmlFor="hide-matched">
-                Hide already matched users
+                Hide users I'm already connected with
               </label>
             </div>
 
@@ -593,14 +612,15 @@ const MatchFinder = ({ onRequestMatch, onBack }) => {
           </div>
 
           {/* Active filters display */}
-          {(filters.minScore > 50 || filters.recoveryStage || filters.ageRange || filters.location) && (
+          {(filters.minScore > 50 || filters.recoveryStage || filters.ageRange || filters.location || 
+            !filters.hideAlreadyMatched || !filters.hideRequestsSent) && (
             <div className="alert alert-info mt-3">
               <strong>Active Filters:</strong> 
               {filters.minScore > 50 && ` Min Compatibility: ${filters.minScore}% •`}
               {filters.recoveryStage && ` Recovery: ${filters.recoveryStage} •`}
               {filters.ageRange && ` Age: ${filters.ageRange} •`}
               {filters.location && ` Location: ${filters.location} •`}
-              {!filters.hideAlreadyMatched && ` Including matched users •`}
+              {!filters.hideAlreadyMatched && ` Including connected users •`}
               {!filters.hideRequestsSent && ` Including contacted users`}
             </div>
           )}
@@ -629,7 +649,7 @@ const MatchFinder = ({ onRequestMatch, onBack }) => {
         {loading && (
           <div className="empty-state">
             <div className="loading-spinner large"></div>
-            <p>Finding your perfect matches...</p>
+            <p>Finding your perfect roommate matches...</p>
           </div>
         )}
         
@@ -638,6 +658,17 @@ const MatchFinder = ({ onRequestMatch, onBack }) => {
           <div className="card text-center">
             <h3>No matches found</h3>
             <p>Try adjusting your filters or check back later for new applicants.</p>
+            
+            {/* ✅ NEW: Show exclusion stats when no matches found */}
+            {(excludedUsers.size > 0 || sentRequests.size > 0) && (
+              <div className="alert alert-info mt-3 mb-3">
+                <strong>Hidden from search:</strong>
+                {excludedUsers.size > 0 && ` ${excludedUsers.size} already connected`}
+                {excludedUsers.size > 0 && sentRequests.size > 0 && ` • `}
+                {sentRequests.size > 0 && ` ${sentRequests.size} pending requests`}
+              </div>
+            )}
+            
             <div className="mt-3">
               <button
                 className="btn btn-primary"
@@ -645,32 +676,42 @@ const MatchFinder = ({ onRequestMatch, onBack }) => {
                   minScore: 30, 
                   recoveryStage: '', 
                   ageRange: '', 
-                  location: '',
+                  location: ''
+                })}
+              >
+                Expand Search Criteria
+              </button>
+              
+              <button
+                className="btn btn-outline ml-2"
+                onClick={() => handleFilterChange({ 
                   hideAlreadyMatched: false,
                   hideRequestsSent: false 
                 })}
               >
-                Expand Search Criteria
+                Show All Users
               </button>
             </div>
           </div>
         )}
         
-        {/* ✅ IMPROVED: Better matches grid layout - max 2 per row */}
+        {/* ✅ IMPROVED: Better matches grid layout */}
         {!loading && !error && matches.length > 0 && (
           <>
             <div className="card mb-4">
               <div className="match-results-header">
                 <h3 className="card-title">
-                  {matches.length} Compatible Match{matches.length !== 1 ? 'es' : ''} Found
+                  {matches.length} Compatible Roommate{matches.length !== 1 ? 's' : ''} Found
                 </h3>
                 <div className="text-gray-600 text-sm">
-                  {excludedUsers.size} users excluded • {sentRequests.size} requests sent
+                  {excludedUsers.size > 0 && `${excludedUsers.size} connected users hidden`}
+                  {excludedUsers.size > 0 && sentRequests.size > 0 && ` • `}
+                  {sentRequests.size > 0 && `${sentRequests.size} pending requests hidden`}
                 </div>
               </div>
             </div>
 
-            {/* ✅ NEW: Improved match cards grid - max 2 per row */}
+            {/* Match cards grid */}
             <div className="matches-grid mb-5">
               {matches.map((match) => {
                 const isRequestSent = match.isRequestSent;
@@ -685,7 +726,7 @@ const MatchFinder = ({ onRequestMatch, onBack }) => {
                       </div>
                       <div className="match-badges">
                         {isAlreadyMatched && (
-                          <span className="badge badge-warning">Already Matched</span>
+                          <span className="badge badge-warning">Already Connected</span>
                         )}
                         {isRequestSent && (
                           <span className="badge badge-info">Request Sent</span>
@@ -703,7 +744,7 @@ const MatchFinder = ({ onRequestMatch, onBack }) => {
                         </div>
                       </div>
                       
-                      {/* ✅ IMPROVED: Green Flags with proper styling */}
+                      {/* Green Flags */}
                       {match.greenFlags?.length > 0 && (
                         <div className="compatibility-section">
                           <div className="green-flags-section">
@@ -724,7 +765,7 @@ const MatchFinder = ({ onRequestMatch, onBack }) => {
                         </div>
                       )}
                       
-                      {/* ✅ IMPROVED: Red Flags with proper styling */}
+                      {/* Red Flags */}
                       {match.redFlags?.length > 0 && (
                         <div className="compatibility-section">
                           <div className="red-flags-section">
@@ -745,7 +786,7 @@ const MatchFinder = ({ onRequestMatch, onBack }) => {
                         </div>
                       )}
                       
-                      {/* ✅ FIXED: Improved button layout */}
+                      {/* Action buttons */}
                       <div className="match-actions">
                         <button
                           className="btn btn-outline"
@@ -760,7 +801,7 @@ const MatchFinder = ({ onRequestMatch, onBack }) => {
                           disabled={isRequestSent || isAlreadyMatched}
                         >
                           {isRequestSent ? 'Request Sent' :
-                           isAlreadyMatched ? 'Already Matched' :
+                           isAlreadyMatched ? 'Already Connected' :
                            'Request Match'}
                         </button>
                       </div>
@@ -785,7 +826,7 @@ const MatchFinder = ({ onRequestMatch, onBack }) => {
         )}
       </div>
       
-      {/* Match Details Modal - keeping existing modal code */}
+      {/* Match Details Modal */}
       {showDetails && selectedMatch && (
         <div className="modal-overlay" onClick={() => setShowDetails(false)}>
           <div className="modal-content" onClick={(e) => e.stopPropagation()}>
@@ -806,12 +847,12 @@ const MatchFinder = ({ onRequestMatch, onBack }) => {
               <div className="mb-4">
                 {selectedMatch.isAlreadyMatched && (
                   <div className="alert alert-warning">
-                    <strong>Already Matched:</strong> This user is currently matched with someone else.
+                    <strong>Already Connected:</strong> You're already connected with this user.
                   </div>
                 )}
                 {selectedMatch.isRequestSent && (
                   <div className="alert alert-info">
-                    <strong>Request Sent:</strong> You've already sent a match request to this user.
+                    <strong>Request Sent:</strong> You've already sent a roommate request to this user.
                   </div>
                 )}
               </div>
@@ -885,17 +926,16 @@ const MatchFinder = ({ onRequestMatch, onBack }) => {
                 disabled={selectedMatch.isRequestSent || selectedMatch.isAlreadyMatched}
               >
                 {selectedMatch.isRequestSent ? 'Request Sent' :
-                 selectedMatch.isAlreadyMatched ? 'Already Matched' :
-                 'Send Match Request'}
+                 selectedMatch.isAlreadyMatched ? 'Already Connected' :
+                 'Send Roommate Request'}
               </button>
             </div>
           </div>
         </div>
       )}
 
-      {/* ✅ NEW: Custom CSS for improved styling */}
+      {/* Custom CSS for improved styling */}
       <style jsx>{`
-        /* ✅ IMPROVED: Filter controls styling */
         .filter-row-primary {
           display: grid;
           grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
@@ -920,7 +960,6 @@ const MatchFinder = ({ onRequestMatch, onBack }) => {
           margin: 0 auto;
         }
 
-        /* ✅ NEW: Match results header */
         .match-results-header {
           display: flex;
           align-items: center;
@@ -929,7 +968,6 @@ const MatchFinder = ({ onRequestMatch, onBack }) => {
           gap: 1rem;
         }
 
-        /* ✅ IMPROVED: Matches grid - max 2 per row */
         .matches-grid {
           display: grid;
           grid-template-columns: repeat(auto-fit, minmax(450px, 1fr));
@@ -938,7 +976,6 @@ const MatchFinder = ({ onRequestMatch, onBack }) => {
           margin: 0 auto;
         }
 
-        /* ✅ NEW: Match card styling */
         .match-card {
           background: white;
           border-radius: var(--radius-xl);
@@ -981,7 +1018,6 @@ const MatchFinder = ({ onRequestMatch, onBack }) => {
           gap: 0.25rem;
         }
 
-        /* ✅ IMPROVED: Basic info grid */
         .basic-info {
           margin-bottom: 1.5rem;
         }
@@ -1003,7 +1039,6 @@ const MatchFinder = ({ onRequestMatch, onBack }) => {
           font-weight: 400;
         }
 
-        /* ✅ NEW: Compatibility sections */
         .compatibility-section {
           margin-bottom: 1.5rem;
         }
@@ -1020,7 +1055,6 @@ const MatchFinder = ({ onRequestMatch, onBack }) => {
           gap: 0.5rem;
         }
 
-        /* ✅ IMPROVED: Green flags styling */
         .green-flags-section {
           background: linear-gradient(135deg, #d4edda 0%, #e8f7ec 100%);
           border: 1px solid #c3e6cb;
@@ -1038,7 +1072,6 @@ const MatchFinder = ({ onRequestMatch, onBack }) => {
           white-space: nowrap;
         }
 
-        /* ✅ IMPROVED: Red flags styling */
         .red-flags-section {
           background: linear-gradient(135deg, #f8d7da 0%, #fde2e4 100%);
           border: 1px solid #f5c6cb;
@@ -1062,7 +1095,6 @@ const MatchFinder = ({ onRequestMatch, onBack }) => {
           padding: 0.25rem 0.5rem;
         }
 
-        /* ✅ FIXED: Match actions */
         .match-actions {
           display: grid;
           grid-template-columns: 1fr 1fr;
@@ -1072,7 +1104,6 @@ const MatchFinder = ({ onRequestMatch, onBack }) => {
           border-top: 1px solid var(--border-beige);
         }
 
-        /* ✅ RESPONSIVE: Mobile adjustments */
         @media (max-width: 768px) {
           .matches-grid {
             grid-template-columns: 1fr;
