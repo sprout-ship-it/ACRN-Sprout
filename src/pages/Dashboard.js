@@ -3,7 +3,7 @@ import React, { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../hooks/useAuth'
 import { db } from '../utils/supabase'
-import '../../styles/global.css';
+import '../styles/global.css';
 
 const Dashboard = () => {
   const { profile, hasRole, user } = useAuth()
