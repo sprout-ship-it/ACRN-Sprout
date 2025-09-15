@@ -1,7 +1,7 @@
 // src/components/auth/RegisterForms.js
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { useAuth } from '../../context/AuthContext';
+import { useAuth } from '../../hooks/useAuth';
 import LoadingSpinner from '../ui/LoadingSpinner';
 import '../../styles/global.css';
 
