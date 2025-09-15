@@ -275,7 +275,7 @@ const PeerSupportFinder = ({ onBack }) => {
 
     // Check if specialist is accepting clients
     if (!specialist.is_accepting_clients) {
-      if (!confirm(`${specialist.registrant_profiles?.first_name || 'This specialist'} is not currently accepting new clients. Send request anyway?`)) {
+      if (!window.confirm(`${specialist.registrant_profiles?.first_name || 'This specialist'} is not currently accepting new clients. Send request anyway?`)) {
         return;
       }
     }

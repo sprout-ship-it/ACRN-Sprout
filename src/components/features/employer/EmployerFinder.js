@@ -327,7 +327,7 @@ const EmployerFinder = ({ onBack }) => {
 
     // Check if employer is actively hiring
     if (!employer.is_actively_hiring) {
-      if (!confirm(`${employer.company_name} is not currently marked as actively hiring. Send inquiry anyway?`)) {
+      if (!window.confirm(`${employer.company_name} is not currently marked as actively hiring. Send inquiry anyway?`)) {
         return;
       }
     }
