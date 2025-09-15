@@ -11,7 +11,7 @@ import AboutSection from './sections/peer-support/AboutSection';
 import ServiceSettingsSection from './sections/peer-support/ServiceSettingsSection';
 
 // Import shared components
-import LoadingSpinner from '../common/LoadingSpinner';
+import LoadingSpinner from './components/ui/LoadingSpinner';
 
 const FORM_SECTIONS = [
   {

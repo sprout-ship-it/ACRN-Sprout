@@ -2,7 +2,7 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
-import LoadingSpinner from '../common/LoadingSpinner';
+import LoadingSpinner from './components/ui/LoadingSpinner';
 import '../../styles/global.css';
 
 const LoginForm = ({ onBackToLanding }) => {

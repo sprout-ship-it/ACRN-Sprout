@@ -2,7 +2,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
-import LoadingSpinner from '../common/LoadingSpinner';
+import LoadingSpinner from './components/ui/LoadingSpinner';
 import '../../styles/global.css';
 
 const RegisterForm = ({ onBackToLanding, preSelectedRole }) => {

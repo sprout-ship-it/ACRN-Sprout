@@ -9,7 +9,7 @@ import Header from '../components/layout/Header'
 import Navigation from '../components/layout/Navigation'
 
 // Common Components
-import LoadingSpinner from '../components/common/LoadingSpinner'
+import LoadingSpinner from './components/ui/LoadingSpinner';
 
 // Form Components
 import EnhancedMatchingProfileForm from '../components/forms/EnhancedMatchingProfileForm'

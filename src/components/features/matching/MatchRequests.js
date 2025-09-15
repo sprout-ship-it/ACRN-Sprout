@@ -2,7 +2,7 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../../../context/AuthContext';
 import { db } from '../../../utils/supabase';
-import LoadingSpinner from '../common/LoadingSpinner';
+import LoadingSpinner from './components/ui/LoadingSpinner';
 import '../../styles/global.css';
 
 const Connections = () => {

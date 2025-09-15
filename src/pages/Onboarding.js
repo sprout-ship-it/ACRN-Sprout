@@ -3,7 +3,7 @@
 import React, { useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext';
-import LoadingSpinner from '../components/common/LoadingSpinner'
+import LoadingSpinner from './components/ui/LoadingSpinner';
 import '../styles/global.css'
 
 const Onboarding = () => {
