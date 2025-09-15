@@ -1,8 +1,8 @@
-// src/components/PropertySearch.js - FIXED FOR ENHANCED HOUSING SEARCH
+// src/components/features/property/PropertySearch.js
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../../../context/AuthContext';
 import { supabase } from '../../../utils/supabase';
-import '../styles/global.css';
+import '../../../styles/global.css';
 
 const PropertySearch = () => {
   const { user, profile } = useAuth();

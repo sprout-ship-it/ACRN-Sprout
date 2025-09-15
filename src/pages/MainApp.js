@@ -26,7 +26,7 @@ import EmployerManagement from '../components/dashboard/EmployerManagement'
 import EmployerFinder from '../components/dashboard/EmployerFinder'
 
 // Search Components
-import PropertySearch from '../components/PropertySearch'
+import PropertySearch from '../components/features/property/PropertySearch';
 
 import '../styles/global.css';
 
