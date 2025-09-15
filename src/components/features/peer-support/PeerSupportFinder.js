@@ -1,7 +1,7 @@
 // src/components/dashboard/PeerSupportFinder.js - FIXED FOR PROPER PEER SUPPORT CONNECTIONS
 import React, { useState, useEffect } from 'react';
-import { useAuth } from '../../context/AuthContext';
-import { db } from '../../utils/supabase';
+import { useAuth } from '../../../context/AuthContext';
+import { db } from '../../../utils/supabase';
 import LoadingSpinner from '../common/LoadingSpinner';
 import '../../styles/global.css';
 

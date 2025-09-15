@@ -1,8 +1,8 @@
 // src/components/Settings.js
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { useAuth } from '../context/AuthContext';
-import { db } from '../utils/supabase';
+import { useAuth } from '../../context/AuthContext';
+import { db } from '../../utils/supabase';
 import '../styles/global.css';
 
 const Settings = () => {

@@ -1,17 +1,17 @@
 // src/components/dashboard/PropertyManagement.js
 import React, { useState, useEffect } from 'react';
-import { useAuth } from '../../context/AuthContext';
-import { supabase } from '../../utils/supabase';
+import { useAuth } from '../../../context/AuthContext';
+import { supabase } from '../../../utils/supabase';
 
 // Import the new sectioned components
-import PropertyBasicInfoSection from '../property/sections/PropertyBasicInfoSection';
-import PropertyFinancialSection from '../property/sections/PropertyFinancialSection';
-import PropertyRecoverySection from '../property/sections/PropertyRecoverySection';
-import PropertyAmenitiesSection from '../property/sections/PropertyAmenitiesSection';
+import PropertyBasicInfoSection from '../../property/sections/PropertyBasicInfoSection';
+import PropertyFinancialSection from '../../property/sections/PropertyFinancialSection';
+import PropertyRecoverySection from '../../property/sections/PropertyRecoverySection';
+import PropertyAmenitiesSection from '../../property/sections/PropertyAmenitiesSection';
 
 // Import the new bifurcation components
-import PropertyTypeSelector from '../property/PropertyTypeSelector';
-import SimplifiedPropertyForm from '../property/SimplifiedPropertyForm';
+import PropertyTypeSelector from '../../property/PropertyTypeSelector';
+import SimplifiedPropertyForm from '../../property/SimplifiedPropertyForm';
 
 const PropertyManagement = () => {
   const { user } = useAuth();

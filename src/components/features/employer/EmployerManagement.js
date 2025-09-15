@@ -1,13 +1,13 @@
 // src/components/dashboard/EmployerManagement.js
 import React, { useState, useEffect } from 'react';
-import { useAuth } from '../../context/AuthContext';
-import { supabase } from '../../utils/supabase';
+import { useAuth } from '../../../context/AuthContext';
+import { supabase } from '../../../utils/supabase';
 
 // Import form sections
-import EmployerBasicInfoSection from '../employer/sections/EmployerBasicInfoSection';
-import EmployerDetailsSection from '../employer/sections/EmployerDetailsSection';
-import EmployerPoliciesSection from '../employer/sections/EmployerPoliciesSection';
-import EmployerJobsSection from '../employer/sections/EmployerJobsSection';
+import EmployerBasicInfoSection from '../../employer/sections/EmployerBasicInfoSection';
+import EmployerDetailsSection from '../../employer/sections/EmployerDetailsSection';
+import EmployerPoliciesSection from '../../employer/sections/EmployerPoliciesSection';
+import EmployerJobsSection from '../../employer/sections/EmployerJobsSection';
 
 const EmployerManagement = () => {
   const { user } = useAuth();

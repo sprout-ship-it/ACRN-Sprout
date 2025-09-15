@@ -12,7 +12,6 @@ import Navigation from '../components/layout/Navigation'
 import LoadingSpinner from '../components/common/LoadingSpinner'
 
 // Form Components
-import BasicProfileForm from '../components/forms/BasicProfileForm'
 import EnhancedMatchingProfileForm from '../components/forms/EnhancedMatchingProfileForm'
 import PeerSupportProfileForm from '../components/forms/PeerSupportProfileForm'
 
