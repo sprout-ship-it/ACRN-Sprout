@@ -1,4 +1,4 @@
-// src/components/forms/constants/propertyConstants.js
+// src/components/features/property/constants/propertyConstants.js
 
 // ✅ ALIGNED: Property types that match applicant form expectations
 export const propertyTypes = [

@@ -2,8 +2,8 @@
 // This component handles old bookmarks/links to the previous onboarding flow
 import React, { useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { useAuth } from '../context/AuthContext';
-import LoadingSpinner from './components/ui/LoadingSpinner';
+import { useAuth } from '../hooks/useAuth';
+import LoadingSpinner from '../components/ui/LoadingSpinner';
 import '../styles/global.css'
 
 const Onboarding = () => {

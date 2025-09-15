@@ -4,14 +4,14 @@ import { useAuth } from '../../../context/AuthContext';
 import { supabase } from '../../../utils/supabase';
 
 // Import the new sectioned components
-import PropertyBasicInfoSection from '../../property/sections/PropertyBasicInfoSection';
-import PropertyFinancialSection from '../../property/sections/PropertyFinancialSection';
-import PropertyRecoverySection from '../../property/sections/PropertyRecoverySection';
-import PropertyAmenitiesSection from '../../property/sections/PropertyAmenitiesSection';
+import PropertyBasicInfoSection from './sections/PropertyBasicInfoSection';
+import PropertyFinancialSection from './sections/PropertyFinancialSection';
+import PropertyRecoverySection from './sections/PropertyRecoverySection';
+import PropertyAmenitiesSection from './sections/PropertyAmenitiesSection';
 
 // Import the new bifurcation components
-import PropertyTypeSelector from '../../property/PropertyTypeSelector';
-import SimplifiedPropertyForm from '../../property/SimplifiedPropertyForm';
+import PropertyTypeSelector from './PropertyTypeSelector';
+import SimplifiedPropertyForm from './SimplifiedPropertyForm';
 
 const PropertyManagement = () => {
   const { user } = useAuth();

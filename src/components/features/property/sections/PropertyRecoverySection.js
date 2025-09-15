@@ -1,10 +1,10 @@
-// src/components/property/sections/PropertyRecoverySection.js
+// src/components/features/property/sections/PropertyRecoverySection.js
 import React from 'react';
 import PropTypes from 'prop-types';
 import { 
   requiredRecoveryPrograms,
   houseRulesOptions
-} from '../../forms/constants/propertyConstants';
+} from '../constants/propertyConstants';
 
 const PropertyRecoverySection = ({
   formData,

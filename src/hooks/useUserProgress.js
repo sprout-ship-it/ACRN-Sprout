@@ -1,6 +1,6 @@
 // src/hooks/useUserProgress.js
 import { useContext } from 'react';
-import { UserProgressContext } from '../contexts/UserProgressContext';
+import { UserProgressContext } from '../context/UserProgressContext';
 
 /**
  * Custom hook for accessing user progress state and methods

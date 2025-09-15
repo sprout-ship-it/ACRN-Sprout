@@ -1,7 +1,7 @@
 // src/hooks/useMatching.js
 
 import { useState, useCallback, useEffect } from 'react';
-import { useAuth } from '../context/AuthContext';
+import { useAuth } from './useAuth';
 import { useMatchingProfile, useMatchRequests } from './useSupabase';
 import { 
   transformProfileForAlgorithm, 

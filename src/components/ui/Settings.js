@@ -3,7 +3,7 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import { db } from '../../utils/supabase';
-import '../styles/global.css';
+import '../../styles/global.css';  // ← Fixed: was '../styles/global.css'
 
 const Settings = () => {
   const { user, profile, updateProfile, signOut, hasRole } = useAuth();

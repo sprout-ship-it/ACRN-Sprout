@@ -8,7 +8,7 @@ import {
   populationOptions,
   serviceDeliveryOptions,
   HELP_TEXT 
-} from '../../constants/peerSupportConstants';
+} from '../constants/peerSupportConstants';
 
 const ServiceInfoSection = ({
   formData,

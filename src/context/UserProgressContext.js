@@ -1,6 +1,6 @@
 // src/contexts/UserProgressContext.js
 import React, { createContext, useContext, useEffect, useState } from 'react';
-import { useAuth } from '../context/AuthContext';
+import { useAuth } from './AuthContext';  
 import { db } from '../utils/supabase';
 
 const UserProgressContext = createContext({});

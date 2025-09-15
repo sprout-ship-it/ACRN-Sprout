@@ -1,8 +1,8 @@
 // src/pages/Landing.js
 import React, { useState } from 'react'
-import { useAuth } from '../context/AuthContext';
+import { useAuth } from '../hooks/useAuth';
 import LoginForm from '../components/auth/LoginForm';
-import RegisterForms from '../components/auth/RegisterForms';
+import RegisterForm from '../components/auth/RegisterForm'
 import '../styles/global.css';
 
 const Landing = () => {

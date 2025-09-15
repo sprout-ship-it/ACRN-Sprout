@@ -1,7 +1,7 @@
 // src/components/forms/sections/peer-support/ProfessionalInfoSection.js
 import React from 'react';
 import PropTypes from 'prop-types';
-import { certificationOptions, HELP_TEXT } from '../../constants/peerSupportConstants';
+import { certificationOptions, HELP_TEXT } from '../constants/peerSupportConstants';
 
 const ProfessionalInfoSection = ({
   formData,

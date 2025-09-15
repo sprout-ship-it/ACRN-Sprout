@@ -1,17 +1,17 @@
 // src/components/forms/PeerSupportProfileForm.js
 import React, { useState } from 'react';
-import { useAuth } from '../../context/AuthContext';
+import { useAuth } from '../../../context/AuthContext';
 import { usePeerSupportProfileForm } from './hooks/usePeerSupportProfileForm';
 
 // Import section components
-import ContactInfoSection from './sections/peer-support/ContactInfoSection';
-import ProfessionalInfoSection from './sections/peer-support/ProfessionalInfoSection';
-import ServiceInfoSection from './sections/peer-support/ServiceInfoSection';
-import AboutSection from './sections/peer-support/AboutSection';
-import ServiceSettingsSection from './sections/peer-support/ServiceSettingsSection';
+import ContactInfoSection from './sections/ContactInfoSection';
+import ProfessionalInfoSection from './sections/ProfessionalInfoSection';
+import ServiceInfoSection from './sections/ServiceInfoSection';
+import AboutSection from './sections/AboutSection';
+import ServiceSettingsSection from './sections/ServiceSettingsSection';
 
 // Import shared components
-import LoadingSpinner from './components/ui/LoadingSpinner';
+import LoadingSpinner from '../../ui/LoadingSpinner';
 
 const FORM_SECTIONS = [
   {

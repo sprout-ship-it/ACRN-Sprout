@@ -1,6 +1,6 @@
 // src/components/features/property/PropertySearch.js
 import React, { useState, useEffect } from 'react';
-import { useAuth } from '../../../context/AuthContext';
+import { useAuth } from '../../../hooks/useAuth';
 import { supabase } from '../../../utils/supabase';
 import '../../../styles/global.css';
 

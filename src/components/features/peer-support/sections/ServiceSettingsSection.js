@@ -7,7 +7,7 @@ import {
   serviceAreaOptions,
   HELP_TEXT,
   VALIDATION_RULES 
-} from '../../constants/peerSupportConstants';
+} from '../constants/peerSupportConstants';
 
 const ServiceSettingsSection = ({
   formData,

@@ -5,7 +5,7 @@ import {
   propertyAmenities,
   accessibilityFeatures,
   neighborhoodFeatures
-} from '../../forms/constants/propertyConstants';
+} from '../constants/propertyConstants';
 
 const PropertyAmenitiesSection = ({
   formData,

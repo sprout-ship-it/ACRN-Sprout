@@ -1,12 +1,12 @@
 // src/components/forms/EnhancedMatchingProfileForm.js - COMPLETE WITH SUBMISSION FIXES
 import React, { useState, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { useAuth } from '../../context/AuthContext';
+import { useAuth } from '../../../context/AuthContext';
 import { useMatchingProfileForm } from './hooks/useMatchingProfileForm';
 
 // Import form components
-import FormActions from './components/FormActions';
-import ProgressBar from './components/ProgressBar';
+import FormActions from '../../forms/components/FormActions';
+import ProgressBar from '../../forms/components/ProgressBar';
 
 // Import all section components
 import PersonalInfoSection from './sections/PersonalInfoSection';
@@ -17,7 +17,7 @@ import LifestylePreferencesSection from './sections/LifestylePreferencesSection'
 import CompatibilitySection from './sections/CompatibilitySection';
 
 // Import styles
-import './styles/EnhancedMatchingForm.css';
+import '../../forms/styles/EnhancedMatchingForm.css';
 
 const FORM_SECTIONS = [
   {

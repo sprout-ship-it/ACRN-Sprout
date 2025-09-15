@@ -1,7 +1,7 @@
-// src/components/property/sections/PropertyBasicInfoSection.js
+// src/components/features/property/sections/PropertyBasicInfoSection.js
 import React from 'react';
 import PropTypes from 'prop-types';
-import { propertyTypes } from '../../forms/constants/propertyConstants';
+import { propertyTypes } from '../constants/propertyConstants';
 
 const PropertyBasicInfoSection = ({
   formData,

@@ -1,8 +1,7 @@
-// src/components/property/sections/PropertyFinancialSection.js
+// src/components/features/property/sections/PropertyFinancialSection.js
 import React from 'react';
 import PropTypes from 'prop-types';
-import { acceptedSubsidyPrograms } from '../../forms/constants/propertyConstants';
-
+import { acceptedSubsidyPrograms } from '../constants/propertyConstants';
 const PropertyFinancialSection = ({
   formData,
   errors,

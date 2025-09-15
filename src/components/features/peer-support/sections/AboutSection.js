@@ -1,7 +1,7 @@
 // src/components/forms/sections/peer-support/AboutSection.js
 import React from 'react';
 import PropTypes from 'prop-types';
-import { HELP_TEXT, VALIDATION_RULES } from '../../constants/peerSupportConstants';
+import { HELP_TEXT, VALIDATION_RULES } from '../constants/peerSupportConstants';
 
 const AboutSection = ({
   formData,

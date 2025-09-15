@@ -1,7 +1,7 @@
 // src/pages/MainApp.js
 import React, { useEffect, useState } from 'react'
 import { Routes, Route, Navigate, useNavigate, useLocation } from 'react-router-dom'
-import { useAuth } from '../context/AuthContext';
+import { useAuth } from '../hooks/useAuth';
 import { db } from '../utils/supabase'
 
 // Layout
@@ -9,21 +9,20 @@ import Header from '../components/layout/Header'
 import Navigation from '../components/layout/Navigation'
 
 // Common Components
-import LoadingSpinner from './components/ui/LoadingSpinner';
+import LoadingSpinner from '../components/ui/LoadingSpinner';
 
 // Form Components
-import EnhancedMatchingProfileForm from '../components/forms/EnhancedMatchingProfileForm'
-import PeerSupportProfileForm from '../components/forms/PeerSupportProfileForm'
+import EnhancedMatchingProfileForm from '../components/features/matching/EnhancedMatchingProfileForm'
+import PeerSupportProfileForm from '../components/features/peer-support/PeerSupportProfileForm'
 
 // Dashboard Components  
-import Dashboard from '../components/dashboard/Dashboard'
-import MatchFinder from '../components/dashboard/MatchFinder'
-import MatchRequests from '../components/dashboard/MatchRequests'
-import PropertyManagement from '../components/dashboard/PropertyManagement'
-import PeerSupportFinder from '../components/dashboard/PeerSupportFinder'
-// ✅ NEW: Import EmployerManagement component
-import EmployerManagement from '../components/dashboard/EmployerManagement'
-import EmployerFinder from '../components/dashboard/EmployerFinder'
+import Dashboard from './Dashboard'
+import MatchFinder from '../components/features/matching/MatchFinder'
+import MatchRequests from '../components/features/matching/MatchRequests'
+import PropertyManagement from '../components/features/property/PropertyManagement'
+import PeerSupportFinder from '../components/features/peer-support/PeerSupportFinder'
+import EmployerManagement from '../components/features/employer/EmployerManagement'
+import EmployerFinder from '../components/features/employer/EmployerFinder'
 
 // Search Components
 import PropertySearch from '../components/features/property/PropertySearch';

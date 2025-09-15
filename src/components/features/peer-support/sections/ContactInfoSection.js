@@ -1,7 +1,7 @@
 // src/components/forms/sections/peer-support/ContactInfoSection.js
 import React from 'react';
 import PropTypes from 'prop-types';
-import { stateOptions, HELP_TEXT } from '../../constants/peerSupportConstants';
+import { stateOptions, HELP_TEXT } from '../constants/peerSupportConstants';
 
 const ContactInfoSection = ({
   formData,
