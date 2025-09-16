@@ -61,7 +61,7 @@ async loadUserProfile(userId) {
     // Use direct database call instead of hook
     const result = await db.applicantForms.getByUserId(userId);
     
-    if (result.success !== false && result.data) {
+    if (!result.hasError && result.hasData && result.data) {
       const transformedProfile = transformProfileForAlgorithm(result.data);
       console.log('✅ User profile loaded:', transformedProfile);
       return transformedProfile;
@@ -89,7 +89,7 @@ async loadUserProfile(userId) {
       const excludedUserIds = new Set();
 
       // Exclude from match requests
-      if (requestsResult.success !== false && requestsResult.data) {
+      if (!requestsResult.hasError && requestsResult.hasData && requestsResult.data) {
         requestsResult.data.forEach(request => {
           if (request.request_type === 'roommate' || !request.request_type) {
             const otherUserId = request.requester_id === userId ? request.target_id : request.requester_id;
@@ -132,7 +132,7 @@ async loadUserProfile(userId) {
     try {
       const result = await db.matchRequests.getByUserId(userId);
       
-      if (result.success !== false && result.data) {
+      if (!result.hasError && result.hasData && result.data) {
         const sentRequestIds = new Set(
           result.data
             .filter(req => 
@@ -178,8 +178,8 @@ async loadUserProfile(userId) {
 
       // Get active profiles from database
       const result = await db.applicantForms.getActiveProfiles();
-      
-      if (!result.success) {
+
+      if (result.hasError || !result.hasData) {
         throw new Error(result.error || 'Failed to load profiles');
       }
 
