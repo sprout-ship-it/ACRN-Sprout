@@ -257,7 +257,7 @@ const Dashboard = () => {
         label: 'Connections', 
         description: 'View and manage all your connection requests', 
         className: 'role-card-connections', // Black
-        path: '/app/match-requests',
+        path: '/app/connections',
         icon: '🤝'
       }
     )

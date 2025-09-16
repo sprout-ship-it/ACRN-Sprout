@@ -24,6 +24,7 @@ import PropertyManagement from '../components/features/property/PropertyManageme
 import PeerSupportFinder from '../components/features/peer-support/PeerSupportFinder'
 import EmployerManagement from '../components/features/employer/EmployerManagement'
 import EmployerFinder from '../components/features/employer/EmployerFinder'
+import ConnectionHub from '../components/features/connections/ConnectionHub'
 
 // Search Components
 import PropertySearch from '../components/features/property/PropertySearch';
@@ -385,6 +386,7 @@ if (!profileSetup.hasComprehensiveProfile && !profileJustCompleted) {
 
             {/* Universal Routes for All Users */}
             <Route path="/property-search" element={<PropertySearch />} />
+            <Route path="/connections" element={<ConnectionHub />} />
             <Route path="/messages" element={<Messages />} />
             <Route path="/settings" element={<Settings />} />
             <Route path="/match-requests" element={<MatchRequests />} />

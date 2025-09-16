@@ -159,6 +159,13 @@ export const db = {
     }
   },
 
+  // Add registrantProfiles alias for profiles (for compatibility)
+  registrantProfiles: {
+    getById: async (id) => db.profiles.getById(id),
+    create: async (profileData) => db.profiles.create(profileData),
+    update: async (id, updates) => db.profiles.update(id, updates)
+  },
+
   // Applicant forms operations
   applicantForms: {
     create: async (profileData) => {
@@ -494,60 +501,60 @@ export const db = {
     },
 
     getAvailable: async (filters = {}) => {
-  console.log('📊 DB: employerProfiles.getAvailable called', { filters })
-  try {
-    let query = supabase
-      .from('employer_profiles')
-      .select('*')
-      .eq('profile_completed', true)
+      console.log('📊 DB: employerProfiles.getAvailable called', { filters })
+      try {
+        let query = supabase
+          .from('employer_profiles')
+          .select('*')
+          .eq('profile_completed', true)
 
-    // Apply filters
-    if (filters.isActivelyHiring) {
-      query = query.eq('is_actively_hiring', true)
-    }
+        // Apply filters
+        if (filters.isActivelyHiring) {
+          query = query.eq('is_actively_hiring', true)
+        }
 
-    if (filters.industry) {
-      query = query.eq('industry', filters.industry)
-    }
+        if (filters.industry) {
+          query = query.eq('industry', filters.industry)
+        }
 
-    if (filters.city) {
-      query = query.ilike('city', `%${filters.city}%`)
-    }
+        if (filters.city) {
+          query = query.ilike('city', `%${filters.city}%`)
+        }
 
-    if (filters.state) {
-      query = query.eq('state', filters.state)
-    }
+        if (filters.state) {
+          query = query.eq('state', filters.state)
+        }
 
-    if (filters.businessType) {
-      query = query.eq('business_type', filters.businessType)
-    }
+        if (filters.businessType) {
+          query = query.eq('business_type', filters.businessType)
+        }
 
-    if (filters.remoteWork) {
-      query = query.eq('remote_work_options', filters.remoteWork)
-    }
+        if (filters.remoteWork) {
+          query = query.eq('remote_work_options', filters.remoteWork)
+        }
 
-    // Array filters need to be handled with contains or overlap
-    if (filters.recoveryFeatures && filters.recoveryFeatures.length > 0) {
-      query = query.overlaps('recovery_friendly_features', filters.recoveryFeatures)
-    }
+        // Array filters need to be handled with contains or overlap
+        if (filters.recoveryFeatures && filters.recoveryFeatures.length > 0) {
+          query = query.overlaps('recovery_friendly_features', filters.recoveryFeatures)
+        }
 
-    if (filters.jobTypes && filters.jobTypes.length > 0) {
-      query = query.overlaps('current_openings', filters.jobTypes)
-    }
+        if (filters.jobTypes && filters.jobTypes.length > 0) {
+          query = query.overlaps('current_openings', filters.jobTypes)
+        }
 
-    const { data, error } = await query
-      .order('is_actively_hiring', { ascending: false })
-      .order('updated_at', { ascending: false })
+        const { data, error } = await query
+          .order('is_actively_hiring', { ascending: false })
+          .order('updated_at', { ascending: false })
 
-    console.log('📊 DB: employerProfiles.getAvailable result', { 
-      hasData: !!data, 
-      dataLength: data?.length,
-      hasError: !!error 
-    })
-    return { data, error }
-  } catch (err) {
-    console.error('💥 DB: employerProfiles.getAvailable failed', err)
-    return { data: [], error: err }
+        console.log('📊 DB: employerProfiles.getAvailable result', { 
+          hasData: !!data, 
+          dataLength: data?.length,
+          hasError: !!error 
+        })
+        return { data, error }
+      } catch (err) {
+        console.error('💥 DB: employerProfiles.getAvailable failed', err)
+        return { data: [], error: err }
       }
     }
   },
@@ -701,6 +708,7 @@ export const db = {
       }
     }
   },
+
   // Peer support operations
   peerSupportProfiles: {
     create: async (profileData) => {
@@ -970,6 +978,50 @@ export const db = {
       }
     },
 
+    // Get connection summary for a user
+    getConnectionSummary: async (userId) => {
+      console.log('📊 DB: matchGroups.getConnectionSummary called', { userId })
+      try {
+        // Get all groups for user
+        const { data: groups, error } = await supabase
+          .from('match_groups')
+          .select(`
+            id,
+            status,
+            match_type,
+            created_at,
+            applicant_1_id,
+            applicant_2_id,
+            landlord_id,
+            peer_support_id,
+            property_id
+          `)
+          .or(`applicant_1_id.eq.${userId},applicant_2_id.eq.${userId},landlord_id.eq.${userId},peer_support_id.eq.${userId}`)
+
+        if (error || !groups) {
+          return { data: { active: 0, completed: 0, total: 0 }, error }
+        }
+
+        const summary = {
+          active: groups.filter(g => g.status === 'active').length,
+          completed: groups.filter(g => g.status === 'completed').length,
+          dissolved: groups.filter(g => g.status === 'dissolved').length,
+          total: groups.length,
+          byType: {
+            housing: groups.filter(g => g.property_id).length,
+            peer_support: groups.filter(g => g.peer_support_id).length,
+            applicant_peer: groups.filter(g => g.applicant_1_id && g.applicant_2_id && !g.property_id && !g.peer_support_id).length
+          }
+        }
+
+        console.log('📊 DB: matchGroups.getConnectionSummary result', { summary })
+        return { data: summary, error: null }
+      } catch (err) {
+        console.error('💥 DB: matchGroups.getConnectionSummary failed', err)
+        return { data: { active: 0, completed: 0, total: 0 }, error: err }
+      }
+    },
+
     // Helper to determine match type
     getMatchType: (matchGroup) => {
       if (matchGroup.property_id && matchGroup.landlord_id) {
@@ -1010,6 +1062,165 @@ export const db = {
         
         default:
           return null
+      }
+    }
+  },
+
+  // Communication templates operations
+  communicationTemplates: {
+    create: async (templateData) => {
+      console.log('📊 DB: communicationTemplates.create called')
+      try {
+        const { data, error } = await supabase
+          .from('communication_templates')
+          .insert(templateData)
+          .select()
+        console.log('📊 DB: communicationTemplates.create result', { hasData: !!data, hasError: !!error })
+        return { data, error }
+      } catch (err) {
+        console.error('💥 DB: communicationTemplates.create failed', err)
+        return { data: null, error: err }
+      }
+    },
+
+    getByCategory: async (category, userId = null) => {
+      console.log('📊 DB: communicationTemplates.getByCategory called', { category, userId })
+      try {
+        let query = supabase
+          .from('communication_templates')
+          .select('*')
+          .eq('category', category)
+          .eq('is_active', true)
+
+        // Get both system templates and user's custom templates
+        if (userId) {
+          query = query.or(`user_id.is.null,user_id.eq.${userId}`)
+        } else {
+          query = query.is('user_id', null) // Only system templates
+        }
+
+        const { data, error } = await query.order('is_system', { ascending: false })
+        console.log('📊 DB: communicationTemplates.getByCategory result', { hasData: !!data, hasError: !!error })
+        return { data, error }
+      } catch (err) {
+        console.error('💥 DB: communicationTemplates.getByCategory failed', err)
+        return { data: [], error: err }
+      }
+    },
+
+    getByUserId: async (userId) => {
+      console.log('📊 DB: communicationTemplates.getByUserId called', { userId })
+      try {
+        const { data, error } = await supabase
+          .from('communication_templates')
+          .select('*')
+          .eq('user_id', userId)
+          .eq('is_active', true)
+          .order('created_at', { ascending: false })
+        console.log('📊 DB: communicationTemplates.getByUserId result', { hasData: !!data, hasError: !!error })
+        return { data, error }
+      } catch (err) {
+        console.error('💥 DB: communicationTemplates.getByUserId failed', err)
+        return { data: [], error: err }
+      }
+    },
+
+    update: async (id, updates) => {
+      console.log('📊 DB: communicationTemplates.update called', { id })
+      try {
+        const { data, error } = await supabase
+          .from('communication_templates')
+          .update({
+            ...updates,
+            updated_at: new Date().toISOString()
+          })
+          .eq('id', id)
+          .select()
+        console.log('📊 DB: communicationTemplates.update result', { hasData: !!data, hasError: !!error })
+        return { data, error }
+      } catch (err) {
+        console.error('💥 DB: communicationTemplates.update failed', err)
+        return { data: null, error: err }
+      }
+    },
+
+    delete: async (id) => {
+      console.log('📊 DB: communicationTemplates.delete called', { id })
+      try {
+        // Soft delete - mark as inactive instead of actually deleting
+        const { data, error } = await supabase
+          .from('communication_templates')
+          .update({ 
+            is_active: false,
+            updated_at: new Date().toISOString()
+          })
+          .eq('id', id)
+          .select()
+        console.log('📊 DB: communicationTemplates.delete result', { hasData: !!data, hasError: !!error })
+        return { data, error }
+      } catch (err) {
+        console.error('💥 DB: communicationTemplates.delete failed', err)
+        return { data: null, error: err }
+      }
+    }
+  },
+
+  // Communication logs operations
+  communicationLogs: {
+    create: async (logData) => {
+      console.log('📊 DB: communicationLogs.create called')
+      try {
+        const { data, error } = await supabase
+          .from('communication_logs')
+          .insert(logData)
+          .select()
+        console.log('📊 DB: communicationLogs.create result', { hasData: !!data, hasError: !!error })
+        return { data, error }
+      } catch (err) {
+        console.error('💥 DB: communicationLogs.create failed', err)
+        return { data: null, error: err }
+      }
+    },
+
+    getByMatchGroup: async (matchGroupId) => {
+      console.log('📊 DB: communicationLogs.getByMatchGroup called', { matchGroupId })
+      try {
+        const { data, error } = await supabase
+          .from('communication_logs')
+          .select(`
+            *,
+            sender:registrant_profiles!sender_id(id, first_name),
+            recipient:registrant_profiles!recipient_id(id, first_name)
+          `)
+          .eq('match_group_id', matchGroupId)
+          .order('created_at', { ascending: false })
+        console.log('📊 DB: communicationLogs.getByMatchGroup result', { hasData: !!data, hasError: !!error })
+        return { data, error }
+      } catch (err) {
+        console.error('💥 DB: communicationLogs.getByMatchGroup failed', err)
+        return { data: [], error: err }
+      }
+    },
+
+    getByUserId: async (userId, limit = 50) => {
+      console.log('📊 DB: communicationLogs.getByUserId called', { userId, limit })
+      try {
+        const { data, error } = await supabase
+          .from('communication_logs')
+          .select(`
+            *,
+            sender:registrant_profiles!sender_id(id, first_name),
+            recipient:registrant_profiles!recipient_id(id, first_name),
+            match_group:match_groups(id, match_type, status)
+          `)
+          .or(`sender_id.eq.${userId},recipient_id.eq.${userId}`)
+          .order('created_at', { ascending: false })
+          .limit(limit)
+        console.log('📊 DB: communicationLogs.getByUserId result', { hasData: !!data, hasError: !!error })
+        return { data, error }
+      } catch (err) {
+        console.error('💥 DB: communicationLogs.getByUserId failed', err)
+        return { data: [], error: err }
       }
     }
   }
