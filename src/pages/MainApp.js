@@ -10,6 +10,7 @@ import Navigation from '../components/layout/Navigation'
 
 // Common Components
 import LoadingSpinner from '../components/ui/LoadingSpinner';
+import Settings from '../components/ui/Settings';
 
 // Form Components
 import EnhancedMatchingProfileForm from '../components/features/matching/EnhancedMatchingProfileForm'
@@ -63,18 +64,6 @@ const Messages = () => (
     </p>
     <div className="alert alert-info">
       <p>Messaging system coming soon...</p>
-    </div>
-  </div>
-)
-
-const Settings = () => (
-  <div className="card">
-    <h1 className="card-title">Account Settings</h1>
-    <p className="card-text mb-4">
-      Manage your account preferences and privacy settings.
-    </p>
-    <div className="alert alert-info">
-      <p>Settings page coming soon...</p>
     </div>
   </div>
 )
