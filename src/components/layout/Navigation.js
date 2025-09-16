@@ -67,7 +67,7 @@ const Navigation = () => {
         id: 'connections', 
         label: 'Connections', 
         icon: '🤝',
-        path: '/app/match-requests',
+        path: '/app/connections',  // <-- CORRECT PATH
         description: 'View and manage all your connections and requests',
         className: 'nav-connections'
       }

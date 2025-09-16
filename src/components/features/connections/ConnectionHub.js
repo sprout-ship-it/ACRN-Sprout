@@ -1,6 +1,6 @@
 // src/components/features/connections/ConnectionHub.js - FIXED VERSION
 import React, { useState, useEffect } from 'react';
-import { useAuth } from '../../../context/AuthContext';
+import { useAuth } from '../../../hooks/useAuth';
 import { db } from '../../../utils/supabase';
 import LoadingSpinner from '../../ui/LoadingSpinner';
 import '../../../styles/global.css';
