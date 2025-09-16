@@ -1,10 +1,9 @@
 // src/utils/matching/matchingService.js
+
 import { db } from '../supabase';
 import { useMatchingProfile } from '../../hooks/useSupabase';
-import { 
-  calculateDetailedCompatibility,
-  transformProfileForAlgorithm 
-} from './dataTransform';
+import { calculateDetailedCompatibility } from './algorithm';  // ← Fix: Import from algorithm
+import { transformProfileForAlgorithm } from './dataTransform';  // ← Fix: Import from dataTransform  
 import { generateDetailedFlags } from './compatibility';
 import { 
   COMPATIBILITY_WEIGHTS,
@@ -36,88 +35,6 @@ class MatchingService {
   /**
    * Transform database record to algorithm-compatible format
    */
-  transformProfileForAlgorithm(dbProfile) {
-    if (!dbProfile) return null;
-
-    const calculateAge = (dateOfBirth) => {
-      if (!dateOfBirth) return null;
-      const today = new Date();
-      const birthDate = new Date(dateOfBirth);
-      let age = today.getFullYear() - birthDate.getFullYear();
-      const monthDiff = today.getMonth() - birthDate.getMonth();
-      if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birthDate.getDate())) {
-        age--;
-      }
-      return age;
-    };
-
-    return {
-      // Basic identifiers
-      id: dbProfile.id,
-      user_id: dbProfile.user_id,
-      
-      // Personal details
-      age: calculateAge(dbProfile.date_of_birth),
-      gender: dbProfile.gender,
-      
-      // Location - use preferred_city and preferred_state, or city as fallback
-      location: (dbProfile.preferred_city && dbProfile.preferred_state) 
-        ? `${dbProfile.preferred_city}, ${dbProfile.preferred_state}`
-        : dbProfile.preferred_city || dbProfile.preferred_state || dbProfile.city || 'Not specified',
-      
-      // Budget
-      budget_max: dbProfile.budget_max,
-      price_range: {
-        min: dbProfile.price_range_min || 0,
-        max: dbProfile.price_range_max || dbProfile.budget_max || 5000
-      },
-      
-      // Recovery info
-      recovery_stage: dbProfile.recovery_stage,
-      recovery_methods: dbProfile.recovery_methods || [],
-      program_type: dbProfile.program_type || [],
-      primary_issues: dbProfile.primary_issues || [],
-      sobriety_date: dbProfile.sobriety_date,
-      
-      // Lifestyle
-      cleanliness_level: dbProfile.cleanliness_level || 3,
-      noise_level: dbProfile.noise_level || 3,
-      social_level: dbProfile.social_level || 3,
-      work_schedule: dbProfile.work_schedule,
-      bedtime_preference: dbProfile.bedtime_preference,
-      
-      // Preferences
-      preferred_roommate_gender: dbProfile.preferred_roommate_gender,
-      gender_preference: dbProfile.gender_preference,
-      smoking_status: dbProfile.smoking_status,
-      smoking_preference: dbProfile.smoking_preference,
-      
-      // Housing
-      housing_type: dbProfile.housing_type || [],
-      housing_subsidy: dbProfile.housing_subsidy || [],
-      
-      // Social preferences
-      pets_owned: dbProfile.pets_owned,
-      pets_comfortable: dbProfile.pets_comfortable,
-      overnight_guests_ok: dbProfile.overnight_guests_ok,
-      shared_groceries: dbProfile.shared_groceries,
-      guests_policy: dbProfile.guests_policy,
-      
-      // Personal
-      interests: dbProfile.interests || [],
-      spiritual_affiliation: dbProfile.spiritual_affiliation,
-      about_me: dbProfile.about_me,
-      looking_for: dbProfile.looking_for,
-      
-      // Profile metadata
-      is_active: dbProfile.is_active,
-      profile_completed: dbProfile.profile_completed,
-      
-      // Include registrant_profiles data if available
-      first_name: dbProfile.registrant_profiles?.first_name || 'Anonymous',
-      email: dbProfile.registrant_profiles?.email
-    };
-  }
 
   /**
    * Generate display-friendly compatibility information
