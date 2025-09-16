@@ -1,4 +1,4 @@
-// src/components/layout/Navigation.js - FIXED ROUTES
+// src/components/layout/Navigation.js - UPDATED WITH GRID LAYOUT
 import React from 'react'
 import { useLocation, useNavigate } from 'react-router-dom'
 import { useAuth } from '../../context/AuthContext'
@@ -26,7 +26,7 @@ const Navigation = () => {
         id: 'applicant-profile',
         label: 'My Profile',
         icon: '👤', 
-        path: '/app/profile/matching', // ✅ FIXED: was /comprehensive, now matches MainApp route
+        path: '/app/profile/matching',
         description: 'Complete applicant profile with matching preferences'
       })
     }
@@ -56,7 +56,7 @@ const Navigation = () => {
         id: 'employer-profile',
         label: 'My Profile',
         icon: '👤',
-        path: '/app/employers', // For employers, profile is managed through employer management
+        path: '/app/employers',
         description: 'Manage your employer profile and company information'
       })
     }
@@ -68,7 +68,8 @@ const Navigation = () => {
         label: 'Connections', 
         icon: '🤝',
         path: '/app/match-requests',
-        description: 'View and manage all your connections and requests'
+        description: 'View and manage all your connections and requests',
+        className: 'nav-connections'
       }
     )
 
@@ -77,17 +78,35 @@ const Navigation = () => {
       baseItems.push(
         { 
           id: 'find-matches', 
-          label: 'Find Matches', 
+          label: 'Find Roommates', 
           icon: '🔍',
           path: '/app/find-matches',
-          description: 'Discover compatible roommates'
+          description: 'Discover compatible roommates',
+          className: 'nav-housing-seeker'
         },
         { 
           id: 'browse-housing', 
-          label: 'Browse Housing', 
+          label: 'Find Housing', 
           icon: '🏘️',
-          path: '/app/property-search', // ✅ FIXED: was /properties, now correct for applicants
-          description: 'Search for recovery-friendly housing'
+          path: '/app/property-search',
+          description: 'Search for recovery-friendly housing',
+          className: 'nav-property-owner'
+        },
+        { 
+          id: 'find-peer-support', 
+          label: 'Find Support', 
+          icon: '👥',
+          path: '/app/find-peer-support',
+          description: 'Connect with peer support specialists',
+          className: 'nav-peer-support'
+        },
+        { 
+          id: 'find-employers', 
+          label: 'Find Employment', 
+          icon: '💼',
+          path: '/app/find-employers',
+          description: 'Discover recovery-friendly job opportunities',
+          className: 'nav-employer'
         }
       )
     }
@@ -99,14 +118,16 @@ const Navigation = () => {
           label: 'My Properties', 
           icon: '🏢',
           path: '/app/properties',
-          description: 'Manage your rental properties'
+          description: 'Manage your rental properties',
+          className: 'nav-property-owner'
         },
         { 
           id: 'tenants', 
           label: 'Tenant Requests', 
           icon: '📋',
           path: '/app/tenants',
-          description: 'Review tenant applications and requests'
+          description: 'Review tenant applications and requests',
+          className: 'nav-property-owner'
         }
       )
     }
@@ -118,14 +139,16 @@ const Navigation = () => {
           label: 'Client Dashboard', 
           icon: '📊',
           path: '/app/peer-dashboard',
-          description: 'Manage peer support services and clients'
+          description: 'Manage peer support services and clients',
+          className: 'nav-peer-support'
         },
         { 
           id: 'my-clients', 
           label: 'My Clients', 
           icon: '👥',
           path: '/app/clients',
-          description: 'View and manage client relationships'
+          description: 'View and manage client relationships',
+          className: 'nav-peer-support'
         }
       )
     }
@@ -137,35 +160,18 @@ const Navigation = () => {
           label: 'Manage Companies', 
           icon: '🏢',
           path: '/app/employers',
-          description: 'Manage your company profiles'
+          description: 'Manage your company profiles',
+          className: 'nav-employer'
         },
         { 
           id: 'candidates', 
           label: 'Candidates', 
           icon: '👥',
           path: '/app/candidates',
-          description: 'Review job applications and candidates'
+          description: 'Review job applications and candidates',
+          className: 'nav-employer'
         }
       )
-    }
-
-    // ✅ CONDITIONAL: Advanced features (only show if user has progressed enough)
-    const shouldShowAdvancedFeatures = profile && (
-      hasRole('applicant') || hasRole('peer') || hasRole('landlord')
-    )
-
-    if (shouldShowAdvancedFeatures) {
-      // ✅ REMOVED: Match Dashboard temporarily until route is implemented
-      // We'll re-add this when the route exists in MainApp.js
-      /*
-      baseItems.push({ 
-        id: 'match-dashboard', 
-        label: 'Match Dashboard', 
-        icon: '🎯',
-        path: '/app/match-dashboard',
-        description: 'Coordinate housing search with matched roommate'
-      })
-      */
     }
 
     // Universal tools
@@ -223,7 +229,7 @@ const Navigation = () => {
   }
 
   return (
-    <nav className="navigation">
+    <>
       {/* ✅ ADDED: Role indicator for better user context */}
       {profile && (
         <div style={{ 
@@ -232,45 +238,143 @@ const Navigation = () => {
           borderBottom: '1px solid var(--border-beige)',
           fontSize: '0.9rem',
           color: 'var(--gray-700)',
-          textAlign: 'center'
+          textAlign: 'center',
+          marginBottom: '1rem'
         }}>
           {getRoleGreeting()}
         </div>
       )}
 
-      <ul className="nav-list">
+      {/* Grid Navigation */}
+      <nav className="dashboard-grid-nav">
         {navigationItems.map(item => {
           const isCurrentlyActive = isActive(item.path)
           
           return (
-            <li key={item.id} className="nav-item">
-              <button
-                className={`nav-button ${isCurrentlyActive ? 'active' : ''}`}
-                onClick={() => handleNavigation(item.path)}
-                title={item.description || item.label}
-              >
-                <span className="nav-icon">{item.icon}</span>
-                <span className="nav-label">{item.label}</span>
-              </button>
-            </li>
+            <button
+              key={item.id}
+              className={`nav-grid-item ${item.className || ''} ${isCurrentlyActive ? 'active' : ''}`}
+              onClick={() => handleNavigation(item.path)}
+              title={item.description || item.label}
+            >
+              <span className="nav-icon">{item.icon}</span>
+              <span className="nav-label">{item.label}</span>
+            </button>
           )
         })}
-      </ul>
+      </nav>
 
       {/* ✅ ADDED: Quick progress indicator for incomplete profiles */}
       {profile && (
         <div style={{
           padding: '10px 20px',
-          borderTop: '1px solid var(--border-beige)',
           background: 'var(--bg-light-cream)',
           fontSize: '0.8rem',
           color: 'var(--gray-600)',
-          textAlign: 'center'
+          textAlign: 'center',
+          marginTop: '1rem'
         }}>
           💡 Tip: Complete your profile to unlock all features
         </div>
       )}
-    </nav>
+
+      {/* Grid Navigation Styles */}
+      <style jsx>{`
+        .dashboard-grid-nav {
+          display: grid;
+          grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+          gap: 8px;
+          background: white;
+          border-radius: 12px;
+          padding: 12px;
+          box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+
+        .nav-grid-item {
+          display: flex;
+          flex-direction: column;
+          align-items: center;
+          padding: 12px 8px;
+          border-radius: 8px;
+          border: 2px solid transparent;
+          background: #f9fafb;
+          color: #6b7280;
+          transition: all 0.2s ease;
+          cursor: pointer;
+        }
+
+        .nav-grid-item:hover {
+          transform: translateY(-2px);
+          box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+        }
+
+        .nav-grid-item.active {
+          color: white;
+          border-color: currentColor;
+        }
+
+        .nav-grid-item .nav-icon {
+          font-size: 1.5rem;
+          margin-bottom: 4px;
+        }
+
+        .nav-grid-item .nav-label {
+          font-size: 0.75rem;
+          font-weight: 600;
+          text-align: center;
+          line-height: 1.2;
+        }
+
+        /* Role-specific navigation colors */
+        .nav-housing-seeker:hover,
+        .nav-housing-seeker.active {
+          background: #8b5cf6; /* Purple */
+        }
+
+        .nav-peer-support:hover,
+        .nav-peer-support.active {
+          background: #3b82f6; /* Blue */
+        }
+
+        .nav-employer:hover,
+        .nav-employer.active {
+          background: #ef4444; /* Red */
+        }
+
+        .nav-property-owner:hover,
+        .nav-property-owner.active {
+          background: #f59e0b; /* Yellow/Orange */
+        }
+
+        .nav-connections:hover,
+        .nav-connections.active {
+          background: #374151; /* Dark gray/black */
+        }
+
+        /* Default hover for items without specific colors */
+        .nav-grid-item:not(.nav-housing-seeker):not(.nav-peer-support):not(.nav-employer):not(.nav-property-owner):not(.nav-connections):hover,
+        .nav-grid-item:not(.nav-housing-seeker):not(.nav-peer-support):not(.nav-employer):not(.nav-property-owner):not(.nav-connections).active {
+          background: #6366f1; /* Default purple */
+        }
+
+        /* Mobile responsive */
+        @media (max-width: 768px) {
+          .dashboard-grid-nav {
+            grid-template-columns: repeat(3, 1fr);
+          }
+          
+          .nav-grid-item .nav-label {
+            font-size: 0.7rem;
+          }
+        }
+
+        @media (max-width: 480px) {
+          .dashboard-grid-nav {
+            grid-template-columns: repeat(2, 1fr);
+          }
+        }
+      `}</style>
+    </>
   )
 }
 

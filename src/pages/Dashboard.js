@@ -1,6 +1,6 @@
-// src/pages/Dashboard.js - Integrated with grid navigation + role-specific dashboard cards
+// src/pages/Dashboard.js - REMOVED grid navigation (now in Navigation.js)
 import React, { useState, useEffect } from 'react'
-import { useNavigate, useLocation } from 'react-router-dom'
+import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../hooks/useAuth'
 import { db } from '../utils/supabase'
 import '../styles/global.css';
@@ -8,104 +8,13 @@ import '../styles/global.css';
 const Dashboard = () => {
   const { profile, hasRole, user, loading: authLoading } = useAuth()
   const navigate = useNavigate()
-  const location = useLocation()
   const [profileStats, setProfileStats] = useState({
     completionPercentage: 0,
     loading: true
   })
   const [profileError, setProfileError] = useState(null)
-  const [activeNavTab, setActiveNavTab] = useState('dashboard')
 
-  // Set active tab based on current route
-  useEffect(() => {
-    const path = location.pathname
-    if (path === '/app' || path === '/app/') {
-      setActiveNavTab('dashboard')
-    } else if (path.includes('/match-requests')) {
-      setActiveNavTab('match-requests')
-    } else if (path.includes('/find-matches')) {
-      setActiveNavTab('find-matches')
-    } else if (path.includes('/find-peer-support')) {
-      setActiveNavTab('find-peer-support')
-    } else if (path.includes('/property-search')) {
-      setActiveNavTab('property-search')
-    } else if (path.includes('/find-employers')) {
-      setActiveNavTab('find-employers')
-    } else if (path.includes('/messages')) {
-      setActiveNavTab('messages')
-    } else if (path.includes('/profile')) {
-      setActiveNavTab('profile')
-    } else if (path.includes('/settings')) {
-      setActiveNavTab('settings')
-    } else if (path.includes('/peer-dashboard')) {
-      setActiveNavTab('peer-dashboard')
-    } else if (path.includes('/properties')) {
-      setActiveNavTab('properties')
-    } else if (path.includes('/employers')) {
-      setActiveNavTab('employers')
-    }
-  }, [location.pathname])
-
-  // Get navigation items for grid
-  const getNavigationItems = () => {
-    const allItems = [
-      { id: 'dashboard', label: 'Dashboard', icon: '📊', path: '/app', showAlways: true },
-      { id: 'match-requests', label: 'Connections', icon: '🤝', path: '/app/match-requests', showAlways: true, className: 'nav-connections' },
-      { id: 'find-matches', label: 'Find Roommates', icon: '🔍', path: '/app/find-matches', roles: ['applicant'], className: 'nav-housing-seeker' },
-      { id: 'find-peer-support', label: 'Find Support', icon: '👥', path: '/app/find-peer-support', roles: ['applicant'], className: 'nav-peer-support' },
-      { id: 'property-search', label: 'Find Housing', icon: '🏠', path: '/app/property-search', roles: ['applicant'], className: 'nav-property-owner' },
-      { id: 'find-employers', label: 'Find Employment', icon: '💼', path: '/app/find-employers', roles: ['applicant'], className: 'nav-employer' },
-      { id: 'messages', label: 'Messages', icon: '💬', path: '/app/messages', showAlways: true },
-      { id: 'profile', label: 'My Profile', icon: '👤', path: '/app/profile', showAlways: true },
-      { id: 'settings', label: 'Settings', icon: '⚙️', path: '/app/settings', showAlways: true }
-    ]
-
-    // Filter items based on user roles
-    const visibleItems = allItems.filter(item => {
-      if (item.showAlways) return true
-      if (item.roles && typeof hasRole === 'function') {
-        return item.roles.some(role => hasRole(role))
-      }
-      return false
-    })
-
-    // Add role-specific items that aren't in the main list
-    if (typeof hasRole === 'function') {
-      if (hasRole('peer')) {
-        const peerItem = { id: 'peer-dashboard', label: 'Peer Dashboard', icon: '👥', path: '/app/peer-dashboard', className: 'nav-peer-support' }
-        const messagesIndex = visibleItems.findIndex(item => item.id === 'messages')
-        if (messagesIndex > -1) {
-          visibleItems.splice(messagesIndex, 0, peerItem)
-        } else {
-          visibleItems.push(peerItem)
-        }
-      }
-      
-      if (hasRole('landlord')) {
-        const propertiesItem = { id: 'properties', label: 'My Properties', icon: '🏢', path: '/app/properties', className: 'nav-property-owner' }
-        const messagesIndex = visibleItems.findIndex(item => item.id === 'messages')
-        if (messagesIndex > -1) {
-          visibleItems.splice(messagesIndex, 0, propertiesItem)
-        } else {
-          visibleItems.push(propertiesItem)
-        }
-      }
-      
-      if (hasRole('employer')) {
-        const employersItem = { id: 'employers', label: 'My Companies', icon: '🏢', path: '/app/employers', className: 'nav-employer' }
-        const messagesIndex = visibleItems.findIndex(item => item.id === 'messages')
-        if (messagesIndex > -1) {
-          visibleItems.splice(messagesIndex, 0, employersItem)
-        } else {
-          visibleItems.push(employersItem)
-        }
-      }
-    }
-    
-    return visibleItems
-  }
-
-  // Calculate profile completeness (same as before)
+  // Calculate profile completeness
   useEffect(() => {
     let isMounted = true;
     let timeoutId = null;
@@ -256,7 +165,7 @@ const Dashboard = () => {
     }
   }, [user, profile, hasRole, authLoading])
 
-  // Dashboard cards - these are the detailed cards with descriptions (DIFFERENT from navigation)
+  // Dashboard cards - these are the detailed cards with descriptions
   const getDashboardCards = () => {
     const cards = []
     
@@ -354,11 +263,6 @@ const Dashboard = () => {
     )
     
     return cards
-  }
-
-  const handleNavClick = (item) => {
-    setActiveNavTab(item.id)
-    navigate(item.path)
   }
 
   const handleCardClick = (card) => {
@@ -459,21 +363,7 @@ const Dashboard = () => {
   }
 
   return (
-    <div>
-      {/* Grid Navigation - Replaces the horizontal scrolling navigation */}
-      <nav className="dashboard-grid-nav">
-        {getNavigationItems().map(item => (
-          <button
-            key={item.id}
-            className={`nav-grid-item ${item.className || ''} ${activeNavTab === item.id ? 'active' : ''}`}
-            onClick={() => handleNavClick(item)}
-          >
-            <span className="nav-icon">{item.icon}</span>
-            <span className="nav-label">{item.label}</span>
-          </button>
-        ))}
-      </nav>
-      
+    <div>      
       {getRoleSpecificWelcome()}
       
       {/* Dashboard Cards - These remain as detailed content cards */}
@@ -523,104 +413,6 @@ const Dashboard = () => {
           </div>
         </div>
       )}
-
-      {/* Grid Navigation Styles */}
-      <style jsx>{`
-        .dashboard-grid-nav {
-          display: grid;
-          grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
-          gap: 8px;
-          background: white;
-          border-radius: 12px;
-          padding: 12px;
-          box-shadow: 0 2px 10px rgba(0,0,0,0.1);
-          margin-bottom: 2rem;
-        }
-
-        .nav-grid-item {
-          display: flex;
-          flex-direction: column;
-          align-items: center;
-          padding: 12px 8px;
-          border-radius: 8px;
-          border: 2px solid transparent;
-          background: #f9fafb;
-          color: #6b7280;
-          transition: all 0.2s ease;
-          cursor: pointer;
-        }
-
-        .nav-grid-item:hover {
-          transform: translateY(-2px);
-          box-shadow: 0 4px 12px rgba(0,0,0,0.1);
-        }
-
-        .nav-grid-item.active {
-          color: white;
-          border-color: currentColor;
-        }
-
-        .nav-grid-item .nav-icon {
-          font-size: 1.5rem;
-          margin-bottom: 4px;
-        }
-
-        .nav-grid-item .nav-label {
-          font-size: 0.75rem;
-          font-weight: 600;
-          text-align: center;
-          line-height: 1.2;
-        }
-
-        /* Role-specific navigation colors */
-        .nav-housing-seeker:hover,
-        .nav-housing-seeker.active {
-          background: #8b5cf6; /* Purple */
-        }
-
-        .nav-peer-support:hover,
-        .nav-peer-support.active {
-          background: #3b82f6; /* Blue */
-        }
-
-        .nav-employer:hover,
-        .nav-employer.active {
-          background: #ef4444; /* Red */
-        }
-
-        .nav-property-owner:hover,
-        .nav-property-owner.active {
-          background: #f59e0b; /* Yellow/Orange */
-        }
-
-        .nav-connections:hover,
-        .nav-connections.active {
-          background: #374151; /* Dark gray/black */
-        }
-
-        /* Default hover for items without specific colors */
-        .nav-grid-item:not(.nav-housing-seeker):not(.nav-peer-support):not(.nav-employer):not(.nav-property-owner):not(.nav-connections):hover,
-        .nav-grid-item:not(.nav-housing-seeker):not(.nav-peer-support):not(.nav-employer):not(.nav-property-owner):not(.nav-connections).active {
-          background: #6366f1; /* Default purple */
-        }
-
-        /* Mobile responsive */
-        @media (max-width: 768px) {
-          .dashboard-grid-nav {
-            grid-template-columns: repeat(3, 1fr);
-          }
-          
-          .nav-grid-item .nav-label {
-            font-size: 0.7rem;
-          }
-        }
-
-        @media (max-width: 480px) {
-          .dashboard-grid-nav {
-            grid-template-columns: repeat(2, 1fr);
-          }
-        }
-      `}</style>
     </div>
   )
 }
