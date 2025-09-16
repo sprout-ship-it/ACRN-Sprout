@@ -62,7 +62,7 @@ async loadUserProfile(userId) {
     const result = await db.applicantForms.getByUserId(userId);
     
     if (result.success !== false && result.data) {
-      const transformedProfile = this.transformProfileForAlgorithm(result.data);
+      const transformedProfile = transformProfileForAlgorithm(result.data);
       console.log('✅ User profile loaded:', transformedProfile);
       return transformedProfile;
     } else {
@@ -197,7 +197,7 @@ async loadUserProfile(userId) {
 
       // Transform candidates to algorithm format
       candidates = candidates
-        .map(candidate => this.transformProfileForAlgorithm(candidate))
+        .map(candidate => transformProfileForAlgorithm(candidate))
         .filter(candidate => candidate && candidate.profile_completed);
 
       console.log(`🔄 Transformed ${candidates.length} completed profiles`);
