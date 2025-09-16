@@ -1,9 +1,9 @@
 // src/utils/matching/matchingService.js
 
 import { db } from '../supabase';
-import { useMatchingProfile } from '../../hooks/useSupabase';
-import { calculateDetailedCompatibility } from './algorithm';  // ← Fix: Import from algorithm
-import { transformProfileForAlgorithm } from './dataTransform';  // ← Fix: Import from dataTransform  
+// Remove this line: import { useMatchingProfile } from '../../hooks/useSupabase';
+import { calculateDetailedCompatibility } from './algorithm';
+import { transformProfileForAlgorithm } from './dataTransform';
 import { generateDetailedFlags } from './compatibility';
 import { 
   COMPATIBILITY_WEIGHTS,
@@ -52,27 +52,27 @@ class MatchingService {
     };
   }
 
-  /**
-   * Load user's own matching profile
-   */
-  async loadUserProfile(userId) {
-    try {
-      console.log('🔍 Loading user matching profile...');
-      const { getMatchingProfile } = useMatchingProfile();
-      const result = await getMatchingProfile(userId);
-      
-      if (result.success && result.data) {
-        const transformedProfile = this.transformProfileForAlgorithm(result.data);
-        console.log('✅ User profile loaded:', transformedProfile);
-        return transformedProfile;
-      } else {
-        throw new Error('Please complete your matching profile first');
-      }
-    } catch (err) {
-      console.error('💥 Error loading user profile:', err);
-      throw err;
+/**
+ * Load user's own matching profile
+ */
+async loadUserProfile(userId) {
+  try {
+    console.log('🔍 Loading user matching profile...');
+    // Use direct database call instead of hook
+    const result = await db.applicantForms.getByUserId(userId);
+    
+    if (result.success !== false && result.data) {
+      const transformedProfile = this.transformProfileForAlgorithm(result.data);
+      console.log('✅ User profile loaded:', transformedProfile);
+      return transformedProfile;
+    } else {
+      throw new Error('Please complete your matching profile first');
     }
+  } catch (err) {
+    console.error('💥 Error loading user profile:', err);
+    throw err;
   }
+}
 
   /**
    * Load exclusions (users already connected or with pending requests)
@@ -177,8 +177,7 @@ class MatchingService {
       ]);
 
       // Get active profiles from database
-      const { getActiveProfiles } = useMatchingProfile();
-      const result = await getActiveProfiles();
+      const result = await db.applicantForms.getActiveProfiles();
       
       if (!result.success) {
         throw new Error(result.error || 'Failed to load profiles');
