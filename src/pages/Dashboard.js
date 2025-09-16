@@ -1,6 +1,6 @@
-// src/components/dashboard/Dashboard.js - Updated with modified card layout
+// src/pages/Dashboard.js - Updated with modified card layout, icons, and navigation tabs
 import React, { useState, useEffect } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, Link } from 'react-router-dom'
 import { useAuth } from '../hooks/useAuth'
 import { db } from '../utils/supabase'
 import '../styles/global.css';
@@ -12,12 +12,17 @@ const Dashboard = () => {
     completionPercentage: 0,
     loading: true
   })
+  const [activeNavTab, setActiveNavTab] = useState('dashboard')
 
   // Calculate profile completeness for display only
   useEffect(() => {
+    let isMounted = true; // Flag to prevent state updates after unmounting
+    
     const calculateProfileStats = async () => {
       if (!user || !profile?.roles?.length) {
-        setProfileStats({ completionPercentage: 0, loading: false })
+        if (isMounted) {
+          setProfileStats({ completionPercentage: 0, loading: false })
+        }
         return
       }
 
@@ -28,7 +33,7 @@ const Dashboard = () => {
         if (hasRole('applicant')) {
           const { data: applicantProfile } = await db.applicantForms.getByUserId(user.id)
           
-          if (applicantProfile) {
+          if (applicantProfile && isMounted) {
             let completedFields = 0
             const totalFields = 8
             
@@ -48,7 +53,7 @@ const Dashboard = () => {
         else if (hasRole('peer')) {
           const { data: peerProfile } = await db.peerSupportProfiles.getByUserId(user.id)
           
-          if (peerProfile) {
+          if (peerProfile && isMounted) {
             let completedFields = 0
             const totalFields = 6
             
@@ -70,7 +75,7 @@ const Dashboard = () => {
         else if (hasRole('employer')) {
           const { data: employerProfiles } = await db.employerProfiles.getByUserId(user.id)
           
-          if (employerProfiles && employerProfiles.length > 0) {
+          if (employerProfiles && employerProfiles.length > 0 && isMounted) {
             const employerProfile = employerProfiles[0]
             let completedFields = 0
             const totalFields = 8
@@ -90,18 +95,27 @@ const Dashboard = () => {
           }
         }
 
-        setProfileStats({
-          completionPercentage,
-          loading: false
-        })
+        if (isMounted) {
+          setProfileStats({
+            completionPercentage,
+            loading: false
+          })
+        }
 
       } catch (error) {
         console.error('Error calculating profile stats:', error)
-        setProfileStats({ completionPercentage: 0, loading: false })
+        if (isMounted) {
+          setProfileStats({ completionPercentage: 0, loading: false })
+        }
       }
     }
 
     calculateProfileStats()
+
+    // Cleanup function to prevent state updates after unmounting
+    return () => {
+      isMounted = false
+    }
   }, [user, profile, hasRole])
 
   // Updated dashboard cards - removed Profile and Settings cards
@@ -125,7 +139,7 @@ const Dashboard = () => {
           description: 'Connect with experienced peer support specialists', 
           className: 'role-card-peer-support',
           path: '/app/find-peer-support',
-          icon: '🤝'
+          icon: '👥' // Changed from 🤝 to 👥
         },
         { 
           id: 'find-employers', 
@@ -154,7 +168,7 @@ const Dashboard = () => {
           description: 'Manage your peer support services and clients', 
           className: 'role-card-peer-support',
           path: '/app/peer-dashboard',
-          icon: '👥'
+          icon: '👥' // Changed from 🤝 to 👥
         }
       )
     }
@@ -200,11 +214,59 @@ const Dashboard = () => {
     return cards
   }
 
+  // Dashboard navigation tabs
+  const getNavigationTabs = () => {
+    const tabs = [
+      { id: 'dashboard', label: 'Dashboard', icon: '📊', path: '/app' }
+    ]
+    
+    // Add role-specific tabs
+    if (hasRole('applicant')) {
+      tabs.push(
+        { id: 'find-matches', label: 'Find Roommates', icon: '🔍', path: '/app/find-matches' },
+        { id: 'find-peer-support', label: 'Find Support', icon: '👥', path: '/app/find-peer-support' },
+        { id: 'property-search', label: 'Find Housing', icon: '🏠', path: '/app/property-search' },
+        { id: 'find-employers', label: 'Find Employment', icon: '💼', path: '/app/find-employers' }
+      )
+    }
+    
+    if (hasRole('peer')) {
+      tabs.push(
+        { id: 'peer-dashboard', label: 'Peer Dashboard', icon: '👥', path: '/app/peer-dashboard' }
+      )
+    }
+    
+    if (hasRole('landlord')) {
+      tabs.push(
+        { id: 'properties', label: 'My Properties', icon: '🏢', path: '/app/properties' }
+      )
+    }
+    
+    if (hasRole('employer')) {
+      tabs.push(
+        { id: 'employers', label: 'My Companies', icon: '🏢', path: '/app/employers' }
+      )
+    }
+    
+    // Common tabs for all users
+    tabs.push(
+      { id: 'match-requests', label: 'Connections', icon: '🤝', path: '/app/match-requests' },
+      { id: 'settings', label: 'Settings', icon: '⚙️', path: '/app/settings' }
+    )
+    
+    return tabs
+  }
+
   const handleCardClick = (card) => {
     console.log('🔄 Dashboard card clicked:', card.label, 'Path:', card.path)
     if (card.path) {
       navigate(card.path)
     }
+  }
+
+  const handleTabClick = (tab) => {
+    setActiveNavTab(tab.id)
+    navigate(tab.path)
   }
 
   // Streamlined welcome message without progress bar
@@ -247,6 +309,25 @@ const Dashboard = () => {
 
   return (
     <div>
+      {/* Dashboard Navigation Tabs */}
+      <div className="dashboard-nav mb-5">
+        <div className="navigation">
+          <ul className="nav-list">
+            {getNavigationTabs().map(tab => (
+              <li key={tab.id} className="nav-item">
+                <button
+                  className={`nav-button ${activeNavTab === tab.id ? 'active' : ''}`}
+                  onClick={() => handleTabClick(tab)}
+                >
+                  <span className="nav-icon">{tab.icon}</span>
+                  <span>{tab.label}</span>
+                </button>
+              </li>
+            ))}
+          </ul>
+        </div>
+      </div>
+      
       {getRoleSpecificWelcome()}
       
       {/* Main Dashboard Cards with Updated Styling */}
@@ -296,6 +377,67 @@ const Dashboard = () => {
           </div>
         </div>
       )}
+
+      {/* Add some CSS for the dashboard navigation */}
+      <style jsx>{`
+        .dashboard-nav {
+          background: white;
+          border-radius: var(--radius-lg);
+          box-shadow: var(--shadow-sm);
+          margin-bottom: 1.5rem;
+        }
+        
+        .dashboard-nav .nav-list {
+          display: flex;
+          overflow-x: auto;
+          padding: 0.5rem;
+          scrollbar-width: thin;
+        }
+        
+        .dashboard-nav .nav-item {
+          flex: 0 0 auto;
+          white-space: nowrap;
+        }
+        
+        .dashboard-nav .nav-button {
+          display: flex;
+          align-items: center;
+          gap: 0.5rem;
+          padding: 0.75rem 1rem;
+          border-radius: var(--radius-md);
+          color: var(--gray-700);
+          transition: all 0.2s ease;
+        }
+        
+        .dashboard-nav .nav-button:hover {
+          background: var(--bg-light-cream);
+        }
+        
+        .dashboard-nav .nav-button.active {
+          background: var(--primary-purple);
+          color: white;
+        }
+        
+        .dashboard-nav .nav-icon {
+          font-size: 1.25rem;
+        }
+        
+        @media (max-width: 768px) {
+          .dashboard-nav .nav-list {
+            scrollbar-width: none;
+            -ms-overflow-style: none;
+          }
+          
+          .dashboard-nav .nav-list::-webkit-scrollbar {
+            display: none;
+          }
+          
+          .dashboard-nav .nav-button {
+            padding: 0.75rem 0.75rem;
+            font-size: 0.875rem;
+          }
+        }
+      `}</style>
     </div>
   )
 }

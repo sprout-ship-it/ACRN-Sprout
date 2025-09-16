@@ -1,4 +1,4 @@
-// src/components/forms/sections/LocationPreferencesSection.js
+// src/components/features/matching/sections/LocationPreferencesSection.js
 import React from 'react';
 import PropTypes from 'prop-types';
 import { housingTypeOptions } from '../constants/matchingFormConstants';
@@ -7,10 +7,10 @@ const LocationPreferencesSection = ({
   formData,
   errors,
   loading,
-  profile,      // Added for interface consistency
+  profile,
   onInputChange,
   onArrayChange,
-  onRangeChange // Added for interface consistency
+  onRangeChange
 }) => {
   // State options for dropdown
   const stateOptions = [
@@ -132,8 +132,9 @@ const LocationPreferencesSection = ({
 
       <div className="grid-2 mb-4">
         <div className="form-group">
+          {/* ✅ UPDATED: Changed label to Total Combined Budget Maximum */}
           <label className="label">
-            Personal Budget Maximum <span className="text-red-500">*</span>
+            Total Combined Budget Maximum <span className="text-red-500">*</span>
           </label>
           <input
             className={`input ${errors.budgetMax ? 'border-red-500' : ''}`}
@@ -149,11 +150,38 @@ const LocationPreferencesSection = ({
           {errors.budgetMax && (
             <div className="text-red-500 mt-1">{errors.budgetMax}</div>
           )}
+          {/* ✅ UPDATED: Added helper text about including all income sources */}
           <div className="text-gray-500 mt-1 text-sm">
-            Your personal budget for housing costs
+            Include all sources of income and housing support
           </div>
         </div>
         
+        {/* ✅ NEW: Added minimum budget field */}
+        <div className="form-group">
+          <label className="label">
+            Minimum Budget <span className="text-red-500">*</span>
+          </label>
+          <input
+            className={`input ${errors.budgetMin ? 'border-red-500' : ''}`}
+            type="number"
+            value={formData.budgetMin || ''}
+            onChange={(e) => onInputChange('budgetMin', e.target.value)}
+            placeholder="Your minimum monthly budget"
+            disabled={loading}
+            min="0"
+            max="4500"
+            required
+          />
+          {errors.budgetMin && (
+            <div className="text-red-500 mt-1">{errors.budgetMin}</div>
+          )}
+          <div className="text-gray-500 mt-1 text-sm">
+            Lowest acceptable housing cost
+          </div>
+        </div>
+      </div>
+
+      <div className="grid-2 mb-4">
         <div className="form-group">
           <label className="label">
             Maximum Commute Time <span className="text-red-500">*</span>
@@ -176,6 +204,28 @@ const LocationPreferencesSection = ({
           {errors.maxCommute && (
             <div className="text-red-500 mt-1">{errors.maxCommute}</div>
           )}
+        </div>
+        
+        {/* ✅ NEW: Preferred number of bedrooms */}
+        <div className="form-group">
+          <label className="label">
+            Preferred Bedrooms
+          </label>
+          <select
+            className="input"
+            value={formData.preferredBedrooms || ''}
+            onChange={(e) => onInputChange('preferredBedrooms', e.target.value)}
+            disabled={loading}
+          >
+            <option value="">No preference</option>
+            <option value="1">1 bedroom</option>
+            <option value="2">2 bedrooms</option>
+            <option value="3">3 bedrooms</option>
+            <option value="4">4+ bedrooms</option>
+          </select>
+          <div className="text-gray-500 mt-1 text-sm">
+            Preferred number of bedrooms in housing
+          </div>
         </div>
       </div>
 
@@ -214,6 +264,7 @@ const LocationPreferencesSection = ({
             onChange={(e) => onInputChange('moveInDate', e.target.value)}
             disabled={loading}
             required
+            min={new Date().toISOString().split('T')[0]} // ✅ NEW: Can't select past dates
           />
           {errors.moveInDate && (
             <div className="text-red-500 mt-1">{errors.moveInDate}</div>
@@ -237,6 +288,64 @@ const LocationPreferencesSection = ({
           </select>
         </div>
       </div>
+
+      {/* ✅ NEW: Additional preferences section */}
+      <div className="form-group mb-4">
+        <h4 className="subtitle">Additional Preferences</h4>
+        <div className="grid-2 mt-3">
+          <div className="checkbox-item">
+            <input
+              type="checkbox"
+              id="furnished-preference"
+              checked={formData.furnishedPreference || false}
+              onChange={(e) => onInputChange('furnishedPreference', e.target.checked)}
+              disabled={loading}
+            />
+            <label htmlFor="furnished-preference">
+              Prefer furnished housing
+            </label>
+          </div>
+          
+          <div className="checkbox-item">
+            <input
+              type="checkbox"
+              id="pets-allowed"
+              checked={formData.petsAllowed || false}
+              onChange={(e) => onInputChange('petsAllowed', e.target.checked)}
+              disabled={loading}
+            />
+            <label htmlFor="pets-allowed">
+              Need pet-friendly housing
+            </label>
+          </div>
+          
+          <div className="checkbox-item">
+            <input
+              type="checkbox"
+              id="utilities-included"
+              checked={formData.utilitiesIncluded || false}
+              onChange={(e) => onInputChange('utilitiesIncluded', e.target.checked)}
+              disabled={loading}
+            />
+            <label htmlFor="utilities-included">
+              Prefer utilities included
+            </label>
+          </div>
+          
+          <div className="checkbox-item">
+            <input
+              type="checkbox"
+              id="accessibility-needed"
+              checked={formData.accessibilityNeeded || false}
+              onChange={(e) => onInputChange('accessibilityNeeded', e.target.checked)}
+              disabled={loading}
+            />
+            <label htmlFor="accessibility-needed">
+              Need accessibility features
+            </label>
+          </div>
+        </div>
+      </div>
     </>
   );
 };
@@ -247,21 +356,27 @@ LocationPreferencesSection.propTypes = {
     preferredState: PropTypes.string,
     targetZipCodes: PropTypes.string,
     budgetMax: PropTypes.oneOfType([PropTypes.string, PropTypes.number]),
+    budgetMin: PropTypes.oneOfType([PropTypes.string, PropTypes.number]),
     maxCommute: PropTypes.string,
     housingType: PropTypes.arrayOf(PropTypes.string),
     moveInDate: PropTypes.string,
-    leaseDuration: PropTypes.string
+    leaseDuration: PropTypes.string,
+    preferredBedrooms: PropTypes.oneOfType([PropTypes.string, PropTypes.number]),
+    furnishedPreference: PropTypes.bool,
+    petsAllowed: PropTypes.bool,
+    utilitiesIncluded: PropTypes.bool,
+    accessibilityNeeded: PropTypes.bool
   }).isRequired,
   errors: PropTypes.object.isRequired,
   loading: PropTypes.bool.isRequired,
-  profile: PropTypes.shape({               // Added for interface consistency
+  profile: PropTypes.shape({
     first_name: PropTypes.string,
     last_name: PropTypes.string,
     email: PropTypes.string
   }),
   onInputChange: PropTypes.func.isRequired,
   onArrayChange: PropTypes.func.isRequired,
-  onRangeChange: PropTypes.func.isRequired  // Added for interface consistency
+  onRangeChange: PropTypes.func.isRequired
 };
 
 LocationPreferencesSection.defaultProps = {
