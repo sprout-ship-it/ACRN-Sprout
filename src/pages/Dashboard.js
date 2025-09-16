@@ -1,4 +1,4 @@
-// src/pages/Dashboard.js - Updated with modified card layout, icons, and navigation tabs
+// src/pages/Dashboard.js - Updated with consolidated navigation in specified order
 import React, { useState, useEffect } from 'react'
 import { useNavigate, Link } from 'react-router-dom'
 import { useAuth } from '../hooks/useAuth'
@@ -6,20 +6,43 @@ import { db } from '../utils/supabase'
 import '../styles/global.css';
 
 const Dashboard = () => {
-  const { profile, hasRole, user } = useAuth()
+  const { profile, hasRole, user, loading: authLoading } = useAuth()
   const navigate = useNavigate()
   const [profileStats, setProfileStats] = useState({
     completionPercentage: 0,
     loading: true
   })
   const [activeNavTab, setActiveNavTab] = useState('dashboard')
+  const [profileError, setProfileError] = useState(null)
 
   // Calculate profile completeness for display only
   useEffect(() => {
     let isMounted = true; // Flag to prevent state updates after unmounting
     
     const calculateProfileStats = async () => {
-      if (!user || !profile?.roles?.length) {
+      // Reset error state
+      if (isMounted) {
+        setProfileError(null)
+      }
+
+      // Wait for auth to finish loading and ensure we have basic user data
+      if (authLoading || !user) {
+        if (isMounted) {
+          setProfileStats({ completionPercentage: 0, loading: true })
+        }
+        return
+      }
+
+      // If profile is still loading or null after auth is complete, show loading state
+      if (!profile) {
+        if (isMounted) {
+          setProfileStats({ completionPercentage: 0, loading: true })
+        }
+        return
+      }
+
+      // If profile exists but has no roles, set completion to 0
+      if (!profile.roles?.length) {
         if (isMounted) {
           setProfileStats({ completionPercentage: 0, loading: false })
         }
@@ -29,42 +52,52 @@ const Dashboard = () => {
       try {
         let completionPercentage = 0
 
-        // Check role-specific profile completion
+        // Check role-specific profile completion with better error handling
         if (hasRole('applicant')) {
-          const { data: applicantProfile } = await db.applicantForms.getByUserId(user.id)
-          
-          if (applicantProfile && isMounted) {
-            let completedFields = 0
-            const totalFields = 8
+          try {
+            const { data: applicantProfile } = await db.applicantForms.getByUserId(user.id)
             
-            if (applicantProfile.date_of_birth) completedFields++
-            if (applicantProfile.phone) completedFields++
-            if (applicantProfile.about_me) completedFields++
-            if (applicantProfile.looking_for) completedFields++
-            if (applicantProfile.recovery_stage) completedFields++
-            if (applicantProfile.budget_max) completedFields++
-            if (applicantProfile.preferred_city && applicantProfile.preferred_state) completedFields++
-            if (applicantProfile.interests?.length > 0) completedFields++
-            
-            completionPercentage = Math.round((completedFields / totalFields) * 100)
+            if (applicantProfile && isMounted) {
+              let completedFields = 0
+              const totalFields = 8
+              
+              if (applicantProfile.date_of_birth) completedFields++
+              if (applicantProfile.phone) completedFields++
+              if (applicantProfile.about_me) completedFields++
+              if (applicantProfile.looking_for) completedFields++
+              if (applicantProfile.recovery_stage) completedFields++
+              if (applicantProfile.budget_max) completedFields++
+              if (applicantProfile.preferred_city && applicantProfile.preferred_state) completedFields++
+              if (applicantProfile.interests?.length > 0) completedFields++
+              
+              completionPercentage = Math.round((completedFields / totalFields) * 100)
+            }
+          } catch (error) {
+            console.warn('Error loading applicant profile:', error)
+            // Continue with default completion percentage
           }
         }
         
         else if (hasRole('peer')) {
-          const { data: peerProfile } = await db.peerSupportProfiles.getByUserId(user.id)
-          
-          if (peerProfile && isMounted) {
-            let completedFields = 0
-            const totalFields = 6
+          try {
+            const { data: peerProfile } = await db.peerSupportProfiles.getByUserId(user.id)
             
-            if (peerProfile.age) completedFields++
-            if (peerProfile.phone) completedFields++
-            if (peerProfile.bio) completedFields++
-            if (peerProfile.specialties?.length > 0) completedFields++
-            if (peerProfile.time_in_recovery) completedFields++
-            if (peerProfile.supported_recovery_methods?.length > 0) completedFields++
-            
-            completionPercentage = Math.round((completedFields / totalFields) * 100)
+            if (peerProfile && isMounted) {
+              let completedFields = 0
+              const totalFields = 6
+              
+              if (peerProfile.age) completedFields++
+              if (peerProfile.phone) completedFields++
+              if (peerProfile.bio) completedFields++
+              if (peerProfile.specialties?.length > 0) completedFields++
+              if (peerProfile.time_in_recovery) completedFields++
+              if (peerProfile.supported_recovery_methods?.length > 0) completedFields++
+              
+              completionPercentage = Math.round((completedFields / totalFields) * 100)
+            }
+          } catch (error) {
+            console.warn('Error loading peer profile:', error)
+            // Continue with default completion percentage
           }
         }
         
@@ -73,24 +106,29 @@ const Dashboard = () => {
         }
 
         else if (hasRole('employer')) {
-          const { data: employerProfiles } = await db.employerProfiles.getByUserId(user.id)
-          
-          if (employerProfiles && employerProfiles.length > 0 && isMounted) {
-            const employerProfile = employerProfiles[0]
-            let completedFields = 0
-            const totalFields = 8
+          try {
+            const { data: employerProfiles } = await db.employerProfiles.getByUserId(user.id)
             
-            if (employerProfile.company_name) completedFields++
-            if (employerProfile.industry) completedFields++
-            if (employerProfile.description) completedFields++
-            if (employerProfile.recovery_friendly_features?.length > 0) completedFields++
-            if (employerProfile.job_types_available?.length > 0) completedFields++
-            if (employerProfile.benefits_offered?.length > 0) completedFields++
-            if (employerProfile.hiring_practices) completedFields++
-            if (employerProfile.profile_completed) completedFields++
-            
-            completionPercentage = Math.round((completedFields / totalFields) * 100)
-          } else {
+            if (employerProfiles && employerProfiles.length > 0 && isMounted) {
+              const employerProfile = employerProfiles[0]
+              let completedFields = 0
+              const totalFields = 8
+              
+              if (employerProfile.company_name) completedFields++
+              if (employerProfile.industry) completedFields++
+              if (employerProfile.description) completedFields++
+              if (employerProfile.recovery_friendly_features?.length > 0) completedFields++
+              if (employerProfile.job_types_available?.length > 0) completedFields++
+              if (employerProfile.benefits_offered?.length > 0) completedFields++
+              if (employerProfile.hiring_practices) completedFields++
+              if (employerProfile.profile_completed) completedFields++
+              
+              completionPercentage = Math.round((completedFields / totalFields) * 100)
+            } else {
+              completionPercentage = profile?.phone ? 20 : 0
+            }
+          } catch (error) {
+            console.warn('Error loading employer profile:', error)
             completionPercentage = profile?.phone ? 20 : 0
           }
         }
@@ -106,6 +144,7 @@ const Dashboard = () => {
         console.error('Error calculating profile stats:', error)
         if (isMounted) {
           setProfileStats({ completionPercentage: 0, loading: false })
+          setProfileError('Unable to load profile information. Please refresh the page.')
         }
       }
     }
@@ -116,11 +155,16 @@ const Dashboard = () => {
     return () => {
       isMounted = false
     }
-  }, [user, profile, hasRole])
+  }, [user, profile, hasRole, authLoading]) // Added authLoading to dependencies
 
   // Updated dashboard cards - removed Profile and Settings cards
   const getDashboardCards = () => {
     const cards = []
+    
+    // Only show role-specific cards if hasRole is available and user is loaded
+    if (!user || !hasRole || typeof hasRole !== 'function') {
+      return cards
+    }
     
     // Role-specific primary actions
     if (hasRole('applicant')) {
@@ -199,7 +243,7 @@ const Dashboard = () => {
       )
     }
     
-    // Connections card with new styling - black border, grey background
+    // Connections card with new styling - black border, grey background (always show if user exists)
     cards.push(
       { 
         id: 'match-requests', 
@@ -214,47 +258,67 @@ const Dashboard = () => {
     return cards
   }
 
-  // Dashboard navigation tabs
+  // Consolidated navigation tabs in specified order
   const getNavigationTabs = () => {
-    const tabs = [
-      { id: 'dashboard', label: 'Dashboard', icon: '📊', path: '/app' }
+    const allTabs = [
+      { id: 'dashboard', label: 'Dashboard', icon: '📊', path: '/app', showAlways: true },
+      { id: 'match-requests', label: 'Connections', icon: '🤝', path: '/app/match-requests', showAlways: true },
+      { id: 'find-matches', label: 'Find Roommates', icon: '🔍', path: '/app/find-matches', roles: ['applicant'] },
+      { id: 'find-peer-support', label: 'Find Support', icon: '👥', path: '/app/find-peer-support', roles: ['applicant'] },
+      { id: 'property-search', label: 'Find Housing', icon: '🏠', path: '/app/property-search', roles: ['applicant'] },
+      { id: 'find-employers', label: 'Find Employment', icon: '💼', path: '/app/find-employers', roles: ['applicant'] },
+      { id: 'messages', label: 'Messages', icon: '💬', path: '/app/messages', showAlways: true },
+      { id: 'profile', label: 'My Profile', icon: '👤', path: '/app/profile', showAlways: true },
+      { id: 'settings', label: 'Settings', icon: '⚙️', path: '/app/settings', showAlways: true }
     ]
-    
-    // Add role-specific tabs
-    if (hasRole('applicant')) {
-      tabs.push(
-        { id: 'find-matches', label: 'Find Roommates', icon: '🔍', path: '/app/find-matches' },
-        { id: 'find-peer-support', label: 'Find Support', icon: '👥', path: '/app/find-peer-support' },
-        { id: 'property-search', label: 'Find Housing', icon: '🏠', path: '/app/property-search' },
-        { id: 'find-employers', label: 'Find Employment', icon: '💼', path: '/app/find-employers' }
-      )
+
+    // Filter tabs based on user roles and showAlways flag
+    // Use defensive programming to handle cases where hasRole might not be available yet
+    const visibleTabs = allTabs.filter(tab => {
+      if (tab.showAlways) return true
+      if (tab.roles && typeof hasRole === 'function') {
+        return tab.roles.some(role => hasRole(role))
+      }
+      return false
+    })
+
+    // Add role-specific tabs that aren't in the main list (only if hasRole is available)
+    if (typeof hasRole === 'function') {
+      if (hasRole('peer')) {
+        // Insert peer dashboard after find employment but before messages
+        const peerTab = { id: 'peer-dashboard', label: 'Peer Dashboard', icon: '👥', path: '/app/peer-dashboard' }
+        const messagesIndex = visibleTabs.findIndex(tab => tab.id === 'messages')
+        if (messagesIndex > -1) {
+          visibleTabs.splice(messagesIndex, 0, peerTab)
+        } else {
+          visibleTabs.push(peerTab)
+        }
+      }
+      
+      if (hasRole('landlord')) {
+        // Insert properties after find employment but before messages
+        const propertiesTab = { id: 'properties', label: 'My Properties', icon: '🏢', path: '/app/properties' }
+        const messagesIndex = visibleTabs.findIndex(tab => tab.id === 'messages')
+        if (messagesIndex > -1) {
+          visibleTabs.splice(messagesIndex, 0, propertiesTab)
+        } else {
+          visibleTabs.push(propertiesTab)
+        }
+      }
+      
+      if (hasRole('employer')) {
+        // Insert employers after find employment but before messages
+        const employersTab = { id: 'employers', label: 'My Companies', icon: '🏢', path: '/app/employers' }
+        const messagesIndex = visibleTabs.findIndex(tab => tab.id === 'messages')
+        if (messagesIndex > -1) {
+          visibleTabs.splice(messagesIndex, 0, employersTab)
+        } else {
+          visibleTabs.push(employersTab)
+        }
+      }
     }
     
-    if (hasRole('peer')) {
-      tabs.push(
-        { id: 'peer-dashboard', label: 'Peer Dashboard', icon: '👥', path: '/app/peer-dashboard' }
-      )
-    }
-    
-    if (hasRole('landlord')) {
-      tabs.push(
-        { id: 'properties', label: 'My Properties', icon: '🏢', path: '/app/properties' }
-      )
-    }
-    
-    if (hasRole('employer')) {
-      tabs.push(
-        { id: 'employers', label: 'My Companies', icon: '🏢', path: '/app/employers' }
-      )
-    }
-    
-    // Common tabs for all users
-    tabs.push(
-      { id: 'match-requests', label: 'Connections', icon: '🤝', path: '/app/match-requests' },
-      { id: 'settings', label: 'Settings', icon: '⚙️', path: '/app/settings' }
-    )
-    
-    return tabs
+    return visibleTabs
   }
 
   const handleCardClick = (card) => {
@@ -271,6 +335,35 @@ const Dashboard = () => {
 
   // Streamlined welcome message without progress bar
   const getRoleSpecificWelcome = () => {
+    // Show loading state if auth is still loading
+    if (authLoading || !user) {
+      return (
+        <div className="welcome-section">
+          <div className="alert alert-info">
+            <div style={{ textAlign: 'center' }}>
+              <strong>Loading your dashboard...</strong>
+            </div>
+          </div>
+        </div>
+      )
+    }
+
+    // Show minimal welcome if profile hasn't loaded yet
+    if (!profile) {
+      return (
+        <div className="welcome-section">
+          <h1 className="welcome-title">
+            Welcome back!
+          </h1>
+          <div className="alert alert-info">
+            <div style={{ textAlign: 'center' }}>
+              <strong>Loading your profile...</strong>
+            </div>
+          </div>
+        </div>
+      )
+    }
+
     const roleLabels = profile?.roles?.map(role => {
       switch(role) {
         case 'applicant': return 'Housing Seeker'
@@ -290,8 +383,17 @@ const Dashboard = () => {
           <strong>Your Role{profile?.roles?.length > 1 ? 's' : ''}:</strong> {roleLabels}
         </p>
         
+        {/* Show error if profile stats failed to load */}
+        {profileError && (
+          <div className="alert alert-warning">
+            <div style={{ textAlign: 'center' }}>
+              <strong>⚠️ {profileError}</strong>
+            </div>
+          </div>
+        )}
+        
         {/* Simple completion status without progress bar */}
-        {!profileStats.loading && profileStats.completionPercentage < 100 && (
+        {!profileStats.loading && !profileError && profileStats.completionPercentage < 100 && (
           <div className="alert alert-info">
             <div style={{ textAlign: 'center' }}>
               <strong>Profile Completion: {profileStats.completionPercentage}%</strong>
@@ -309,7 +411,7 @@ const Dashboard = () => {
 
   return (
     <div>
-      {/* Dashboard Navigation Tabs */}
+      {/* Consolidated Navigation Tabs in Specified Order */}
       <div className="dashboard-nav mb-5">
         <div className="navigation">
           <ul className="nav-list">
@@ -356,7 +458,7 @@ const Dashboard = () => {
         </div>
       </div>
       
-      {/* Multi-Role Access Summary */}
+      {/* Multi-Role Access Summary - only show when profile is fully loaded */}
       {profile?.roles?.length > 1 && (
         <div className="card mt-5">
           <h3 className="card-title">Your Multi-Role Access</h3>
@@ -378,7 +480,7 @@ const Dashboard = () => {
         </div>
       )}
 
-      {/* Add some CSS for the dashboard navigation */}
+      {/* Navigation Styles */}
       <style jsx>{`
         .dashboard-nav {
           background: white;
