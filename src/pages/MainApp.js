@@ -17,7 +17,7 @@ import PeerSupportProfileForm from '../components/features/peer-support/PeerSupp
 
 // Dashboard Components  
 import Dashboard from './Dashboard'
-import MatchFinder from '../components/features/matching/MatchFinder'
+import RoommateDiscovery from '../components/features/matching/RoommateDiscovery'
 import MatchRequests from '../components/features/matching/MatchRequests'
 import PropertyManagement from '../components/features/property/PropertyManagement'
 import PeerSupportFinder from '../components/features/peer-support/PeerSupportFinder'
@@ -350,7 +350,7 @@ if (!profileSetup.hasComprehensiveProfile && !profileJustCompleted) {
                   </div>
                 } />
                 
-                <Route path="/find-matches" element={<MatchFinder />} />
+                <Route path="/find-matches" element={<RoommateDiscovery />} />
                 <Route path="/find-peer-support" element={<PeerSupportFinder />} />
                 {/* ✅ NEW: Added employer finder route for applicants */}
                 <Route path="/find-employers" element={<EmployerFinder />} />
