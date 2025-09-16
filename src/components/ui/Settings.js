@@ -1,9 +1,9 @@
-// src/components/Settings.js
+// src/components/ui/Settings.js - Updated with registrant_forms integration
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
-import { db } from '../../utils/supabase';
-import '../../styles/global.css';  // ← Fixed: was '../styles/global.css'
+import { db, supabase } from '../../utils/supabase';
+import '../../styles/global.css';
 
 const Settings = () => {
   const { user, profile, updateProfile, signOut, hasRole } = useAuth();
@@ -12,7 +12,9 @@ const Settings = () => {
   const [saving, setSaving] = useState(false);
   const [activeTab, setActiveTab] = useState('privacy');
   const [successMessage, setSuccessMessage] = useState('');
+  const [errorMessage, setErrorMessage] = useState('');
   const [userSettings, setUserSettings] = useState(null);
+  const [registrantForm, setRegistrantForm] = useState(null);
 
   // Privacy Settings State
   const [privacySettings, setPrivacySettings] = useState({
@@ -36,6 +38,10 @@ const Settings = () => {
     lastName: '',
     email: '',
     phone: '',
+    city: '',
+    state: '',
+    zip: '',
+    dateOfBirth: '',
     currentPassword: '',
     newPassword: '',
     confirmPassword: ''
@@ -53,25 +59,88 @@ const Settings = () => {
     phoneNumber: ''
   });
 
+  // State options for dropdown
+  const stateOptions = [
+    { value: '', label: 'Select State' },
+    { value: 'AL', label: 'Alabama' },
+    { value: 'AK', label: 'Alaska' },
+    { value: 'AZ', label: 'Arizona' },
+    { value: 'AR', label: 'Arkansas' },
+    { value: 'CA', label: 'California' },
+    { value: 'CO', label: 'Colorado' },
+    { value: 'CT', label: 'Connecticut' },
+    { value: 'DE', label: 'Delaware' },
+    { value: 'FL', label: 'Florida' },
+    { value: 'GA', label: 'Georgia' },
+    { value: 'HI', label: 'Hawaii' },
+    { value: 'ID', label: 'Idaho' },
+    { value: 'IL', label: 'Illinois' },
+    { value: 'IN', label: 'Indiana' },
+    { value: 'IA', label: 'Iowa' },
+    { value: 'KS', label: 'Kansas' },
+    { value: 'KY', label: 'Kentucky' },
+    { value: 'LA', label: 'Louisiana' },
+    { value: 'ME', label: 'Maine' },
+    { value: 'MD', label: 'Maryland' },
+    { value: 'MA', label: 'Massachusetts' },
+    { value: 'MI', label: 'Michigan' },
+    { value: 'MN', label: 'Minnesota' },
+    { value: 'MS', label: 'Mississippi' },
+    { value: 'MO', label: 'Missouri' },
+    { value: 'MT', label: 'Montana' },
+    { value: 'NE', label: 'Nebraska' },
+    { value: 'NV', label: 'Nevada' },
+    { value: 'NH', label: 'New Hampshire' },
+    { value: 'NJ', label: 'New Jersey' },
+    { value: 'NM', label: 'New Mexico' },
+    { value: 'NY', label: 'New York' },
+    { value: 'NC', label: 'North Carolina' },
+    { value: 'ND', label: 'North Dakota' },
+    { value: 'OH', label: 'Ohio' },
+    { value: 'OK', label: 'Oklahoma' },
+    { value: 'OR', label: 'Oregon' },
+    { value: 'PA', label: 'Pennsylvania' },
+    { value: 'RI', label: 'Rhode Island' },
+    { value: 'SC', label: 'South Carolina' },
+    { value: 'SD', label: 'South Dakota' },
+    { value: 'TN', label: 'Tennessee' },
+    { value: 'TX', label: 'Texas' },
+    { value: 'UT', label: 'Utah' },
+    { value: 'VT', label: 'Vermont' },
+    { value: 'VA', label: 'Virginia' },
+    { value: 'WA', label: 'Washington' },
+    { value: 'WV', label: 'West Virginia' },
+    { value: 'WI', label: 'Wisconsin' },
+    { value: 'WY', label: 'Wyoming' }
+  ];
+
   // Load settings on component mount
   useEffect(() => {
     loadUserSettings();
   }, [user, profile]);
 
   /**
-   * Load user settings from database and profile
+   * ✅ IMPROVED: Load user settings from multiple tables
    */
   const loadUserSettings = async () => {
     if (!user || !profile) return;
 
     setLoading(true);
+    setErrorMessage('');
+    
     try {
+      console.log('👤 Loading user settings for:', user.id);
+      
       // Load basic account info from profile
       setAccountSettings({
         firstName: profile.first_name || '',
         lastName: profile.last_name || '',
         email: profile.email || user.email || '',
         phone: profile.phone || '',
+        city: profile.city || '',
+        state: profile.state || '',
+        zip: profile.zip_code || '',
+        dateOfBirth: '',
         currentPassword: '',
         newPassword: '',
         confirmPassword: ''
@@ -79,23 +148,60 @@ const Settings = () => {
 
       setCommunicationSettings(prev => ({
         ...prev,
-        phoneNumber: profile.phone || ''
+        phoneNumber: profile.phone || '',
+        emailNotifications: profile.communication_preferences?.emailNotifications !== false,
+        matchRequestNotifications: profile.communication_preferences?.matchRequestNotifications !== false,
+        messageNotifications: profile.communication_preferences?.messageNotifications !== false
       }));
 
-      // TODO: Load privacy and communication settings from user_settings table
-      // For now, using defaults with some profile-based logic
+      // Set privacy settings from profile
       setPrivacySettings(prev => ({
         ...prev,
+        ...profile.privacy_settings,
         // If user has completed profiles, show more info by default
-        showRecoveryStage: !!profile.roles?.includes('applicant'),
-        allowPeerSupportRequests: !!profile.roles?.includes('applicant'),
-        allowEmploymentInquiries: !!profile.roles?.includes('applicant'),
-        allowPropertyInquiries: !!profile.roles?.includes('applicant') || !!profile.roles?.includes('landlord')
+        showRecoveryStage: profile.privacy_settings?.showRecoveryStage !== false && !!profile.roles?.includes('applicant'),
+        allowPeerSupportRequests: profile.privacy_settings?.allowPeerSupportRequests !== false && !!profile.roles?.includes('applicant'),
+        allowEmploymentInquiries: profile.privacy_settings?.allowEmploymentInquiries !== false && !!profile.roles?.includes('applicant'),
+        allowPropertyInquiries: profile.privacy_settings?.allowPropertyInquiries !== false && 
+          (!!profile.roles?.includes('applicant') || !!profile.roles?.includes('landlord'))
       }));
+
+      // ✅ NEW: Load registrant form data
+      if (hasRole('applicant')) {
+        try {
+          const { data: registrantData, error: registrantError } = await supabase
+            .from('registrant_forms')
+            .select('*')
+            .eq('user_id', user.id)
+            .single();
+            
+          if (registrantError && registrantError.code !== 'PGRST116') {
+            console.error('Error loading registrant form:', registrantError);
+          }
+          
+          if (registrantData) {
+            console.log('✅ Loaded registrant form data:', registrantData);
+            setRegistrantForm(registrantData);
+            
+            // Update account settings with registrant form data
+            setAccountSettings(prev => ({
+              ...prev,
+              dateOfBirth: registrantData.date_of_birth || '',
+              phone: registrantData.phone || prev.phone,
+              city: registrantData.city || prev.city,
+              state: registrantData.state || prev.state,
+              zip: registrantData.zip_code || prev.zip
+            }));
+          }
+        } catch (err) {
+          console.error('Error loading registrant form:', err);
+        }
+      }
 
       console.log('✅ Settings loaded for user:', user.id);
     } catch (err) {
       console.error('💥 Error loading settings:', err);
+      setErrorMessage('Failed to load settings. Please refresh the page and try again.');
     } finally {
       setLoading(false);
     }
@@ -107,6 +213,7 @@ const Settings = () => {
   const savePrivacySettings = async () => {
     setSaving(true);
     setSuccessMessage('');
+    setErrorMessage('');
 
     try {
       // Update profile with privacy preferences
@@ -125,18 +232,19 @@ const Settings = () => {
       }
     } catch (err) {
       console.error('💥 Error saving privacy settings:', err);
-      alert(`Failed to save privacy settings: ${err.message}`);
+      setErrorMessage(`Failed to save privacy settings: ${err.message || 'Please try again.'}`);
     } finally {
       setSaving(false);
     }
   };
 
   /**
-   * Save account settings
+   * ✅ IMPROVED: Save account settings with registrant_forms update
    */
   const saveAccountSettings = async () => {
     setSaving(true);
     setSuccessMessage('');
+    setErrorMessage('');
 
     try {
       // Validate password change if attempting
@@ -152,52 +260,107 @@ const Settings = () => {
         }
       }
 
-      // Update basic profile information
-      const updates = {
+      // 1. Update basic profile information
+      const profileUpdates = {
         first_name: accountSettings.firstName,
         last_name: accountSettings.lastName,
         phone: accountSettings.phone,
+        city: accountSettings.city,
+        state: accountSettings.state,
+        zip_code: accountSettings.zip,
         updated_at: new Date().toISOString()
       };
 
-      const result = await updateProfile(updates);
+      console.log('🔄 Updating profile with:', profileUpdates);
+      const profileResult = await updateProfile(profileUpdates);
       
-      if (result.success) {
-        setSuccessMessage('Account settings saved successfully!');
-        
-        // Clear password fields
-        setAccountSettings(prev => ({
-          ...prev,
-          currentPassword: '',
-          newPassword: '',
-          confirmPassword: ''
-        }));
-        
-        console.log('✅ Account settings saved');
-      } else {
-        throw new Error(result.error || 'Failed to save account settings');
+      if (!profileResult.success) {
+        throw new Error(profileResult.error || 'Failed to update profile');
       }
-
-      // TODO: Handle password change via Supabase auth
+      
+      // 2. Update registrant_forms if applicable
+      if (hasRole('applicant')) {
+        const registrantUpdates = {
+          phone: accountSettings.phone,
+          city: accountSettings.city,
+          state: accountSettings.state,
+          zip_code: accountSettings.zip,
+          updated_at: new Date().toISOString()
+        };
+        
+        // Include date of birth if provided
+        if (accountSettings.dateOfBirth) {
+          registrantUpdates.date_of_birth = accountSettings.dateOfBirth;
+        }
+        
+        console.log('🔄 Updating registrant form with:', registrantUpdates);
+        
+        let registrantResult;
+        if (registrantForm) {
+          // Update existing registrant form
+          registrantResult = await supabase
+            .from('registrant_forms')
+            .update(registrantUpdates)
+            .eq('user_id', user.id);
+        } else {
+          // Create new registrant form if it doesn't exist
+          registrantUpdates.user_id = user.id;
+          registrantResult = await supabase
+            .from('registrant_forms')
+            .insert([registrantUpdates]);
+        }
+        
+        if (registrantResult.error) {
+          console.error('Error updating registrant form:', registrantResult.error);
+          // Continue anyway, but log the error - we still updated the profile
+        } else {
+          console.log('✅ Registrant form updated successfully');
+        }
+      }
+      
+      // 3. Update password if requested
       if (accountSettings.newPassword) {
-        console.log('🔑 Password change would be handled here via Supabase auth');
-        // await supabase.auth.updateUser({ password: accountSettings.newPassword });
+        console.log('🔑 Updating password...');
+        
+        const { error: passwordError } = await supabase.auth.updateUser({
+          password: accountSettings.newPassword
+        });
+        
+        if (passwordError) {
+          throw new Error(`Password update failed: ${passwordError.message}`);
+        }
+        
+        console.log('✅ Password updated successfully');
       }
 
+      // Success!
+      setSuccessMessage('Account settings saved successfully!');
+      
+      // Clear password fields
+      setAccountSettings(prev => ({
+        ...prev,
+        currentPassword: '',
+        newPassword: '',
+        confirmPassword: ''
+      }));
+      
+      console.log('✅ All account settings saved successfully');
+      
     } catch (err) {
       console.error('💥 Error saving account settings:', err);
-      alert(`Failed to save account settings: ${err.message}`);
+      setErrorMessage(`Failed to save account settings: ${err.message || 'Please try again.'}`);
     } finally {
       setSaving(false);
     }
   };
 
   /**
-   * Save communication settings
+   * ✅ IMPROVED: Save communication settings with better feedback
    */
   const saveCommunicationSettings = async () => {
     setSaving(true);
     setSuccessMessage('');
+    setErrorMessage('');
 
     try {
       const updates = {
@@ -206,9 +369,29 @@ const Settings = () => {
         updated_at: new Date().toISOString()
       };
 
+      console.log('🔄 Updating communication preferences:', updates);
       const result = await updateProfile(updates);
       
       if (result.success) {
+        // Also update phone in registrant_forms if applicable
+        if (hasRole('applicant') && communicationSettings.phoneNumber) {
+          try {
+            const { error: registrantError } = await supabase
+              .from('registrant_forms')
+              .update({ 
+                phone: communicationSettings.phoneNumber,
+                updated_at: new Date().toISOString()
+              })
+              .eq('user_id', user.id);
+              
+            if (registrantError) {
+              console.warn('Could not update phone in registrant form:', registrantError);
+            }
+          } catch (err) {
+            console.warn('Error updating registrant form phone:', err);
+          }
+        }
+        
         setSuccessMessage('Communication preferences saved successfully!');
         console.log('✅ Communication settings saved');
       } else {
@@ -216,7 +399,7 @@ const Settings = () => {
       }
     } catch (err) {
       console.error('💥 Error saving communication settings:', err);
-      alert(`Failed to save communication settings: ${err.message}`);
+      setErrorMessage(`Failed to save communication settings: ${err.message || 'Please try again.'}`);
     } finally {
       setSaving(false);
     }
@@ -234,6 +417,7 @@ const Settings = () => {
 
     try {
       setSaving(true);
+      setErrorMessage('');
       
       const updates = {
         is_active: false,
@@ -246,7 +430,7 @@ const Settings = () => {
       navigate('/');
     } catch (err) {
       console.error('💥 Error deactivating account:', err);
-      alert('Failed to deactivate account. Please try again.');
+      setErrorMessage('Failed to deactivate account. Please try again.');
     } finally {
       setSaving(false);
     }
@@ -270,6 +454,7 @@ const Settings = () => {
 
     try {
       setSaving(true);
+      setErrorMessage('');
       
       // TODO: Implement account deletion logic
       console.log('🗑️ Account deletion would be handled here');
@@ -277,7 +462,7 @@ const Settings = () => {
       
     } catch (err) {
       console.error('💥 Error deleting account:', err);
-      alert('Failed to delete account. Please contact support.');
+      setErrorMessage('Failed to delete account. Please contact support.');
     } finally {
       setSaving(false);
     }
@@ -289,6 +474,7 @@ const Settings = () => {
   const handleExportData = async () => {
     try {
       setSaving(true);
+      setErrorMessage('');
       
       // TODO: Implement data export
       console.log('📤 Data export would be handled here');
@@ -296,7 +482,7 @@ const Settings = () => {
       
     } catch (err) {
       console.error('💥 Error exporting data:', err);
-      alert('Failed to export data. Please contact support.');
+      setErrorMessage('Failed to export data. Please contact support.');
     } finally {
       setSaving(false);
     }
@@ -333,6 +519,13 @@ const Settings = () => {
       {successMessage && (
         <div className="alert alert-success mb-4">
           {successMessage}
+        </div>
+      )}
+      
+      {/* Error Message */}
+      {errorMessage && (
+        <div className="alert alert-error mb-4">
+          {errorMessage}
         </div>
       )}
 
@@ -540,15 +733,73 @@ const Settings = () => {
             <small className="text-gray-600">Email cannot be changed. Contact support if needed.</small>
           </div>
 
-          <div className="form-group">
-            <label className="label">Phone Number</label>
-            <input
-              className="input"
-              type="tel"
-              value={accountSettings.phone}
-              onChange={(e) => setAccountSettings(prev => ({ ...prev, phone: e.target.value }))}
-              placeholder="Enter your phone number"
-            />
+          <div className="grid-2 mb-4">
+            <div className="form-group">
+              <label className="label">Phone Number</label>
+              <input
+                className="input"
+                type="tel"
+                value={accountSettings.phone}
+                onChange={(e) => setAccountSettings(prev => ({ ...prev, phone: e.target.value }))}
+                placeholder="Enter your phone number"
+              />
+            </div>
+            
+            {/* ✅ NEW: Date of Birth field */}
+            {hasRole('applicant') && (
+              <div className="form-group">
+                <label className="label">Date of Birth</label>
+                <input
+                  className="input"
+                  type="date"
+                  value={accountSettings.dateOfBirth}
+                  onChange={(e) => setAccountSettings(prev => ({ ...prev, dateOfBirth: e.target.value }))}
+                  max={new Date().toISOString().split('T')[0]}
+                />
+              </div>
+            )}
+          </div>
+
+          {/* ✅ NEW: Address fields */}
+          <div className="form-group mb-4">
+            <h4 className="subtitle">Address Information</h4>
+            <div className="grid-3 mt-3">
+              <div className="form-group">
+                <label className="label">City</label>
+                <input
+                  className="input"
+                  type="text"
+                  value={accountSettings.city}
+                  onChange={(e) => setAccountSettings(prev => ({ ...prev, city: e.target.value }))}
+                  placeholder="Enter your city"
+                />
+              </div>
+              
+              <div className="form-group">
+                <label className="label">State</label>
+                <select
+                  className="input"
+                  value={accountSettings.state}
+                  onChange={(e) => setAccountSettings(prev => ({ ...prev, state: e.target.value }))}
+                >
+                  <option value="">Select State</option>
+                  {stateOptions.map(state => (
+                    <option key={state.value} value={state.value}>{state.label}</option>
+                  ))}
+                </select>
+              </div>
+              
+              <div className="form-group">
+                <label className="label">ZIP Code</label>
+                <input
+                  className="input"
+                  type="text"
+                  value={accountSettings.zip}
+                  onChange={(e) => setAccountSettings(prev => ({ ...prev, zip: e.target.value }))}
+                  placeholder="Enter ZIP code"
+                />
+              </div>
+            </div>
           </div>
 
           {/* Password Change Section */}
