@@ -58,8 +58,12 @@ class MatchingService {
 async loadUserProfile(userId) {
   try {
     console.log('🔍 Loading user matching profile...');
-    // Use direct database call instead of hook
     const result = await db.applicantForms.getByUserId(userId);
+    
+    // ✅ ADD DEBUGGING:
+    console.log('🔍 Database result:', result);
+    console.log('🔍 Result.data:', result.data);
+    console.log('🔍 Has data check:', !result.hasError && result.hasData && result.data);
     
     if (!result.hasError && result.hasData && result.data) {
       const transformedProfile = transformProfileForAlgorithm(result.data);
