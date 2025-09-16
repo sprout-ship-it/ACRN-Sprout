@@ -1,4 +1,4 @@
-// src/pages/MainApp.js
+// src/pages/MainApp.js - UPDATED ROUTING
 import React, { useEffect, useState } from 'react'
 import { Routes, Route, Navigate, useNavigate, useLocation } from 'react-router-dom'
 import { useAuth } from '../hooks/useAuth';
@@ -53,18 +53,6 @@ const CandidateManagement = () => (
     </p>
     <div className="alert alert-info">
       <p>Candidate management features coming soon...</p>
-    </div>
-  </div>
-)
-
-const Messages = () => (
-  <div className="card">
-    <h1 className="card-title">Messages</h1>
-    <p className="card-text mb-4">
-      Communicate with your matches, landlords, peer support specialists, and employers.
-    </p>
-    <div className="alert alert-info">
-      <p>Messaging system coming soon...</p>
     </div>
   </div>
 )
@@ -316,7 +304,7 @@ if (!profileSetup.hasComprehensiveProfile && !profileJustCompleted) {
 
   console.log('✅ User has comprehensive profile, rendering main app routes')
   
-  // ✅ PHASE 4: Main app routes with employer support
+  // ✅ UPDATED: Fixed routing - ConnectionHub moved to /communications, MatchRequests back to /connections
   return (
     <div className="app-background" style={{ minHeight: '100vh', padding: '20px 0' }}>
       <div className="container">
@@ -384,12 +372,18 @@ if (!profileSetup.hasComprehensiveProfile && !profileJustCompleted) {
               </>
             )}
 
-            {/* Universal Routes for All Users */}
+            {/* ✅ UPDATED: Universal Routes - Fixed routing */}
             <Route path="/property-search" element={<PropertySearch />} />
-            <Route path="/connections" element={<ConnectionHub />} />
-            <Route path="/messages" element={<Messages />} />
+            
+            {/* ✅ FIXED: Connections back to MatchRequests, Communications to ConnectionHub */}
+            <Route path="/connections" element={<MatchRequests />} />
+            <Route path="/communications" element={<ConnectionHub />} />
+            
             <Route path="/settings" element={<Settings />} />
             <Route path="/match-requests" element={<MatchRequests />} />
+            
+            {/* ✅ DEPRECATED: Remove old /messages route since it's now /communications */}
+            <Route path="/messages" element={<Navigate to="/app/communications" replace />} />
             
             {/* ✅ PHASE 4: Updated basic profile route - now just shows/updates phone */}
             <Route path="/profile/basic" element={

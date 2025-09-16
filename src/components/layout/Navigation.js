@@ -1,4 +1,4 @@
-// src/components/layout/Navigation.js - UPDATED WITH GRID LAYOUT
+// src/components/layout/Navigation.js - UPDATED WITH COMMUNICATIONS
 import React from 'react'
 import { useLocation, useNavigate } from 'react-router-dom'
 import { useAuth } from '../../context/AuthContext'
@@ -61,14 +61,14 @@ const Navigation = () => {
       })
     }
 
-    // Universal navigation items
+    // ✅ UPDATED: Universal navigation items with corrected routing
     baseItems.push(
       { 
         id: 'connections', 
         label: 'Connections', 
         icon: '🤝',
-        path: '/app/connections',  // <-- CORRECT PATH
-        description: 'View and manage all your connections and requests',
+        path: '/app/connections',
+        description: 'View and manage your match requests and connection status',
         className: 'nav-connections'
       }
     )
@@ -174,14 +174,14 @@ const Navigation = () => {
       )
     }
 
-    // Universal tools
+    // ✅ UPDATED: Universal tools with Communications instead of Messages
     baseItems.push(
       { 
-        id: 'messages', 
-        label: 'Messages', 
+        id: 'communications', 
+        label: 'Communications', 
         icon: '💬',
-        path: '/app/messages',
-        description: 'Communicate with matches and contacts'
+        path: '/app/communications',
+        description: 'Manage secure communication with your connections'
       },
       { 
         id: 'settings', 

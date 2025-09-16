@@ -1,4 +1,4 @@
-// src/pages/Dashboard.js - REMOVED grid navigation (now in Navigation.js)
+// src/pages/Dashboard.js - UPDATED WITH COMMUNICATIONS
 import React, { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../hooks/useAuth'
@@ -250,15 +250,23 @@ const Dashboard = () => {
       )
     }
     
-    // Connections card - Black styling
+    // ✅ UPDATED: Universal cards with corrected routing
     cards.push(
       { 
-        id: 'match-requests', 
+        id: 'connections', 
         label: 'Connections', 
-        description: 'View and manage all your connection requests', 
+        description: 'View and manage your match requests and connection status', 
         className: 'role-card-connections', // Black
         path: '/app/connections',
         icon: '🤝'
+      },
+      { 
+        id: 'communications', 
+        label: 'Communications', 
+        description: 'Secure communication hub for your active connections', 
+        className: 'role-card-peer-support', // Blue styling for communications
+        path: '/app/communications',
+        icon: '💬'
       }
     )
     
