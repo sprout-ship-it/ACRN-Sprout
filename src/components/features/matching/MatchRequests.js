@@ -1,4 +1,4 @@
-// src/components/dashboard/MatchRequests.js - FIXED CONNECTION SYSTEM
+// src/components/dashboard/MatchRequests.js - FIXED CONNECTION SYSTEM + UI FEEDBACK
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../../../context/AuthContext';
 import { db } from '../../../utils/supabase';
@@ -18,6 +18,10 @@ const Connections = () => {
   const [rejectReason, setRejectReason] = useState('');
   const [showContactModal, setShowContactModal] = useState(false);
   const [contactInfo, setContactInfo] = useState(null);
+  
+  // ✅ NEW: Track sent reconnection requests for UI feedback
+  const [sentReconnectionRequests, setSentReconnectionRequests] = useState(new Set());
+  const [requestSendingStates, setRequestSendingStates] = useState(new Set());
   
   // Load match requests
   useEffect(() => {
@@ -286,39 +290,58 @@ const Connections = () => {
       };
     }
   };
+
   /**
- * ✅ NEW: Handle reconnection request 
- */
-const handleRequestReconnection = async (formerMatch) => {
-  try {
-    // Create data for new connection request
-    const requestData = {
-      requester_id: user.id,
-      target_id: formerMatch.requester_id === user.id ? 
-        formerMatch.target_id : formerMatch.requester_id,
-      request_type: formerMatch.request_type,
-      message: `I'd like to reconnect with you as a ${getConnectionType(formerMatch)}.`,
-      status: 'pending'
-    };
+   * ✅ IMPROVED: Handle reconnection request with UI feedback tracking
+   */
+  const handleRequestReconnection = async (formerMatch) => {
+    // Get the other user's ID for tracking
+    const otherUserId = formerMatch.requester_id === user.id ? 
+      formerMatch.target_id : formerMatch.requester_id;
     
-    console.log('📩 Sending reconnection request:', requestData);
+    // ✅ NEW: Track that we're sending this request
+    setRequestSendingStates(prev => new Set([...prev, otherUserId]));
     
-    // Create new match request in database
-    const result = await db.matchRequests.create(requestData);
-    
-    if (result.error) throw result.error;
-    
-    console.log('✅ Reconnection request sent:', result.data);
-    
-    // Update UI to show request sent
-    loadRequests(); // Reload the full list
-    
-    alert('Reconnection request sent successfully!');
-  } catch (err) {
-    console.error('💥 Error sending reconnection request:', err);
-    alert('Failed to send request. Please try again.');
-  }
-};
+    try {
+      // Create data for new connection request
+      const requestData = {
+        requester_id: user.id,
+        target_id: otherUserId,
+        request_type: formerMatch.request_type,
+        message: `I'd like to reconnect with you as a ${getConnectionType(formerMatch)}.`,
+        status: 'pending'
+      };
+      
+      console.log('📩 Sending reconnection request:', requestData);
+      
+      // Create new match request in database
+      const result = await db.matchRequests.create(requestData);
+      
+      if (result.error) throw result.error;
+      
+      console.log('✅ Reconnection request sent:', result.data);
+      
+      // ✅ NEW: Update UI state to reflect sent request
+      setSentReconnectionRequests(prev => new Set([...prev, otherUserId]));
+      
+      // Update UI to show request sent
+      loadRequests(); // Reload the full list
+      
+      alert('Reconnection request sent successfully!');
+      
+    } catch (err) {
+      console.error('💥 Error sending reconnection request:', err);
+      alert('Failed to send request. Please try again.');
+    } finally {
+      // ✅ NEW: Remove from sending state
+      setRequestSendingStates(prev => {
+        const newSet = new Set(prev);
+        newSet.delete(otherUserId);
+        return newSet;
+      });
+    }
+  };
+
   // Handle reject request
   const handleReject = (request) => {
     setSelectedRequest(request);
@@ -586,7 +609,7 @@ const handleViewContactInfo = async (request) => {
     );
   };
   
-  // Render action buttons
+  // ✅ IMPROVED: Render action buttons with reconnection request UI feedback
   const renderActionButtons = (request) => {
     const isReceived = request.target_id === user.id;
     const isSent = request.requester_id === user.id;
@@ -649,19 +672,31 @@ const handleViewContactInfo = async (request) => {
       );
     }
     
-      if (status === 'unmatched') {
-        return (
-          <div>
-            <button
-              className="btn btn-outline btn-sm"
-              onClick={() => handleRequestReconnection(request)}
-              disabled={actionLoading}
-            >
-              Request Reconnection
-            </button>
-          </div>
-        );
-      }
+    if (status === 'unmatched') {
+      // ✅ NEW: Enhanced reconnection button with UI feedback
+      const otherUserId = request.requester_id === user.id ? 
+        request.target_id : request.requester_id;
+      
+      const isRequestSent = sentReconnectionRequests.has(otherUserId);
+      const isSending = requestSendingStates.has(otherUserId);
+      
+      return (
+        <div>
+          <button
+            className={`btn btn-sm ${isRequestSent ? 'btn-success' : 'btn-outline'}`}
+            onClick={() => handleRequestReconnection(request)}
+            disabled={actionLoading || isRequestSent || isSending}
+          >
+            {isSending ? '📤 Sending...' : isRequestSent ? '✅ Request Sent' : 'Request Reconnection'}
+          </button>
+          {isRequestSent && (
+            <div className="text-sm text-success mt-1">
+              Reconnection request sent successfully!
+            </div>
+          )}
+        </div>
+      );
+    }
     
     return null;
   };
@@ -678,6 +713,18 @@ const handleViewContactInfo = async (request) => {
   // Get request direction
   const getRequestDirection = (request) => {
     return request.requester_id === user.id ? 'sent' : 'received';
+  };
+
+  // ✅ NEW: Check if this is a request with sent reconnection status
+  const getCardClassName = (request) => {
+    if (request.status !== 'unmatched') return 'card mb-4';
+    
+    const otherUserId = request.requester_id === user.id ? 
+      request.target_id : request.requester_id;
+    
+    const isRequestSent = sentReconnectionRequests.has(otherUserId);
+    
+    return `card mb-4 ${isRequestSent ? 'card-request-sent' : ''}`;
   };
 
   // Render pending requests (both incoming and outgoing)
@@ -704,7 +751,7 @@ const handleViewContactInfo = async (request) => {
     return (
       <div className="requests-list">
         {filteredRequests.map(request => (
-          <div key={request.id} className="card mb-4">
+          <div key={request.id} className={getCardClassName(request)}>
             <div className="card-header">
               <div>
                 <div className="card-title">
@@ -790,7 +837,7 @@ const handleViewContactInfo = async (request) => {
               
               <div className="connections-grid">
                 {connections.map(request => (
-                  <div key={request.id} className="card">
+                  <div key={request.id} className={getCardClassName(request)}>
                     <div className="card-header">
                       <div>
                         <div className="card-title">
@@ -940,7 +987,7 @@ const handleViewContactInfo = async (request) => {
           </div>
         ) : (
           getFilteredRequests().map(request => (
-            <div key={request.id} className="card mb-4">
+            <div key={request.id} className={getCardClassName(request)}>
               <div className="card-header">
                 <div>
                   <div className="card-title">
@@ -1189,7 +1236,7 @@ const handleViewContactInfo = async (request) => {
   </div>
 )}
 
-      {/* Custom CSS for connection type sections */}
+      {/* ✅ NEW: Custom CSS for UI feedback styling */}
       <style jsx>{`
         .connections-by-type {
           display: flex;
@@ -1233,6 +1280,55 @@ const handleViewContactInfo = async (request) => {
           margin: 0 auto;
         }
 
+        /* ✅ NEW: Card styling for sent reconnection requests */
+        .card-request-sent {
+          background: linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 100%);
+          border: 2px solid #0284c7 !important;
+          position: relative;
+        }
+
+        .card-request-sent::before {
+          content: "📤";
+          position: absolute;
+          top: -8px;
+          right: -8px;
+          font-size: 1.5rem;
+          background: #0284c7;
+          color: white;
+          width: 32px;
+          height: 32px;
+          border-radius: 50%;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          z-index: 1;
+        }
+
+        /* ✅ NEW: Success text styling */
+        .text-success {
+          color: #059669;
+          font-weight: 500;
+        }
+
+        /* ✅ NEW: Success button styling */
+        .btn-success {
+          background: linear-gradient(135deg, #059669, #047857);
+          color: white;
+          border: 2px solid #047857;
+        }
+
+        .btn-success:hover:not(:disabled) {
+          background: linear-gradient(135deg, #047857, #065f46);
+          transform: translateY(-1px);
+        }
+
+        .btn-success:disabled {
+          background: #9ca3af;
+          border-color: #9ca3af;
+          color: white;
+          cursor: not-allowed;
+        }
+
         @media (max-width: 768px) {
           .connections-grid {
             grid-template-columns: 1fr;
@@ -1248,6 +1344,14 @@ const handleViewContactInfo = async (request) => {
           
           .nav-button {
             justify-content: flex-start;
+          }
+          
+          .card-request-sent::before {
+            top: -6px;
+            right: -6px;
+            font-size: 1.2rem;
+            width: 24px;
+            height: 24px;
           }
         }
       `}</style>
