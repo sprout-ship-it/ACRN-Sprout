@@ -491,9 +491,216 @@ export const db = {
         console.error('💥 DB: employerProfiles.delete failed', err)
         return { data: null, error: err }
       }
+    },
+
+    getAvailable: async (filters = {}) => {
+  console.log('📊 DB: employerProfiles.getAvailable called', { filters })
+  try {
+    let query = supabase
+      .from('employer_profiles')
+      .select('*')
+      .eq('profile_completed', true)
+
+    // Apply filters
+    if (filters.isActivelyHiring) {
+      query = query.eq('is_actively_hiring', true)
+    }
+
+    if (filters.industry) {
+      query = query.eq('industry', filters.industry)
+    }
+
+    if (filters.city) {
+      query = query.ilike('city', `%${filters.city}%`)
+    }
+
+    if (filters.state) {
+      query = query.eq('state', filters.state)
+    }
+
+    if (filters.businessType) {
+      query = query.eq('business_type', filters.businessType)
+    }
+
+    if (filters.remoteWork) {
+      query = query.eq('remote_work_options', filters.remoteWork)
+    }
+
+    // Array filters need to be handled with contains or overlap
+    if (filters.recoveryFeatures && filters.recoveryFeatures.length > 0) {
+      query = query.overlaps('recovery_friendly_features', filters.recoveryFeatures)
+    }
+
+    if (filters.jobTypes && filters.jobTypes.length > 0) {
+      query = query.overlaps('current_openings', filters.jobTypes)
+    }
+
+    const { data, error } = await query
+      .order('is_actively_hiring', { ascending: false })
+      .order('updated_at', { ascending: false })
+
+    console.log('📊 DB: employerProfiles.getAvailable result', { 
+      hasData: !!data, 
+      dataLength: data?.length,
+      hasError: !!error 
+    })
+    return { data, error }
+  } catch (err) {
+    console.error('💥 DB: employerProfiles.getAvailable failed', err)
+    return { data: [], error: err }
+      }
     }
   },
 
+  // Employer favorites operations
+  employerFavorites: {
+    // Get all favorites for a user with employer details
+    getByUserId: async (userId) => {
+      console.log('📊 DB: employerFavorites.getByUserId called', { userId })
+      try {
+        const { data, error } = await supabase
+          .from('employer_favorites_with_details')
+          .select('*')
+          .eq('user_id', userId)
+          .order('created_at', { ascending: false })
+        
+        console.log('📊 DB: employerFavorites.getByUserId result', { 
+          hasData: !!data, 
+          dataLength: data?.length,
+          hasError: !!error
+        })
+        return { data, error }
+      } catch (err) {
+        console.error('💥 DB: employerFavorites.getByUserId failed', err)
+        return { data: [], error: err }
+      }
+    },
+
+    // Add a favorite
+    add: async (userId, employerUserId) => {
+      console.log('📊 DB: employerFavorites.add called', { userId, employerUserId })
+      try {
+        const { data, error } = await supabase
+          .from('employer_favorites')
+          .insert({ 
+            user_id: userId, 
+            employer_user_id: employerUserId 
+          })
+          .select()
+          .single()
+        
+        console.log('📊 DB: employerFavorites.add result', { hasData: !!data, hasError: !!error })
+        return { data, error }
+      } catch (err) {
+        console.error('💥 DB: employerFavorites.add failed', err)
+        return { data: null, error: err }
+      }
+    },
+
+    // Remove a favorite
+    remove: async (userId, employerUserId) => {
+      console.log('📊 DB: employerFavorites.remove called', { userId, employerUserId })
+      try {
+        const { data, error } = await supabase
+          .from('employer_favorites')
+          .delete()
+          .eq('user_id', userId)
+          .eq('employer_user_id', employerUserId)
+          .select()
+        
+        console.log('📊 DB: employerFavorites.remove result', { hasData: !!data, hasError: !!error })
+        return { data, error }
+      } catch (err) {
+        console.error('💥 DB: employerFavorites.remove failed', err)
+        return { data: null, error: err }
+      }
+    },
+
+    // Check if employer is favorited
+    isFavorited: async (userId, employerUserId) => {
+      console.log('📊 DB: employerFavorites.isFavorited called', { userId, employerUserId })
+      try {
+        const { data, error } = await supabase
+          .from('employer_favorites')
+          .select('id')
+          .eq('user_id', userId)
+          .eq('employer_user_id', employerUserId)
+          .single()
+        
+        // If data exists, it's favorited; if no data but no error, it's not favorited
+        const isFavorited = !!data && !error
+        
+        console.log('📊 DB: employerFavorites.isFavorited result', { 
+          isFavorited, 
+          hasError: !!error,
+          errorCode: error?.code 
+        })
+        
+        // Return just the boolean result, ignore "not found" errors
+        return { 
+          data: isFavorited, 
+          error: error?.code === 'PGRST116' ? null : error 
+        }
+      } catch (err) {
+        console.error('💥 DB: employerFavorites.isFavorited failed', err)
+        return { data: false, error: err }
+      }
+    },
+
+    // Get favorites count for an employer (how many users have favorited them)
+    getEmployerFavoritesCount: async (employerUserId) => {
+      console.log('📊 DB: employerFavorites.getEmployerFavoritesCount called', { employerUserId })
+      try {
+        const { data, error } = await supabase
+          .from('employer_favorites')
+          .select('id', { count: 'exact' })
+          .eq('employer_user_id', employerUserId)
+        
+        console.log('📊 DB: employerFavorites.getEmployerFavoritesCount result', { 
+          count: data?.length || 0, 
+          hasError: !!error 
+        })
+        
+        return { data: data?.length || 0, error }
+      } catch (err) {
+        console.error('💥 DB: employerFavorites.getEmployerFavoritesCount failed', err)
+        return { data: 0, error: err }
+      }
+    },
+
+    // Batch check if multiple employers are favorited (for efficient UI updates)
+    checkMultipleFavorites: async (userId, employerUserIds) => {
+      console.log('📊 DB: employerFavorites.checkMultipleFavorites called', { 
+        userId, 
+        employerCount: employerUserIds?.length 
+      })
+      
+      if (!employerUserIds || employerUserIds.length === 0) {
+        return { data: [], error: null }
+      }
+      
+      try {
+        const { data, error } = await supabase
+          .from('employer_favorites')
+          .select('employer_user_id')
+          .eq('user_id', userId)
+          .in('employer_user_id', employerUserIds)
+        
+        // Convert to Set of favorited employer IDs for easy lookup
+        const favoritedIds = new Set(data?.map(fav => fav.employer_user_id) || [])
+        
+        console.log('📊 DB: employerFavorites.checkMultipleFavorites result', { 
+          favoritedCount: favoritedIds.size,
+          hasError: !!error 
+        })
+        
+        return { data: favoritedIds, error }
+      } catch (err) {
+        console.error('💥 DB: employerFavorites.checkMultipleFavorites failed', err)
+        return { data: new Set(), error: err }
+      }
+    }
+  },
   // Peer support operations
   peerSupportProfiles: {
     create: async (profileData) => {
