@@ -102,14 +102,17 @@ const PeerSupportHub = ({ onBack }) => {
     try {
       console.log('🔄 Loading available peer support connections...');
       
-      // Get active peer support match groups where user is the peer specialist
+      // Get forming peer support match groups where user is the peer specialist
       const result = await db.matchGroups.getByUserId(user.id);
       
       if (result.data && !result.error) {
         const peerSupportConnections = result.data.filter(match => 
           match.peer_support_id === user.id && 
-          match.status === 'active'
+          match.status === 'forming' &&
+          match.connection_type === 'peer_support'
         );
+
+        console.log(`📊 Found ${peerSupportConnections.length} forming peer support connections`);
 
         // Get existing client user IDs to filter out
         const existingClientIds = clients.map(client => client.client_id);
@@ -117,8 +120,10 @@ const PeerSupportHub = ({ onBack }) => {
         // Filter connections that aren't already clients
         const availableConnections = peerSupportConnections.filter(connection => {
           const clientId = connection.applicant_1_id || connection.applicant_2_id;
-          return !existingClientIds.includes(clientId);
+          return clientId && !existingClientIds.includes(clientId);
         });
+
+        console.log(`📊 Found ${availableConnections.length} available connections after filtering existing clients`);
 
         // Enrich with profile data
         const enrichedConnections = await Promise.all(
@@ -140,6 +145,7 @@ const PeerSupportHub = ({ onBack }) => {
         );
 
         setAvailableConnections(enrichedConnections);
+        console.log(`✅ Loaded ${enrichedConnections.length} enriched available connections`);
       }
 
     } catch (err) {
