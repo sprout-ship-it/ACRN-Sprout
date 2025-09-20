@@ -16,13 +16,19 @@ const PeerSupportHub = ({ onBack }) => {
   const [newGoal, setNewGoal] = useState('');
   const [editingClient, setEditingClient] = useState(null);
 
-  // Load clients and available connections on mount
+  // Load clients and available connections on mount and when clients change
   useEffect(() => {
     if (user?.id) {
       loadClients();
-      loadAvailableConnections();
     }
   }, [user?.id]);
+
+  // Load available connections when clients data changes
+  useEffect(() => {
+    if (user?.id) {
+      loadAvailableConnections();
+    }
+  }, [user?.id, clients.length]); // Re-run when client count changes
 
   /**
    * Load existing PSS clients for this peer specialist
@@ -114,8 +120,13 @@ const PeerSupportHub = ({ onBack }) => {
 
         console.log(`📊 Found ${peerSupportConnections.length} forming peer support connections`);
 
-        // Get existing client user IDs to filter out
-        const existingClientIds = clients.map(client => client.client_id);
+        // Get existing PSS client relationships directly from database
+        const existingClientsResult = await db.pssClients.getByPeerSpecialistId(user.id);
+        const existingClientIds = existingClientsResult.data 
+          ? existingClientsResult.data.map(client => client.client_id)
+          : [];
+
+        console.log(`📊 Found ${existingClientIds.length} existing PSS clients to filter out`);
 
         // Filter connections that aren't already clients
         const availableConnections = peerSupportConnections.filter(connection => {
@@ -179,8 +190,14 @@ const PeerSupportHub = ({ onBack }) => {
       }
 
       alert(`${connection.displayName} has been added as your client!`);
-      loadClients(); // Refresh the client list
-      loadAvailableConnections(); // Refresh available connections
+      
+      // Immediately remove from available connections
+      setAvailableConnections(prev => 
+        prev.filter(conn => conn.id !== connection.id)
+      );
+      
+      // Refresh the client list to include the new client
+      loadClients();
 
     } catch (err) {
       console.error('💥 Error adding client:', err);
