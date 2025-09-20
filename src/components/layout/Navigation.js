@@ -1,4 +1,4 @@
-// src/components/layout/Navigation.js - UPDATED WITH COMMUNICATIONS
+// src/components/layout/Navigation.js - UPDATED WITH STREAMLINED PEER NAVIGATION
 import React from 'react'
 import { useLocation, useNavigate } from 'react-router-dom'
 import { useAuth } from '../../context/AuthContext'
@@ -20,7 +20,7 @@ const Navigation = () => {
       }
     ]
 
-    // ✅ FIXED: Role-specific profile management with CORRECT paths
+    // Role-specific profile management with CORRECT paths
     if (hasRole('applicant')) {
       baseItems.push({
         id: 'applicant-profile',
@@ -61,19 +61,21 @@ const Navigation = () => {
       })
     }
 
-    // ✅ UPDATED: Universal navigation items with corrected routing
-    baseItems.push(
-      { 
-        id: 'connections', 
-        label: 'Connections', 
-        icon: '🤝',
-        path: '/app/connections',
-        description: 'View and manage your match requests and connection status',
-        className: 'nav-connections'
-      }
-    )
+    // UPDATED: Connections only for non-peer users (peer specialists use the integrated hub)
+    if (!hasRole('peer')) {
+      baseItems.push(
+        { 
+          id: 'connections', 
+          label: 'Connections', 
+          icon: '🤝',
+          path: '/app/connections',
+          description: 'View and manage your match requests and connection status',
+          className: 'nav-connections'
+        }
+      )
+    }
 
-    // ✅ FIXED: Role-specific feature navigation with CORRECT paths
+    // Role-specific feature navigation with CORRECT paths
     if (hasRole('applicant')) {
       baseItems.push(
         { 
@@ -132,22 +134,15 @@ const Navigation = () => {
       )
     }
 
+    // UPDATED: Streamlined peer navigation - just one "Support Hub"
     if (hasRole('peer')) {
       baseItems.push(
         { 
           id: 'peer-dashboard', 
-          label: 'Client Dashboard', 
+          label: 'Support Hub', 
           icon: '📊',
           path: '/app/peer-dashboard',
-          description: 'Manage peer support services and clients',
-          className: 'nav-peer-support'
-        },
-        { 
-          id: 'my-clients', 
-          label: 'My Clients', 
-          icon: '👥',
-          path: '/app/clients',
-          description: 'View and manage client relationships',
+          description: 'Comprehensive peer support client management dashboard',
           className: 'nav-peer-support'
         }
       )
@@ -174,7 +169,7 @@ const Navigation = () => {
       )
     }
 
-    // ✅ UPDATED: Universal tools with Communications instead of Messages
+    // Universal tools with Communications instead of Messages
     baseItems.push(
       { 
         id: 'communications', 
@@ -202,7 +197,7 @@ const Navigation = () => {
     navigate(path)
   }
 
-  // ✅ IMPROVED: Better active state detection for nested routes
+  // Better active state detection for nested routes
   const isActive = (path) => {
     if (path === '/app') {
       return location.pathname === '/app' || location.pathname === '/app/'
@@ -216,7 +211,7 @@ const Navigation = () => {
     return location.pathname.startsWith(path)
   }
 
-  // ✅ ADDED: Helper to get user's role-specific greeting
+  // Helper to get user's role-specific greeting
   const getRoleGreeting = () => {
     if (!profile) return ''
     
@@ -230,7 +225,7 @@ const Navigation = () => {
 
   return (
     <>
-      {/* ✅ ADDED: Role indicator for better user context */}
+      {/* Role indicator for better user context */}
       {profile && (
         <div style={{ 
           padding: '10px 20px', 
@@ -264,7 +259,7 @@ const Navigation = () => {
         })}
       </nav>
 
-      {/* ✅ ADDED: Quick progress indicator for incomplete profiles */}
+      {/* Quick progress indicator for incomplete profiles */}
       {profile && (
         <div style={{
           padding: '10px 20px',
