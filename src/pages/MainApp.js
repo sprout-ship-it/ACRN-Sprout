@@ -32,7 +32,7 @@ import PropertySearch from '../components/features/property/PropertySearch';
 
 import '../styles/global.css';
 
-// Peer Support Routes
+{/* Peer Support Routes */}
 {hasRole('peer') && (
   <>
     <Route path="/profile/peer-support" element={
@@ -344,7 +344,7 @@ if (!profileSetup.hasComprehensiveProfile && !profileJustCompleted) {
               </>
             )}
 
-            // Peer Support Routes
+            {/* Peer Support Routes */}
             {hasRole('peer') && (
               <>
                 <Route path="/profile/peer-support" element={
