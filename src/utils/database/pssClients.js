@@ -13,25 +13,17 @@ export const pssClientsService = {
         .from('pss_clients')
         .select(`
           *,
-          peer_specialist:peer_support_profiles!peer_specialist_id(
+          peer_specialist:registrant_profiles!peer_specialist_id(
             id,
-            user_id,
-            registrant_profiles!user_id(
-              id,
-              first_name,
-              last_name,
-              email
-            )
+            first_name,
+            last_name,
+            email
           ),
-          client:applicant_forms!client_id(
+          client:registrant_profiles!client_id(
             id,
-            user_id,
-            registrant_profiles!user_id(
-              id,
-              first_name,
-              last_name,
-              email
-            )
+            first_name,
+            last_name,
+            email
           )
         `)
         .eq('peer_specialist_id', peerSpecialistId)
@@ -62,25 +54,17 @@ export const pssClientsService = {
         .from('pss_clients')
         .select(`
           *,
-          peer_specialist:peer_support_profiles!peer_specialist_id(
+          peer_specialist:registrant_profiles!peer_specialist_id(
             id,
-            user_id,
-            registrant_profiles!user_id(
-              id,
-              first_name,
-              last_name,
-              email
-            )
+            first_name,
+            last_name,
+            email
           ),
-          client:applicant_forms!client_id(
+          client:registrant_profiles!client_id(
             id,
-            user_id,
-            registrant_profiles!user_id(
-              id,
-              first_name,
-              last_name,
-              email
-            )
+            first_name,
+            last_name,
+            email
           )
         `)
         .eq('id', clientId)
@@ -111,25 +95,17 @@ export const pssClientsService = {
         .from('pss_clients')
         .select(`
           *,
-          peer_specialist:peer_support_profiles!peer_specialist_id(
+          peer_specialist:registrant_profiles!peer_specialist_id(
             id,
-            user_id,
-            registrant_profiles!user_id(
-              id,
-              first_name,
-              last_name,
-              email
-            )
+            first_name,
+            last_name,
+            email
           ),
-          client:applicant_forms!client_id(
+          client:registrant_profiles!client_id(
             id,
-            user_id,
-            registrant_profiles!user_id(
-              id,
-              first_name,
-              last_name,
-              email
-            )
+            first_name,
+            last_name,
+            email
           )
         `)
         .eq('client_id', clientId)
@@ -403,15 +379,11 @@ export const pssClientsService = {
         .from('pss_clients')
         .select(`
           *,
-          client:applicant_forms!client_id(
+          client:registrant_profiles!client_id(
             id,
-            user_id,
-            registrant_profiles!user_id(
-              id,
-              first_name,
-              last_name,
-              email
-            )
+            first_name,
+            last_name,
+            email
           )
         `)
         .eq('peer_specialist_id', peerSpecialistId)
@@ -446,15 +418,11 @@ export const pssClientsService = {
         .from('pss_clients')
         .select(`
           *,
-          client:applicant_forms!client_id(
+          client:registrant_profiles!client_id(
             id,
-            user_id,
-            registrant_profiles!user_id(
-              id,
-              first_name,
-              last_name,
-              email
-            )
+            first_name,
+            last_name,
+            email
           )
         `)
         .eq('peer_specialist_id', peerSpecialistId)
