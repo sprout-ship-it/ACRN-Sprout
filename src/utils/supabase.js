@@ -1,5 +1,6 @@
 // src/utils/supabase.js - COMPLETE UPDATED VERSION
 import { createClient } from '@supabase/supabase-js'
+import pssClientsService from './database/pssClients';
 
 console.log('🔧 Supabase client initializing...')
 
@@ -1223,7 +1224,8 @@ export const db = {
         return { data: [], error: err }
       }
     }
-  }
+  },
+  pssClients: pssClientsService,
 }
 
 console.log('✅ Supabase module fully loaded')

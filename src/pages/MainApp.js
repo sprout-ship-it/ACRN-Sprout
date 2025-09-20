@@ -25,24 +25,31 @@ import PeerSupportFinder from '../components/features/peer-support/PeerSupportFi
 import EmployerManagement from '../components/features/employer/EmployerManagement'
 import EmployerFinder from '../components/features/employer/EmployerFinder'
 import ConnectionHub from '../components/features/connections/ConnectionHub'
+import PeerSupportHub from '../components/features/peer-support/PeerSupportHub'
 
 // Search Components
 import PropertySearch from '../components/features/property/PropertySearch';
 
 import '../styles/global.css';
 
-// Placeholder components for features not yet implemented
-const PeerSupportDashboard = () => (
-  <div className="card">
-    <h1 className="card-title">Peer Support Dashboard</h1>
-    <p className="card-text mb-4">
-      Manage your peer support services and client relationships.
-    </p>
-    <div className="alert alert-info">
-      <p>Peer support specialist features coming soon...</p>
-    </div>
-  </div>
-)
+// Peer Support Routes
+{hasRole('peer') && (
+  <>
+    <Route path="/profile/peer-support" element={
+      <div style={{ maxWidth: '900px', margin: '0 auto' }}>
+        <PeerSupportProfileForm 
+          editMode={true}
+          onComplete={() => navigate('/app')}
+          onCancel={() => navigate('/app')}
+        />
+      </div>
+    } />
+    
+    {/* ✅ UPDATED: Use PeerSupportHub instead of placeholder */}
+    <Route path="/peer-dashboard" element={<PeerSupportHub />} />
+    <Route path="/clients" element={<MatchRequests />} />
+  </>
+)}
 
 // ✅ NEW: Job Applications/Candidates management placeholder
 const CandidateManagement = () => (
@@ -337,7 +344,7 @@ if (!profileSetup.hasComprehensiveProfile && !profileJustCompleted) {
               </>
             )}
 
-            {/* Peer Support Routes */}
+            // Peer Support Routes
             {hasRole('peer') && (
               <>
                 <Route path="/profile/peer-support" element={
@@ -350,7 +357,7 @@ if (!profileSetup.hasComprehensiveProfile && !profileJustCompleted) {
                   </div>
                 } />
                 
-                <Route path="/peer-dashboard" element={<PeerSupportDashboard />} />
+                <Route path="/peer-dashboard" element={<PeerSupportHub />} />
                 <Route path="/clients" element={<MatchRequests />} />
               </>
             )}
