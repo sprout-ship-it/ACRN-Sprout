@@ -13,17 +13,25 @@ export const pssClientsService = {
         .from('pss_clients')
         .select(`
           *,
-          client_profile:registrant_profiles!pss_clients_client_id_fkey(
+          peer_specialist:peer_support_profiles!peer_specialist_id(
             id,
-            first_name,
-            last_name,
-            email
+            user_id,
+            registrant_profiles!user_id(
+              id,
+              first_name,
+              last_name,
+              email
+            )
           ),
-          peer_profile:registrant_profiles!pss_clients_peer_specialist_id_fkey(
+          client:applicant_forms!client_id(
             id,
-            first_name,
-            last_name,
-            email
+            user_id,
+            registrant_profiles!user_id(
+              id,
+              first_name,
+              last_name,
+              email
+            )
           )
         `)
         .eq('peer_specialist_id', peerSpecialistId)
@@ -54,17 +62,25 @@ export const pssClientsService = {
         .from('pss_clients')
         .select(`
           *,
-          client_profile:registrant_profiles!pss_clients_client_id_fkey(
+          peer_specialist:peer_support_profiles!peer_specialist_id(
             id,
-            first_name,
-            last_name,
-            email
+            user_id,
+            registrant_profiles!user_id(
+              id,
+              first_name,
+              last_name,
+              email
+            )
           ),
-          peer_profile:registrant_profiles!pss_clients_peer_specialist_id_fkey(
+          client:applicant_forms!client_id(
             id,
-            first_name,
-            last_name,
-            email
+            user_id,
+            registrant_profiles!user_id(
+              id,
+              first_name,
+              last_name,
+              email
+            )
           )
         `)
         .eq('id', clientId)
@@ -95,17 +111,25 @@ export const pssClientsService = {
         .from('pss_clients')
         .select(`
           *,
-          client_profile:registrant_profiles!pss_clients_client_id_fkey(
+          peer_specialist:peer_support_profiles!peer_specialist_id(
             id,
-            first_name,
-            last_name,
-            email            
+            user_id,
+            registrant_profiles!user_id(
+              id,
+              first_name,
+              last_name,
+              email
+            )
           ),
-          peer_profile:registrant_profiles!pss_clients_peer_specialist_id_fkey(
+          client:applicant_forms!client_id(
             id,
-            first_name,
-            last_name,
-            email
+            user_id,
+            registrant_profiles!user_id(
+              id,
+              first_name,
+              last_name,
+              email
+            )
           )
         `)
         .eq('client_id', clientId)
@@ -379,11 +403,15 @@ export const pssClientsService = {
         .from('pss_clients')
         .select(`
           *,
-          client_profile:registrant_profiles!pss_clients_client_id_fkey(
+          client:applicant_forms!client_id(
             id,
-            first_name,
-            last_name,
-            email            
+            user_id,
+            registrant_profiles!user_id(
+              id,
+              first_name,
+              last_name,
+              email
+            )
           )
         `)
         .eq('peer_specialist_id', peerSpecialistId)
@@ -418,11 +446,15 @@ export const pssClientsService = {
         .from('pss_clients')
         .select(`
           *,
-          client_profile:registrant_profiles!pss_clients_client_id_fkey(
+          client:applicant_forms!client_id(
             id,
-            first_name,
-            last_name,
-            email            
+            user_id,
+            registrant_profiles!user_id(
+              id,
+              first_name,
+              last_name,
+              email
+            )
           )
         `)
         .eq('peer_specialist_id', peerSpecialistId)

@@ -34,8 +34,20 @@ const PeerSupportHub = ({ onBack }) => {
     try {
       console.log('🔄 Loading PSS clients...');
       
-      // Get PSS client relationships
-      const result = await db.pssClients.getByPeerSpecialistId(user.id);
+      // First, get the peer specialist profile ID for this user
+      const peerProfileResult = await db.peerSupportProfiles.getByUserId(user.id);
+      if (!peerProfileResult.data) {
+        console.log('No peer support profile found for user');
+        setClients([]);
+        setLoading(false);
+        return;
+      }
+
+      const peerSpecialistId = peerProfileResult.data.id;
+      console.log('Using peer specialist ID:', peerSpecialistId);
+      
+      // Get PSS client relationships using the peer support profile ID
+      const result = await db.pssClients.getByPeerSpecialistId(peerSpecialistId);
       
       if (result.error) {
         throw new Error(result.error.message || 'Failed to load clients');
@@ -44,47 +56,41 @@ const PeerSupportHub = ({ onBack }) => {
       const clientData = result.data || [];
       console.log(`📊 Found ${clientData.length} PSS clients`);
 
-      // Enrich client data with applicant profile information
-      const enrichedClients = await Promise.all(
-        clientData.map(async (client) => {
-          try {
-            // Get registrant profile for basic info
-            const profileResult = await db.profiles.getById(client.client_id);
-            const clientProfile = profileResult.data;
+      // Process the nested data structure from the new queries
+      const enrichedClients = clientData.map((client) => {
+        try {
+          // Extract client profile info from nested structure
+          const clientProfile = client.client?.registrant_profiles;
+          const applicantProfile = client.client;
 
-            // Get applicant form data for recovery details (primary substances, recovery stage, etc.)
-            const applicantResult = await db.applicantForms.getByUserId(client.client_id);
-            const applicantProfile = applicantResult.data;
-
-            return {
-              ...client,
-              profile: clientProfile,
-              applicantProfile: applicantProfile,
-              displayName: clientProfile?.first_name 
-                ? `${clientProfile.first_name} ${clientProfile.last_name?.charAt(0) || ''}.`
-                : 'Anonymous Client',
-              phone: applicantProfile?.phone || 'Not provided',
-              email: clientProfile?.email,
-              primarySubstances: applicantProfile?.primary_substance ? [applicantProfile.primary_substance] : [],
-              recoveryStage: applicantProfile?.recovery_stage || 'Not specified',
-              recoveryGoals: client.recovery_goals || [],
-              nextFollowup: client.next_followup_date,
-              followupFrequency: client.followup_frequency || 'weekly',
-              lastContact: client.last_contact_date,
-              totalSessions: client.total_sessions || 0,
-              status: client.status || 'active'
-            };
-          } catch (err) {
-            console.warn(`Error enriching client data for ${client.client_id}:`, err);
-            return {
-              ...client,
-              displayName: 'Unknown Client',
-              recoveryGoals: [],
-              status: 'active'
-            };
-          }
-        })
-      );
+          return {
+            ...client,
+            profile: clientProfile,
+            applicantProfile: applicantProfile,
+            displayName: clientProfile?.first_name 
+              ? `${clientProfile.first_name} ${clientProfile.last_name?.charAt(0) || ''}.`
+              : 'Anonymous Client',
+            phone: applicantProfile?.phone || 'Not provided',
+            email: clientProfile?.email,
+            primarySubstances: applicantProfile?.primary_substance ? [applicantProfile.primary_substance] : [],
+            recoveryStage: applicantProfile?.recovery_stage || 'Not specified',
+            recoveryGoals: client.recovery_goals || [],
+            nextFollowup: client.next_followup_date,
+            followupFrequency: client.followup_frequency || 'weekly',
+            lastContact: client.last_contact_date,
+            totalSessions: client.total_sessions || 0,
+            status: client.status || 'active'
+          };
+        } catch (err) {
+          console.warn(`Error processing client data for ${client.id}:`, err);
+          return {
+            ...client,
+            displayName: 'Unknown Client',
+            recoveryGoals: [],
+            status: 'active'
+          };
+        }
+      });
 
       setClients(enrichedClients);
 
@@ -112,35 +118,38 @@ const PeerSupportHub = ({ onBack }) => {
           match.status === 'active'
         );
 
-        // Get existing client IDs to filter out
+        // Get existing client applicant form IDs to filter out
         const existingClientIds = clients.map(client => client.client_id);
 
-        // Filter connections that aren't already clients
-        const availableConnections = peerSupportConnections.filter(connection => {
-          const clientId = connection.applicant_1_id || connection.applicant_2_id;
-          return !existingClientIds.includes(clientId);
-        });
-
-        // Enrich with profile data
-        const enrichedConnections = await Promise.all(
-          availableConnections.map(async (connection) => {
-            const clientId = connection.applicant_1_id || connection.applicant_2_id;
-            const profileResult = await db.profiles.getById(clientId);
-            const applicantResult = await db.applicantForms.getByUserId(clientId);
+        // Filter connections that aren't already clients and get applicant form IDs
+        const availableConnections = [];
+        
+        for (const connection of peerSupportConnections) {
+          const applicantUserId = connection.applicant_1_id || connection.applicant_2_id;
+          
+          if (applicantUserId) {
+            // Get the applicant form ID for this user
+            const applicantResult = await db.applicantForms.getByUserId(applicantUserId);
             
-            return {
-              ...connection,
-              client_id: clientId,
-              profile: profileResult.data,
-              applicantProfile: applicantResult.data,
-              displayName: profileResult.data?.first_name 
-                ? `${profileResult.data.first_name} ${profileResult.data.last_name?.charAt(0) || ''}.`
-                : 'Anonymous'
-            };
-          })
-        );
+            if (applicantResult.data && !existingClientIds.includes(applicantResult.data.id)) {
+              // Get the profile data
+              const profileResult = await db.profiles.getById(applicantUserId);
+              
+              availableConnections.push({
+                ...connection,
+                client_id: applicantResult.data.id, // Use applicant form ID
+                client_user_id: applicantUserId, // Keep user ID for reference
+                profile: profileResult.data,
+                applicantProfile: applicantResult.data,
+                displayName: profileResult.data?.first_name 
+                  ? `${profileResult.data.first_name} ${profileResult.data.last_name?.charAt(0) || ''}.`
+                  : 'Anonymous'
+              });
+            }
+          }
+        }
 
-        setAvailableConnections(enrichedConnections);
+        setAvailableConnections(availableConnections);
       }
 
     } catch (err) {
@@ -155,9 +164,15 @@ const PeerSupportHub = ({ onBack }) => {
     try {
       console.log('➕ Adding new PSS client:', connection.displayName);
 
+      // Get the peer specialist profile ID
+      const peerProfileResult = await db.peerSupportProfiles.getByUserId(user.id);
+      if (!peerProfileResult.data) {
+        throw new Error('Peer specialist profile not found');
+      }
+
       const clientData = {
-        peer_specialist_id: user.id,
-        client_id: connection.client_id,
+        peer_specialist_id: peerProfileResult.data.id, // Use peer support profile ID
+        client_id: connection.client_id, // Use applicant form ID
         match_group_id: connection.id,
         status: 'active',
         next_followup_date: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString().split('T')[0], // 1 week from now
