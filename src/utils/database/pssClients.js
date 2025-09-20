@@ -17,7 +17,7 @@ export const pssClientsService = {
             id,
             first_name,
             last_name,
-            email,
+            email
           ),
           peer_profile:registrant_profiles!pss_clients_peer_specialist_id_fkey(
             id,
@@ -58,7 +58,7 @@ export const pssClientsService = {
             id,
             first_name,
             last_name,
-            email,
+            email
           ),
           peer_profile:registrant_profiles!pss_clients_peer_specialist_id_fkey(
             id,
@@ -99,7 +99,7 @@ export const pssClientsService = {
             id,
             first_name,
             last_name,
-            email,            
+            email            
           ),
           peer_profile:registrant_profiles!pss_clients_peer_specialist_id_fkey(
             id,
@@ -383,7 +383,7 @@ export const pssClientsService = {
             id,
             first_name,
             last_name,
-            email,            
+            email            
           )
         `)
         .eq('peer_specialist_id', peerSpecialistId)
@@ -422,7 +422,7 @@ export const pssClientsService = {
             id,
             first_name,
             last_name,
-            email,            
+            email            
           )
         `)
         .eq('peer_specialist_id', peerSpecialistId)
