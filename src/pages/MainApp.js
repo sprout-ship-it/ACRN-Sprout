@@ -32,25 +32,6 @@ import PropertySearch from '../components/features/property/PropertySearch';
 
 import '../styles/global.css';
 
-{/* Peer Support Routes */}
-{hasRole('peer') && (
-  <>
-    <Route path="/profile/peer-support" element={
-      <div style={{ maxWidth: '900px', margin: '0 auto' }}>
-        <PeerSupportProfileForm 
-          editMode={true}
-          onComplete={() => navigate('/app')}
-          onCancel={() => navigate('/app')}
-        />
-      </div>
-    } />
-    
-    {/* ✅ UPDATED: Use PeerSupportHub instead of placeholder */}
-    <Route path="/peer-dashboard" element={<PeerSupportHub />} />
-    <Route path="/clients" element={<MatchRequests />} />
-  </>
-)}
-
 // ✅ NEW: Job Applications/Candidates management placeholder
 const CandidateManagement = () => (
   <div className="card">
