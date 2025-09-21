@@ -1,5 +1,5 @@
-// src/components/features/matching/components/MatchDetailsModal.js - ENHANCED VERSION
-import React, { useState } from 'react';
+// src/components/features/matching/components/MatchDetailsModal.js - ENHANCED VERSION WITH Z-INDEX FIXES
+import React, { useState, useEffect } from 'react';
 import PropTypes from 'prop-types';
 
 const MODAL_SECTIONS = [
@@ -43,6 +43,76 @@ const MatchDetailsModal = ({
   isAlreadyMatched
 }) => {
   const [activeSection, setActiveSection] = useState('overview');
+
+  // Fix modal z-index issues and prevent body scroll
+  useEffect(() => {
+    console.log('🔧 Applying modal positioning fixes...');
+    
+    // Prevent body scroll when modal is open
+    const originalOverflow = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+    
+    // Add emergency classes after a brief delay to ensure DOM is ready
+    const timeoutId = setTimeout(() => {
+      const modalOverlay = document.querySelector('.modal-overlay');
+      const modalContent = document.querySelector('.modal-content-enhanced');
+      const modalBody = document.querySelector('.modal-body-enhanced');
+      
+      if (modalOverlay) {
+        modalOverlay.classList.add('emergency-fix');
+        console.log('✅ Applied emergency-fix to modal overlay');
+      }
+      if (modalContent) {
+        modalContent.classList.add('emergency-fix');
+        console.log('✅ Applied emergency-fix to modal content');
+      }
+      if (modalBody) {
+        modalBody.classList.add('emergency-fix');
+        console.log('✅ Applied emergency-fix to modal body');
+      }
+    }, 100);
+    
+    // Cleanup on unmount
+    return () => {
+      console.log('🧹 Cleaning up modal fixes...');
+      clearTimeout(timeoutId);
+      document.body.style.overflow = originalOverflow;
+      
+      // Remove emergency classes
+      const modalOverlay = document.querySelector('.modal-overlay');
+      const modalContent = document.querySelector('.modal-content-enhanced');
+      const modalBody = document.querySelector('.modal-body-enhanced');
+      
+      if (modalOverlay) {
+        modalOverlay.classList.remove('emergency-fix');
+      }
+      if (modalContent) {
+        modalContent.classList.remove('emergency-fix');
+      }
+      if (modalBody) {
+        modalBody.classList.remove('emergency-fix');
+      }
+    };
+  }, []);
+
+  // Enhanced close handler to ensure proper cleanup
+  const handleClose = () => {
+    console.log('🚪 Closing modal with cleanup...');
+    document.body.style.overflow = 'auto';
+    onClose();
+  };
+
+  // Enhanced section change with scroll reset
+  const handleSectionChange = (sectionId) => {
+    console.log(`🔄 Switching to section: ${sectionId}`);
+    setActiveSection(sectionId);
+    
+    // Reset scroll position when changing sections
+    const modalBody = document.querySelector('.modal-body-enhanced');
+    if (modalBody) {
+      modalBody.scrollTop = 0;
+    }
+  };
 
   if (!match) return null;
 
@@ -418,8 +488,8 @@ const MatchDetailsModal = ({
   };
 
   return (
-    <div className="modal-overlay" onClick={onClose}>
-      <div className="modal-content-enhanced" onClick={(e) => e.stopPropagation()}>
+    <div className="modal-overlay emergency-fix" onClick={handleClose}>
+      <div className="modal-content-enhanced emergency-fix" onClick={(e) => e.stopPropagation()}>
         {/* Modal Header */}
         <div className="modal-header-enhanced">
           <div className="modal-title-section">
@@ -428,7 +498,7 @@ const MatchDetailsModal = ({
               {matchScore}% Match
             </div>
           </div>
-          <button className="modal-close" onClick={onClose}>×</button>
+          <button className="modal-close" onClick={handleClose}>×</button>
         </div>
 
         {/* Section Navigation */}
@@ -437,7 +507,7 @@ const MatchDetailsModal = ({
             <button
               key={section.id}
               className={`modal-nav-tab ${activeSection === section.id ? 'active' : ''}`}
-              onClick={() => setActiveSection(section.id)}
+              onClick={() => handleSectionChange(section.id)}
             >
               <span className="nav-icon">{section.icon}</span>
               <span className="nav-label">{section.title}</span>
@@ -446,7 +516,7 @@ const MatchDetailsModal = ({
         </div>
 
         {/* Section Content */}
-        <div className="modal-body-enhanced">
+        <div className="modal-body-enhanced emergency-fix">
           {renderCurrentSection()}
         </div>
 
@@ -454,7 +524,7 @@ const MatchDetailsModal = ({
         <div className="modal-footer-enhanced">
           <button
             className="btn btn-outline"
-            onClick={onClose}
+            onClick={handleClose}
           >
             Close
           </button>
@@ -465,7 +535,7 @@ const MatchDetailsModal = ({
             }`}
             onClick={() => {
               onRequestMatch(match);
-              onClose();
+              handleClose();
             }}
             disabled={isRequestSent || isAlreadyMatched}
           >

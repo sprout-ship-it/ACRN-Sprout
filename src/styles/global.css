@@ -2282,4 +2282,178 @@ select.input {
   .modal-nav-tab .nav-icon {
     font-size: 1rem;
   }
+  /* ==================== MODAL Z-INDEX AND POSITIONING FIXES ==================== */
+
+/* Fix 1: Ensure header/navigation has high z-index */
+.app-header {
+  position: relative;
+  z-index: 9999; /* Higher than modal overlay */
+}
+
+/* Fix 2: Update modal overlay positioning to account for header */
+.modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 8000; /* Lower than header but high enough for content */
+  padding: 20px;
+  /* Ensure modal doesn't extend above header */
+  padding-top: max(20px, 120px); /* Account for header height */
+}
+
+/* Fix 3: Constrain modal content properly */
+.modal-content-enhanced {
+  background: white;
+  border-radius: var(--radius-xl);
+  border: 2px solid var(--border-beige);
+  max-width: 900px;
+  width: 95%;
+  /* CRITICAL FIX: Better height constraint */
+  max-height: calc(100vh - 140px); /* Subtract header height + padding */
+  min-height: 60vh; /* Ensure minimum usable height */
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  box-shadow: var(--shadow-xl);
+  /* Ensure modal stays within bounds */
+  position: relative;
+  z-index: 8001;
+}
+
+/* Fix 4: Proper scrolling containment */
+.modal-body-enhanced {
+  flex: 1;
+  overflow-y: auto;
+  overflow-x: hidden; /* Prevent horizontal overflow */
+  padding: 2rem;
+  /* Ensure scrolling stays within modal */
+  max-height: calc(100vh - 300px); /* Account for header + modal header + footer */
+  /* Better scrollbar styling */
+  scrollbar-width: thin;
+  scrollbar-color: var(--gray-400) var(--gray-100);
+}
+
+/* Fix 5: Webkit scrollbar styling for better UX */
+.modal-body-enhanced::-webkit-scrollbar {
+  width: 8px;
+}
+
+.modal-body-enhanced::-webkit-scrollbar-track {
+  background: var(--gray-100);
+  border-radius: 4px;
+}
+
+.modal-body-enhanced::-webkit-scrollbar-thumb {
+  background: var(--gray-400);
+  border-radius: 4px;
+}
+
+.modal-body-enhanced::-webkit-scrollbar-thumb:hover {
+  background: var(--gray-500);
+}
+
+/* Fix 6: Ensure modal header and footer don't overflow */
+.modal-header-enhanced {
+  flex-shrink: 0; /* Don't shrink */
+  z-index: 8002; /* Above modal body */
+  position: relative;
+}
+
+.modal-navigation {
+  flex-shrink: 0; /* Don't shrink */
+  z-index: 8002; /* Above modal body */
+  position: relative;
+}
+
+.modal-footer-enhanced {
+  flex-shrink: 0; /* Don't shrink */
+  z-index: 8002; /* Above modal body */
+  position: relative;
+}
+
+/* Fix 7: Navigation component z-index */
+.dashboard-grid-nav {
+  position: relative;
+  z-index: 9000; /* Below header but above modal */
+}
+
+/* Fix 8: Ensure content sections don't overflow modal bounds */
+.modal-section {
+  overflow: hidden; /* Prevent section overflow */
+}
+
+.section-grid,
+.overview-stats,
+.breakdown-grid,
+.yes-no-grid {
+  /* Ensure grids don't cause horizontal overflow */
+  max-width: 100%;
+  overflow: hidden;
+}
+
+/* Fix 9: Mobile responsive fixes */
+@media (max-width: 768px) {
+  .modal-overlay {
+    padding: 10px;
+    padding-top: max(10px, 100px); /* Smaller header on mobile */
+  }
+  
+  .modal-content-enhanced {
+    width: 98%;
+    max-height: calc(100vh - 120px); /* Adjust for mobile header */
+  }
+  
+  .modal-body-enhanced {
+    padding: 1rem;
+    max-height: calc(100vh - 250px); /* Account for mobile spacing */
+  }
+}
+
+@media (max-width: 480px) {
+  .modal-overlay {
+    padding: 5px;
+    padding-top: max(5px, 80px);
+  }
+  
+  .modal-content-enhanced {
+    width: 100%;
+    max-height: calc(100vh - 100px);
+    border-radius: var(--radius-lg); /* Smaller radius on small screens */
+  }
+  
+  .modal-body-enhanced {
+    padding: 0.75rem;
+    max-height: calc(100vh - 200px);
+  }
+}
+
+/* Fix 10: Force modal to stay below header on all devices */
+@media (max-width: 1024px) {
+  .modal-overlay {
+    align-items: flex-start; /* Align to top instead of center */
+    padding-top: 120px; /* Ensure space for header */
+  }
+}
+
+/* Fix 11: Emergency override for any remaining z-index issues */
+.modal-overlay.emergency-fix {
+  z-index: 7999 !important;
+}
+
+.modal-content-enhanced.emergency-fix {
+  z-index: 8000 !important;
+}
+
+/* Apply emergency fix to modal body if needed */
+.modal-body-enhanced.emergency-fix {
+  position: relative;
+  z-index: 8001 !important;
+  max-height: calc(100vh - 320px) !important;
+}
 }
