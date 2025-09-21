@@ -480,6 +480,8 @@ const RoommateDiscovery = ({ onRequestMatch, onBack }) => {
           onRequestMatch={handleRequestMatch}
           isRequestSent={selectedMatch.isRequestSent}
           isAlreadyMatched={selectedMatch.isAlreadyMatched}
+          usePortal={true}
+          debugMode={true}
         />
       )}
     </>
