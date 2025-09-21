@@ -1,5 +1,6 @@
-// src/components/features/matching/components/MatchDetailsModal.js - ENHANCED VERSION WITH Z-INDEX FIXES
+// src/components/features/matching/components/MatchDetailsModal.js - PORTAL-BASED SOLUTION
 import React, { useState, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import PropTypes from 'prop-types';
 
 const MODAL_SECTIONS = [
@@ -35,79 +36,127 @@ const MODAL_SECTIONS = [
   }
 ];
 
+// 🔧 DEBUG: Stacking context detection utility
+const debugStackingContext = (element, label) => {
+  if (!element) return;
+  
+  const styles = window.getComputedStyle(element);
+  const stackingProps = {
+    position: styles.position,
+    zIndex: styles.zIndex,
+    transform: styles.transform,
+    opacity: styles.opacity,
+    isolation: styles.isolation,
+    filter: styles.filter
+  };
+  
+  console.log(`🔍 ${label} stacking context:`, stackingProps);
+  
+  // Check if creates stacking context
+  const createsContext = (
+    (styles.position !== 'static' && styles.zIndex !== 'auto') ||
+    styles.transform !== 'none' ||
+    styles.opacity !== '1' ||
+    styles.isolation === 'isolate' ||
+    styles.filter !== 'none'
+  );
+  
+  console.log(`📊 ${label} creates stacking context:`, createsContext);
+  return createsContext;
+};
+
+// 🎯 Portal Container Management
+const getModalRoot = () => {
+  let modalRoot = document.getElementById('modal-root');
+  
+  if (!modalRoot) {
+    modalRoot = document.createElement('div');
+    modalRoot.id = 'modal-root';
+    modalRoot.style.cssText = `
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      z-index: 9999;
+      pointer-events: none;
+    `;
+    document.body.appendChild(modalRoot);
+    console.log('✅ Created modal-root portal container');
+  }
+  
+  return modalRoot;
+};
+
 const MatchDetailsModal = ({
   match,
   onClose,
   onRequestMatch,
   isRequestSent,
-  isAlreadyMatched
+  isAlreadyMatched,
+  usePortal = true, // Toggle portal usage
+  debugMode = false // Toggle debug mode
 }) => {
   const [activeSection, setActiveSection] = useState('overview');
+  const [modalContainer, setModalContainer] = useState(null);
 
-  // Fix modal z-index issues and prevent body scroll
+  // 🔧 Setup modal container and debugging
   useEffect(() => {
-    console.log('🔧 Applying modal positioning fixes...');
+    console.log('🎭 MatchDetailsModal: Setting up modal...');
     
-    // Prevent body scroll when modal is open
+    // Debug mode: analyze stacking contexts
+    if (debugMode) {
+      setTimeout(() => {
+        debugStackingContext(document.querySelector('.app-header'), 'Header');
+        debugStackingContext(document.querySelector('.container'), 'Container');
+        debugStackingContext(document.querySelector('.content'), 'Content');
+        debugStackingContext(document.querySelector('.dashboard-grid-nav'), 'Navigation');
+        debugStackingContext(document.body, 'Body');
+      }, 500);
+    }
+    
+    // Setup modal container
+    if (usePortal) {
+      const container = getModalRoot();
+      setModalContainer(container);
+    }
+    
+    // Prevent body scroll
     const originalOverflow = document.body.style.overflow;
+    const originalPosition = document.body.style.position;
+    
     document.body.style.overflow = 'hidden';
+    document.body.style.position = 'relative';
     
-    // Add emergency classes after a brief delay to ensure DOM is ready
-    const timeoutId = setTimeout(() => {
-      const modalOverlay = document.querySelector('.modal-overlay');
-      const modalContent = document.querySelector('.modal-content-enhanced');
-      const modalBody = document.querySelector('.modal-body-enhanced');
-      
-      if (modalOverlay) {
-        modalOverlay.classList.add('emergency-fix');
-        console.log('✅ Applied emergency-fix to modal overlay');
-      }
-      if (modalContent) {
-        modalContent.classList.add('emergency-fix');
-        console.log('✅ Applied emergency-fix to modal content');
-      }
-      if (modalBody) {
-        modalBody.classList.add('emergency-fix');
-        console.log('✅ Applied emergency-fix to modal body');
-      }
-    }, 100);
+    // Add debug class if enabled
+    if (debugMode) {
+      document.body.classList.add('debug-stacking');
+    }
     
-    // Cleanup on unmount
+    // Cleanup
     return () => {
-      console.log('🧹 Cleaning up modal fixes...');
-      clearTimeout(timeoutId);
+      console.log('🧹 MatchDetailsModal: Cleaning up...');
       document.body.style.overflow = originalOverflow;
+      document.body.style.position = originalPosition;
       
-      // Remove emergency classes
-      const modalOverlay = document.querySelector('.modal-overlay');
-      const modalContent = document.querySelector('.modal-content-enhanced');
-      const modalBody = document.querySelector('.modal-body-enhanced');
-      
-      if (modalOverlay) {
-        modalOverlay.classList.remove('emergency-fix');
-      }
-      if (modalContent) {
-        modalContent.classList.remove('emergency-fix');
-      }
-      if (modalBody) {
-        modalBody.classList.remove('emergency-fix');
+      if (debugMode) {
+        document.body.classList.remove('debug-stacking');
       }
     };
-  }, []);
+  }, [usePortal, debugMode]);
 
-  // Enhanced close handler to ensure proper cleanup
+  // 🚀 Enhanced close handler
   const handleClose = () => {
-    console.log('🚪 Closing modal with cleanup...');
-    document.body.style.overflow = 'auto';
+    console.log('🚪 MatchDetailsModal: Closing...');
     onClose();
   };
 
-  // Enhanced section change with scroll reset
+  // 📱 Enhanced section change with scroll reset
   const handleSectionChange = (sectionId) => {
-    console.log(`🔄 Switching to section: ${sectionId}`);
+    console.log(`🔄 MatchDetailsModal: Switching to ${sectionId}`);
     setActiveSection(sectionId);
     
-    // Reset scroll position when changing sections
+    // Reset scroll position
     const modalBody = document.querySelector('.modal-body-enhanced');
     if (modalBody) {
       modalBody.scrollTop = 0;
@@ -186,10 +235,9 @@ const MatchDetailsModal = ({
     );
   };
 
-  // Section rendering functions
+  // Section rendering functions (same as before)
   const renderOverviewSection = () => (
     <div className="modal-section">
-      {/* Profile Header */}
       <div className="profile-header-enhanced">
         <div className="profile-info">
           <h2 className="profile-name">{first_name}</h2>
@@ -210,7 +258,6 @@ const MatchDetailsModal = ({
         </div>
       </div>
 
-      {/* Status Indicators */}
       {(isAlreadyMatched || isRequestSent) && (
         <div className="status-section">
           {isAlreadyMatched && (
@@ -228,7 +275,6 @@ const MatchDetailsModal = ({
         </div>
       )}
 
-      {/* Quick Stats Grid */}
       <div className="overview-stats">
         <div className="stat-card">
           <span className="stat-icon">⏰</span>
@@ -366,7 +412,6 @@ const MatchDetailsModal = ({
 
   const renderCompatibilitySection = () => (
     <div className="modal-section">
-      {/* Green Flags */}
       {greenFlags.length > 0 && (
         <div className="compatibility-card green">
           <div className="compatibility-header">
@@ -384,7 +429,6 @@ const MatchDetailsModal = ({
         </div>
       )}
 
-      {/* Red Flags */}
       {redFlags.length > 0 && (
         <div className="compatibility-card red">
           <div className="compatibility-header">
@@ -402,7 +446,6 @@ const MatchDetailsModal = ({
         </div>
       )}
 
-      {/* Compatibility Breakdown */}
       {Object.keys(breakdown).length > 0 && (
         <div className="compatibility-breakdown">
           <h4 className="breakdown-title">Detailed Compatibility Scores</h4>
@@ -434,7 +477,6 @@ const MatchDetailsModal = ({
 
   const renderAboutSection = () => (
     <div className="modal-section">
-      {/* About Me */}
       {about_me && (
         <div className="about-card">
           <h4 className="about-title">About {first_name}</h4>
@@ -444,7 +486,6 @@ const MatchDetailsModal = ({
         </div>
       )}
 
-      {/* What They're Looking For */}
       {looking_for && (
         <div className="about-card">
           <h4 className="about-title">What {first_name} is Looking For</h4>
@@ -454,7 +495,6 @@ const MatchDetailsModal = ({
         </div>
       )}
 
-      {/* Interests */}
       {interests && interests.length > 0 && (
         <div className="interests-card">
           <h4 className="interests-title">Interests & Hobbies</h4>
@@ -470,26 +510,29 @@ const MatchDetailsModal = ({
 
   const renderCurrentSection = () => {
     switch (activeSection) {
-      case 'overview':
-        return renderOverviewSection();
-      case 'recovery':
-        return renderRecoverySection();
-      case 'lifestyle':
-        return renderLifestyleSection();
-      case 'housing':
-        return renderHousingSection();
-      case 'compatibility':
-        return renderCompatibilitySection();
-      case 'about':
-        return renderAboutSection();
-      default:
-        return renderOverviewSection();
+      case 'overview': return renderOverviewSection();
+      case 'recovery': return renderRecoverySection();
+      case 'lifestyle': return renderLifestyleSection();
+      case 'housing': return renderHousingSection();
+      case 'compatibility': return renderCompatibilitySection();
+      case 'about': return renderAboutSection();
+      default: return renderOverviewSection();
     }
   };
 
-  return (
-    <div className="modal-overlay emergency-fix" onClick={handleClose}>
-      <div className="modal-content-enhanced emergency-fix" onClick={(e) => e.stopPropagation()}>
+  // 🎭 Modal JSX
+  const modalJSX = (
+    <div 
+      className={`modal-overlay ${debugMode ? 'debug-stacking-context' : ''} ${!usePortal ? 'modal-emergency-override' : ''}`}
+      onClick={handleClose}
+      style={{
+        pointerEvents: 'auto' // Enable clicks when in portal
+      }}
+    >
+      <div 
+        className={`modal-content-enhanced ${!usePortal ? 'modal-content-emergency-override' : ''}`}
+        onClick={(e) => e.stopPropagation()}
+      >
         {/* Modal Header */}
         <div className="modal-header-enhanced">
           <div className="modal-title-section">
@@ -516,16 +559,13 @@ const MatchDetailsModal = ({
         </div>
 
         {/* Section Content */}
-        <div className="modal-body-enhanced emergency-fix">
+        <div className="modal-body-enhanced">
           {renderCurrentSection()}
         </div>
 
         {/* Modal Footer */}
         <div className="modal-footer-enhanced">
-          <button
-            className="btn btn-outline"
-            onClick={handleClose}
-          >
+          <button className="btn btn-outline" onClick={handleClose}>
             Close
           </button>
           
@@ -547,6 +587,15 @@ const MatchDetailsModal = ({
       </div>
     </div>
   );
+
+  // 🚀 Render with or without portal
+  if (usePortal && modalContainer) {
+    console.log('🎯 Rendering modal via React Portal');
+    return createPortal(modalJSX, modalContainer);
+  } else {
+    console.log('🎯 Rendering modal inline');
+    return modalJSX;
+  }
 };
 
 MatchDetailsModal.propTypes = {
@@ -554,7 +603,9 @@ MatchDetailsModal.propTypes = {
   onClose: PropTypes.func.isRequired,
   onRequestMatch: PropTypes.func.isRequired,
   isRequestSent: PropTypes.bool,
-  isAlreadyMatched: PropTypes.bool
+  isAlreadyMatched: PropTypes.bool,
+  usePortal: PropTypes.bool,
+  debugMode: PropTypes.bool
 };
 
 export default MatchDetailsModal;

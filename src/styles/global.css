@@ -2282,178 +2282,304 @@ select.input {
   .modal-nav-tab .nav-icon {
     font-size: 1rem;
   }
-  /* ==================== MODAL Z-INDEX AND POSITIONING FIXES ==================== */
+/* ==================== STACKING CONTEXT DEBUG & COMPREHENSIVE FIX ==================== */
 
-/* Fix 1: Ensure header/navigation has high z-index */
+/* 🔍 DEBUGGING: Add these temporarily to identify stacking context issues */
+.debug-stacking * {
+  outline: 1px solid red !important;
+  position: relative !important;
+}
+
+.debug-stacking *:before {
+  content: attr(class) " | z:" attr(style) !important;
+  position: absolute !important;
+  top: 0 !important;
+  left: 0 !important;
+  background: yellow !important;
+  color: black !important;
+  font-size: 10px !important;
+  z-index: 99999 !important;
+  pointer-events: none !important;
+}
+
+/* ==================== COMPREHENSIVE Z-INDEX HIERARCHY ==================== */
+
+/* 🏗️ ROOT LEVEL: Establish clear z-index hierarchy */
+:root {
+  --z-base: 1;
+  --z-header: 1000;
+  --z-navigation: 999;
+  --z-content: 1;
+  --z-modal-backdrop: 9998;
+  --z-modal: 9999;
+  --z-modal-content: 10000;
+  --z-emergency: 99999;
+}
+
+/* ==================== FORCE PROPER STACKING CONTEXTS ==================== */
+
+/* 🎯 CRITICAL: Ensure body doesn't create conflicting stacking context */
+body {
+  position: relative;
+  z-index: var(--z-base);
+  /* Remove any properties that create stacking contexts */
+  transform: none !important;
+  opacity: 1 !important;
+  filter: none !important;
+}
+
+/* 🎯 CRITICAL: Container should not create stacking context */
+.container {
+  /* Remove positioning that might create stacking context */
+  position: static !important;
+  z-index: auto !important;
+  /* Ensure no transform/opacity issues */
+  transform: none !important;
+  opacity: 1 !important;
+  isolation: auto !important;
+}
+
+/* 🎯 CRITICAL: Content areas should not interfere */
+.content {
+  position: relative;
+  z-index: var(--z-content);
+  /* Prevent stacking context creation */
+  transform: none !important;
+  isolation: auto !important;
+}
+
+/* ==================== HEADER & NAVIGATION HIERARCHY ==================== */
+
+/* 🎯 CRITICAL: Header gets highest priority except modals */
 .app-header {
-  position: relative;
-  z-index: 9999; /* Higher than modal overlay */
+  position: relative !important;
+  z-index: var(--z-header) !important;
+  isolation: isolate; /* Create intentional stacking context */
 }
 
-/* Fix 2: Update modal overlay positioning to account for header */
+/* 🎯 Navigation should be below header but above content */
+.dashboard-grid-nav,
+.navigation,
+.nav {
+  position: relative !important;
+  z-index: var(--z-navigation) !important;
+}
+
+/* ==================== MODAL SYSTEM OVERHAUL ==================== */
+
+/* 🎯 CRITICAL: Modal overlay - highest priority */
 .modal-overlay {
-  position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background: rgba(0, 0, 0, 0.5);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  z-index: 8000; /* Lower than header but high enough for content */
-  padding: 20px;
-  /* Ensure modal doesn't extend above header */
-  padding-top: max(20px, 120px); /* Account for header height */
+  position: fixed !important;
+  top: 0 !important;
+  left: 0 !important;
+  right: 0 !important;
+  bottom: 0 !important;
+  z-index: var(--z-modal-backdrop) !important;
+  
+  /* ✅ CRITICAL: Create new stacking context at root level */
+  isolation: isolate !important;
+  
+  /* Ensure modal is contained properly */
+  display: flex !important;
+  align-items: flex-start !important; /* Changed from center to flex-start */
+  justify-content: center !important;
+  padding: 20px !important;
+  padding-top: 140px !important; /* Account for header height */
+  
+  /* Prevent any parent interference */
+  transform: none !important;
+  opacity: 1 !important;
+  filter: none !important;
+  
+  /* Ensure scrolling if needed */
+  overflow-y: auto !important;
+  overflow-x: hidden !important;
 }
 
-/* Fix 3: Constrain modal content properly */
+/* 🎯 CRITICAL: Modal content - even higher priority */
 .modal-content-enhanced {
-  background: white;
-  border-radius: var(--radius-xl);
-  border: 2px solid var(--border-beige);
-  max-width: 900px;
-  width: 95%;
-  /* CRITICAL FIX: Better height constraint */
-  max-height: calc(100vh - 140px); /* Subtract header height + padding */
-  min-height: 60vh; /* Ensure minimum usable height */
-  overflow: hidden;
-  display: flex;
-  flex-direction: column;
-  box-shadow: var(--shadow-xl);
-  /* Ensure modal stays within bounds */
-  position: relative;
-  z-index: 8001;
+  position: relative !important;
+  z-index: var(--z-modal-content) !important;
+  
+  /* ✅ CRITICAL: Break free from any parent stacking context */
+  isolation: isolate !important;
+  
+  /* Proper sizing */
+  max-width: 900px !important;
+  width: 95% !important;
+  max-height: calc(100vh - 160px) !important; /* Account for header + padding */
+  
+  /* Display properties */
+  background: white !important;
+  border-radius: var(--radius-xl) !important;
+  border: 2px solid var(--border-beige) !important;
+  box-shadow: var(--shadow-xl) !important;
+  display: flex !important;
+  flex-direction: column !important;
+  overflow: hidden !important;
+  
+  /* Remove any conflicting properties */
+  transform: none !important;
+  opacity: 1 !important;
+  filter: none !important;
 }
 
-/* Fix 4: Proper scrolling containment */
+/* 🎯 Modal body scrolling */
 .modal-body-enhanced {
-  flex: 1;
-  overflow-y: auto;
-  overflow-x: hidden; /* Prevent horizontal overflow */
-  padding: 2rem;
-  /* Ensure scrolling stays within modal */
-  max-height: calc(100vh - 300px); /* Account for header + modal header + footer */
-  /* Better scrollbar styling */
-  scrollbar-width: thin;
-  scrollbar-color: var(--gray-400) var(--gray-100);
+  flex: 1 !important;
+  overflow-y: auto !important;
+  overflow-x: hidden !important;
+  position: relative !important;
+  z-index: var(--z-modal-content) !important;
+  
+  /* Ensure proper scrolling containment */
+  max-height: none !important; /* Let flex handle height */
+  padding: 2rem !important;
+  
+  /* Better scrollbar */
+  scrollbar-width: thin !important;
+  scrollbar-color: var(--gray-400) var(--gray-100) !important;
 }
 
-/* Fix 5: Webkit scrollbar styling for better UX */
-.modal-body-enhanced::-webkit-scrollbar {
-  width: 8px;
+/* ==================== EMERGENCY OVERRIDES ==================== */
+
+/* 🚨 NUCLEAR OPTION: If all else fails */
+.modal-emergency-override {
+  position: fixed !important;
+  top: 0 !important;
+  left: 0 !important;
+  right: 0 !important;
+  bottom: 0 !important;
+  z-index: var(--z-emergency) !important;
+  background: rgba(0, 0, 0, 0.5) !important;
+  
+  /* Force new stacking context at document level */
+  isolation: isolate !important;
+  transform: translateZ(0) !important; /* Force hardware acceleration */
+  
+  display: flex !important;
+  align-items: flex-start !important;
+  justify-content: center !important;
+  padding: 140px 20px 20px !important;
+  overflow-y: auto !important;
 }
 
-.modal-body-enhanced::-webkit-scrollbar-track {
-  background: var(--gray-100);
-  border-radius: 4px;
+.modal-content-emergency-override {
+  position: relative !important;
+  z-index: calc(var(--z-emergency) + 1) !important;
+  isolation: isolate !important;
+  transform: translateZ(0) !important;
+  
+  background: white !important;
+  max-width: 900px !important;
+  width: 95% !important;
+  max-height: calc(100vh - 160px) !important;
+  border-radius: var(--radius-xl) !important;
+  box-shadow: var(--shadow-xl) !important;
+  
+  display: flex !important;
+  flex-direction: column !important;
+  overflow: hidden !important;
 }
 
-.modal-body-enhanced::-webkit-scrollbar-thumb {
-  background: var(--gray-400);
-  border-radius: 4px;
+/* ==================== PREVENT STACKING CONTEXT CREATION ==================== */
+
+/* 🎯 Remove common stacking context creators */
+.matches-grid,
+.dashboard-grid,
+.grid-auto,
+.grid-2,
+.grid-3 {
+  /* Ensure grids don't create stacking contexts */
+  position: static !important;
+  z-index: auto !important;
+  transform: none !important;
+  opacity: 1 !important;
+  isolation: auto !important;
 }
 
-.modal-body-enhanced::-webkit-scrollbar-thumb:hover {
-  background: var(--gray-500);
-}
-
-/* Fix 6: Ensure modal header and footer don't overflow */
-.modal-header-enhanced {
-  flex-shrink: 0; /* Don't shrink */
-  z-index: 8002; /* Above modal body */
+/* 🎯 Match cards should not interfere */
+.match-card-enhanced,
+.card {
   position: relative;
+  z-index: var(--z-content);
+  /* Prevent stacking context creation unless needed */
+  transform: none;
+  isolation: auto;
 }
 
-.modal-navigation {
-  flex-shrink: 0; /* Don't shrink */
-  z-index: 8002; /* Above modal body */
-  position: relative;
+.match-card-enhanced:hover {
+  /* Use transform for hover effects but create stacking context */
+  transform: translateY(-4px);
+  isolation: isolate;
+  z-index: calc(var(--z-content) + 1);
 }
 
-.modal-footer-enhanced {
-  flex-shrink: 0; /* Don't shrink */
-  z-index: 8002; /* Above modal body */
-  position: relative;
-}
+/* ==================== RESPONSIVE FIXES ==================== */
 
-/* Fix 7: Navigation component z-index */
-.dashboard-grid-nav {
-  position: relative;
-  z-index: 9000; /* Below header but above modal */
-}
-
-/* Fix 8: Ensure content sections don't overflow modal bounds */
-.modal-section {
-  overflow: hidden; /* Prevent section overflow */
-}
-
-.section-grid,
-.overview-stats,
-.breakdown-grid,
-.yes-no-grid {
-  /* Ensure grids don't cause horizontal overflow */
-  max-width: 100%;
-  overflow: hidden;
-}
-
-/* Fix 9: Mobile responsive fixes */
 @media (max-width: 768px) {
   .modal-overlay {
-    padding: 10px;
-    padding-top: max(10px, 100px); /* Smaller header on mobile */
+    padding-top: 120px !important;
   }
   
   .modal-content-enhanced {
-    width: 98%;
-    max-height: calc(100vh - 120px); /* Adjust for mobile header */
-  }
-  
-  .modal-body-enhanced {
-    padding: 1rem;
-    max-height: calc(100vh - 250px); /* Account for mobile spacing */
+    max-height: calc(100vh - 140px) !important;
   }
 }
 
 @media (max-width: 480px) {
   .modal-overlay {
-    padding: 5px;
-    padding-top: max(5px, 80px);
+    padding: 100px 10px 10px !important;
   }
   
   .modal-content-enhanced {
-    width: 100%;
-    max-height: calc(100vh - 100px);
-    border-radius: var(--radius-lg); /* Smaller radius on small screens */
-  }
-  
-  .modal-body-enhanced {
-    padding: 0.75rem;
-    max-height: calc(100vh - 200px);
+    width: 100% !important;
+    max-height: calc(100vh - 120px) !important;
   }
 }
 
-/* Fix 10: Force modal to stay below header on all devices */
-@media (max-width: 1024px) {
-  .modal-overlay {
-    align-items: flex-start; /* Align to top instead of center */
-    padding-top: 120px; /* Ensure space for header */
-  }
-}
+/* ==================== PORTAL ROOT (if using React Portal) ==================== */
 
-/* Fix 11: Emergency override for any remaining z-index issues */
-.modal-overlay.emergency-fix {
-  z-index: 7999 !important;
-}
-
-.modal-content-enhanced.emergency-fix {
-  z-index: 8000 !important;
-}
-
-/* Apply emergency fix to modal body if needed */
-.modal-body-enhanced.emergency-fix {
+/* 🎯 If we need to use React Portal */
+#modal-root {
   position: relative;
-  z-index: 8001 !important;
-  max-height: calc(100vh - 320px) !important;
+  z-index: var(--z-modal-backdrop);
+  isolation: isolate;
+}
+
+/* ==================== WEBKIT SCROLLBAR FIXES ==================== */
+
+.modal-body-enhanced::-webkit-scrollbar {
+  width: 8px !important;
+}
+
+.modal-body-enhanced::-webkit-scrollbar-track {
+  background: var(--gray-100) !important;
+  border-radius: 4px !important;
+}
+
+.modal-body-enhanced::-webkit-scrollbar-thumb {
+  background: var(--gray-400) !important;
+  border-radius: 4px !important;
+}
+
+.modal-body-enhanced::-webkit-scrollbar-thumb:hover {
+  background: var(--gray-500) !important;
+}
+
+/* ==================== DEBUG HELPERS ==================== */
+
+/* 🔍 Add this class to any element to debug its stacking context */
+.debug-stacking-context::before {
+  content: "SC: " attr(class) !important;
+  position: fixed !important;
+  top: 10px !important;
+  right: 10px !important;
+  background: red !important;
+  color: white !important;
+  padding: 4px !important;
+  font-size: 12px !important;
+  z-index: 999999 !important;
+  pointer-events: none !important;
 }
 }
