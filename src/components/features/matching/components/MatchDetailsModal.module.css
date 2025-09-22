@@ -1,73 +1,79 @@
-/* MatchDetailsModal.module.css - Component-specific modal styles */
+/* MatchDetailsModal.module.css - FIXED VERSION */
 
 /* ==================== MODAL OVERLAY & CONTAINER ==================== */
 .overlay {
-  position: fixed !important;
-  top: 0 !important;
-  left: 0 !important;
-  right: 0 !important;
-  bottom: 0 !important;
-  z-index: 9999 !important;
-  background: rgba(0, 0, 0, 0.5) !important;
-  isolation: isolate !important;
-  display: flex !important;
-  align-items: flex-start !important;
-  justify-content: center !important;
-  padding: 20px !important;
-  padding-top: 140px !important; /* Account for header height */
-  overflow-y: auto !important;
-  overflow-x: hidden !important;
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 10000; /* Simplified z-index */
+  background: rgba(0, 0, 0, 0.5);
+  isolation: isolate;
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  padding: 20px;
+  padding-top: 180px; /* Increased for header + nav */
+  overflow-y: auto;
+  overflow-x: hidden;
   pointer-events: auto;
 }
 
 .content {
-  position: relative !important;
-  z-index: 10000 !important;
-  isolation: isolate !important;
-  background: white !important;
-  border-radius: var(--radius-xl) !important;
-  border: 2px solid var(--border-beige) !important;
-  max-width: 900px !important;
-  width: 95% !important;
-  max-height: calc(100vh - 160px) !important;
-  box-shadow: var(--shadow-xl) !important;
-  display: flex !important;
-  flex-direction: column !important;
-  overflow: hidden !important;
+  position: relative;
+  z-index: 1; /* Relative to overlay context */
+  isolation: isolate;
+  background: white;
+  border-radius: var(--radius-xl);
+  border: 2px solid var(--border-beige);
+  max-width: 900px;
+  width: 95%;
+  max-height: calc(100vh - 200px); /* Account for larger header */
+  box-shadow: var(--shadow-xl);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
 }
 
-/* Emergency override classes */
+/* Emergency override classes - simplified */
 .emergencyOverride {
-  position: fixed !important;
-  top: 0 !important;
-  left: 0 !important;
-  right: 0 !important;
-  bottom: 0 !important;
-  z-index: 99999 !important;
-  background: rgba(0, 0, 0, 0.5) !important;
-  isolation: isolate !important;
-  transform: translateZ(0) !important;
-  display: flex !important;
-  align-items: flex-start !important;
-  justify-content: center !important;
-  padding: 140px 20px 20px !important;
-  overflow-y: auto !important;
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 10001; /* Just slightly higher */
+  background: rgba(0, 0, 0, 0.5);
+  isolation: isolate;
+  transform: translateZ(0);
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  padding: 180px 20px 20px; /* Consistent padding */
+  overflow-y: auto;
 }
 
 .contentEmergencyOverride {
-  position: relative !important;
-  z-index: 999999 !important;
-  isolation: isolate !important;
-  transform: translateZ(0) !important;
-  background: white !important;
-  max-width: 900px !important;
-  width: 95% !important;
-  max-height: calc(100vh - 160px) !important;
-  border-radius: var(--radius-xl) !important;
-  box-shadow: var(--shadow-xl) !important;
-  display: flex !important;
-  flex-direction: column !important;
-  overflow: hidden !important;
+  position: relative;
+  z-index: 1; /* Relative to emergency override context */
+  isolation: isolate;
+  transform: translateZ(0);
+  background: white;
+  max-width: 900px;
+  width: 95%;
+  max-height: calc(100vh - 200px);
+  border-radius: var(--radius-xl);
+  box-shadow: var(--shadow-xl);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+/* Debug stacking context class */
+.debugStackingContext {
+  outline: 3px solid red;
+  box-shadow: 0 0 0 5px rgba(255, 0, 0, 0.3);
 }
 
 /* ==================== MODAL HEADER ==================== */
@@ -79,6 +85,7 @@
   background: linear-gradient(135deg, var(--primary-purple), var(--secondary-purple));
   color: white;
   position: relative;
+  z-index: 1;
 }
 
 .titleSection {
@@ -150,6 +157,8 @@
   padding: 0;
   display: flex;
   overflow-x: auto;
+  position: relative;
+  z-index: 1;
 }
 
 .navTab {
@@ -197,7 +206,7 @@
   overflow-y: auto;
   overflow-x: hidden;
   position: relative;
-  z-index: 10000;
+  z-index: 1;
   padding: 2rem;
   scrollbar-width: thin;
   scrollbar-color: var(--gray-400) var(--gray-100);
@@ -511,6 +520,13 @@
   padding: 1.5rem;
 }
 
+.lifestyleChoices {
+  background: white;
+  border: 2px solid var(--border-beige);
+  border-radius: var(--radius-lg);
+  padding: 1.5rem;
+}
+
 .subsectionTitle {
   font-size: 1.1rem;
   font-weight: 600;
@@ -792,6 +808,8 @@
   background: rgba(248, 249, 250, 0.8);
   border-top: 2px solid var(--border-beige);
   gap: 1rem;
+  position: relative;
+  z-index: 1;
 }
 
 .footer .btn {
@@ -801,11 +819,11 @@
 /* ==================== RESPONSIVE DESIGN ==================== */
 @media (max-width: 768px) {
   .overlay {
-    padding-top: 120px !important;
+    padding-top: 160px;
   }
   
   .content {
-    max-height: calc(100vh - 140px) !important;
+    max-height: calc(100vh - 180px);
   }
   
   .body {
@@ -861,12 +879,12 @@
 
 @media (max-width: 480px) {
   .overlay {
-    padding: 100px 10px 10px !important;
+    padding: 140px 10px 10px;
   }
   
   .content {
-    width: 100% !important;
-    max-height: calc(100vh - 120px) !important;
+    width: 100%;
+    max-height: calc(100vh - 160px);
   }
   
   .header {
