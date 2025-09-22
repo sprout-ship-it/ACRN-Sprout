@@ -1,9 +1,12 @@
-// src/components/dashboard/PeerSupportFinder.js - FIXED FOR PROPER PEER SUPPORT CONNECTIONS
+// src/components/features/peer-support/PeerSupportFinder.js - UPDATED WITH CSS MODULE
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../../../context/AuthContext';
 import { db } from '../../../utils/supabase';
 import LoadingSpinner from '../../ui/LoadingSpinner';
-import '../../../styles/global.css';
+
+// ✅ UPDATED: Import our new CSS foundation and component module
+import '../../../styles/main.css';
+import styles from './PeerSupportFinder.module.css';
 
 const PeerSupportFinder = ({ onBack }) => {
   const { user, profile } = useAuth();
@@ -342,13 +345,13 @@ I would appreciate the opportunity to discuss how your support could help me in 
     const isAcceptingClients = specialist.is_accepting_clients;
     
     if (hasConnection) {
-      return { text: 'Active Connection', disabled: true, className: 'btn-success' };
+      return { text: 'Active Connection', disabled: true, className: styles.statusConnected };
     } else if (hasRequest) {
-      return { text: 'Request Sent', disabled: true, className: 'btn-info' };
+      return { text: 'Request Sent', disabled: true, className: styles.statusRequestSent };
     } else if (!isAcceptingClients) {
-      return { text: 'Request Connection', disabled: false, className: 'btn-outline' };
+      return { text: 'Request Connection', disabled: false, className: styles.statusNotAccepting };
     } else {
-      return { text: 'Request Connection', disabled: false, className: 'btn-secondary' };
+      return { text: 'Request Connection', disabled: false, className: styles.statusAvailable };
     }
   };
 
@@ -378,11 +381,11 @@ I would appreciate the opportunity to discuss how your support could help me in 
           </p>
         </div>
 
-        {/* ✅ IMPROVED: Better search filters layout */}
-        <div className="card mb-5">
+        {/* ✅ UPDATED: Better search filters layout using CSS module */}
+        <div className={styles.filterContainer}>
           <h3 className="card-title">Search Filters</h3>
           
-          <div className="grid-auto mb-4">
+          <div className={styles.filterGrid}>
             <div className="form-group">
               <label className="label">Location (City, State)</label>
               <input
@@ -434,8 +437,8 @@ I would appreciate the opportunity to discuss how your support could help me in 
             </div>
           </div>
 
-          {/* Quick Action Buttons */}
-          <div className="grid-auto mb-4">
+          {/* ✅ UPDATED: Quick Action Buttons using CSS module */}
+          <div className={styles.filterActions}>
             <button
               className="btn btn-outline"
               onClick={handleShowNearby}
@@ -465,10 +468,10 @@ I would appreciate the opportunity to discuss how your support could help me in 
             </div>
           </div>
 
-          {/* Specialties Filter */}
+          {/* ✅ UPDATED: Specialties Filter using CSS module */}
           <div className="form-group">
             <label className="label">Specialties (select any that interest you)</label>
-            <div className="grid-auto">
+            <div className={styles.specialtiesGrid}>
               {specialtyOptions.map(specialty => (
                 <div key={specialty} className="checkbox-item">
                   <input
@@ -485,9 +488,9 @@ I would appreciate the opportunity to discuss how your support could help me in 
             </div>
           </div>
 
-          {/* Active Filters Display */}
+          {/* ✅ UPDATED: Active Filters Display using CSS module */}
           {(filters.specialties.length > 0 || filters.location || filters.zipCode || filters.minExperience) && (
-            <div className="alert alert-info">
+            <div className={styles.activeFiltersDisplay}>
               <strong>Active Filters:</strong> 
               {filters.location && ` Location: ${filters.location} •`}
               {filters.zipCode && ` Zip: ${filters.zipCode} •`}
@@ -498,9 +501,9 @@ I would appreciate the opportunity to discuss how your support could help me in 
           )}
         </div>
 
-        {/* Error State */}
+        {/* ✅ UPDATED: Error State using CSS module */}
         {error && (
-          <div className="card mb-5">
+          <div className={styles.errorState}>
             <div className="alert alert-error">
               <h4>Error Loading Specialists</h4>
               <p>{error}</p>
@@ -517,20 +520,21 @@ I would appreciate the opportunity to discuss how your support could help me in 
           </div>
         )}
 
-        {/* Loading State */}
+        {/* ✅ UPDATED: Loading State using CSS module */}
         {loading && (
-          <div className="empty-state">
+          <div className={styles.loadingContainer}>
             <LoadingSpinner />
-            <p>Finding peer support specialists...</p>
+            <div className={styles.loadingMessage}>Finding peer support specialists...</div>
           </div>
         )}
 
-        {/* No Results State */}
+        {/* ✅ UPDATED: No Results State using CSS module */}
         {!loading && !error && specialists.length === 0 && (
-          <div className="card text-center">
-            <h3>No specialists found</h3>
-            <p>Try adjusting your filters or expanding your search area.</p>
-            <div className="mt-3">
+          <div className={styles.emptyState}>
+            <div className={styles.emptyStateIcon}>🔍</div>
+            <h3 className={styles.emptyStateTitle}>No specialists found</h3>
+            <p className={styles.emptyStateMessage}>Try adjusting your filters or expanding your search area.</p>
+            <div className={styles.emptyStateActions}>
               <button
                 className="btn btn-primary"
                 onClick={handleShowNearby}
@@ -538,7 +542,7 @@ I would appreciate the opportunity to discuss how your support could help me in 
                 Find Nearby Specialists
               </button>
               <button
-                className="btn btn-outline ml-2"
+                className="btn btn-outline"
                 onClick={clearFilters}
               >
                 Clear All Filters
@@ -547,40 +551,38 @@ I would appreciate the opportunity to discuss how your support could help me in 
           </div>
         )}
 
-        {/* Specialists Grid */}
+        {/* ✅ UPDATED: Specialists Grid using CSS module */}
         {!loading && !error && specialists.length > 0 && (
-          <>
-            <div className="card mb-4">
-              <div className="flex" style={{ alignItems: 'center', justifyContent: 'space-between' }}>
-                <h3 className="card-title">
-                  {specialists.length} Specialist{specialists.length !== 1 ? 's' : ''} Found
-                </h3>
-                <div className="text-gray-600">
-                  {specialists.filter(s => s.is_accepting_clients).length} accepting new clients •{' '}
-                  {activeConnections.size} active connections •{' '}
-                  {connectionRequests.size} pending requests
-                </div>
+          <div className={styles.specialistsContainer}>
+            <div className={styles.specialistsHeader}>
+              <h3 className="card-title">
+                {specialists.length} Specialist{specialists.length !== 1 ? 's' : ''} Found
+              </h3>
+              <div className={styles.specialistsStats}>
+                {specialists.filter(s => s.is_accepting_clients).length} accepting new clients •{' '}
+                {activeConnections.size} active connections •{' '}
+                {connectionRequests.size} pending requests
               </div>
             </div>
 
-            <div className="grid-auto mb-5">
+            <div className={styles.specialistsGrid}>
               {specialists.map((specialist) => {
                 const connectionStatus = getConnectionStatus(specialist);
                 
                 return (
-                  <div key={specialist.user_id} className="card">
-                    <div className="card-header">
+                  <div key={specialist.user_id} className={styles.specialistCard}>
+                    <div className={styles.specialistCardHeader}>
                       <div>
-                        <div className="card-title">
+                        <div className={styles.specialistName}>
                           {specialist.registrant_profiles?.first_name || 'Anonymous'}
                         </div>
-                        <div className="card-subtitle">
+                        <div className={styles.specialistTitle}>
                           {specialist.professional_title || 'Peer Support Specialist'}
                         </div>
                       </div>
-                      <div>
+                      <div className={styles.badgeGroup}>
                         {specialist.is_licensed && (
-                          <span className="badge badge-success mb-1">Licensed</span>
+                          <span className="badge badge-success">Licensed</span>
                         )}
                         {specialist.is_accepting_clients ? (
                           <span className="badge badge-success">Accepting Clients</span>
@@ -597,44 +599,44 @@ I would appreciate the opportunity to discuss how your support could help me in 
                     </div>
 
                     <div className="mb-4">
-                      <div className="grid-2 text-gray-600 mb-3">
+                      <div className={styles.experienceInfo}>
                         <div>
-                          <span className="text-gray-600">Experience:</span>
-                          <span className="text-gray-800 ml-1">
+                          <span className={styles.experienceLabel}>Experience:</span>
+                          <span className={styles.experienceValue}>
                             {formatExperienceText(specialist.years_experience)}
                           </span>
                         </div>
                         <div>
-                          <span className="text-gray-600">Service Area:</span>
-                          <span className="text-gray-800 ml-1">
+                          <span className={styles.experienceLabel}>Service Area:</span>
+                          <span className={styles.experienceValue}>
                             {formatLocationText(specialist.service_area)}
                           </span>
                         </div>
                       </div>
 
-                      {/* Specialties */}
+                      {/* ✅ UPDATED: Specialties using CSS module */}
                       {specialist.specialties?.length > 0 && (
-                        <div className="mb-3">
+                        <div className={styles.specialtiesSection}>
                           <div className="label mb-2">Specialties</div>
-                          <div className="mb-2">
+                          <div className={styles.specialtiesList}>
                             {specialist.specialties.slice(0, 4).map((specialty, i) => (
-                              <span key={i} className="badge badge-info mr-1 mb-1">
+                              <span key={i} className={styles.specialtyBadge}>
                                 {specialty}
                               </span>
                             ))}
-                            {specialist.specialties.length > 4 && (
-                              <span className="text-sm text-gray-600">
-                                +{specialist.specialties.length - 4} more
-                              </span>
-                            )}
                           </div>
+                          {specialist.specialties.length > 4 && (
+                            <div className={styles.moreSpecialties}>
+                              +{specialist.specialties.length - 4} more
+                            </div>
+                          )}
                         </div>
                       )}
 
-                      {/* Brief Bio */}
+                      {/* ✅ UPDATED: Brief Bio using CSS module */}
                       {specialist.bio && (
-                        <div className="mb-3">
-                          <p className="card-text">
+                        <div className={styles.bioSection}>
+                          <p className={styles.bioText}>
                             {specialist.bio.length > 150 
                               ? `${specialist.bio.substring(0, 150)}...` 
                               : specialist.bio
@@ -644,7 +646,7 @@ I would appreciate the opportunity to discuss how your support could help me in 
                       )}
                     </div>
 
-                    <div className="grid-2">
+                    <div className={styles.cardActions}>
                       <button
                         className="btn btn-outline"
                         onClick={() => handleShowDetails(specialist)}
@@ -664,7 +666,7 @@ I would appreciate the opportunity to discuss how your support could help me in 
                 );
               })}
             </div>
-          </>
+          </div>
         )}
 
         {/* Back Button */}
@@ -680,160 +682,154 @@ I would appreciate the opportunity to discuss how your support could help me in 
         )}
       </div>
 
-      {/* Specialist Details Modal */}
+      {/* ✅ UPDATED: Specialist Details Modal using CSS module */}
       {showDetails && selectedSpecialist && (
         <div className="modal-overlay" onClick={() => setShowDetails(false)}>
-          <div className="modal-content" onClick={(e) => e.stopPropagation()}>
-            <div className="modal-header">
-              <h2 className="modal-title">
+          <div className={styles.modalContent} onClick={(e) => e.stopPropagation()}>
+            <div className={styles.modalHeader}>
+              <h2 className={styles.modalTitle}>
                 {selectedSpecialist.registrant_profiles?.first_name || 'Anonymous'} - Peer Support Specialist
               </h2>
               <button
-                className="modal-close"
+                className={styles.modalClose}
                 onClick={() => setShowDetails(false)}
               >
                 ×
               </button>
             </div>
 
-            {/* Connection Status */}
-            {activeConnections.has(selectedSpecialist.user_id) && (
-              <div className="alert alert-success mb-4">
-                <strong>✅ Active Connection:</strong> You have an active peer support connection with this specialist. 
-                Check your connections page to exchange contact information and coordinate support sessions.
-              </div>
-            )}
-            
-            {connectionRequests.has(selectedSpecialist.user_id) && !activeConnections.has(selectedSpecialist.user_id) && (
-              <div className="alert alert-info mb-4">
-                <strong>📤 Request Sent:</strong> You've sent a peer support request to this specialist. 
-                They will review your request and respond through their dashboard.
-              </div>
-            )}
+            <div className={styles.modalBody}>
+              {/* Connection Status */}
+              {activeConnections.has(selectedSpecialist.user_id) && (
+                <div className="alert alert-success mb-4">
+                  <strong>✅ Active Connection:</strong> You have an active peer support connection with this specialist. 
+                  Check your connections page to exchange contact information and coordinate support sessions.
+                </div>
+              )}
+              
+              {connectionRequests.has(selectedSpecialist.user_id) && !activeConnections.has(selectedSpecialist.user_id) && (
+                <div className="alert alert-info mb-4">
+                  <strong>📤 Request Sent:</strong> You've sent a peer support request to this specialist. 
+                  They will review your request and respond through their dashboard.
+                </div>
+              )}
 
-            {/* Professional Information */}
-            <div className="mb-4">
-              <h4 className="card-title">Professional Background</h4>
-              <div className="grid-2 text-sm mb-3">
-                <div>
-                  <strong>Title:</strong> {selectedSpecialist.professional_title || 'Peer Support Specialist'}
-                </div>
-                <div>
-                  <strong>Experience:</strong> {formatExperienceText(selectedSpecialist.years_experience)}
-                </div>
-                <div>
-                  <strong>Licensed:</strong> {selectedSpecialist.is_licensed ? 'Yes' : 'No'}
-                </div>
-                <div>
-                  <strong>Accepting Clients:</strong> {selectedSpecialist.is_accepting_clients ? 'Yes' : 'No'}
-                </div>
-              </div>
-            </div>
-
-            {/* Bio */}
-            {selectedSpecialist.bio && (
-              <div className="mb-4">
-                <h4 className="card-title">About</h4>
-                <p className="card-text">{selectedSpecialist.bio}</p>
-              </div>
-            )}
-
-            {/* Service Areas */}
-            {selectedSpecialist.service_area?.length > 0 && (
-              <div className="mb-4">
-                <h4 className="card-title">Service Areas</h4>
-                <div className="mb-2">
-                  {(Array.isArray(selectedSpecialist.service_area) 
-                    ? selectedSpecialist.service_area 
-                    : [selectedSpecialist.service_area]
-                  ).map((area, i) => (
-                    <span key={i} className="badge badge-success mr-1 mb-1">{area}</span>
-                  ))}
+              {/* ✅ UPDATED: Professional Information using CSS module */}
+              <div className={styles.professionalInfo}>
+                <h4 className={styles.detailSectionTitle}>Professional Background</h4>
+                <div className={styles.professionalGrid}>
+                  <div className={styles.infoItem}>
+                    <span className={styles.infoLabel}>Title:</span>
+                    <span className={styles.infoValue}>{selectedSpecialist.professional_title || 'Peer Support Specialist'}</span>
+                  </div>
+                  <div className={styles.infoItem}>
+                    <span className={styles.infoLabel}>Experience:</span>
+                    <span className={styles.infoValue}>{formatExperienceText(selectedSpecialist.years_experience)}</span>
+                  </div>
+                  <div className={styles.infoItem}>
+                    <span className={styles.infoLabel}>Licensed:</span>
+                    <span className={styles.infoValue}>{selectedSpecialist.is_licensed ? 'Yes' : 'No'}</span>
+                  </div>
+                  <div className={styles.infoItem}>
+                    <span className={styles.infoLabel}>Accepting Clients:</span>
+                    <span className={styles.infoValue}>{selectedSpecialist.is_accepting_clients ? 'Yes' : 'No'}</span>
+                  </div>
                 </div>
               </div>
-            )}
 
-            {/* All Specialties */}
-            {selectedSpecialist.specialties?.length > 0 && (
-              <div className="mb-4">
-                <h4 className="card-title">Specialties</h4>
-                <div className="mb-2">
-                  {selectedSpecialist.specialties.map((specialty, i) => (
-                    <span key={i} className="badge badge-info mr-1 mb-1">{specialty}</span>
-                  ))}
+              {/* Bio */}
+              {selectedSpecialist.bio && (
+                <div className={styles.detailSection}>
+                  <h4 className={styles.detailSectionTitle}>About</h4>
+                  <p className={styles.bioText}>{selectedSpecialist.bio}</p>
                 </div>
-              </div>
-            )}
+              )}
 
-            {/* Recovery Methods Supported */}
-            {selectedSpecialist.supported_recovery_methods?.length > 0 && (
-              <div className="mb-4">
-                <h4 className="card-title">Supported Recovery Methods</h4>
-                <div className="mb-2">
-                  {selectedSpecialist.supported_recovery_methods.map((method, i) => (
-                    <span key={i} className="badge badge-warning mr-1 mb-1">{method}</span>
-                  ))}
+              {/* ✅ UPDATED: Service Areas using CSS module */}
+              {selectedSpecialist.service_area?.length > 0 && (
+                <div className={styles.detailSection}>
+                  <h4 className={styles.detailSectionTitle}>Service Areas</h4>
+                  <div className={styles.tagsList}>
+                    {(Array.isArray(selectedSpecialist.service_area) 
+                      ? selectedSpecialist.service_area 
+                      : [selectedSpecialist.service_area]
+                    ).map((area, i) => (
+                      <span key={i} className={styles.detailBadge}>{area}</span>
+                    ))}
+                  </div>
                 </div>
-              </div>
-            )}
+              )}
 
-            {/* Additional Information */}
-            {selectedSpecialist.additional_info && (
-              <div className="mb-4">
-                <h4 className="card-title">Additional Information</h4>
-                <p className="card-text">{selectedSpecialist.additional_info}</p>
-              </div>
-            )}
+              {/* ✅ UPDATED: All Specialties using CSS module */}
+              {selectedSpecialist.specialties?.length > 0 && (
+                <div className={styles.detailSection}>
+                  <h4 className={styles.detailSectionTitle}>Specialties</h4>
+                  <div className={styles.tagsList}>
+                    {selectedSpecialist.specialties.map((specialty, i) => (
+                      <span key={i} className={styles.detailBadge}>{specialty}</span>
+                    ))}
+                  </div>
+                </div>
+              )}
 
-            {/* Connection Process Explanation */}
-            {!activeConnections.has(selectedSpecialist.user_id) && !connectionRequests.has(selectedSpecialist.user_id) && (
-              <div className="mb-4">
-                <h4 className="card-title">Connection Process</h4>
-                <div className="alert alert-info">
-                  <strong>🤝 Peer Support Connection Process:</strong>
-                  <ol style={{ marginTop: '0.5rem', paddingLeft: '1.25rem' }}>
+              {/* Recovery Methods Supported */}
+              {selectedSpecialist.supported_recovery_methods?.length > 0 && (
+                <div className={styles.detailSection}>
+                  <h4 className={styles.detailSectionTitle}>Supported Recovery Methods</h4>
+                  <div className={styles.tagsList}>
+                    {selectedSpecialist.supported_recovery_methods.map((method, i) => (
+                      <span key={i} className={styles.detailBadge}>{method}</span>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Additional Information */}
+              {selectedSpecialist.additional_info && (
+                <div className={styles.detailSection}>
+                  <h4 className={styles.detailSectionTitle}>Additional Information</h4>
+                  <p className={styles.bioText}>{selectedSpecialist.additional_info}</p>
+                </div>
+              )}
+
+              {/* ✅ UPDATED: Connection Process Explanation using CSS module */}
+              {!activeConnections.has(selectedSpecialist.user_id) && !connectionRequests.has(selectedSpecialist.user_id) && (
+                <div className={styles.connectionProcess}>
+                  <div className={styles.connectionProcessTitle}>🤝 Peer Support Connection Process:</div>
+                  <ol className={styles.connectionProcessList}>
                     <li>Send connection request to express interest in peer support</li>
                     <li>Specialist reviews your request and your recovery goals</li>
                     <li>If approved, you can exchange contact information and coordinate</li>
                     <li>Work together to establish a support schedule and goals</li>
                   </ol>
                 </div>
-              </div>
-            )}
-
-            <div className="grid-2">
-              <button
-                className="btn btn-outline"
-                onClick={() => setShowDetails(false)}
-              >
-                Close
-              </button>
-              
-              {!activeConnections.has(selectedSpecialist.user_id) && !connectionRequests.has(selectedSpecialist.user_id) ? (
-                <button
-                  className="btn btn-secondary"
-                  onClick={() => {
-                    handleRequestConnection(selectedSpecialist);
-                    setShowDetails(false);
-                  }}
-                  disabled={!selectedSpecialist.is_accepting_clients}
-                >
-                  {!selectedSpecialist.is_accepting_clients ? 'Not Accepting Clients' : 'Request Connection'}
-                </button>
-              ) : (
-                <div className="text-center" style={{ 
-                  display: 'flex', 
-                  alignItems: 'center', 
-                  justifyContent: 'center',
-                  padding: '10px',
-                  background: 'var(--bg-light-cream)',
-                  borderRadius: 'var(--radius-md)',
-                  color: 'var(--primary-purple)',
-                  fontWeight: '600'
-                }}>
-                  {activeConnections.has(selectedSpecialist.user_id) ? '✅ Active Connection' : '📤 Request Sent'}
-                </div>
               )}
+
+              <div className={styles.modalActions}>
+                <button
+                  className="btn btn-outline"
+                  onClick={() => setShowDetails(false)}
+                >
+                  Close
+                </button>
+                
+                {!activeConnections.has(selectedSpecialist.user_id) && !connectionRequests.has(selectedSpecialist.user_id) ? (
+                  <button
+                    className="btn btn-secondary"
+                    onClick={() => {
+                      handleRequestConnection(selectedSpecialist);
+                      setShowDetails(false);
+                    }}
+                    disabled={!selectedSpecialist.is_accepting_clients}
+                  >
+                    {!selectedSpecialist.is_accepting_clients ? 'Not Accepting Clients' : 'Request Connection'}
+                  </button>
+                ) : (
+                  <div className={styles.connectionStatusDisplay}>
+                    {activeConnections.has(selectedSpecialist.user_id) ? '✅ Active Connection' : '📤 Request Sent'}
+                  </div>
+                )}
+              </div>
             </div>
           </div>
         </div>

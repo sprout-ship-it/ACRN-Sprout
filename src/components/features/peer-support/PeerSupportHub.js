@@ -1,9 +1,12 @@
-// src/components/features/peer-support/PeerSupportHub.js
+// src/components/features/peer-support/PeerSupportHub.js - UPDATED WITH CSS MODULE
 import React, { useState, useEffect } from 'react';
-import { useAuth } from '../../../hooks/useAuth';
+import { useAuth } from '../../../context/AuthContext';
 import { db } from '../../../utils/supabase';
 import LoadingSpinner from '../../ui/LoadingSpinner';
-import '../../../styles/global.css';
+
+// ✅ UPDATED: Import our new CSS foundation and component module
+import '../../../styles/main.css';
+import styles from './PeerSupportHub.module.css';
 
 const PeerSupportHub = ({ onBack }) => {
   const { user, profile } = useAuth();
@@ -318,6 +321,16 @@ const PeerSupportHub = ({ onBack }) => {
     return diffDays;
   };
 
+  /**
+   * ✅ NEW: Get follow-up alert styling based on status
+   */
+  const getFollowupAlertClass = (daysUntilFollowup) => {
+    if (daysUntilFollowup === null) return styles.followupOnTrack;
+    if (daysUntilFollowup < 0) return styles.followupOverdue;
+    if (daysUntilFollowup <= 2) return styles.followupDueSoon;
+    return styles.followupOnTrack;
+  };
+
   return (
     <div className="content">
       {/* Header */}
@@ -328,9 +341,9 @@ const PeerSupportHub = ({ onBack }) => {
         </p>
       </div>
 
-      {/* Error State */}
+      {/* ✅ UPDATED: Error State using CSS module */}
       {error && (
-        <div className="card mb-5">
+        <div className={styles.errorContainer}>
           <div className="alert alert-error">
             <h4>Error Loading Clients</h4>
             <p>{error}</p>
@@ -347,27 +360,27 @@ const PeerSupportHub = ({ onBack }) => {
         </div>
       )}
 
-      {/* Loading State */}
+      {/* ✅ UPDATED: Loading State using CSS module */}
       {loading && (
-        <div className="empty-state">
+        <div className={styles.loadingContainer}>
           <LoadingSpinner />
-          <p>Loading your clients...</p>
+          <div className={styles.loadingMessage}>Loading your clients...</div>
         </div>
       )}
 
-      {/* Available Connections to Add */}
+      {/* ✅ UPDATED: Available Connections to Add using CSS module */}
       {!loading && availableConnections.length > 0 && (
-        <div className="card mb-5">
+        <div className={styles.availableConnectionsCard}>
           <h3 className="card-title">Available Connections</h3>
           <p className="card-text mb-4">
             These individuals have connected with you for peer support but haven't been added to your client list yet.
           </p>
           
-          <div className="grid-auto">
+          <div className={styles.availableConnectionsGrid}>
             {availableConnections.map((connection) => (
-              <div key={connection.id} className="card" style={{ background: 'var(--bg-light-cream)' }}>
-                <h4 className="card-title">{connection.displayName}</h4>
-                <div className="text-gray-600 mb-3">
+              <div key={connection.id} className={styles.connectionCard}>
+                <h4 className={styles.connectionName}>{connection.displayName}</h4>
+                <div className={styles.connectionMeta}>
                   <div>Connected: {new Date(connection.created_at).toLocaleDateString()}</div>
                   {connection.applicantProfile?.recovery_stage && (
                     <div>Recovery Stage: {connection.applicantProfile.recovery_stage}</div>
@@ -386,38 +399,35 @@ const PeerSupportHub = ({ onBack }) => {
         </div>
       )}
 
-      {/* Current Clients */}
+      {/* ✅ UPDATED: Current Clients using CSS module */}
       {!loading && clients.length > 0 && (
         <>
-          <div className="card mb-4">
-            <div className="flex" style={{ alignItems: 'center', justifyContent: 'space-between' }}>
-              <h3 className="card-title">
-                Your Clients ({clients.length})
-              </h3>
-              <button 
-                className="btn btn-outline btn-sm"
-                onClick={loadClients}
-                disabled={loading}
-              >
-                🔄 Refresh
-              </button>
-            </div>
+          <div className={styles.clientsHeader}>
+            <h3 className="card-title">
+              Your Clients ({clients.length})
+            </h3>
+            <button 
+              className={styles.refreshButton}
+              onClick={loadClients}
+              disabled={loading}
+            >
+              🔄 Refresh
+            </button>
           </div>
 
-          <div className="grid-auto mb-5">
+          <div className={styles.clientsGrid}>
             {clients.map((client) => {
               const statusBadge = getStatusBadge(client.status);
               const daysUntilFollowup = getDaysUntilFollowup(client.nextFollowup);
-              const isOverdue = daysUntilFollowup < 0;
-              const isDueSoon = daysUntilFollowup >= 0 && daysUntilFollowup <= 2;
+              const followupAlertClass = getFollowupAlertClass(daysUntilFollowup);
               
               return (
-                <div key={client.id} className="card">
-                  {/* Client Header */}
-                  <div className="card-header">
+                <div key={client.id} className={styles.clientCard}>
+                  {/* ✅ UPDATED: Client Header using CSS module */}
+                  <div className={styles.clientCardHeader}>
                     <div>
-                      <div className="card-title">{client.displayName}</div>
-                      <div className="card-subtitle">
+                      <div className={styles.clientName}>{client.displayName}</div>
+                      <div className={styles.clientSubtitle}>
                         {client.totalSessions} sessions • 
                         {client.lastContact 
                           ? ` Last contact: ${new Date(client.lastContact).toLocaleDateString()}`
@@ -426,40 +436,44 @@ const PeerSupportHub = ({ onBack }) => {
                       </div>
                     </div>
                     
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', alignItems: 'flex-end' }}>
+                    <div className={styles.clientStatusBadge}>
                       <span className={`badge ${statusBadge.class}`}>
                         {statusBadge.text}
                       </span>
                     </div>
                   </div>
 
-                  {/* Client Info */}
-                  <div className="mb-4">
-                    <div className="grid-2 text-sm mb-3">
+                  {/* ✅ UPDATED: Client Info using CSS module */}
+                  <div className={styles.clientInfo}>
+                    <div className={styles.clientInfoGrid}>
                       <div>
-                        <strong>Phone:</strong> {client.phone || 'Not provided'}
+                        <span className={styles.infoLabel}>Phone:</span>
+                        <span className={styles.infoValue}> {client.phone || 'Not provided'}</span>
                       </div>
                       <div>
-                        <strong>Email:</strong> {client.email || 'Not provided'}
-                      </div>
-                    </div>
-
-                    <div className="grid-2 text-sm mb-3">
-                      <div>
-                        <strong>Recovery Stage:</strong> {client.recoveryStage}
-                      </div>
-                      <div>
-                        <strong>Follow-up:</strong> {formatFollowupFrequency(client.followupFrequency)}
+                        <span className={styles.infoLabel}>Email:</span>
+                        <span className={styles.infoValue}> {client.email || 'Not provided'}</span>
                       </div>
                     </div>
 
-                    {/* Primary Substances */}
+                    <div className={styles.clientInfoGrid}>
+                      <div>
+                        <span className={styles.infoLabel}>Recovery Stage:</span>
+                        <span className={styles.infoValue}> {client.recoveryStage}</span>
+                      </div>
+                      <div>
+                        <span className={styles.infoLabel}>Follow-up:</span>
+                        <span className={styles.infoValue}> {formatFollowupFrequency(client.followupFrequency)}</span>
+                      </div>
+                    </div>
+
+                    {/* ✅ UPDATED: Primary Substances using CSS module */}
                     {client.primarySubstances?.length > 0 && (
                       <div className="mb-3">
-                        <strong>Primary Substances:</strong>
-                        <div className="mt-1">
+                        <span className={styles.infoLabel}>Primary Substances:</span>
+                        <div className={styles.substancesList}>
                           {client.primarySubstances.map((substance, i) => (
-                            <span key={i} className="badge badge-warning mr-1 mb-1">
+                            <span key={i} className={styles.substanceBadge}>
                               {substance}
                             </span>
                           ))}
@@ -467,46 +481,48 @@ const PeerSupportHub = ({ onBack }) => {
                       </div>
                     )}
 
-                    {/* Follow-up Status */}
+                    {/* ✅ UPDATED: Follow-up Status using CSS module */}
                     {client.nextFollowup && (
-                      <div className={`alert ${isOverdue ? 'alert-error' : isDueSoon ? 'alert-warning' : 'alert-info'}`}>
+                      <div className={`${styles.followupAlert} ${followupAlertClass}`}>
                         <strong>Next Follow-up:</strong> {new Date(client.nextFollowup).toLocaleDateString()}
-                        {isOverdue && (
-                          <span className="ml-2 text-red-600">(Overdue by {Math.abs(daysUntilFollowup)} days)</span>
+                        {daysUntilFollowup < 0 && (
+                          <span className="ml-2">(Overdue by {Math.abs(daysUntilFollowup)} days)</span>
                         )}
-                        {isDueSoon && !isOverdue && (
+                        {daysUntilFollowup >= 0 && daysUntilFollowup <= 2 && (
                           <span className="ml-2">(Due in {daysUntilFollowup} days)</span>
                         )}
                       </div>
                     )}
 
-                    {/* Recovery Goals Preview */}
-                    <div className="mb-3">
-                      <strong>Recovery Goals ({client.recoveryGoals?.length || 0}/5):</strong>
+                    {/* ✅ UPDATED: Recovery Goals Preview using CSS module */}
+                    <div className={styles.goalsSection}>
+                      <div className={styles.goalsHeader}>
+                        🎯 Recovery Goals ({client.recoveryGoals?.length || 0}/5)
+                      </div>
                       {client.recoveryGoals?.length > 0 ? (
-                        <div className="mt-2">
-                          {client.recoveryGoals.slice(0, 3).map((goal, i) => (
-                            <div key={goal.id} className="flex" style={{ alignItems: 'center', gap: '0.5rem', marginBottom: '0.5rem' }}>
-                              <span className={`badge ${goal.status === 'completed' ? 'badge-success' : goal.status === 'active' ? 'badge-info' : 'badge-warning'}`}>
+                        <div className={styles.goalsList}>
+                          {client.recoveryGoals.slice(0, 3).map((goal) => (
+                            <div key={goal.id} className={styles.goalItem}>
+                              <span className={`${styles.goalStatus} ${styles[`goalStatus${goal.status.charAt(0).toUpperCase() + goal.status.slice(1)}`]}`}>
                                 {goal.status}
                               </span>
-                              <span className="text-sm">{goal.goal}</span>
+                              <span className={styles.goalText}>{goal.goal}</span>
                             </div>
                           ))}
                           {client.recoveryGoals.length > 3 && (
-                            <div className="text-sm text-gray-600">+{client.recoveryGoals.length - 3} more goals</div>
+                            <div className={styles.moreGoalsText}>+{client.recoveryGoals.length - 3} more goals</div>
                           )}
                         </div>
                       ) : (
-                        <div className="text-gray-600 text-sm mt-1">No goals set yet</div>
+                        <div className={styles.noGoalsText}>No goals set yet</div>
                       )}
                     </div>
                   </div>
 
-                  {/* Action Buttons */}
-                  <div className="button-grid">
+                  {/* ✅ UPDATED: Action Buttons using CSS module */}
+                  <div className={styles.clientActions}>
                     <button
-                      className="btn btn-primary"
+                      className={`${styles.actionButton} ${styles.actionPrimary}`}
                       onClick={() => {
                         setSelectedClient(client);
                         setActiveModal('goals');
@@ -516,7 +532,7 @@ const PeerSupportHub = ({ onBack }) => {
                     </button>
                     
                     <button
-                      className="btn btn-secondary"
+                      className={`${styles.actionButton} ${styles.actionSecondary}`}
                       onClick={() => {
                         setEditingClient(client);
                         setActiveModal('edit');
@@ -526,7 +542,7 @@ const PeerSupportHub = ({ onBack }) => {
                     </button>
 
                     <button
-                      className="btn btn-outline"
+                      className={`${styles.actionButton} ${styles.actionOutline}`}
                       onClick={() => {
                         const phoneUrl = client.phone ? `tel:${client.phone}` : '#';
                         if (client.phone) {
@@ -541,7 +557,7 @@ const PeerSupportHub = ({ onBack }) => {
                     </button>
 
                     <button
-                      className="btn btn-outline"
+                      className={`${styles.actionButton} ${styles.actionOutline}`}
                       onClick={() => {
                         const emailUrl = client.email ? `mailto:${client.email}` : '#';
                         if (client.email) {
@@ -562,21 +578,20 @@ const PeerSupportHub = ({ onBack }) => {
         </>
       )}
 
-      {/* No Clients State */}
+      {/* ✅ UPDATED: No Clients State using CSS module */}
       {!loading && clients.length === 0 && availableConnections.length === 0 && (
-        <div className="card text-center">
-          <h3>No Clients Yet</h3>
-          <p>Once individuals connect with you for peer support, they'll appear here as potential clients.</p>
-          <div className="mt-4">
-            <p className="text-gray-600 mb-3">To get started:</p>
-            <div className="grid-auto">
-              <button className="btn btn-outline">
-                📋 Update Your Profile
-              </button>
-              <button className="btn btn-outline">
-                📞 Check Connection Requests
-              </button>
-            </div>
+        <div className={styles.emptyState}>
+          <div className={styles.emptyStateIcon}>👥</div>
+          <h3 className={styles.emptyStateTitle}>No Clients Yet</h3>
+          <p className={styles.emptyStateMessage}>Once individuals connect with you for peer support, they'll appear here as potential clients.</p>
+          <div className={styles.emptyStateSubtext}>To get started:</div>
+          <div className={styles.emptyStateActions}>
+            <button className="btn btn-outline">
+              📋 Update Your Profile
+            </button>
+            <button className="btn btn-outline">
+              📞 Check Connection Requests
+            </button>
           </div>
         </div>
       )}
@@ -593,28 +608,28 @@ const PeerSupportHub = ({ onBack }) => {
         </div>
       )}
 
-      {/* Goals Management Modal */}
+      {/* ✅ UPDATED: Goals Management Modal using CSS module */}
       {activeModal === 'goals' && selectedClient && (
         <div className="modal-overlay" onClick={() => setActiveModal(null)}>
-          <div className="modal-content" onClick={(e) => e.stopPropagation()}>
-            <div className="modal-header">
-              <h3 className="modal-title">Recovery Goals - {selectedClient.displayName}</h3>
-              <button className="modal-close" onClick={() => setActiveModal(null)}>×</button>
+          <div className={styles.modalContent} onClick={(e) => e.stopPropagation()}>
+            <div className={styles.modalHeader}>
+              <h3 className={styles.modalTitle}>Recovery Goals - {selectedClient.displayName}</h3>
+              <button className={styles.modalClose} onClick={() => setActiveModal(null)}>×</button>
             </div>
 
-            <div style={{ padding: '1rem' }}>
-              {/* Current Goals */}
-              <div className="mb-4">
-                <h4>Current Goals ({selectedClient.recoveryGoals?.length || 0}/5)</h4>
+            <div className={styles.modalBody}>
+              {/* ✅ UPDATED: Current Goals using CSS module */}
+              <div className={styles.currentGoalsSection}>
+                <h4 className={styles.currentGoalsTitle}>Current Goals ({selectedClient.recoveryGoals?.length || 0}/5)</h4>
                 
                 {selectedClient.recoveryGoals?.length > 0 ? (
-                  <div className="mt-3">
+                  <div>
                     {selectedClient.recoveryGoals.map((goal) => (
-                      <div key={goal.id} className="card" style={{ background: 'var(--gray-100)', marginBottom: '1rem' }}>
-                        <div className="flex" style={{ alignItems: 'flex-start', justifyContent: 'space-between' }}>
-                          <div style={{ flex: 1 }}>
-                            <div className="font-weight-600 mb-2">{goal.goal}</div>
-                            <div className="text-sm text-gray-600">
+                      <div key={goal.id} className={styles.goalCard}>
+                        <div className={styles.goalCardHeader}>
+                          <div className={styles.goalCardText}>
+                            <div className={styles.goalTitle}>{goal.goal}</div>
+                            <div className={styles.goalMeta}>
                               Created: {new Date(goal.created_at).toLocaleDateString()}
                               {goal.target_date && (
                                 <> • Target: {new Date(goal.target_date).toLocaleDateString()}</>
@@ -622,11 +637,11 @@ const PeerSupportHub = ({ onBack }) => {
                             </div>
                           </div>
                           
-                          <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
+                          <div className={styles.goalControls}>
                             <select
                               value={goal.status}
                               onChange={(e) => handleUpdateGoal(selectedClient, goal.id, { status: e.target.value })}
-                              className="input input-sm"
+                              className={styles.goalStatusSelect}
                             >
                               <option value="active">Active</option>
                               <option value="completed">Completed</option>
@@ -645,13 +660,13 @@ const PeerSupportHub = ({ onBack }) => {
                 )}
               </div>
 
-              {/* Add New Goal */}
+              {/* ✅ UPDATED: Add New Goal using CSS module */}
               {(selectedClient.recoveryGoals?.length || 0) < 5 && (
-                <div className="mb-4">
-                  <h4>Add New Goal</h4>
+                <div className={styles.addGoalSection}>
+                  <h4 className={styles.addGoalTitle}>Add New Goal</h4>
                   <div className="form-group">
                     <textarea
-                      className="input"
+                      className={styles.goalInput}
                       placeholder="Enter a specific, measurable recovery goal..."
                       value={newGoal}
                       onChange={(e) => setNewGoal(e.target.value)}
@@ -669,7 +684,7 @@ const PeerSupportHub = ({ onBack }) => {
               )}
 
               {selectedClient.recoveryGoals?.length >= 5 && (
-                <div className="alert alert-warning">
+                <div className={styles.maxGoalsWarning}>
                   <p>Maximum of 5 active goals reached. Complete or remove existing goals to add new ones.</p>
                 </div>
               )}
@@ -678,58 +693,60 @@ const PeerSupportHub = ({ onBack }) => {
         </div>
       )}
 
-      {/* Edit Client Modal */}
+      {/* ✅ UPDATED: Edit Client Modal using CSS module */}
       {activeModal === 'edit' && editingClient && (
         <div className="modal-overlay" onClick={() => setActiveModal(null)}>
-          <div className="modal-content" onClick={(e) => e.stopPropagation()}>
-            <div className="modal-header">
-              <h3 className="modal-title">Update Client Info - {editingClient.displayName}</h3>
-              <button className="modal-close" onClick={() => setActiveModal(null)}>×</button>
+          <div className={styles.modalContent} onClick={(e) => e.stopPropagation()}>
+            <div className={styles.modalHeader}>
+              <h3 className={styles.modalTitle}>Update Client Info - {editingClient.displayName}</h3>
+              <button className={styles.modalClose} onClick={() => setActiveModal(null)}>×</button>
             </div>
 
-            <div style={{ padding: '1rem' }}>
-              <div className="form-group">
-                <label className="label">Next Follow-up Date</label>
-                <input
-                  type="date"
-                  className="input"
-                  value={editingClient.nextFollowup || ''}
-                  onChange={(e) => setEditingClient(prev => ({ ...prev, nextFollowup: e.target.value }))}
-                />
+            <div className={styles.modalBody}>
+              <div className={styles.editClientForm}>
+                <div className="form-group">
+                  <label className="label">Next Follow-up Date</label>
+                  <input
+                    type="date"
+                    className="input"
+                    value={editingClient.nextFollowup || ''}
+                    onChange={(e) => setEditingClient(prev => ({ ...prev, nextFollowup: e.target.value }))}
+                  />
+                </div>
+
+                <div className="form-group">
+                  <label className="label">Follow-up Frequency</label>
+                  <select
+                    className="input"
+                    value={editingClient.followupFrequency || 'weekly'}
+                    onChange={(e) => setEditingClient(prev => ({ ...prev, followupFrequency: e.target.value }))}
+                  >
+                    <option value="daily">Daily</option>
+                    <option value="twice_weekly">Twice Weekly</option>
+                    <option value="weekly">Weekly</option>
+                    <option value="bi_weekly">Bi-weekly</option>
+                    <option value="monthly">Monthly</option>
+                    <option value="as_needed">As Needed</option>
+                  </select>
+                </div>
+
+                <div className="form-group">
+                  <label className="label">Client Status</label>
+                  <select
+                    className="input"
+                    value={editingClient.status || 'active'}
+                    onChange={(e) => setEditingClient(prev => ({ ...prev, status: e.target.value }))}
+                  >
+                    <option value="active">Active</option>
+                    <option value="on_hold">On Hold</option>
+                    <option value="completed">Completed</option>
+                    <option value="transferred">Transferred</option>
+                    <option value="inactive">Inactive</option>
+                  </select>
+                </div>
               </div>
 
-              <div className="form-group">
-                <label className="label">Follow-up Frequency</label>
-                <select
-                  className="input"
-                  value={editingClient.followupFrequency || 'weekly'}
-                  onChange={(e) => setEditingClient(prev => ({ ...prev, followupFrequency: e.target.value }))}
-                >
-                  <option value="daily">Daily</option>
-                  <option value="twice_weekly">Twice Weekly</option>
-                  <option value="weekly">Weekly</option>
-                  <option value="bi_weekly">Bi-weekly</option>
-                  <option value="monthly">Monthly</option>
-                  <option value="as_needed">As Needed</option>
-                </select>
-              </div>
-
-              <div className="form-group">
-                <label className="label">Client Status</label>
-                <select
-                  className="input"
-                  value={editingClient.status || 'active'}
-                  onChange={(e) => setEditingClient(prev => ({ ...prev, status: e.target.value }))}
-                >
-                  <option value="active">Active</option>
-                  <option value="on_hold">On Hold</option>
-                  <option value="completed">Completed</option>
-                  <option value="transferred">Transferred</option>
-                  <option value="inactive">Inactive</option>
-                </select>
-              </div>
-
-              <div className="grid-2">
+              <div className={styles.modalActions}>
                 <button
                   className="btn btn-outline"
                   onClick={() => setActiveModal(null)}

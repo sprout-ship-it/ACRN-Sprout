@@ -1,4 +1,4 @@
-// src/components/forms/PeerSupportProfileForm.js
+// src/components/features/peer-support/PeerSupportProfileForm.js - UPDATED WITH CSS MODULE
 import React, { useState } from 'react';
 import { useAuth } from '../../../context/AuthContext';
 import { usePeerSupportProfileForm } from './hooks/usePeerSupportProfileForm';
@@ -12,6 +12,10 @@ import ServiceSettingsSection from './sections/ServiceSettingsSection';
 
 // Import shared components
 import LoadingSpinner from '../../ui/LoadingSpinner';
+
+// ✅ UPDATED: Import our new CSS foundation and component module
+import '../../../styles/main.css';
+import styles from './PeerSupportProfileForm.module.css';
 
 const FORM_SECTIONS = [
   {
@@ -68,8 +72,10 @@ const PeerSupportProfileForm = ({ editMode = false, onComplete, onCancel }) => {
   // Authorization check
   if (!hasRole('peer')) {
     return (
-      <div className="alert alert-info">
-        <p>Peer support profiles are only available for peer support specialists.</p>
+      <div className="content">
+        <div className={styles.authMessage}>
+          <p>Peer support profiles are only available for peer support specialists.</p>
+        </div>
       </div>
     );
   }
@@ -77,8 +83,11 @@ const PeerSupportProfileForm = ({ editMode = false, onComplete, onCancel }) => {
   // Loading state
   if (initialLoading) {
     return (
-      <div className="flex-center" style={{ minHeight: '400px' }}>
-        <LoadingSpinner message="Loading your profile..." />
+      <div className={styles.loadingOverlay}>
+        <div className={styles.loadingContainer}>
+          <LoadingSpinner />
+          <div className={styles.loadingMessage}>Loading your profile...</div>
+        </div>
       </div>
     );
   }
@@ -138,89 +147,100 @@ const PeerSupportProfileForm = ({ editMode = false, onComplete, onCancel }) => {
   };
 
   return (
-    <div className="card" style={{ maxWidth: '900px', margin: '0 auto' }}>
-      {/* Header */}
-      <div className="text-center mb-4">
-        <h2 className="form-title">
-          {editMode ? 'Edit Your Peer Support Profile' : 'Create Your Peer Support Profile'}
-        </h2>
-        <p className="text-gray-600">
-          Share your experience and approach to help others find the right peer support.
-        </p>
-      </div>
-
-      {/* Progress Indicator */}
-      <div className="progress-indicator mb-4">
-        <div className="progress-title">
-          Profile Completion: {completionPercentage}%
+    <div className="content">
+      <div className={styles.formContainer}>
+        {/* ✅ UPDATED: Header using CSS module */}
+        <div className={styles.formHeader}>
+          <h2 className={styles.formTitle}>
+            {editMode ? 'Edit Your Peer Support Profile' : 'Create Your Peer Support Profile'}
+          </h2>
+          <p className={styles.formSubtitle}>
+            Share your experience and approach to help others find the right peer support.
+          </p>
         </div>
-        <div className="progress-bar">
-          <div 
-            className="progress-fill" 
-            style={{ width: `${completionPercentage}%` }}
-          />
+
+        {/* ✅ UPDATED: Progress Indicator using CSS module */}
+        <div className={styles.progressSection}>
+          <div className={styles.progressHeader}>
+            <div className={styles.progressTitle}>Profile Completion</div>
+            <div className={styles.progressPercentage}>{completionPercentage}%</div>
+          </div>
+          <div className={styles.progressBar}>
+            <div 
+              className={styles.progressFill}
+              style={{ width: `${completionPercentage}%` }}
+            />
+          </div>
         </div>
-      </div>
 
-      {/* Section Navigation */}
-      <nav className="navigation mb-4">
-        <ul className="nav-list">
-          {FORM_SECTIONS.map((section, index) => (
-            <li key={section.id} className="nav-item">
-              <button
-                type="button"
-                className={`nav-button ${index === currentSectionIndex ? 'active' : ''}`}
-                onClick={() => handleSectionClick(index)}
-                disabled={loading || isSubmitting}
-              >
-                <span className="nav-icon">{section.icon}</span>
-                <span>{section.title}</span>
-              </button>
-            </li>
-          ))}
-        </ul>
-      </nav>
+        {/* ✅ UPDATED: Section Navigation using CSS module */}
+        <nav className={styles.sectionNavigation}>
+          <ul className={styles.navList}>
+            {FORM_SECTIONS.map((section, index) => (
+              <li key={section.id} className={styles.navItem}>
+                <button
+                  type="button"
+                  className={`${styles.navButton} ${index === currentSectionIndex ? styles.active : ''}`}
+                  onClick={() => handleSectionClick(index)}
+                  disabled={loading || isSubmitting}
+                >
+                  <span className={styles.navIcon}>{section.icon}</span>
+                  <span className={styles.navLabel}>{section.title}</span>
+                </button>
+              </li>
+            ))}
+          </ul>
+        </nav>
 
-      {/* Messages */}
-      {errors.submit && (
-        <div className="alert alert-error mb-4">{errors.submit}</div>
-      )}
-      
-      {successMessage && (
-        <div className="alert alert-success mb-4">{successMessage}</div>
-      )}
+        {/* ✅ UPDATED: Messages using CSS module */}
+        {(errors.submit || successMessage) && (
+          <div className={styles.messageContainer}>
+            {errors.submit && (
+              <div className={styles.messageError}>{errors.submit}</div>
+            )}
+            
+            {successMessage && (
+              <div className={styles.messageSuccess}>{successMessage}</div>
+            )}
+          </div>
+        )}
 
-      {/* Form */}
-      <form onSubmit={handleSubmit}>
-        <div className="card">
-          <div className="card-header">
-            <h3 className="section-header">
-              {currentSection.icon} {currentSection.title}
-            </h3>
+        {/* ✅ UPDATED: Form using CSS module */}
+        <form onSubmit={handleSubmit}>
+          <div className={styles.formContent}>
+            <div className={`${styles.sectionContainer} ${styles.sectionActive}`}>
+              <div className={styles.sectionHeader}>
+                <h3 className={styles.sectionTitle}>
+                  {currentSection.icon} {currentSection.title}
+                </h3>
+              </div>
+
+              <div className={styles.sectionBody}>
+                {/* Current Section Component */}
+                <CurrentSectionComponent
+                  formData={formData}
+                  errors={errors}
+                  loading={loading || isSubmitting}
+                  onInputChange={handleInputChange}
+                  onArrayChange={handleArrayChange}
+                />
+              </div>
+            </div>
           </div>
 
-          {/* Current Section Component */}
-          <CurrentSectionComponent
-            formData={formData}
-            errors={errors}
-            loading={loading || isSubmitting}
-            onInputChange={handleInputChange}
-            onArrayChange={handleArrayChange}
-          />
-
-          {/* Form Actions - Inline like EnhancedMatchingProfileForm */}
-          <div className="form-actions">
+          {/* ✅ UPDATED: Form Actions using CSS module */}
+          <div className={styles.formActions}>
             <button
               type="button"
               onClick={handleSave}
-              className="btn btn-outline"
+              className={`${styles.actionButton} ${styles.actionOutline}`}
               disabled={loading || isSubmitting}
             >
               {(loading && !isSubmitting) ? (
-                <>
-                  <span className="loading-spinner small"></span>
+                <span className={styles.loadingText}>
+                  <span className={styles.loadingSpinner}></span>
                   Saving...
-                </>
+                </span>
               ) : (
                 'Save Progress'
               )}
@@ -230,7 +250,7 @@ const PeerSupportProfileForm = ({ editMode = false, onComplete, onCancel }) => {
               <button
                 type="button"
                 onClick={handlePrevious}
-                className="btn btn-secondary"
+                className={`${styles.actionButton} ${styles.actionSecondary}`}
                 disabled={loading || isSubmitting}
               >
                 Previous
@@ -241,7 +261,7 @@ const PeerSupportProfileForm = ({ editMode = false, onComplete, onCancel }) => {
               <button
                 type="button"
                 onClick={handleNext}
-                className="btn btn-primary"
+                className={`${styles.actionButton} ${styles.actionPrimary}`}
                 disabled={loading || isSubmitting}
               >
                 Next
@@ -249,14 +269,14 @@ const PeerSupportProfileForm = ({ editMode = false, onComplete, onCancel }) => {
             ) : (
               <button
                 type="submit"
-                className="btn btn-primary"
+                className={`${styles.actionButton} ${styles.actionPrimary}`}
                 disabled={loading || isSubmitting || !canSubmit || hasErrors}
               >
                 {isSubmitting ? (
-                  <>
-                    <span className="loading-spinner small"></span>
+                  <span className={styles.loadingText}>
+                    <span className={styles.loadingSpinner}></span>
                     Completing Profile...
-                  </>
+                  </span>
                 ) : (
                   editMode ? 'Update Profile' : 'Complete Profile'
                 )}
@@ -266,7 +286,7 @@ const PeerSupportProfileForm = ({ editMode = false, onComplete, onCancel }) => {
             {onCancel && (
               <button
                 type="button"
-                className="btn btn-outline"
+                className={`${styles.actionButton} ${styles.actionOutline}`}
                 onClick={onCancel}
                 disabled={loading || isSubmitting}
               >
@@ -274,42 +294,49 @@ const PeerSupportProfileForm = ({ editMode = false, onComplete, onCancel }) => {
               </button>
             )}
           </div>
-        </div>
-      </form>
+        </form>
+      </div>
 
-      {/* Form Status */}
-      <div className="card">
-        <div className="card-header">
-          <h3 className="card-title">Profile Status</h3>
+      {/* ✅ UPDATED: Form Status using CSS module */}
+      <div className={styles.statusCard}>
+        <div className={styles.statusHeader}>
+          <h3 className={styles.statusTitle}>Profile Status</h3>
         </div>
         
-        <div className="grid-2">
-          <div>
-            <strong>Completion:</strong> {completionPercentage}%
-            <div className="progress-bar mt-2">
-              <div 
-                className="progress-fill" 
-                style={{ width: `${completionPercentage}%` }}
-              />
+        <div className={styles.statusGrid}>
+          <div className={styles.statusItem}>
+            <div className={styles.statusLabel}>Completion Progress</div>
+            <div className={styles.statusValue}>
+              <div className={styles.statusProgress}>
+                <div className={styles.progressBar}>
+                  <div 
+                    className={styles.progressFill}
+                    style={{ width: `${completionPercentage}%` }}
+                  />
+                </div>
+              </div>
+              <div className={styles.statusProgressText}>{completionPercentage}%</div>
             </div>
           </div>
           
-          <div>
-            <strong>Accepting Clients:</strong>{' '}
-            <span className={`badge ${formData.is_accepting_clients ? 'badge-success' : 'badge-warning'}`}>
-              {formData.is_accepting_clients ? 'Yes' : 'No'}
-            </span>
+          <div className={styles.statusItem}>
+            <div className={styles.statusLabel}>Accepting Clients</div>
+            <div className={styles.statusValue}>
+              <span className={formData.is_accepting_clients ? styles.acceptingClientsActive : styles.acceptingClientsInactive}>
+                {formData.is_accepting_clients ? 'Yes' : 'No'}
+              </span>
+            </div>
           </div>
         </div>
 
         {hasErrors && (
-          <div className="alert alert-warning mt-4">
+          <div className={styles.validationWarning}>
             <strong>Validation Issues:</strong> Please review and correct the highlighted fields before submitting.
           </div>
         )}
 
         {completionPercentage < 80 && (
-          <div className="alert alert-info mt-4">
+          <div className={styles.completionInfo}>
             <strong>Almost there!</strong> Complete all required fields to activate your profile for client matching.
           </div>
         )}

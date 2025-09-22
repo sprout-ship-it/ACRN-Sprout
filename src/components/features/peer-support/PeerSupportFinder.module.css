@@ -1,0 +1,580 @@
+/* PeerSupportFinder.module.css - Component-specific styles */
+
+/* ==================== SEARCH FILTERS ==================== */
+.filterContainer {
+  background: white;
+  border-radius: var(--radius-xl);
+  padding: var(--spacing-xl);
+  border: 2px solid var(--border-beige);
+  margin-bottom: var(--spacing-xl);
+  box-shadow: var(--shadow-md);
+}
+
+.filterGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: var(--spacing-md);
+  margin-bottom: var(--spacing-lg);
+}
+
+.filterActions {
+  display: flex;
+  gap: var(--spacing-md);
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: flex-start;
+  margin-bottom: var(--spacing-lg);
+}
+
+.filterActions .btn {
+  min-width: 140px;
+  white-space: nowrap;
+}
+
+.specialtiesGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: var(--spacing-sm);
+  margin-top: var(--spacing-md);
+}
+
+.activeFiltersDisplay {
+  background: var(--info-bg);
+  border: 1px solid var(--info-border);
+  color: var(--info-text);
+  padding: var(--spacing-md);
+  border-radius: var(--radius-md);
+  margin-top: var(--spacing-md);
+  font-size: 0.9rem;
+  line-height: 1.5;
+}
+
+/* ==================== SPECIALISTS GRID ==================== */
+.specialistsContainer {
+  margin-bottom: var(--spacing-xl);
+}
+
+.specialistsHeader {
+  background: white;
+  border-radius: var(--radius-xl);
+  padding: var(--spacing-lg);
+  border: 2px solid var(--border-beige);
+  margin-bottom: var(--spacing-lg);
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  flex-wrap: wrap;
+  gap: var(--spacing-md);
+}
+
+.specialistsStats {
+  color: var(--gray-600);
+  font-size: 0.9rem;
+  font-style: italic;
+  line-height: 1.4;
+}
+
+.specialistsGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
+  gap: var(--spacing-xl);
+}
+
+/* ==================== SPECIALIST CARD ENHANCEMENTS ==================== */
+.specialistCard {
+  background: white;
+  border-radius: var(--radius-xl);
+  padding: var(--spacing-xl);
+  border: 2px solid var(--border-beige);
+  box-shadow: var(--shadow-md);
+  transition: var(--transition-normal);
+  position: relative;
+}
+
+.specialistCard:hover {
+  transform: translateY(-3px);
+  box-shadow: var(--shadow-lg);
+  border-color: var(--primary-purple);
+}
+
+.specialistCardHeader {
+  border-bottom: 1px solid var(--border-beige);
+  padding-bottom: var(--spacing-md);
+  margin-bottom: var(--spacing-lg);
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: var(--spacing-md);
+}
+
+.specialistName {
+  font-size: 1.3rem;
+  color: var(--primary-purple);
+  margin: 0;
+  font-weight: 700;
+}
+
+.specialistTitle {
+  color: var(--gray-600);
+  margin: 5px 0 0 0;
+  font-size: 0.9rem;
+  font-style: italic;
+}
+
+.badgeGroup {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-xs);
+  align-items: flex-end;
+}
+
+.experienceInfo {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--spacing-md);
+  margin-bottom: var(--spacing-md);
+  font-size: 0.9rem;
+}
+
+.experienceLabel {
+  color: var(--gray-600);
+  font-weight: 500;
+}
+
+.experienceValue {
+  color: var(--gray-800);
+  font-weight: 600;
+}
+
+.specialtiesSection {
+  margin-bottom: var(--spacing-md);
+}
+
+.specialtiesList {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--spacing-xs);
+  margin-bottom: var(--spacing-sm);
+}
+
+.specialtyBadge {
+  background: rgba(160, 32, 240, 0.1);
+  color: var(--primary-purple);
+  border: 1px solid rgba(160, 32, 240, 0.2);
+  padding: 4px 8px;
+  border-radius: 12px;
+  font-size: 0.75rem;
+  font-weight: 600;
+}
+
+.moreSpecialties {
+  font-size: 0.85rem;
+  color: var(--gray-600);
+  font-style: italic;
+}
+
+.bioSection {
+  margin-bottom: var(--spacing-md);
+}
+
+.bioText {
+  line-height: 1.6;
+  color: var(--gray-700);
+  font-size: 0.95rem;
+}
+
+.cardActions {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--spacing-md);
+  margin-top: var(--spacing-lg);
+}
+
+/* ==================== CONNECTION STATUS INDICATORS ==================== */
+.statusConnected {
+  background: linear-gradient(135deg, #059669, #047857);
+  color: white;
+  border: 2px solid #047857;
+}
+
+.statusConnected:hover:not(:disabled) {
+  background: linear-gradient(135deg, #047857, #065f46);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(5, 150, 105, 0.3);
+}
+
+.statusRequestSent {
+  background: linear-gradient(135deg, #0284c7, #0369a1);
+  color: white;
+  border: 2px solid #0369a1;
+}
+
+.statusRequestSent:hover:not(:disabled) {
+  background: linear-gradient(135deg, #0369a1, #075985);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(2, 132, 199, 0.3);
+}
+
+.statusNotAccepting {
+  background: var(--gray-200);
+  color: var(--gray-600);
+  border: 2px solid var(--gray-300);
+  cursor: not-allowed;
+}
+
+.statusAvailable {
+  background: linear-gradient(135deg, var(--secondary-teal), var(--secondary-teal-dark));
+  color: white;
+  border: 2px solid var(--secondary-teal-dark);
+}
+
+.statusAvailable:hover:not(:disabled) {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(32, 178, 170, 0.4);
+}
+
+/* ==================== MODAL ENHANCEMENTS ==================== */
+.modalContent {
+  background: white;
+  border-radius: var(--radius-xl);
+  border: 2px solid var(--border-beige);
+  max-width: 700px;
+  width: 100%;
+  max-height: 85vh;
+  overflow: auto;
+  padding: 0;
+  position: relative;
+  box-shadow: var(--shadow-xl);
+}
+
+.modalHeader {
+  background: linear-gradient(135deg, rgba(160, 32, 240, 0.05) 0%, rgba(32, 178, 170, 0.05) 100%);
+  padding: var(--spacing-xl);
+  border-bottom: 2px solid var(--border-beige);
+  position: sticky;
+  top: 0;
+  z-index: 10;
+}
+
+.modalTitle {
+  font-size: 1.5rem;
+  color: var(--primary-purple);
+  margin: 0;
+  line-height: 1.3;
+}
+
+.modalBody {
+  padding: var(--spacing-xl);
+}
+
+.modalClose {
+  position: absolute;
+  top: 15px;
+  right: 15px;
+  background: rgba(255, 255, 255, 0.9);
+  border: 1px solid var(--border-beige);
+  font-size: 1.5rem;
+  cursor: pointer;
+  color: var(--gray-600);
+  width: 35px;
+  height: 35px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: var(--transition-normal);
+  backdrop-filter: blur(10px);
+}
+
+.modalClose:hover {
+  background: white;
+  color: var(--gray-800);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.professionalInfo {
+  background: var(--bg-light-cream);
+  border-radius: var(--radius-lg);
+  padding: var(--spacing-lg);
+  margin-bottom: var(--spacing-lg);
+}
+
+.professionalGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: var(--spacing-md);
+  margin-bottom: var(--spacing-md);
+}
+
+.infoItem {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-xs);
+}
+
+.infoLabel {
+  font-weight: 600;
+  color: var(--gray-700);
+  font-size: 0.9rem;
+}
+
+.infoValue {
+  color: var(--gray-800);
+  font-size: 0.95rem;
+}
+
+.detailSection {
+  margin-bottom: var(--spacing-xl);
+}
+
+.detailSectionTitle {
+  font-size: 1.2rem;
+  color: var(--primary-purple);
+  margin-bottom: var(--spacing-md);
+  font-weight: 600;
+  padding-bottom: var(--spacing-sm);
+  border-bottom: 1px solid var(--border-beige);
+}
+
+.tagsList {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--spacing-xs);
+  margin-bottom: var(--spacing-sm);
+}
+
+.detailBadge {
+  background: var(--info-bg);
+  color: var(--info-text);
+  border: 1px solid var(--info-border);
+  padding: 6px 12px;
+  border-radius: var(--radius-md);
+  font-size: 0.8rem;
+  font-weight: 600;
+}
+
+.connectionProcess {
+  background: var(--info-bg);
+  border: 1px solid var(--info-border);
+  color: var(--info-text);
+  padding: var(--spacing-lg);
+  border-radius: var(--radius-lg);
+  margin-bottom: var(--spacing-lg);
+}
+
+.connectionProcessTitle {
+  font-weight: 700;
+  font-size: 1rem;
+  margin-bottom: var(--spacing-md);
+  color: var(--info-text);
+}
+
+.connectionProcessList {
+  margin: var(--spacing-sm) 0 0 0;
+  padding-left: 1.25rem;
+  line-height: 1.6;
+}
+
+.connectionProcessList li {
+  margin-bottom: var(--spacing-xs);
+}
+
+.modalActions {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--spacing-md);
+  margin-top: var(--spacing-xl);
+  padding-top: var(--spacing-lg);
+  border-top: 1px solid var(--border-beige);
+}
+
+.connectionStatusDisplay {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--spacing-md);
+  background: var(--bg-light-cream);
+  border-radius: var(--radius-md);
+  color: var(--primary-purple);
+  font-weight: 600;
+  font-size: 1rem;
+}
+
+/* ==================== EMPTY AND ERROR STATES ==================== */
+.emptyState {
+  background: white;
+  border-radius: var(--radius-xl);
+  padding: var(--spacing-xxl);
+  border: 2px solid var(--border-beige);
+  text-align: center;
+  margin-bottom: var(--spacing-xl);
+}
+
+.emptyStateIcon {
+  font-size: 3.5rem;
+  margin-bottom: var(--spacing-lg);
+  opacity: 0.6;
+}
+
+.emptyStateTitle {
+  font-size: 1.3rem;
+  color: var(--gray-800);
+  margin-bottom: var(--spacing-md);
+  font-weight: 600;
+}
+
+.emptyStateMessage {
+  color: var(--gray-600);
+  margin-bottom: var(--spacing-xl);
+  line-height: 1.6;
+  font-size: 1rem;
+}
+
+.emptyStateActions {
+  display: flex;
+  gap: var(--spacing-md);
+  justify-content: center;
+  flex-wrap: wrap;
+}
+
+.errorState {
+  background: white;
+  border-radius: var(--radius-xl);
+  padding: var(--spacing-xl);
+  border: 2px solid var(--error-border);
+  margin-bottom: var(--spacing-xl);
+}
+
+/* ==================== LOADING ENHANCEMENTS ==================== */
+.loadingContainer {
+  background: white;
+  border-radius: var(--radius-xl);
+  padding: var(--spacing-xxl);
+  border: 2px solid var(--border-beige);
+  text-align: center;
+}
+
+.loadingMessage {
+  color: var(--gray-600);
+  font-size: 1.1rem;
+  margin-top: var(--spacing-lg);
+  line-height: 1.5;
+}
+
+/* ==================== RESPONSIVE DESIGN ==================== */
+@media (max-width: 768px) {
+  .filterGrid {
+    grid-template-columns: 1fr;
+    gap: var(--spacing-sm);
+  }
+
+  .filterActions {
+    flex-direction: column;
+    align-items: stretch;
+    gap: var(--spacing-sm);
+  }
+
+  .filterActions .btn {
+    min-width: unset;
+    width: 100%;
+  }
+
+  .specialistsGrid {
+    grid-template-columns: 1fr;
+    gap: var(--spacing-lg);
+  }
+
+  .specialistsHeader {
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+  }
+
+  .specialistCardHeader {
+    flex-direction: column;
+    align-items: flex-start;
+    text-align: left;
+  }
+
+  .badgeGroup {
+    align-items: flex-start;
+    width: 100%;
+  }
+
+  .experienceInfo {
+    grid-template-columns: 1fr;
+    gap: var(--spacing-sm);
+  }
+
+  .cardActions {
+    grid-template-columns: 1fr;
+  }
+
+  .modalContent {
+    max-width: 95vw;
+    margin: 10px;
+  }
+
+  .modalHeader {
+    padding: var(--spacing-lg);
+  }
+
+  .modalBody {
+    padding: var(--spacing-lg);
+  }
+
+  .professionalGrid {
+    grid-template-columns: 1fr;
+  }
+
+  .modalActions {
+    grid-template-columns: 1fr;
+  }
+
+  .emptyStateActions {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .specialtiesGrid {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 480px) {
+  .filterContainer {
+    padding: var(--spacing-lg);
+  }
+
+  .specialistCard {
+    padding: var(--spacing-lg);
+  }
+
+  .specialistName {
+    font-size: 1.2rem;
+  }
+
+  .modalHeader {
+    padding: var(--spacing-md);
+  }
+
+  .modalBody {
+    padding: var(--spacing-md);
+  }
+
+  .modalTitle {
+    font-size: 1.3rem;
+  }
+
+  .emptyState {
+    padding: var(--spacing-xl);
+  }
+
+  .emptyStateIcon {
+    font-size: 2.5rem;
+  }
+
+  .emptyStateTitle {
+    font-size: 1.1rem;
+  }
+}
