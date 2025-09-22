@@ -1,7 +1,10 @@
-// src/components/dashboard/MatchDashboard.js
+// src/components/features/matching/MatchDashboard.js - UPDATED WITH CSS MODULE
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../../../context/AuthContext';
-import '../../../styles/global.css';
+
+// ✅ UPDATED: Import our new CSS foundation and component module
+import '../../../styles/main.css';
+import styles from './MatchDashboard.module.css';
 
 // ==================== MOCK DATA ====================
 
@@ -267,9 +270,9 @@ const MatchDashboard = ({ onBack }) => {
           <>
             <h3 className="card-title">🏠 Available Housing</h3>
             
-            {/* Search Controls */}
+            {/* ✅ UPDATED: Search Controls using CSS module */}
             <div className="alert alert-info mb-4">
-              <div className="grid-auto">
+              <div className={styles.filterRowPrimary}>
                 <div className="form-group">
                   <label className="label">Location</label>
                   <input
@@ -322,10 +325,10 @@ const MatchDashboard = ({ onBack }) => {
               </div>
             </div>
             
-            {/* Housing Results */}
+            {/* ✅ UPDATED: Housing Results using CSS module */}
             {loading ? (
-              <div className="text-center p-5">
-                <p>Finding the perfect housing options for you...</p>
+              <div className={styles.loadingState}>
+                <div className={styles.loadingText}>Finding the perfect housing options for you...</div>
               </div>
             ) : housingResults.length === 0 ? (
               <div className="empty-state">
@@ -334,33 +337,34 @@ const MatchDashboard = ({ onBack }) => {
                 <p>No housing options found. Try adjusting your search criteria.</p>
               </div>
             ) : (
-              <div className="grid-auto">
+              <div className={styles.searchResultsGrid}>
                 {housingResults.map(listing => (
-                  <div key={listing.id} className="card">
-                    <div className="card" style={{ background: 'var(--bg-light-cream)', marginBottom: 'var(--spacing-lg)', textAlign: 'center', padding: '60px 20px' }}>
-                      <div style={{ fontSize: '3rem', color: 'var(--primary-purple)' }}>🏠</div>
+                  <div key={listing.id} className={styles.searchResultCard}>
+                    {/* ✅ UPDATED: Housing card placeholder using CSS module */}
+                    <div className={styles.housingCardPlaceholder}>
+                      <div className={styles.housingCardIcon}>🏠</div>
                     </div>
                     
-                    <div>
+                    <div className={styles.searchResultContent}>
                       {listing.isRecoveryFriendly && (
                         <span className="badge badge-warning mb-2">
                           Recovery Friendly
                         </span>
                       )}
                       
-                      <h4 className="card-title">{listing.title}</h4>
-                      <p className="text-gray-600 mb-2">{listing.address}</p>
-                      <p className="card-title text-secondary-teal mb-2">
+                      <h4 className={styles.searchResultTitle}>{listing.title}</h4>
+                      <p className={styles.searchResultAddress}>{listing.address}</p>
+                      <p className={styles.searchResultPrice}>
                         ${listing.price}/month
                       </p>
                       
-                      <div className="text-gray-600 mb-3">
+                      <div className={styles.searchResultDetails}>
                         {listing.bedrooms} bed • {listing.bathrooms} bath<br/>
                         {listing.amenities.join(' • ')}
                       </div>
                       
                       <button
-                        className="btn btn-primary"
+                        className={`btn btn-primary ${styles.searchResultButton}`}
                         onClick={() => handleContactLandlord(listing)}
                       >
                         Contact Landlord
@@ -373,7 +377,7 @@ const MatchDashboard = ({ onBack }) => {
           </>
         )}
         
-        {/* Peer Support Tab */}
+        {/* ✅ UPDATED: Peer Support Tab using CSS module */}
         {activeTab === 'peer-support' && (
           <>
             <h3 className="card-title">🤝 Peer Support Specialists</h3>
@@ -383,43 +387,43 @@ const MatchDashboard = ({ onBack }) => {
             </p>
             
             {loading ? (
-              <div className="text-center p-5">
-                <p>Finding compatible peer support specialists...</p>
+              <div className={styles.loadingState}>
+                <div className={styles.loadingText}>Finding compatible peer support specialists...</div>
               </div>
             ) : (
-              <div className="grid-auto">
+              <div className={styles.searchResultsGrid}>
                 {peerResults.map(peer => (
-                  <div key={peer.id} className="card">
-                    <div className="card-header">
-                      <div>
+                  <div key={peer.id} className={styles.peerSupportCard}>
+                    <div className={styles.peerSupportHeader}>
+                      <div className={styles.peerSupportInfo}>
                         <h4 className="card-title">{peer.name}</h4>
                         <p className="card-subtitle">{peer.title}</p>
                       </div>
                       <span className="badge badge-success">{peer.matchScore}% Match</span>
                     </div>
                     
-                    <div className="mb-4">
+                    <div className={styles.peerSupportSpecialties}>
                       <div className="label mb-2">Specialties</div>
-                      <div className="mb-3">
+                      <div className={styles.specialtyBadges}>
                         {peer.specialties.map((specialty, i) => (
-                          <span key={i} className="badge badge-info mr-1 mb-1">
+                          <span key={i} className={`badge badge-info ${styles.mr1} ${styles.mb1}`}>
                             {specialty}
                           </span>
                         ))}
                       </div>
                     </div>
                     
-                    <div className="text-gray-600 mb-3">
+                    <div className={styles.peerSupportDetails}>
                       <strong>Experience:</strong> {peer.experience}<br/>
                       <strong>Location:</strong> {peer.location}
                     </div>
                     
-                    <p className="card-text mb-3">
+                    <p className={styles.peerSupportDescription}>
                       {peer.description}
                     </p>
                     
                     <button
-                      className="btn btn-primary"
+                      className={`btn btn-primary ${styles.peerSupportButton}`}
                       onClick={() => handleContactPeer(peer)}
                     >
                       Connect with {peer.name.split(' ')[0]}

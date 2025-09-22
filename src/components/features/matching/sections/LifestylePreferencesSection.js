@@ -1,4 +1,4 @@
-// src/components/forms/sections/LifestylePreferencesSection.js
+// src/components/features/matching/sections/LifestylePreferencesSection.js - Updated with CSS module
 import React from 'react';
 import PropTypes from 'prop-types';
 import {
@@ -14,7 +14,8 @@ const LifestylePreferencesSection = ({
   profile,      // Added for interface consistency
   onInputChange,
   onArrayChange, // Added for interface consistency
-  onRangeChange
+  onRangeChange,
+  styles = {}   // CSS module styles passed from parent
 }) => {
   return (
     <>
@@ -43,82 +44,82 @@ const LifestylePreferencesSection = ({
         )}
       </div>
 
-      {/* Enhanced 1-5 Scale Preferences */}
+      {/* ✅ UPDATED: Enhanced 1-5 Scale Preferences using CSS module classes */}
       <div className="grid-3 mb-4">
         <div className="form-group">
-          <div className="enhanced-range-container">
-            <div className="range-description">Social Level</div>
-            <div className="range-slider-wrapper">
+          <div className={styles.enhancedRangeContainer || 'enhanced-range-container'}>
+            <div className={styles.rangeDescription || 'range-description'}>Social Level</div>
+            <div className={styles.rangeSliderWrapper || 'range-slider-wrapper'}>
               <input
                 type="range"
                 min="1"
                 max="5"
                 value={formData.socialLevel}
                 onChange={(e) => onRangeChange('socialLevel', e.target.value)}
-                className="range-slider"
+                className={styles.rangeSlider || 'range-slider'}
                 disabled={loading}
               />
-              <div className="enhanced-range-labels">
-                <div className="range-endpoint">Quiet (1)</div>
-                <div className="range-arrow">←→</div>
-                <div className="range-endpoint">Very Social (5)</div>
+              <div className={styles.enhancedRangeLabels || 'enhanced-range-labels'}>
+                <div className={styles.rangeEndpoint || 'range-endpoint'}>Quiet (1)</div>
+                <div className={styles.rangeArrow || 'range-arrow'}>←→</div>
+                <div className={styles.rangeEndpoint || 'range-endpoint'}>Very Social (5)</div>
               </div>
             </div>
-            <div className="current-value-display">
-              <span className="current-value-number">{formData.socialLevel}</span>
-              <span className="current-value-label">Current Level</span>
+            <div className={styles.currentValueDisplay || 'current-value-display'}>
+              <span className={styles.currentValueNumber || 'current-value-number'}>{formData.socialLevel}</span>
+              <span className={styles.currentValueLabel || 'current-value-label'}>Current Level</span>
             </div>
           </div>
         </div>
         
         <div className="form-group">
-          <div className="enhanced-range-container">
-            <div className="range-description">Cleanliness Level</div>
-            <div className="range-slider-wrapper">
+          <div className={styles.enhancedRangeContainer || 'enhanced-range-container'}>
+            <div className={styles.rangeDescription || 'range-description'}>Cleanliness Level</div>
+            <div className={styles.rangeSliderWrapper || 'range-slider-wrapper'}>
               <input
                 type="range"
                 min="1"
                 max="5"
                 value={formData.cleanlinessLevel}
                 onChange={(e) => onRangeChange('cleanlinessLevel', e.target.value)}
-                className="range-slider"
+                className={styles.rangeSlider || 'range-slider'}
                 disabled={loading}
               />
-              <div className="enhanced-range-labels">
-                <div className="range-endpoint">Relaxed (1)</div>
-                <div className="range-arrow">←→</div>
-                <div className="range-endpoint">Very Clean (5)</div>
+              <div className={styles.enhancedRangeLabels || 'enhanced-range-labels'}>
+                <div className={styles.rangeEndpoint || 'range-endpoint'}>Relaxed (1)</div>
+                <div className={styles.rangeArrow || 'range-arrow'}>←→</div>
+                <div className={styles.rangeEndpoint || 'range-endpoint'}>Very Clean (5)</div>
               </div>
             </div>
-            <div className="current-value-display">
-              <span className="current-value-number">{formData.cleanlinessLevel}</span>
-              <span className="current-value-label">Current Level</span>
+            <div className={styles.currentValueDisplay || 'current-value-display'}>
+              <span className={styles.currentValueNumber || 'current-value-number'}>{formData.cleanlinessLevel}</span>
+              <span className={styles.currentValueLabel || 'current-value-label'}>Current Level</span>
             </div>
           </div>
         </div>
         
         <div className="form-group">
-          <div className="enhanced-range-container">
-            <div className="range-description">Noise Level</div>
-            <div className="range-slider-wrapper">
+          <div className={styles.enhancedRangeContainer || 'enhanced-range-container'}>
+            <div className={styles.rangeDescription || 'range-description'}>Noise Level</div>
+            <div className={styles.rangeSliderWrapper || 'range-slider-wrapper'}>
               <input
                 type="range"
                 min="1"
                 max="5"
                 value={formData.noiseLevel}
                 onChange={(e) => onRangeChange('noiseLevel', e.target.value)}
-                className="range-slider"
+                className={styles.rangeSlider || 'range-slider'}
                 disabled={loading}
               />
-              <div className="enhanced-range-labels">
-                <div className="range-endpoint">Very Quiet (1)</div>
-                <div className="range-arrow">←→</div>
-                <div className="range-endpoint">Loud OK (5)</div>
+              <div className={styles.enhancedRangeLabels || 'enhanced-range-labels'}>
+                <div className={styles.rangeEndpoint || 'range-endpoint'}>Very Quiet (1)</div>
+                <div className={styles.rangeArrow || 'range-arrow'}>←→</div>
+                <div className={styles.rangeEndpoint || 'range-endpoint'}>Loud OK (5)</div>
               </div>
             </div>
-            <div className="current-value-display">
-              <span className="current-value-number">{formData.noiseLevel}</span>
-              <span className="current-value-label">Current Level</span>
+            <div className={styles.currentValueDisplay || 'current-value-display'}>
+              <span className={styles.currentValueNumber || 'current-value-number'}>{formData.noiseLevel}</span>
+              <span className={styles.currentValueLabel || 'current-value-label'}>Current Level</span>
             </div>
           </div>
         </div>
@@ -179,11 +180,13 @@ LifestylePreferencesSection.propTypes = {
   }),
   onInputChange: PropTypes.func.isRequired,
   onArrayChange: PropTypes.func.isRequired, // Added for interface consistency
-  onRangeChange: PropTypes.func.isRequired
+  onRangeChange: PropTypes.func.isRequired,
+  styles: PropTypes.object                  // ✅ NEW: CSS module styles
 };
 
 LifestylePreferencesSection.defaultProps = {
-  profile: null
+  profile: null,
+  styles: {}                                // ✅ NEW: Default empty object for styles
 };
 
 export default LifestylePreferencesSection;

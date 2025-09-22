@@ -1,4 +1,4 @@
-// src/components/forms/sections/RoommatePreferencesSection.js
+// src/components/features/matching/sections/RoommatePreferencesSection.js - Updated with CSS module
 import React from 'react';
 import PropTypes from 'prop-types';
 import {
@@ -13,7 +13,8 @@ const RoommatePreferencesSection = ({
   profile,      // Added for interface consistency
   onInputChange,
   onArrayChange, // Added for interface consistency
-  onRangeChange  // Added for interface consistency
+  onRangeChange, // Added for interface consistency
+  styles = {}   // CSS module styles passed from parent
 }) => {
   return (
     <>
@@ -72,7 +73,11 @@ const RoommatePreferencesSection = ({
         </div>
       </div>
 
-      {/* Age Range Preferences */}
+      {/* ✅ UPDATED: Age Range Preferences with enhanced section header */}
+      <h4 className={styles.sectionHeader || 'section-header'}>
+        Age Range Preferences
+      </h4>
+      
       <div className="grid-2 mb-4">
         <div className="form-group">
           <label className="label">Preferred Age Range - Minimum</label>
@@ -109,7 +114,11 @@ const RoommatePreferencesSection = ({
         </div>
       </div>
 
-      {/* Additional Preferences */}
+      {/* ✅ UPDATED: Additional Preferences with enhanced section header */}
+      <h4 className={styles.sectionHeader || 'section-header'}>
+        Additional Preferences
+      </h4>
+      
       <div className="grid-2 mb-4">
         <div className="form-group">
           <label className="label">Pet Preference</label>
@@ -150,7 +159,11 @@ const RoommatePreferencesSection = ({
         </div>
       </div>
 
-      {/* Gender Preference Context */}
+      {/* ✅ UPDATED: Gender Preference Context with enhanced section header */}
+      <h4 className={styles.sectionHeader || 'section-header'}>
+        General Gender Preferences
+      </h4>
+      
       <div className="form-group mb-4">
         <label className="label">General Gender Preference</label>
         <select
@@ -194,11 +207,13 @@ RoommatePreferencesSection.propTypes = {
   }),
   onInputChange: PropTypes.func.isRequired,
   onArrayChange: PropTypes.func.isRequired, // Added for interface consistency
-  onRangeChange: PropTypes.func.isRequired  // Added for interface consistency
+  onRangeChange: PropTypes.func.isRequired, // Added for interface consistency
+  styles: PropTypes.object                  // ✅ NEW: CSS module styles
 };
 
 RoommatePreferencesSection.defaultProps = {
-  profile: null
+  profile: null,
+  styles: {}                                 // ✅ NEW: Default empty object for styles
 };
 
 export default RoommatePreferencesSection;

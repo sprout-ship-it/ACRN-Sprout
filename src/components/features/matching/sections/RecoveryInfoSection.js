@@ -1,4 +1,4 @@
-// src/components/forms/sections/RecoveryInfoSection.js
+// src/components/features/matching/sections/RecoveryInfoSection.js - Updated with CSS module
 import React from 'react';
 import PropTypes from 'prop-types';
 import {
@@ -16,7 +16,8 @@ const RecoveryInfoSection = ({
   profile,      // Added for interface consistency
   onInputChange,
   onArrayChange,
-  onRangeChange // Added for interface consistency
+  onRangeChange, // Added for interface consistency
+  styles = {}   // CSS module styles passed from parent
 }) => {
   return (
     <>
@@ -74,16 +75,18 @@ const RecoveryInfoSection = ({
         <label className="label">
           Primary Issues <span className="text-red-500">*</span>
         </label>
-        <div className="checkbox-columns-compact">
+        
+        {/* ✅ UPDATED: Using CSS module for compact checkbox columns */}
+        <div className={styles.checkboxColumnsCompact || 'checkbox-columns-compact'}>
           {primaryIssuesOptions.map(issue => (
-            <label key={issue} className="checkbox-label">
+            <label key={issue} className={styles.checkboxLabel || 'checkbox-label'}>
               <input
                 type="checkbox"
                 checked={formData.primaryIssues.includes(issue)}
                 onChange={(e) => onArrayChange('primaryIssues', issue, e.target.checked)}
                 disabled={loading}
               />
-              <span className="checkbox-text">
+              <span className={styles.checkboxText || 'checkbox-text'}>
                 {issue.replace(/-/g, ' ').replace(/\b\w/g, l => l.toUpperCase())}
               </span>
             </label>
@@ -99,16 +102,18 @@ const RecoveryInfoSection = ({
         <label className="label">
           Recovery Methods <span className="text-red-500">*</span>
         </label>
-        <div className="checkbox-columns-compact">
+        
+        {/* ✅ UPDATED: Using CSS module for compact checkbox columns */}
+        <div className={styles.checkboxColumnsCompact || 'checkbox-columns-compact'}>
           {recoveryMethodsOptions.map(method => (
-            <label key={method} className="checkbox-label">
+            <label key={method} className={styles.checkboxLabel || 'checkbox-label'}>
               <input
                 type="checkbox"
                 checked={formData.recoveryMethods.includes(method)}
                 onChange={(e) => onArrayChange('recoveryMethods', method, e.target.checked)}
                 disabled={loading}
               />
-              <span className="checkbox-text">
+              <span className={styles.checkboxText || 'checkbox-text'}>
                 {method.replace(/-/g, ' ').replace(/\b\w/g, l => l.toUpperCase())}
               </span>
             </label>
@@ -124,16 +129,18 @@ const RecoveryInfoSection = ({
         <label className="label">
           Recovery Program Types <span className="text-red-500">*</span>
         </label>
-        <div className="checkbox-columns">
+        
+        {/* ✅ UPDATED: Using CSS module for regular checkbox columns (wider items) */}
+        <div className={styles.checkboxColumns || 'checkbox-columns'}>
           {programTypeOptions.map(program => (
-            <label key={program} className="checkbox-label">
+            <label key={program} className={styles.checkboxLabel || 'checkbox-label'}>
               <input
                 type="checkbox"
                 checked={formData.programType.includes(program)}
                 onChange={(e) => onArrayChange('programType', program, e.target.checked)}
                 disabled={loading}
               />
-              <span className="checkbox-text">{program}</span>
+              <span className={styles.checkboxText || 'checkbox-text'}>{program}</span>
             </label>
           ))}
         </div>
@@ -162,11 +169,13 @@ RecoveryInfoSection.propTypes = {
   }),
   onInputChange: PropTypes.func.isRequired,
   onArrayChange: PropTypes.func.isRequired,
-  onRangeChange: PropTypes.func.isRequired  // Added for interface consistency
+  onRangeChange: PropTypes.func.isRequired,  // Added for interface consistency
+  styles: PropTypes.object                   // ✅ NEW: CSS module styles
 };
 
 RecoveryInfoSection.defaultProps = {
-  profile: null
+  profile: null,
+  styles: {}                                 // ✅ NEW: Default empty object for styles
 };
 
 export default RecoveryInfoSection;

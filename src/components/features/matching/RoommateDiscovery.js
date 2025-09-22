@@ -1,4 +1,4 @@
-// src/components/features/matching/RoommateDiscovery.js
+// src/components/features/matching/RoommateDiscovery.js - UPDATED WITH CSS MODULE
 import React, { useState, useEffect, useCallback } from 'react';
 import { useAuth } from '../../../context/AuthContext';
 import { matchingService } from '../../../utils/matching/matchingService';
@@ -10,7 +10,9 @@ import MatchDetailsModal from './components/MatchDetailsModal';
 import LoadingSpinner from '../../ui/LoadingSpinner';
 import StackingDebug from '../../debug/StackingDebug';
 
-import '../../../styles/global.css';
+// ✅ UPDATED: Import our new CSS foundation and component module
+import '../../../styles/main.css';
+import styles from './RoommateDiscovery.module.css';
 
 const RoommateDiscovery = ({ onRequestMatch, onBack }) => {
   const { user, hasRole } = useAuth();
@@ -169,8 +171,8 @@ const RoommateDiscovery = ({ onRequestMatch, onBack }) => {
     <div className="card mb-5">
       <h3 className="card-title">Search Filters</h3>
       
-      {/* Primary filters */}
-      <div className="filter-row-primary mb-4">
+      {/* ✅ UPDATED: Primary filters using CSS module */}
+      <div className={styles.filterRowPrimary}>
         <div className="form-group">
           <label className="label">Min Compatibility</label>
           <select
@@ -226,8 +228,8 @@ const RoommateDiscovery = ({ onRequestMatch, onBack }) => {
         </div>
       </div>
 
-      {/* Action buttons */}
-      <div className="filter-actions mb-4">
+      {/* ✅ UPDATED: Action buttons using CSS module */}
+      <div className={styles.filterActions}>
         <button
           className="btn btn-primary"
           onClick={findMatches}
@@ -253,8 +255,8 @@ const RoommateDiscovery = ({ onRequestMatch, onBack }) => {
         </button>
       </div>
 
-      {/* Exclusion options */}
-      <div className="filter-options">
+      {/* ✅ UPDATED: Exclusion options using CSS module */}
+      <div className={styles.filterOptions}>
         <div className="checkbox-item">
           <input
             type="checkbox"
@@ -280,18 +282,20 @@ const RoommateDiscovery = ({ onRequestMatch, onBack }) => {
         </div>
       </div>
 
-      {/* Active filters display */}
+      {/* ✅ UPDATED: Active filters display using CSS module */}
       {(filters.minScore > DEFAULT_FILTERS.minScore || filters.recoveryStage || 
         filters.ageRange || filters.location || !filters.hideAlreadyMatched || 
         !filters.hideRequestsSent) && (
-        <div className="alert alert-info mt-3">
-          <strong>Active Filters:</strong> 
-          {filters.minScore > DEFAULT_FILTERS.minScore && ` Min Compatibility: ${filters.minScore}% •`}
-          {filters.recoveryStage && ` Recovery: ${filters.recoveryStage} •`}
-          {filters.ageRange && ` Age: ${filters.ageRange} •`}
-          {filters.location && ` Location: ${filters.location} •`}
-          {!filters.hideAlreadyMatched && ` Including connected users •`}
-          {!filters.hideRequestsSent && ` Including contacted users`}
+        <div className={styles.activeFiltersDisplay}>
+          <div className={styles.activeFiltersTitle}>Active Filters:</div>
+          <div className={styles.activeFiltersList}>
+            {filters.minScore > DEFAULT_FILTERS.minScore && ` Min Compatibility: ${filters.minScore}% •`}
+            {filters.recoveryStage && ` Recovery: ${filters.recoveryStage} •`}
+            {filters.ageRange && ` Age: ${filters.ageRange} •`}
+            {filters.location && ` Location: ${filters.location} •`}
+            {!filters.hideAlreadyMatched && ` Including connected users •`}
+            {!filters.hideRequestsSent && ` Including contacted users`}
+          </div>
         </div>
       )}
     </div>
@@ -303,18 +307,21 @@ const RoommateDiscovery = ({ onRequestMatch, onBack }) => {
   const renderMatches = () => {
     if (loading) {
       return (
-        <div className="empty-state">
+        <div className={styles.loadingMatchesContainer}>
           <LoadingSpinner message="Finding your perfect roommate matches..." />
+          <div className={styles.loadingMatchesText}>
+            Analyzing compatibility scores and preferences...
+          </div>
         </div>
       );
     }
 
     if (error) {
       return (
-        <div className="card mb-5">
+        <div className={styles.errorCard}>
           <div className="alert alert-error">
-            <h4>Error Loading Matches</h4>
-            <p>{error}</p>
+            <h4 className={styles.errorTitle}>Error Loading Matches</h4>
+            <p className={styles.errorMessage}>{error}</p>
             <button 
               className="btn btn-outline"
               onClick={() => {
@@ -331,13 +338,15 @@ const RoommateDiscovery = ({ onRequestMatch, onBack }) => {
 
     if (matches.length === 0) {
       return (
-        <div className="card text-center">
-          <h3>No matches found</h3>
-          <p>Try adjusting your filters or check back later for new applicants.</p>
+        <div className={styles.noMatchesCard}>
+          <h3 className={styles.noMatchesTitle}>No matches found</h3>
+          <p className={styles.noMatchesMessage}>
+            Try adjusting your filters or check back later for new applicants.
+          </p>
           
           {/* Show exclusion stats when no matches found */}
           {(excludedCount > 0 || sentRequestsCount > 0) && (
-            <div className="alert alert-info mt-3 mb-3">
+            <div className={styles.exclusionStats}>
               <strong>Hidden from search:</strong>
               {excludedCount > 0 && ` ${excludedCount} already connected`}
               {excludedCount > 0 && sentRequestsCount > 0 && ` • `}
@@ -345,7 +354,7 @@ const RoommateDiscovery = ({ onRequestMatch, onBack }) => {
             </div>
           )}
           
-          <div className="mt-3">
+          <div className={styles.searchExpansionActions}>
             <button
               className="btn btn-primary"
               onClick={() => handleFilterChange({ 
@@ -359,7 +368,7 @@ const RoommateDiscovery = ({ onRequestMatch, onBack }) => {
             </button>
             
             <button
-              className="btn btn-outline ml-2"
+              className={`btn btn-outline ${styles.ml2}`}
               onClick={() => handleFilterChange({ 
                 hideAlreadyMatched: false,
                 hideRequestsSent: false 
@@ -374,13 +383,13 @@ const RoommateDiscovery = ({ onRequestMatch, onBack }) => {
 
     return (
       <>
-        {/* Results header */}
+        {/* ✅ UPDATED: Results header using CSS module */}
         <div className="card mb-4">
-          <div className="match-results-header">
+          <div className={styles.matchResultsHeader}>
             <h3 className="card-title">
               {matches.length} Compatible Roommate{matches.length !== 1 ? 's' : ''} Found
             </h3>
-            <div className="text-gray-600 text-sm">
+            <div className={styles.matchResultsStats}>
               {excludedCount > 0 && `${excludedCount} connected users hidden`}
               {excludedCount > 0 && sentRequestsCount > 0 && ` • `}
               {sentRequestsCount > 0 && `${sentRequestsCount} pending requests hidden`}
@@ -388,8 +397,8 @@ const RoommateDiscovery = ({ onRequestMatch, onBack }) => {
           </div>
         </div>
 
-        {/* Match cards grid */}
-        <div className="matches-grid mb-5">
+        {/* ✅ UPDATED: Match cards grid using CSS module */}
+        <div className={styles.matchesGrid}>
           {matches.map((match) => (
             <MatchCard
               key={match.user_id}
@@ -445,10 +454,10 @@ const RoommateDiscovery = ({ onRequestMatch, onBack }) => {
   return (
     <>
       <div className="content">
-        {/* Header */}
-        <div className="text-center mb-5">
-          <h1 className="welcome-title">Find Your Perfect Roommate</h1>
-          <p className="welcome-text">
+        {/* ✅ UPDATED: Header using CSS module */}
+        <div className={styles.discoveryHeader}>
+          <h1 className={styles.discoveryTitle}>Find Your Perfect Roommate</h1>
+          <p className={styles.discoverySubtitle}>
             Discover compatible roommates based on recovery goals, lifestyle preferences, and personal compatibility
           </p>
         </div>

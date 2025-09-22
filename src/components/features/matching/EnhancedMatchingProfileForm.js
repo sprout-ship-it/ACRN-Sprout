@@ -1,4 +1,4 @@
-// src/components/forms/EnhancedMatchingProfileForm.js - COMPLETE WITH SUBMISSION FIXES
+// src/components/features/matching/EnhancedMatchingProfileForm.js - UPDATED WITH CSS MODULE
 import React, { useState, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../../context/AuthContext';
@@ -16,8 +16,8 @@ import RoommatePreferencesSection from './sections/RoommatePreferencesSection';
 import LifestylePreferencesSection from './sections/LifestylePreferencesSection';
 import CompatibilitySection from './sections/CompatibilitySection';
 
-// Import styles
-import '../../forms/styles/EnhancedMatchingForm.css';
+// Import CSS module
+import styles from './EnhancedMatchingProfileForm.module.css';
 
 const FORM_SECTIONS = [
   {
@@ -414,7 +414,7 @@ const EnhancedMatchingProfileForm = ({ editMode = false, onComplete, onCancel })
           label={`Section ${currentSectionIndex + 1} of ${FORM_SECTIONS.length}`}
         />
 
-        {/* ✅ FIX 6: Enhanced Section Navigation with proper event handling */}
+        {/* ✅ UPDATED: Section Navigation using layout utilities */}
         <nav className="navigation">
           <ul className="nav-list">
             {FORM_SECTIONS.map((section, index) => (
@@ -455,7 +455,7 @@ const EnhancedMatchingProfileForm = ({ editMode = false, onComplete, onCancel })
           </div>
         )}
 
-        {/* ✅ FIX 7: Enhanced form with better event handling */}
+        {/* ✅ UPDATED: Enhanced form with better event handling */}
         <form 
           onSubmit={handleSubmit} 
           onKeyDown={handleKeyDown}
@@ -463,7 +463,7 @@ const EnhancedMatchingProfileForm = ({ editMode = false, onComplete, onCancel })
         >
           <div className="card">
             <div className="card-header">
-              <h2 className="section-header">
+              <h2 className={styles.sectionHeader}>
                 {currentSection.icon} {currentSection.title}
               </h2>
             </div>
@@ -477,82 +477,24 @@ const EnhancedMatchingProfileForm = ({ editMode = false, onComplete, onCancel })
               onInputChange={handleInputChange}
               onArrayChange={handleArrayChange}
               onRangeChange={handleRangeChange}
+              styles={styles} // Pass CSS module to sections
             />
 
-            {/* ✅ FIX 8: Enhanced form actions with explicit button types and event handling */}
-            <div className="form-actions">
-              {/* Save Progress Button */}
-              <button
-                type="button"
-                onClick={handleSave}
-                className="btn btn-outline"
-                disabled={loading || isSubmitting}
-              >
-                {(loading && !isSubmitting) ? (
-                  <>
-                    <span className="loading-spinner small"></span>
-                    Saving...
-                  </>
-                ) : (
-                  'Save Progress'
-                )}
-              </button>
-              
-              {/* Cancel Button (Edit Mode Only) */}
-              {editMode && (
-                <button
-                  type="button"
-                  onClick={handleCancel}
-                  className="btn btn-secondary"
-                  disabled={loading || isSubmitting}
-                >
-                  Cancel
-                </button>
-              )}
-              
-              {/* Previous Button */}
-              {!isFirstSection && (
-                <button
-                  type="button"
-                  onClick={handlePrevious}
-                  className="btn btn-secondary"
-                  disabled={loading || isSubmitting}
-                >
-                  Previous
-                </button>
-              )}
-              
-              {/* Next / Submit Button */}
-              {!isLastSection ? (
-                <button
-                  type="button"
-                  onClick={handleNext}
-                  className="btn btn-primary"
-                  disabled={loading || isSubmitting}
-                >
-                  Next
-                </button>
-              ) : (
-                <button
-                  type="submit"
-                  className="btn btn-primary"
-                  disabled={loading || isSubmitting || (!canSubmit && !editMode)}
-                  onClick={(e) => {
-                    console.log('🚨 SUBMIT BUTTON CLICKED');
-                    // Let the form's onSubmit handle this
-                  }}
-                >
-                  {isSubmitting ? (
-                    <>
-                      <span className="loading-spinner small"></span>
-                      {editMode ? 'Updating...' : 'Completing Profile...'}
-                    </>
-                  ) : (
-                    editMode ? 'Update Profile' : 'Complete Profile'
-                  )}
-                </button>
-              )}
-            </div>
+            {/* ✅ UPDATED: Form Actions using dedicated component */}
+            <FormActions
+              loading={loading}
+              editMode={editMode}
+              isSubmitting={isSubmitting}
+              isFirstSection={isFirstSection}
+              isLastSection={isLastSection}
+              completionPercentage={completionPercentage}
+              canSubmit={canSubmit}
+              onSave={handleSave}
+              onCancel={editMode ? handleCancel : null}
+              onPrevious={!isFirstSection ? handlePrevious : null}
+              onNext={!isLastSection ? handleNext : null}
+              onSubmit={isLastSection ? handleSubmit : null}
+            />
           </div>
         </form>
 
@@ -644,206 +586,5 @@ const EnhancedMatchingProfileForm = ({ editMode = false, onComplete, onCancel })
     </div>
   );
 };
-
-// ✅ ENHANCED: Improved CSS for tab navigation with 2-line support and borders
-const additionalStyles = `
-/* ✅ FIXED: Enhanced Section Navigation with 2-line support and borders */
-.navigation {
-  background: white;
-  border-bottom: 2px solid var(--border-beige);
-  padding: 0;
-  border-radius: var(--radius-lg) var(--radius-lg) 0 0;
-  overflow: hidden;
-}
-
-.navigation .nav-list {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
-  list-style: none;
-  margin: 0;
-  padding: 0;
-}
-
-.navigation .nav-item {
-  position: relative;
-}
-
-.navigation .nav-item:not(:last-child)::after {
-  content: '';
-  position: absolute;
-  top: 10px;
-  right: 0;
-  bottom: 10px;
-  width: 1px;
-  background: var(--border-beige);
-  z-index: 1;
-}
-
-.navigation .nav-button {
-  width: 100%;
-  min-height: 80px;
-  padding: 12px 16px;
-  background: none;
-  border: none;
-  cursor: pointer;
-  font-size: 0.85rem;
-  font-weight: 600;
-  color: var(--gray-600);
-  transition: var(--transition-normal);
-  border-bottom: 3px solid transparent;
-  white-space: normal;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  gap: 6px;
-  line-height: 1.3;
-  text-align: center;
-  position: relative;
-  background: linear-gradient(135deg, rgba(255, 255, 255, 0.8) 0%, rgba(248, 249, 250, 0.8) 100%);
-  border-top: 1px solid transparent;
-  border-left: 1px solid transparent;
-  border-right: 1px solid transparent;
-}
-
-.navigation .nav-button:hover:not(:disabled) {
-  color: var(--primary-purple);
-  background: linear-gradient(135deg, rgba(160, 32, 240, 0.04) 0%, rgba(160, 32, 240, 0.02) 100%);
-  border-top-color: var(--primary-purple);
-  border-left-color: rgba(160, 32, 240, 0.2);
-  border-right-color: rgba(160, 32, 240, 0.2);
-  transform: translateY(-1px);
-  box-shadow: 0 2px 8px rgba(160, 32, 240, 0.1);
-}
-
-.navigation .nav-button.active {
-  color: var(--primary-purple);
-  border-bottom-color: var(--primary-purple);
-  background: linear-gradient(135deg, rgba(160, 32, 240, 0.08) 0%, rgba(160, 32, 240, 0.04) 100%);
-  border-top-color: var(--primary-purple);
-  border-left-color: var(--primary-purple);
-  border-right-color: var(--primary-purple);
-  font-weight: 700;
-  transform: translateY(-2px);
-  box-shadow: 0 4px 12px rgba(160, 32, 240, 0.15);
-  z-index: 2;
-}
-
-.navigation .nav-button:disabled {
-  opacity: 0.6;
-  cursor: not-allowed;
-  transform: none !important;
-  box-shadow: none !important;
-}
-
-.navigation .nav-icon {
-  font-size: 1.2rem;
-  flex-shrink: 0;
-}
-
-/* ✅ ENHANCED: Form actions styling */
-.form-actions {
-  display: flex;
-  gap: 1rem;
-  flex-wrap: wrap;
-  align-items: center;
-  justify-content: flex-end;
-  margin-top: 2rem;
-  padding-top: 1rem;
-  border-top: 1px solid var(--border-beige);
-}
-
-.form-actions .btn {
-  min-width: 120px;
-}
-
-.form-actions .btn:first-child {
-  margin-right: auto;
-}
-
-/* ✅ ENHANCED: Loading and error states */
-.loading-spinner.small {
-  width: 14px;
-  height: 14px;
-  margin-right: 0.5rem;
-}
-
-.error input,
-.error select,
-.error textarea {
-  border-color: var(--coral) !important;
-  background-color: #fff5f5;
-}
-
-.alert-error input,
-.alert-error select, 
-.alert-error textarea {
-  border-color: var(--coral) !important;
-}
-
-details summary {
-  cursor: pointer;
-  font-weight: 500;
-}
-
-details[open] summary {
-  margin-bottom: 0.5rem;
-}
-
-/* ✅ RESPONSIVE: Better responsive behavior for tabs */
-@media (max-width: 768px) {
-  .navigation .nav-list {
-    grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
-  }
-  
-  .navigation .nav-button {
-    min-height: 70px;
-    padding: 10px 12px;
-    font-size: 0.8rem;
-    gap: 4px;
-  }
-  
-  .navigation .nav-icon {
-    font-size: 1rem;
-  }
-
-  .form-actions {
-    flex-direction: column;
-    align-items: stretch;
-  }
-  
-  .form-actions .btn:first-child {
-    margin-right: 0;
-    margin-bottom: 0.5rem;
-  }
-}
-
-@media (max-width: 480px) {
-  .navigation .nav-list {
-    grid-template-columns: repeat(2, 1fr);
-  }
-  
-  .navigation .nav-button {
-    min-height: 65px;
-    padding: 8px 10px;
-    font-size: 0.75rem;
-  }
-  
-  .navigation .nav-icon {
-    font-size: 0.9rem;
-  }
-}
-`;
-
-// Inject additional styles
-if (typeof document !== 'undefined') {
-  const existingStyle = document.getElementById('enhanced-matching-form-styles');
-  if (!existingStyle) {
-    const styleElement = document.createElement('style');
-    styleElement.id = 'enhanced-matching-form-styles';
-    styleElement.textContent = additionalStyles;
-    document.head.appendChild(styleElement);
-  }
-}
 
 export default EnhancedMatchingProfileForm;

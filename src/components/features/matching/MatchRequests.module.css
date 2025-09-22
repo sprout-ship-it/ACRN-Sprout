@@ -1,0 +1,208 @@
+/* MatchRequests.module.css - Component-specific styles */
+
+/* ==================== CONNECTIONS LAYOUT ==================== */
+.connectionsByType {
+  display: flex;
+  flex-direction: column;
+  gap: 2rem;
+}
+
+.connectionTypeSection {
+  background: white;
+  border-radius: var(--radius-xl);
+  padding: 1.5rem;
+  border: 2px solid var(--border-beige);
+}
+
+.connectionTypeTitle {
+  font-size: 1.25rem;
+  font-weight: 700;
+  color: var(--gray-900);
+  margin-bottom: 1rem;
+  padding-bottom: 0.75rem;
+  border-bottom: 1px solid var(--border-beige);
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.connectionCount {
+  color: var(--gray-600);
+  font-weight: 500;
+  font-size: 1rem;
+}
+
+.connectionsGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
+  gap: 1.5rem;
+}
+
+.requestsList {
+  max-width: 800px;
+  margin: 0 auto;
+}
+
+/* ==================== RECONNECTION REQUEST FEEDBACK ==================== */
+.cardRequestSent {
+  background: linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 100%);
+  border: 2px solid #0284c7 !important;
+  position: relative;
+}
+
+.cardRequestSent::before {
+  content: "📤";
+  position: absolute;
+  top: -8px;
+  right: -8px;
+  font-size: 1.5rem;
+  background: #0284c7;
+  color: white;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1;
+}
+
+/* ==================== SUCCESS STATES ==================== */
+.textSuccess {
+  color: #059669;
+  font-weight: 500;
+}
+
+.btnSuccess {
+  background: linear-gradient(135deg, #059669, #047857);
+  color: white;
+  border: 2px solid #047857;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 8px 16px;
+  border-radius: var(--radius-md);
+  font-weight: 600;
+  font-size: 0.9rem;
+  cursor: pointer;
+  transition: var(--transition-normal);
+  text-decoration: none;
+  font-family: var(--font-sans);
+  min-height: 36px;
+}
+
+.btnSuccess:hover:not(:disabled) {
+  background: linear-gradient(135deg, #047857, #065f46);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(5, 150, 105, 0.3);
+}
+
+.btnSuccess:disabled {
+  background: var(--gray-400);
+  border-color: var(--gray-400);
+  color: white;
+  cursor: not-allowed;
+  transform: none;
+  box-shadow: none;
+}
+
+/* ==================== CONTACT MODAL ENHANCEMENTS ==================== */
+.contactDetails {
+  margin-bottom: 2rem;
+}
+
+.contactItem {
+  display: flex;
+  align-items: center;
+  padding: 1rem;
+  background: var(--bg-light-cream);
+  border-radius: var(--radius-md);
+  margin-bottom: 1rem;
+}
+
+.contactItem:last-child {
+  margin-bottom: 0;
+}
+
+.contactIcon {
+  font-size: 1.5rem;
+  margin-right: 1rem;
+  flex-shrink: 0;
+}
+
+.contactInfo {
+  flex: 1;
+}
+
+.contactLabel {
+  display: block;
+  margin-bottom: 0.25rem;
+  font-weight: 600;
+  color: var(--gray-800);
+  font-size: 0.9rem;
+}
+
+.contactValue {
+  font-weight: 600;
+  color: var(--gray-800);
+  margin-bottom: 0.25rem;
+}
+
+.contactLink {
+  color: var(--primary-purple);
+  font-size: 0.9rem;
+  text-decoration: none;
+  font-weight: 500;
+}
+
+.contactLink:hover {
+  text-decoration: underline;
+}
+
+/* ==================== RESPONSIVE DESIGN ==================== */
+@media (max-width: 768px) {
+  .connectionsGrid {
+    grid-template-columns: 1fr;
+  }
+  
+  .connectionTypeTitle {
+    font-size: 1.1rem;
+  }
+  
+  .cardRequestSent::before {
+    top: -6px;
+    right: -6px;
+    font-size: 1.2rem;
+    width: 24px;
+    height: 24px;
+  }
+
+  .contactItem {
+    flex-direction: column;
+    align-items: flex-start;
+    text-align: left;
+  }
+
+  .contactIcon {
+    margin-right: 0;
+    margin-bottom: 0.5rem;
+  }
+}
+
+@media (max-width: 480px) {
+  .connectionsByType {
+    gap: 1.5rem;
+  }
+
+  .connectionTypeSection {
+    padding: 1rem;
+  }
+
+  .connectionsGrid {
+    gap: 1rem;
+  }
+
+  .requestsList {
+    padding: 0 1rem;
+  }
+}

@@ -1,4 +1,4 @@
-// src/components/features/matching/sections/LocationPreferencesSection.js
+// src/components/features/matching/sections/LocationPreferencesSection.js - Updated with CSS module
 import React from 'react';
 import PropTypes from 'prop-types';
 import { housingTypeOptions } from '../constants/matchingFormConstants';
@@ -10,7 +10,8 @@ const LocationPreferencesSection = ({
   profile,
   onInputChange,
   onArrayChange,
-  onRangeChange
+  onRangeChange,
+  styles = {}   // CSS module styles passed from parent
 }) => {
   // State options for dropdown
   const stateOptions = [
@@ -234,16 +235,18 @@ const LocationPreferencesSection = ({
         <label className="label">
           Housing Type Preferences <span className="text-red-500">*</span>
         </label>
-        <div className="checkbox-columns">
+        
+        {/* ✅ UPDATED: Using CSS module for checkbox columns */}
+        <div className={styles.checkboxColumns || 'checkbox-columns'}>
           {housingTypeOptions.map(type => (
-            <label key={type} className="checkbox-label">
+            <label key={type} className={styles.checkboxLabel || 'checkbox-label'}>
               <input
                 type="checkbox"
                 checked={(formData.housingType || []).includes(type)}
                 onChange={(e) => onArrayChange('housingType', type, e.target.checked)}
                 disabled={loading}
               />
-              <span className="checkbox-text">{type}</span>
+              <span className={styles.checkboxText || 'checkbox-text'}>{type}</span>
             </label>
           ))}
         </div>
@@ -289,61 +292,59 @@ const LocationPreferencesSection = ({
         </div>
       </div>
 
-      {/* ✅ NEW: Additional preferences section */}
+      {/* ✅ UPDATED: Additional preferences section with enhanced checkbox styling */}
       <div className="form-group mb-4">
         <h4 className="subtitle">Additional Preferences</h4>
+        
+        {/* ✅ UPDATED: Using CSS module for enhanced checkbox styling */}
         <div className="grid-2 mt-3">
-          <div className="checkbox-item">
+          <label className={styles.checkboxLabel || 'checkbox-item'}>
             <input
               type="checkbox"
-              id="furnished-preference"
               checked={formData.furnishedPreference || false}
               onChange={(e) => onInputChange('furnishedPreference', e.target.checked)}
               disabled={loading}
             />
-            <label htmlFor="furnished-preference">
+            <span className={styles.checkboxText || ''}>
               Prefer furnished housing
-            </label>
-          </div>
+            </span>
+          </label>
           
-          <div className="checkbox-item">
+          <label className={styles.checkboxLabel || 'checkbox-item'}>
             <input
               type="checkbox"
-              id="pets-allowed"
               checked={formData.petsAllowed || false}
               onChange={(e) => onInputChange('petsAllowed', e.target.checked)}
               disabled={loading}
             />
-            <label htmlFor="pets-allowed">
+            <span className={styles.checkboxText || ''}>
               Need pet-friendly housing
-            </label>
-          </div>
+            </span>
+          </label>
           
-          <div className="checkbox-item">
+          <label className={styles.checkboxLabel || 'checkbox-item'}>
             <input
               type="checkbox"
-              id="utilities-included"
               checked={formData.utilitiesIncluded || false}
               onChange={(e) => onInputChange('utilitiesIncluded', e.target.checked)}
               disabled={loading}
             />
-            <label htmlFor="utilities-included">
+            <span className={styles.checkboxText || ''}>
               Prefer utilities included
-            </label>
-          </div>
+            </span>
+          </label>
           
-          <div className="checkbox-item">
+          <label className={styles.checkboxLabel || 'checkbox-item'}>
             <input
               type="checkbox"
-              id="accessibility-needed"
               checked={formData.accessibilityNeeded || false}
               onChange={(e) => onInputChange('accessibilityNeeded', e.target.checked)}
               disabled={loading}
             />
-            <label htmlFor="accessibility-needed">
+            <span className={styles.checkboxText || ''}>
               Need accessibility features
-            </label>
-          </div>
+            </span>
+          </label>
         </div>
       </div>
     </>
@@ -376,11 +377,13 @@ LocationPreferencesSection.propTypes = {
   }),
   onInputChange: PropTypes.func.isRequired,
   onArrayChange: PropTypes.func.isRequired,
-  onRangeChange: PropTypes.func.isRequired
+  onRangeChange: PropTypes.func.isRequired,
+  styles: PropTypes.object                   // ✅ NEW: CSS module styles
 };
 
 LocationPreferencesSection.defaultProps = {
-  profile: null
+  profile: null,
+  styles: {}                                 // ✅ NEW: Default empty object for styles
 };
 
 export default LocationPreferencesSection;

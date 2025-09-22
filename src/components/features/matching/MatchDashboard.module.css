@@ -1,0 +1,259 @@
+/* MatchDashboard.module.css - Component-specific styles */
+
+/* ==================== HOUSING CARD PLACEHOLDER ==================== */
+.housingCardPlaceholder {
+  background: var(--bg-light-cream);
+  margin-bottom: var(--spacing-lg);
+  text-align: center;
+  padding: 60px 20px;
+  border-radius: var(--radius-lg);
+  border: 2px solid var(--border-beige);
+}
+
+.housingCardIcon {
+  font-size: 3rem;
+  color: var(--primary-purple);
+  margin-bottom: 0.5rem;
+  display: block;
+}
+
+/* ==================== FILTER CONTROLS ==================== */
+.filterRowPrimary {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: var(--spacing-md);
+  margin-bottom: var(--spacing-lg);
+}
+
+.filterActions {
+  display: flex;
+  gap: var(--spacing-md);
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: flex-start;
+  margin-bottom: var(--spacing-lg);
+}
+
+.filterActions .btn {
+  min-width: 120px;
+}
+
+/* ==================== SEARCH RESULTS ==================== */
+.searchResultsGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
+  gap: var(--spacing-lg);
+  margin-bottom: var(--spacing-xl);
+}
+
+.searchResultCard {
+  background: white;
+  border-radius: var(--radius-xl);
+  border: 2px solid var(--border-beige);
+  overflow: hidden;
+  transition: var(--transition-normal);
+}
+
+.searchResultCard:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-lg);
+  border-color: var(--primary-purple);
+}
+
+.searchResultContent {
+  padding: var(--spacing-lg);
+}
+
+.searchResultTitle {
+  font-size: 1.1rem;
+  font-weight: 600;
+  color: var(--gray-900);
+  margin-bottom: var(--spacing-sm);
+  line-height: 1.3;
+}
+
+.searchResultAddress {
+  color: var(--gray-600);
+  margin-bottom: var(--spacing-sm);
+  font-size: 0.9rem;
+}
+
+.searchResultPrice {
+  font-size: 1.2rem;
+  font-weight: 700;
+  color: var(--secondary-teal);
+  margin-bottom: var(--spacing-md);
+}
+
+.searchResultDetails {
+  color: var(--gray-600);
+  margin-bottom: var(--spacing-lg);
+  line-height: 1.5;
+}
+
+.searchResultButton {
+  width: 100%;
+}
+
+/* ==================== PEER SUPPORT CARDS ==================== */
+.peerSupportCard {
+  background: white;
+  border-radius: var(--radius-xl);
+  padding: var(--spacing-lg);
+  border: 2px solid var(--border-beige);
+  transition: var(--transition-normal);
+}
+
+.peerSupportCard:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-lg);
+  border-color: var(--secondary-teal);
+}
+
+.peerSupportHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: var(--spacing-lg);
+}
+
+.peerSupportInfo h4 {
+  margin: 0 0 var(--spacing-xs) 0;
+  color: var(--gray-900);
+}
+
+.peerSupportInfo p {
+  margin: 0;
+  color: var(--gray-600);
+  font-size: 0.9rem;
+}
+
+.peerSupportSpecialties {
+  margin-bottom: var(--spacing-lg);
+}
+
+.peerSupportSpecialties .label {
+  margin-bottom: var(--spacing-sm);
+  display: block;
+}
+
+.specialtyBadges {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--spacing-xs);
+  margin-bottom: var(--spacing-md);
+}
+
+.peerSupportDetails {
+  color: var(--gray-600);
+  margin-bottom: var(--spacing-md);
+  line-height: 1.5;
+}
+
+.peerSupportDescription {
+  color: var(--gray-700);
+  line-height: 1.6;
+  margin-bottom: var(--spacing-lg);
+}
+
+.peerSupportButton {
+  width: 100%;
+}
+
+/* ==================== LOADING STATES ==================== */
+.loadingState {
+  text-align: center;
+  padding: var(--spacing-xxl);
+  color: var(--gray-600);
+}
+
+.loadingText {
+  font-size: 1.1rem;
+  margin-top: var(--spacing-md);
+}
+
+/* ==================== RESPONSIVE DESIGN ==================== */
+@media (max-width: 768px) {
+  .filterRowPrimary {
+    grid-template-columns: 1fr;
+    gap: var(--spacing-sm);
+  }
+
+  .filterActions {
+    flex-direction: column;
+    align-items: stretch;
+    gap: var(--spacing-sm);
+  }
+
+  .filterActions .btn {
+    min-width: unset;
+    width: 100%;
+  }
+
+  .searchResultsGrid {
+    grid-template-columns: 1fr;
+    gap: var(--spacing-md);
+  }
+
+  .housingCardPlaceholder {
+    padding: 40px 15px;
+  }
+
+  .housingCardIcon {
+    font-size: 2.5rem;
+  }
+
+  .peerSupportHeader {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: var(--spacing-sm);
+  }
+
+  .specialtyBadges {
+    gap: var(--spacing-xs);
+  }
+}
+
+@media (max-width: 480px) {
+  .searchResultsGrid {
+    gap: var(--spacing-sm);
+  }
+
+  .searchResultContent {
+    padding: var(--spacing-md);
+  }
+
+  .searchResultTitle {
+    font-size: 1rem;
+  }
+
+  .housingCardPlaceholder {
+    padding: 30px 10px;
+  }
+
+  .housingCardIcon {
+    font-size: 2rem;
+  }
+
+  .peerSupportCard {
+    padding: var(--spacing-md);
+  }
+
+  .peerSupportSpecialties .label {
+    font-size: 0.9rem;
+  }
+}
+
+/* ==================== UTILITY OVERRIDES ==================== */
+.textSecondaryTeal {
+  color: var(--secondary-teal) !important;
+}
+
+/* Badge spacing utility */
+.mr-1 {
+  margin-right: var(--spacing-xs);
+}
+
+.mb-1 {
+  margin-bottom: var(--spacing-xs);
+}

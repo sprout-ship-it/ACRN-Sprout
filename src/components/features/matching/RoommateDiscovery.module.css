@@ -1,0 +1,278 @@
+/* RoommateDiscovery.module.css - Component-specific styles */
+
+/* ==================== FILTER CONTROLS ==================== */
+.filterRowPrimary {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: var(--spacing-md);
+  margin-bottom: var(--spacing-lg);
+}
+
+.filterActions {
+  display: flex;
+  gap: var(--spacing-md);
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: flex-start;
+  margin-bottom: var(--spacing-lg);
+}
+
+.filterActions .btn {
+  min-width: 130px;
+  white-space: nowrap;
+}
+
+.filterOptions {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-sm);
+  margin-bottom: var(--spacing-lg);
+}
+
+.filterOptions .checkbox-item {
+  background: rgba(160, 32, 240, 0.02);
+  border: 1px solid var(--border-beige);
+  border-radius: var(--radius-md);
+  padding: var(--spacing-sm) var(--spacing-md);
+  transition: var(--transition-normal);
+}
+
+.filterOptions .checkbox-item:hover {
+  background: rgba(160, 32, 240, 0.05);
+  border-color: var(--primary-purple);
+}
+
+/* ==================== MATCHES GRID ==================== */
+.matchesGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
+  gap: var(--spacing-xl);
+  margin-bottom: var(--spacing-xxl);
+}
+
+.matchResultsHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  flex-wrap: wrap;
+  gap: var(--spacing-md);
+}
+
+.matchResultsStats {
+  color: var(--gray-600);
+  font-size: 0.9rem;
+  font-style: italic;
+}
+
+/* ==================== SEARCH EXPANSION ==================== */
+.searchExpansionActions {
+  display: flex;
+  gap: var(--spacing-md);
+  flex-wrap: wrap;
+  justify-content: center;
+  margin-top: var(--spacing-lg);
+}
+
+.searchExpansionActions .btn {
+  min-width: 160px;
+}
+
+/* ==================== ACTIVE FILTERS DISPLAY ==================== */
+.activeFiltersDisplay {
+  background: var(--info-bg);
+  border: 1px solid var(--info-border);
+  color: var(--info-text);
+  padding: var(--spacing-md);
+  border-radius: var(--radius-md);
+  margin-top: var(--spacing-md);
+  font-size: 0.9rem;
+  line-height: 1.5;
+}
+
+.activeFiltersTitle {
+  font-weight: 600;
+  margin-bottom: var(--spacing-xs);
+}
+
+.activeFiltersList {
+  margin: 0;
+  color: var(--gray-700);
+}
+
+/* ==================== MATCH DISCOVERY HEADER ==================== */
+.discoveryHeader {
+  text-align: center;
+  margin-bottom: var(--spacing-xxl);
+  padding: var(--spacing-xl) var(--spacing-lg);
+  background: linear-gradient(135deg, rgba(160, 32, 240, 0.05) 0%, rgba(32, 178, 170, 0.05) 100%);
+  border-radius: var(--radius-xl);
+  border: 2px solid var(--border-beige);
+}
+
+.discoveryTitle {
+  font-family: var(--font-serif);
+  font-size: 2.2rem;
+  font-weight: 700;
+  color: var(--primary-purple);
+  margin-bottom: var(--spacing-md);
+  line-height: 1.2;
+}
+
+.discoverySubtitle {
+  font-size: 1.1rem;
+  color: var(--gray-700);
+  line-height: 1.6;
+  max-width: 600px;
+  margin: 0 auto;
+}
+
+/* ==================== ERROR STATES ==================== */
+.errorCard {
+  background: white;
+  border-radius: var(--radius-xl);
+  padding: var(--spacing-xl);
+  border: 2px solid var(--error-border);
+  text-align: center;
+  margin-bottom: var(--spacing-xl);
+}
+
+.errorTitle {
+  color: var(--error-text);
+  margin-bottom: var(--spacing-md);
+}
+
+.errorMessage {
+  color: var(--gray-700);
+  margin-bottom: var(--spacing-lg);
+  line-height: 1.6;
+}
+
+/* ==================== NO MATCHES STATE ==================== */
+.noMatchesCard {
+  background: white;
+  border-radius: var(--radius-xl);
+  padding: var(--spacing-xl);
+  border: 2px solid var(--border-beige);
+  text-align: center;
+}
+
+.noMatchesTitle {
+  color: var(--gray-800);
+  margin-bottom: var(--spacing-md);
+}
+
+.noMatchesMessage {
+  color: var(--gray-600);
+  margin-bottom: var(--spacing-lg);
+  line-height: 1.6;
+}
+
+.exclusionStats {
+  background: var(--info-bg);
+  border: 1px solid var(--info-border);
+  color: var(--info-text);
+  padding: var(--spacing-md);
+  border-radius: var(--radius-md);
+  margin: var(--spacing-lg) 0;
+  font-size: 0.9rem;
+}
+
+/* ==================== RESPONSIVE DESIGN ==================== */
+@media (max-width: 768px) {
+  .filterRowPrimary {
+    grid-template-columns: 1fr;
+    gap: var(--spacing-sm);
+  }
+
+  .filterActions {
+    flex-direction: column;
+    align-items: stretch;
+    gap: var(--spacing-sm);
+  }
+
+  .filterActions .btn {
+    min-width: unset;
+    width: 100%;
+  }
+
+  .matchesGrid {
+    grid-template-columns: 1fr;
+    gap: var(--spacing-lg);
+  }
+
+  .matchResultsHeader {
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+  }
+
+  .searchExpansionActions {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .searchExpansionActions .btn {
+    min-width: unset;
+    width: 100%;
+  }
+
+  .discoveryHeader {
+    padding: var(--spacing-lg) var(--spacing-md);
+  }
+
+  .discoveryTitle {
+    font-size: 1.8rem;
+  }
+
+  .discoverySubtitle {
+    font-size: 1rem;
+  }
+}
+
+@media (max-width: 480px) {
+  .matchesGrid {
+    gap: var(--spacing-md);
+  }
+
+  .filterOptions {
+    gap: var(--spacing-xs);
+  }
+
+  .discoveryHeader {
+    padding: var(--spacing-md);
+  }
+
+  .discoveryTitle {
+    font-size: 1.6rem;
+  }
+
+  .discoverySubtitle {
+    font-size: 0.9rem;
+  }
+
+  .errorCard,
+  .noMatchesCard {
+    padding: var(--spacing-lg);
+  }
+}
+
+/* ==================== LOADING STATE ENHANCEMENTS ==================== */
+.loadingMatchesContainer {
+  padding: var(--spacing-xxl);
+  text-align: center;
+  background: white;
+  border-radius: var(--radius-xl);
+  border: 2px solid var(--border-beige);
+}
+
+.loadingMatchesText {
+  color: var(--gray-600);
+  font-size: 1.1rem;
+  margin-top: var(--spacing-lg);
+  line-height: 1.5;
+}
+
+/* ==================== UTILITY HELPERS ==================== */
+.ml2 {
+  margin-left: var(--spacing-sm);
+}

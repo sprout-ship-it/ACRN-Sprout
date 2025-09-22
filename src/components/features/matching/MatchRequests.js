@@ -1,9 +1,12 @@
-// src/components/dashboard/MatchRequests.js - FIXED CONNECTION SYSTEM + UI FEEDBACK
+// src/components/features/matching/MatchRequests.js - UPDATED WITH CSS MODULE
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../../../context/AuthContext';
 import { db } from '../../../utils/supabase';
 import LoadingSpinner from '../../ui/LoadingSpinner';
-import '../../../styles/global.css';
+
+// ✅ UPDATED: Import our new CSS foundation and component module
+import '../../../styles/main.css';
+import styles from './MatchRequests.module.css';
 
 const Connections = () => {
   const { user, profile, hasRole } = useAuth();
@@ -474,232 +477,232 @@ const Connections = () => {
   };
 
   // ✅ IMPROVED: Handle view contact info for both employment and household connections
-/**
- * ✅ IMPROVED: Enhanced contact info retrieval with better applicant_forms integration
- */
-const handleViewContactInfo = async (request) => {
-  try {
-    // Determine the other person's user ID
-    const otherUserId = request.requester_id === user.id ? 
-      request.target_id : request.requester_id;
-    
-    console.log('🔍 Fetching contact info for user:', otherUserId);
-    
-    // Get basic profile info first
-    const { data: otherProfile, error: profileError } = await db.profiles.getById(otherUserId);
-    
-    if (profileError) {
-      console.error('Error fetching profile:', profileError);
-      throw new Error('Could not load user profile');
-    }
-    
-    if (!otherProfile) {
-      throw new Error('User profile not found');
-    }
-    
-    // Initialize contact info with basic profile data
-    let contactInfo = {
-      name: otherProfile.first_name || 'User',
-      email: otherProfile.email || 'Not provided',
-      phone: otherProfile.phone || 'Not provided',
-      connectionType: getConnectionType(request)
-    };
-    
-    // Try to get more detailed contact info based on connection type
-    if (request.request_type === 'employment') {
-      // For employment, try to get employer profile info
-      if (otherProfile.roles?.includes('employer')) {
-        try {
-          const { data: employerProfiles } = await db.employerProfiles.getByUserId(otherUserId);
-          if (employerProfiles && employerProfiles.length > 0) {
-            const employerProfile = employerProfiles[0];
-            contactInfo.phone = employerProfile.phone || employerProfile.contact_phone || contactInfo.phone;
-            contactInfo.website = employerProfile.website;
-            contactInfo.companyName = employerProfile.company_name;
-          }
-        } catch (err) {
-          console.warn('Could not load employer profile:', err);
-        }
-      }
-    } else {
-      // For other connection types, try to get applicant form data
-      try {
-        const { data: applicantData } = await db.applicantForms.getByUserId(otherUserId);
-        
-        if (applicantData) {
-          console.log('✅ Found applicant form data:', applicantData);
-          // Override phone if available in applicant form
-          if (applicantData.phone) {
-            contactInfo.phone = applicantData.phone;
-          }
-          
-          // Add additional relevant info
-          if (applicantData.preferred_contact_method) {
-            contactInfo.preferredContactMethod = applicantData.preferred_contact_method;
-          }
-        }
-      } catch (err) {
-        console.warn('Could not load applicant form data:', err);
-      }
-      
-      // For peer support, try to get peer profile info
-      if (request.request_type === 'peer_support' && otherProfile.roles?.includes('peer')) {
-        try {
-          const { data: peerProfile } = await db.peerSupportProfiles.getByUserId(otherUserId);
-          if (peerProfile) {
-            contactInfo.phone = peerProfile.phone || contactInfo.phone;
-            contactInfo.experience = peerProfile.time_in_recovery;
-          }
-        } catch (err) {
-          console.warn('Could not load peer profile:', err);
-        }
-      }
-      
-      // For housing, try to get landlord info
-      if (request.request_type === 'housing' && otherProfile.roles?.includes('landlord')) {
-        try {
-          const { data: properties } = await db.properties.getByLandlordId(otherUserId);
-          if (properties && properties.length > 0) {
-            contactInfo.phone = properties[0].phone || contactInfo.phone;
-          }
-        } catch (err) {
-          console.warn('Could not load property data:', err);
-        }
-      }
-    }
-    
-    console.log('✅ Contact info prepared:', contactInfo);
-    setContactInfo(contactInfo);
-    setShowContactModal(true);
-    
-    // Optional: Log this contact view for analytics
+  /**
+   * ✅ IMPROVED: Enhanced contact info retrieval with better applicant_forms integration
+   */
+  const handleViewContactInfo = async (request) => {
     try {
-      await db.contactViews.create({
-        viewer_id: user.id,
-        viewed_id: otherUserId,
-        connection_type: request.request_type,
-        request_id: request.id,
-        viewed_at: new Date().toISOString()
-      });
-    } catch (logErr) {
-      console.warn('Could not log contact view:', logErr);
-    }
-    
-  } catch (error) {
-    console.error('💥 Error viewing contact info:', error);
-    alert(`Error: ${error.message || 'Could not load contact information. Please try again.'}`);
-  }
-};
-  
-  // Render status badge
-  const renderStatusBadge = (status) => {
-    const statusClass = {
-      pending: 'badge-warning',
-      approved: 'badge-info',
-      rejected: 'badge-error',
-      matched: 'badge-success',
-      unmatched: 'badge',
-      cancelled: 'badge'
-    }[status] || 'badge';
-    
-    return (
-      <span className={`badge ${statusClass}`}>
-        {status === 'matched' ? 'Active' : status === 'pending' ? 'Pending' : status}
-      </span>
-    );
-  };
-  
-  // ✅ IMPROVED: Render action buttons with reconnection request UI feedback
-  const renderActionButtons = (request) => {
-    const isReceived = request.target_id === user.id;
-    const isSent = request.requester_id === user.id;
-    const { status } = request;
-    
-    if (status === 'pending' && isReceived) {
-      return (
-        <div className="grid-2">
-          <button
-            className="btn btn-secondary btn-sm"
-            onClick={() => handleApprove(request.id)}
-            disabled={actionLoading}
-          >
-            Accept
-          </button>
-          
-          <button
-            className="btn btn-outline btn-sm"
-            onClick={() => handleReject(request)}
-            disabled={actionLoading}
-          >
-            Decline
-          </button>
-        </div>
-      );
-    }
-    
-    if (status === 'pending' && isSent) {
-      return (
-        <div>
-          <button
-            className="btn btn-outline btn-sm"
-            onClick={() => handleCancelSentRequest(request.id)}
-            disabled={actionLoading}
-          >
-            Cancel Request
-          </button>
-        </div>
-      );
-    }
-    
-    if (status === 'matched') {
-      return (
-        <div className="grid-2">
-          <button
-            className="btn btn-primary btn-sm"
-            onClick={() => handleViewContactInfo(request)}
-          >
-            View Contact Info
-          </button>
-          
-          <button
-            className="btn btn-outline btn-sm"
-            onClick={() => handleUnmatch(request.id)}
-            disabled={actionLoading}
-          >
-            End Connection
-          </button>
-        </div>
-      );
-    }
-    
-    if (status === 'unmatched') {
-      // ✅ NEW: Enhanced reconnection button with UI feedback
+      // Determine the other person's user ID
       const otherUserId = request.requester_id === user.id ? 
         request.target_id : request.requester_id;
       
-      const isRequestSent = sentReconnectionRequests.has(otherUserId);
-      const isSending = requestSendingStates.has(otherUserId);
+      console.log('🔍 Fetching contact info for user:', otherUserId);
+      
+      // Get basic profile info first
+      const { data: otherProfile, error: profileError } = await db.profiles.getById(otherUserId);
+      
+      if (profileError) {
+        console.error('Error fetching profile:', profileError);
+        throw new Error('Could not load user profile');
+      }
+      
+      if (!otherProfile) {
+        throw new Error('User profile not found');
+      }
+      
+      // Initialize contact info with basic profile data
+      let contactInfo = {
+        name: otherProfile.first_name || 'User',
+        email: otherProfile.email || 'Not provided',
+        phone: otherProfile.phone || 'Not provided',
+        connectionType: getConnectionType(request)
+      };
+      
+      // Try to get more detailed contact info based on connection type
+      if (request.request_type === 'employment') {
+        // For employment, try to get employer profile info
+        if (otherProfile.roles?.includes('employer')) {
+          try {
+            const { data: employerProfiles } = await db.employerProfiles.getByUserId(otherUserId);
+            if (employerProfiles && employerProfiles.length > 0) {
+              const employerProfile = employerProfiles[0];
+              contactInfo.phone = employerProfile.phone || employerProfile.contact_phone || contactInfo.phone;
+              contactInfo.website = employerProfile.website;
+              contactInfo.companyName = employerProfile.company_name;
+            }
+          } catch (err) {
+            console.warn('Could not load employer profile:', err);
+          }
+        }
+      } else {
+        // For other connection types, try to get applicant form data
+        try {
+          const { data: applicantData } = await db.applicantForms.getByUserId(otherUserId);
+          
+          if (applicantData) {
+            console.log('✅ Found applicant form data:', applicantData);
+            // Override phone if available in applicant form
+            if (applicantData.phone) {
+              contactInfo.phone = applicantData.phone;
+            }
+            
+            // Add additional relevant info
+            if (applicantData.preferred_contact_method) {
+              contactInfo.preferredContactMethod = applicantData.preferred_contact_method;
+            }
+          }
+        } catch (err) {
+          console.warn('Could not load applicant form data:', err);
+        }
+        
+        // For peer support, try to get peer profile info
+        if (request.request_type === 'peer_support' && otherProfile.roles?.includes('peer')) {
+          try {
+            const { data: peerProfile } = await db.peerSupportProfiles.getByUserId(otherUserId);
+            if (peerProfile) {
+              contactInfo.phone = peerProfile.phone || contactInfo.phone;
+              contactInfo.experience = peerProfile.time_in_recovery;
+            }
+          } catch (err) {
+            console.warn('Could not load peer profile:', err);
+          }
+        }
+        
+        // For housing, try to get landlord info
+        if (request.request_type === 'housing' && otherProfile.roles?.includes('landlord')) {
+          try {
+            const { data: properties } = await db.properties.getByLandlordId(otherUserId);
+            if (properties && properties.length > 0) {
+              contactInfo.phone = properties[0].phone || contactInfo.phone;
+            }
+          } catch (err) {
+            console.warn('Could not load property data:', err);
+          }
+        }
+      }
+      
+      console.log('✅ Contact info prepared:', contactInfo);
+      setContactInfo(contactInfo);
+      setShowContactModal(true);
+      
+      // Optional: Log this contact view for analytics
+      try {
+        await db.contactViews.create({
+          viewer_id: user.id,
+          viewed_id: otherUserId,
+          connection_type: request.request_type,
+          request_id: request.id,
+          viewed_at: new Date().toISOString()
+        });
+      } catch (logErr) {
+        console.warn('Could not log contact view:', logErr);
+      }
+      
+    } catch (error) {
+      console.error('💥 Error viewing contact info:', error);
+      alert(`Error: ${error.message || 'Could not load contact information. Please try again.'}`);
+    }
+  };
+    
+    // Render status badge
+    const renderStatusBadge = (status) => {
+      const statusClass = {
+        pending: 'badge-warning',
+        approved: 'badge-info',
+        rejected: 'badge-error',
+        matched: 'badge-success',
+        unmatched: 'badge',
+        cancelled: 'badge'
+      }[status] || 'badge';
       
       return (
-        <div>
-          <button
-            className={`btn btn-sm ${isRequestSent ? 'btn-success' : 'btn-outline'}`}
-            onClick={() => handleRequestReconnection(request)}
-            disabled={actionLoading || isRequestSent || isSending}
-          >
-            {isSending ? '📤 Sending...' : isRequestSent ? '✅ Request Sent' : 'Request Reconnection'}
-          </button>
-          {isRequestSent && (
-            <div className="text-sm text-success mt-1">
-              Reconnection request sent successfully!
-            </div>
-          )}
-        </div>
+        <span className={`badge ${statusClass}`}>
+          {status === 'matched' ? 'Active' : status === 'pending' ? 'Pending' : status}
+        </span>
       );
-    }
+    };
     
-    return null;
-  };
+    // ✅ IMPROVED: Render action buttons with reconnection request UI feedback
+    const renderActionButtons = (request) => {
+      const isReceived = request.target_id === user.id;
+      const isSent = request.requester_id === user.id;
+      const { status } = request;
+      
+      if (status === 'pending' && isReceived) {
+        return (
+          <div className="grid-2">
+            <button
+              className="btn btn-secondary btn-sm"
+              onClick={() => handleApprove(request.id)}
+              disabled={actionLoading}
+            >
+              Accept
+            </button>
+            
+            <button
+              className="btn btn-outline btn-sm"
+              onClick={() => handleReject(request)}
+              disabled={actionLoading}
+            >
+              Decline
+            </button>
+          </div>
+        );
+      }
+      
+      if (status === 'pending' && isSent) {
+        return (
+          <div>
+            <button
+              className="btn btn-outline btn-sm"
+              onClick={() => handleCancelSentRequest(request.id)}
+              disabled={actionLoading}
+            >
+              Cancel Request
+            </button>
+          </div>
+        );
+      }
+      
+      if (status === 'matched') {
+        return (
+          <div className="grid-2">
+            <button
+              className="btn btn-primary btn-sm"
+              onClick={() => handleViewContactInfo(request)}
+            >
+              View Contact Info
+            </button>
+            
+            <button
+              className="btn btn-outline btn-sm"
+              onClick={() => handleUnmatch(request.id)}
+              disabled={actionLoading}
+            >
+              End Connection
+            </button>
+          </div>
+        );
+      }
+      
+      if (status === 'unmatched') {
+        // ✅ NEW: Enhanced reconnection button with UI feedback
+        const otherUserId = request.requester_id === user.id ? 
+          request.target_id : request.requester_id;
+        
+        const isRequestSent = sentReconnectionRequests.has(otherUserId);
+        const isSending = requestSendingStates.has(otherUserId);
+        
+        return (
+          <div>
+            <button
+              className={`btn btn-sm ${isRequestSent ? styles.btnSuccess : 'btn-outline'}`}
+              onClick={() => handleRequestReconnection(request)}
+              disabled={actionLoading || isRequestSent || isSending}
+            >
+              {isSending ? '📤 Sending...' : isRequestSent ? '✅ Request Sent' : 'Request Reconnection'}
+            </button>
+            {isRequestSent && (
+              <div className={`text-sm mt-1 ${styles.textSuccess}`}>
+                Reconnection request sent successfully!
+              </div>
+            )}
+          </div>
+        );
+      }
+      
+      return null;
+    };
 
   // Get the other person's name from the request
   const getOtherPersonName = (request) => {
@@ -715,7 +718,7 @@ const handleViewContactInfo = async (request) => {
     return request.requester_id === user.id ? 'sent' : 'received';
   };
 
-  // ✅ NEW: Check if this is a request with sent reconnection status
+  // ✅ UPDATED: Check if this is a request with sent reconnection status using CSS module
   const getCardClassName = (request) => {
     if (request.status !== 'unmatched') return 'card mb-4';
     
@@ -724,7 +727,7 @@ const handleViewContactInfo = async (request) => {
     
     const isRequestSent = sentReconnectionRequests.has(otherUserId);
     
-    return `card mb-4 ${isRequestSent ? 'card-request-sent' : ''}`;
+    return `card mb-4 ${isRequestSent ? styles.cardRequestSent : ''}`;
   };
 
   // Render pending requests (both incoming and outgoing)
@@ -749,7 +752,7 @@ const handleViewContactInfo = async (request) => {
     }
 
     return (
-      <div className="requests-list">
+      <div className={styles.requestsList}>
         {filteredRequests.map(request => (
           <div key={request.id} className={getCardClassName(request)}>
             <div className="card-header">
@@ -808,7 +811,7 @@ const handleViewContactInfo = async (request) => {
     );
   };
 
-  // Render Active Matches organized by type
+  // ✅ UPDATED: Render Active Matches organized by type using CSS module
   const renderActiveMatches = () => {
     const matchesByType = getActiveMatchesByType();
     const hasAnyMatches = Object.values(matchesByType).some(matches => matches.length > 0);
@@ -824,18 +827,18 @@ const handleViewContactInfo = async (request) => {
     }
 
     return (
-      <div className="connections-by-type">
+      <div className={styles.connectionsByType}>
         {Object.entries(matchesByType).map(([type, connections]) => {
           if (connections.length === 0) return null;
 
           return (
-            <div key={type} className="connection-type-section mb-5">
-              <h4 className="connection-type-title">
+            <div key={type} className={`${styles.connectionTypeSection} mb-5`}>
+              <h4 className={styles.connectionTypeTitle}>
                 {getConnectionIcon({ request_type: type })} {getConnectionType({ request_type: type }) + (connections.length > 1 ? 's' : '')}
-                <span className="connection-count">({connections.length})</span>
+                <span className={styles.connectionCount}>({connections.length})</span>
               </h4>
               
-              <div className="connections-grid">
+              <div className={styles.connectionsGrid}>
                 {connections.map(request => (
                   <div key={request.id} className={getCardClassName(request)}>
                     <div className="card-header">
@@ -1103,258 +1106,117 @@ const handleViewContactInfo = async (request) => {
         </div>
       )}
 
-      {/* ✅ IMPROVED: Contact Info Modal with employment support */}
-{/* Contact Info Modal */}
-{showContactModal && contactInfo && (
-  <div className="modal-overlay" onClick={() => setShowContactModal(false)}>
-    <div 
-      className="modal-content" 
-      style={{ maxWidth: '500px', width: '100%' }}
-      onClick={(e) => e.stopPropagation()}
-    >
-      <div className="modal-header">
-        <h3 className="modal-title">📞 Contact Information</h3>
-        <button
-          className="modal-close"
-          onClick={() => setShowContactModal(false)}
-        >
-          ×
-        </button>
-      </div>
-      
-      <div className="text-center mb-4">
-        <div style={{ fontSize: '3rem', marginBottom: '1rem' }}>
-          {contactInfo.connectionType === 'employment opportunity' ? '💼' : '👤'}
-        </div>
-        <h4 style={{ color: 'var(--primary-purple)', marginBottom: '0.5rem' }}>
-          {contactInfo.name}
-          {contactInfo.companyName && ` (${contactInfo.companyName})`}
-        </h4>
-        <p className="text-gray-600" style={{ margin: 0 }}>
-          Your {contactInfo.connectionType} contact
-        </p>
-      </div>
-      
-      <div className="contact-details" style={{ marginBottom: '2rem' }}>
-        <div className="contact-item" style={{ 
-          display: 'flex', 
-          alignItems: 'center', 
-          padding: '1rem', 
-          background: 'var(--bg-light-cream)', 
-          borderRadius: 'var(--radius-md)',
-          marginBottom: '1rem'
-        }}>
-          <div style={{ fontSize: '1.5rem', marginRight: '1rem' }}>📧</div>
-          <div>
-            <div className="label" style={{ marginBottom: '0.25rem' }}>Email</div>
-            <div style={{ fontWeight: '600', color: 'var(--gray-800)' }}>
-              {contactInfo.email}
-            </div>
-            {contactInfo.email !== 'Not provided' && (
-              <a 
-                href={`mailto:${contactInfo.email}`}
-                style={{ color: 'var(--primary-purple)', fontSize: '0.9rem' }}
+      {/* ✅ UPDATED: Contact Info Modal with CSS module styling */}
+      {showContactModal && contactInfo && (
+        <div className="modal-overlay" onClick={() => setShowContactModal(false)}>
+          <div 
+            className="modal-content" 
+            style={{ maxWidth: '500px', width: '100%' }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="modal-header">
+              <h3 className="modal-title">📞 Contact Information</h3>
+              <button
+                className="modal-close"
+                onClick={() => setShowContactModal(false)}
               >
-                Send Email →
-              </a>
-            )}
+                ×
+              </button>
+            </div>
+            
+            <div className="text-center mb-4">
+              <div style={{ fontSize: '3rem', marginBottom: '1rem' }}>
+                {contactInfo.connectionType === 'employment opportunity' ? '💼' : '👤'}
+              </div>
+              <h4 style={{ color: 'var(--primary-purple)', marginBottom: '0.5rem' }}>
+                {contactInfo.name}
+                {contactInfo.companyName && ` (${contactInfo.companyName})`}
+              </h4>
+              <p className="text-gray-600" style={{ margin: 0 }}>
+                Your {contactInfo.connectionType} contact
+              </p>
+            </div>
+            
+            <div className={styles.contactDetails}>
+              <div className={styles.contactItem}>
+                <div className={styles.contactIcon}>📧</div>
+                <div className={styles.contactInfo}>
+                  <div className={styles.contactLabel}>Email</div>
+                  <div className={styles.contactValue}>
+                    {contactInfo.email}
+                  </div>
+                  {contactInfo.email !== 'Not provided' && (
+                    <a 
+                      href={`mailto:${contactInfo.email}`}
+                      className={styles.contactLink}
+                    >
+                      Send Email →
+                    </a>
+                  )}
+                </div>
+              </div>
+              
+              <div className={styles.contactItem}>
+                <div className={styles.contactIcon}>📱</div>
+                <div className={styles.contactInfo}>
+                  <div className={styles.contactLabel}>Phone</div>
+                  <div className={styles.contactValue}>
+                    {contactInfo.phone}
+                  </div>
+                  {contactInfo.phone !== 'Not provided' && (
+                    <a 
+                      href={`tel:${contactInfo.phone}`}
+                      className={styles.contactLink}
+                    >
+                      Call Now →
+                    </a>
+                  )}
+                </div>
+              </div>
+
+              {/* Website link (if available) */}
+              {contactInfo.website && (
+                <div className={styles.contactItem}>
+                  <div className={styles.contactIcon}>🌐</div>
+                  <div className={styles.contactInfo}>
+                    <div className={styles.contactLabel}>Website</div>
+                    <a 
+                      href={contactInfo.website}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className={styles.contactLink}
+                    >
+                      Visit Website →
+                    </a>
+                  </div>
+                </div>
+              )}
+
+              {/* Preferred contact method (if available) */}
+              {contactInfo.preferredContactMethod && (
+                <div className="alert alert-info mt-3">
+                  <strong>Preferred Contact Method:</strong> {contactInfo.preferredContactMethod}
+                </div>
+              )}
+            </div>
+            
+            <div className="alert alert-info" style={{ marginBottom: '1.5rem' }}>
+              <strong>💡 Next Steps:</strong> Reach out to {contactInfo.name} to coordinate your {contactInfo.connectionType}. 
+              Remember to be respectful and professional in all communications.
+            </div>
+            
+            <div className="text-center">
+              <button
+                className="btn btn-primary"
+                onClick={() => setShowContactModal(false)}
+                style={{ minWidth: '150px' }}
+              >
+                Got It!
+              </button>
+            </div>
           </div>
         </div>
-        
-        <div className="contact-item" style={{ 
-          display: 'flex', 
-          alignItems: 'center', 
-          padding: '1rem', 
-          background: 'var(--bg-light-cream)', 
-          borderRadius: 'var(--radius-md)',
-          marginBottom: contactInfo.website ? '1rem' : '0'
-        }}>
-          <div style={{ fontSize: '1.5rem', marginRight: '1rem' }}>📱</div>
-          <div>
-            <div className="label" style={{ marginBottom: '0.25rem' }}>Phone</div>
-            <div style={{ fontWeight: '600', color: 'var(--gray-800)' }}>
-              {contactInfo.phone}
-            </div>
-            {contactInfo.phone !== 'Not provided' && (
-              <a 
-                href={`tel:${contactInfo.phone}`}
-                style={{ color: 'var(--primary-purple)', fontSize: '0.9rem' }}
-              >
-                Call Now →
-              </a>
-            )}
-          </div>
-        </div>
-
-        {/* Website link (if available) */}
-        {contactInfo.website && (
-          <div className="contact-item" style={{ 
-            display: 'flex', 
-            alignItems: 'center', 
-            padding: '1rem', 
-            background: 'var(--bg-light-cream)', 
-            borderRadius: 'var(--radius-md)'
-          }}>
-            <div style={{ fontSize: '1.5rem', marginRight: '1rem' }}>🌐</div>
-            <div>
-              <div className="label" style={{ marginBottom: '0.25rem' }}>Website</div>
-              <a 
-                href={contactInfo.website}
-                target="_blank"
-                rel="noopener noreferrer"
-                style={{ color: 'var(--primary-purple)', fontWeight: '600' }}
-              >
-                Visit Website →
-              </a>
-            </div>
-          </div>
-        )}
-
-        {/* Preferred contact method (if available) */}
-        {contactInfo.preferredContactMethod && (
-          <div className="alert alert-info mt-3">
-            <strong>Preferred Contact Method:</strong> {contactInfo.preferredContactMethod}
-          </div>
-        )}
-      </div>
-      
-      <div className="alert alert-info" style={{ marginBottom: '1.5rem' }}>
-        <strong>💡 Next Steps:</strong> Reach out to {contactInfo.name} to coordinate your {contactInfo.connectionType}. 
-        Remember to be respectful and professional in all communications.
-      </div>
-      
-      <div className="text-center">
-        <button
-          className="btn btn-primary"
-          onClick={() => setShowContactModal(false)}
-          style={{ minWidth: '150px' }}
-        >
-          Got It!
-        </button>
-      </div>
-    </div>
-  </div>
-)}
-
-      {/* ✅ NEW: Custom CSS for UI feedback styling */}
-      <style jsx>{`
-        .connections-by-type {
-          display: flex;
-          flex-direction: column;
-          gap: 2rem;
-        }
-
-        .connection-type-section {
-          background: white;
-          border-radius: var(--radius-xl);
-          padding: 1.5rem;
-          border: 2px solid var(--border-beige);
-        }
-
-        .connection-type-title {
-          font-size: 1.25rem;
-          font-weight: 700;
-          color: var(--gray-900);
-          margin-bottom: 1rem;
-          padding-bottom: 0.75rem;
-          border-bottom: 1px solid var(--border-beige);
-          display: flex;
-          align-items: center;
-          gap: 0.5rem;
-        }
-
-        .connection-count {
-          color: var(--gray-600);
-          font-weight: 500;
-          font-size: 1rem;
-        }
-
-        .connections-grid {
-          display: grid;
-          grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
-          gap: 1.5rem;
-        }
-
-        .requests-list {
-          max-width: 800px;
-          margin: 0 auto;
-        }
-
-        /* ✅ NEW: Card styling for sent reconnection requests */
-        .card-request-sent {
-          background: linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 100%);
-          border: 2px solid #0284c7 !important;
-          position: relative;
-        }
-
-        .card-request-sent::before {
-          content: "📤";
-          position: absolute;
-          top: -8px;
-          right: -8px;
-          font-size: 1.5rem;
-          background: #0284c7;
-          color: white;
-          width: 32px;
-          height: 32px;
-          border-radius: 50%;
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          z-index: 1;
-        }
-
-        /* ✅ NEW: Success text styling */
-        .text-success {
-          color: #059669;
-          font-weight: 500;
-        }
-
-        /* ✅ NEW: Success button styling */
-        .btn-success {
-          background: linear-gradient(135deg, #059669, #047857);
-          color: white;
-          border: 2px solid #047857;
-        }
-
-        .btn-success:hover:not(:disabled) {
-          background: linear-gradient(135deg, #047857, #065f46);
-          transform: translateY(-1px);
-        }
-
-        .btn-success:disabled {
-          background: #9ca3af;
-          border-color: #9ca3af;
-          color: white;
-          cursor: not-allowed;
-        }
-
-        @media (max-width: 768px) {
-          .connections-grid {
-            grid-template-columns: 1fr;
-          }
-          
-          .connection-type-title {
-            font-size: 1.1rem;
-          }
-          
-          .nav-list {
-            flex-direction: column;
-          }
-          
-          .nav-button {
-            justify-content: flex-start;
-          }
-          
-          .card-request-sent::before {
-            top: -6px;
-            right: -6px;
-            font-size: 1.2rem;
-            width: 24px;
-            height: 24px;
-          }
-        }
-      `}</style>
+      )}
     </div>
   );
 };

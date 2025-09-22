@@ -1,4 +1,4 @@
-// src/components/forms/sections/PersonalInfoSection.js
+// src/components/features/matching/sections/PersonalInfoSection.js - Updated with CSS module
 import React from 'react';
 import PropTypes from 'prop-types';
 import { genderOptions, sexOptions, states } from '../constants/matchingFormConstants';
@@ -10,7 +10,8 @@ const PersonalInfoSection = ({
   profile,
   onInputChange,
   onArrayChange, // Added for interface consistency
-  onRangeChange   // Added for interface consistency
+  onRangeChange,  // Added for interface consistency
+  styles = {}     // CSS module styles passed from parent
 }) => {
   return (
     <>
@@ -126,13 +127,8 @@ const PersonalInfoSection = ({
         </div>
       </div>
 
-      {/* Address Information (Optional) */}
-      <h4 style={{ 
-        color: 'var(--secondary-teal)', 
-        marginBottom: 'var(--spacing-lg)', 
-        paddingBottom: '10px', 
-        borderBottom: '2px solid var(--border-beige)' 
-      }}>
+      {/* ✅ UPDATED: Address Information with enhanced section header */}
+      <h4 className={styles.sectionHeader || 'section-header'}>
         Address Information (Optional)
       </h4>
 
@@ -193,13 +189,8 @@ const PersonalInfoSection = ({
         )}
       </div>
 
-      {/* Emergency Contact (Optional) */}
-      <h4 style={{ 
-        color: 'var(--secondary-teal)', 
-        marginBottom: 'var(--spacing-lg)', 
-        paddingBottom: '10px', 
-        borderBottom: '2px solid var(--border-beige)' 
-      }}>
+      {/* ✅ UPDATED: Emergency Contact with enhanced section header */}
+      <h4 className={styles.sectionHeader || 'section-header'}>
         Emergency Contact (Optional)
       </h4>
 
@@ -254,11 +245,13 @@ PersonalInfoSection.propTypes = {
   }),
   onInputChange: PropTypes.func.isRequired,
   onArrayChange: PropTypes.func.isRequired,  // Added for interface consistency
-  onRangeChange: PropTypes.func.isRequired   // Added for interface consistency
+  onRangeChange: PropTypes.func.isRequired,  // Added for interface consistency
+  styles: PropTypes.object                   // ✅ NEW: CSS module styles
 };
 
 PersonalInfoSection.defaultProps = {
-  profile: null
+  profile: null,
+  styles: {}                                 // ✅ NEW: Default empty object for styles
 };
 
 export default PersonalInfoSection;
