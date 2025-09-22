@@ -1,0 +1,330 @@
+/* EmployerResultsGrid.module.css - Employer Search Results Display Styles */
+
+/* ==================== RESULTS CONTAINER ==================== */
+.resultsContainer {
+  margin-bottom: var(--spacing-xl);
+}
+
+/* ==================== LOADING STATE ==================== */
+.loadingState {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 4rem 2rem;
+  min-height: 400px;
+}
+
+.loadingMessage {
+  text-align: center;
+  margin-top: 2rem;
+  max-width: 400px;
+}
+
+.loadingMessage h3 {
+  color: var(--primary-purple);
+  margin-bottom: 0.5rem;
+}
+
+.loadingMessage p {
+  color: var(--gray-600);
+  margin: 0;
+}
+
+/* ==================== ERROR STATE ==================== */
+.errorState {
+  text-align: center;
+  padding: 4rem 2rem;
+  max-width: 500px;
+  margin: 0 auto;
+}
+
+.errorIcon {
+  font-size: 3rem;
+  margin-bottom: 1rem;
+}
+
+.errorTitle {
+  color: var(--coral);
+  margin-bottom: 1rem;
+}
+
+.errorMessage {
+  color: var(--gray-600);
+  margin-bottom: 2rem;
+  line-height: 1.6;
+}
+
+.errorActions {
+  display: flex;
+  justify-content: center;
+}
+
+/* ==================== EMPTY STATE ==================== */
+.emptyState {
+  text-align: center;
+  padding: 4rem 2rem;
+  max-width: 600px;
+  margin: 0 auto;
+}
+
+.emptyIcon {
+  font-size: 4rem;
+  margin-bottom: 1.5rem;
+  opacity: 0.6;
+}
+
+.emptyTitle {
+  color: var(--gray-800);
+  margin-bottom: 1rem;
+}
+
+.emptyMessage {
+  color: var(--gray-600);
+  margin-bottom: 2rem;
+  line-height: 1.6;
+  font-size: 1.1rem;
+}
+
+.emptyActions {
+  display: flex;
+  gap: 1rem;
+  justify-content: center;
+  margin-bottom: 2rem;
+}
+
+.searchTips {
+  text-align: left;
+  background: var(--bg-light-cream);
+  padding: 1.5rem;
+  border-radius: var(--radius-lg);
+  border-left: 4px solid var(--gold);
+  margin-top: 2rem;
+}
+
+.searchTips h4 {
+  color: var(--gray-800);
+  margin-bottom: 1rem;
+  font-size: 1rem;
+}
+
+.searchTips ul {
+  margin: 0;
+  padding-left: 1.25rem;
+  color: var(--gray-700);
+}
+
+.searchTips li {
+  margin-bottom: 0.5rem;
+  line-height: 1.4;
+}
+
+/* ==================== RESULTS HEADER ==================== */
+.resultsHeader {
+  margin-bottom: var(--spacing-lg);
+  border-left: 4px solid var(--primary-purple);
+}
+
+.resultsSummary {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 1rem;
+}
+
+.summaryMain {
+  flex: 1;
+}
+
+.resultsTitle {
+  color: var(--primary-purple);
+  margin: 0 0 0.5rem 0;
+  font-size: 1.3rem;
+}
+
+.resultsStats {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.statBadge {
+  padding: 4px 10px;
+  border-radius: 12px;
+  font-size: 0.8rem;
+  font-weight: 600;
+  border: 1px solid transparent;
+}
+
+.statBadge.hiring {
+  background: var(--success-bg);
+  color: var(--success-text);
+  border-color: var(--success-border);
+}
+
+.statBadge.connected {
+  background: var(--info-bg);
+  color: var(--info-text);
+  border-color: var(--info-border);
+}
+
+.statBadge.favorited {
+  background: rgba(220, 53, 69, 0.1);
+  color: #dc3545;
+  border-color: rgba(220, 53, 69, 0.3);
+}
+
+.resultsActions {
+  display: flex;
+  gap: 0.5rem;
+  flex-shrink: 0;
+}
+
+/* ==================== FILTER SUMMARY ==================== */
+.filterSummary {
+  margin-top: 1rem;
+  padding-top: 1rem;
+  border-top: 1px solid var(--border-beige);
+}
+
+.filterLabel {
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--gray-700);
+  margin-bottom: 0.5rem;
+}
+
+.filterIndicators {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.filterTag {
+  background: var(--info-bg);
+  color: var(--info-text);
+  padding: 3px 8px;
+  border-radius: 10px;
+  font-size: 0.75rem;
+  font-weight: 500;
+  border: 1px solid var(--info-border);
+}
+
+/* ==================== EMPLOYER GRID ==================== */
+.employersGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
+  gap: var(--spacing-lg);
+  margin-bottom: var(--spacing-xl);
+}
+
+/* ==================== RESULTS FOOTER ==================== */
+.resultsFooter {
+  padding-top: var(--spacing-lg);
+  border-top: 2px solid var(--border-beige);
+}
+
+.footerContent {
+  text-align: center;
+}
+
+.footerText {
+  color: var(--gray-600);
+  margin-bottom: 1rem;
+  font-size: 0.95rem;
+}
+
+.footerTip {
+  background: var(--bg-light-purple);
+  padding: 1rem;
+  border-radius: var(--radius-md);
+  border-left: 4px solid var(--secondary-teal);
+  color: var(--gray-700);
+  font-size: 0.9rem;
+  line-height: 1.5;
+  text-align: left;
+  max-width: 600px;
+  margin: 0 auto;
+}
+
+/* ==================== RESPONSIVE DESIGN ==================== */
+@media (max-width: 768px) {
+  .resultsSummary {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .resultsActions {
+    justify-content: flex-start;
+    margin-top: 1rem;
+  }
+
+  .employersGrid {
+    grid-template-columns: 1fr;
+    gap: var(--spacing-md);
+  }
+
+  .emptyActions {
+    flex-direction: column;
+    align-items: center;
+  }
+
+  .btn {
+    width: auto;
+    min-width: 200px;
+  }
+
+  .searchTips {
+    text-align: center;
+  }
+
+  .searchTips ul {
+    text-align: left;
+    display: inline-block;
+  }
+
+  .filterIndicators {
+    justify-content: center;
+  }
+}
+
+@media (max-width: 480px) {
+  .loadingState,
+  .errorState,
+  .emptyState {
+    padding: 2rem 1rem;
+  }
+
+  .resultsHeader {
+    padding: 1rem;
+  }
+
+  .filterSummary {
+    margin-top: 0.75rem;
+    padding-top: 0.75rem;
+  }
+
+  .employersGrid {
+    gap: var(--spacing-sm);
+  }
+
+  .resultsStats {
+    justify-content: center;
+  }
+
+  .resultsActions {
+    justify-content: center;
+  }
+
+  .btn-sm {
+    padding: 8px 12px;
+    font-size: 0.8rem;
+  }
+}
+
+/* Ensure minimum grid item width on very small screens */
+@media (max-width: 400px) {
+  .employersGrid {
+    grid-template-columns: 1fr;
+  }
+}

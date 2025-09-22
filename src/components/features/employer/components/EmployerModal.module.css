@@ -1,0 +1,414 @@
+/* EmployerModal.module.css - Employer Details Modal Styles */
+
+/* ==================== MODAL OVERLAY & CONTAINER ==================== */
+.modalOverlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.6);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  padding: 20px;
+  backdrop-filter: blur(2px);
+}
+
+.employerModal {
+  max-width: 800px;
+  width: 100%;
+  max-height: 90vh;
+  overflow: auto;
+  background: white;
+  border-radius: var(--radius-xl);
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+}
+
+/* ==================== MODAL HEADER ==================== */
+.modalHeader {
+  padding: 2rem 2rem 1rem 2rem;
+  border-bottom: 2px solid var(--border-beige);
+  background: linear-gradient(135deg, var(--bg-light-purple), var(--bg-light-cream));
+}
+
+.headerContent {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 1rem;
+}
+
+.companyHeader {
+  flex: 1;
+  min-width: 0;
+}
+
+.modalTitle {
+  color: var(--primary-purple);
+  margin: 0 0 0.5rem 0;
+  font-size: 1.75rem;
+  line-height: 1.2;
+}
+
+.companySubtitle {
+  color: var(--gray-600);
+  font-size: 1rem;
+  font-weight: 500;
+}
+
+.headerActions {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex-shrink: 0;
+}
+
+.favoriteBtn {
+  background: rgba(255, 255, 255, 0.9);
+  border: 2px solid var(--border-beige);
+  border-radius: 50%;
+  width: 48px;
+  height: 48px;
+  cursor: pointer;
+  font-size: 1.2rem;
+  transition: all 0.2s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.favoriteBtn:hover {
+  transform: scale(1.05);
+  border-color: var(--primary-purple);
+  background: white;
+}
+
+.favoriteBtn.favorited {
+  border-color: #dc3545;
+  background: rgba(220, 53, 69, 0.1);
+}
+
+.modalClose {
+  background: rgba(255, 255, 255, 0.9);
+  border: 2px solid var(--border-beige);
+  border-radius: 50%;
+  width: 48px;
+  height: 48px;
+  cursor: pointer;
+  font-size: 1.5rem;
+  color: var(--gray-600);
+  transition: all 0.2s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.modalClose:hover {
+  background: white;
+  border-color: var(--coral);
+  color: var(--coral);
+  transform: scale(1.05);
+}
+
+.statusBadges {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.badgeFavorited {
+  background: rgba(220, 53, 69, 0.1);
+  color: #dc3545;
+  border-color: rgba(220, 53, 69, 0.3);
+}
+
+/* ==================== MODAL BODY ==================== */
+.modalBody {
+  padding: 2rem;
+}
+
+.connectionAlert {
+  margin-bottom: 2rem;
+  border-left: 4px solid var(--success-border);
+}
+
+.infoSection {
+  margin-bottom: 2rem;
+  padding: 1.5rem;
+  background: var(--gray-50);
+  border-radius: var(--radius-lg);
+  border-left: 4px solid var(--secondary-teal);
+}
+
+.sectionTitle {
+  font-size: 1.1rem;
+  font-weight: 600;
+  color: var(--gray-800);
+  margin: 0 0 1rem 0;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.infoGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 1rem;
+}
+
+.infoItem {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.infoLabel {
+  font-size: 0.85rem;
+  color: var(--gray-500);
+  font-weight: 500;
+}
+
+.infoValue {
+  font-size: 0.95rem;
+  color: var(--gray-800);
+  font-weight: 600;
+}
+
+.descriptionContent {
+  background: white;
+  padding: 1rem;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--border-beige);
+}
+
+.descriptionContent p {
+  margin: 0;
+  line-height: 1.6;
+  color: var(--gray-700);
+}
+
+.featureTags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.jobOpening {
+  background: var(--success-bg);
+  color: var(--success-text);
+  border: 1px solid var(--success-border);
+  padding: 0.5rem 1rem;
+  font-size: 0.85rem;
+}
+
+.recoveryFeature {
+  background: var(--info-bg);
+  color: var(--info-text);
+  border: 1px solid var(--info-border);
+  padding: 0.5rem 1rem;
+  font-size: 0.85rem;
+}
+
+.benefit {
+  background: var(--warning-bg);
+  color: var(--warning-text);
+  border: 1px solid var(--warning-border);
+  padding: 0.5rem 1rem;
+  font-size: 0.85rem;
+}
+
+/* ==================== CONTACT SECTION ==================== */
+.contactSection {
+  background: linear-gradient(135deg, var(--success-bg), rgba(16, 185, 129, 0.05));
+  border-left-color: #10b981;
+}
+
+.contactInfo {
+  background: white;
+  border-radius: var(--radius-md);
+  padding: 1rem;
+}
+
+.contactGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 1rem;
+}
+
+.contactItem {
+  background: white;
+  padding: 1rem;
+  border-radius: var(--radius-md);
+  border: 1px solid rgba(16, 185, 129, 0.2);
+}
+
+.contactLabel {
+  font-size: 0.85rem;
+  color: var(--gray-500);
+  font-weight: 500;
+  display: block;
+  margin-bottom: 0.25rem;
+}
+
+.contactLink {
+  color: var(--primary-purple);
+  text-decoration: none;
+  font-weight: 600;
+  transition: color 0.2s ease;
+}
+
+.contactLink:hover {
+  color: var(--secondary-purple);
+  text-decoration: underline;
+}
+
+.contactValue {
+  color: var(--gray-800);
+  font-weight: 600;
+}
+
+/* ==================== NEXT STEPS SECTION ==================== */
+.nextStepsContent {
+  background: white;
+  border-radius: var(--radius-md);
+  padding: 1rem;
+}
+
+.processList {
+  margin: 0.5rem 0 0 1.25rem;
+  color: var(--info-text);
+}
+
+.processList li {
+  margin-bottom: 0.5rem;
+  line-height: 1.4;
+}
+
+.warningNote {
+  margin-top: 1rem;
+  padding: 0.75rem;
+  background: var(--warning-bg);
+  border: 1px solid var(--warning-border);
+  border-radius: var(--radius-sm);
+  color: var(--warning-text);
+  font-size: 0.9rem;
+}
+
+/* ==================== MODAL FOOTER ==================== */
+.modalFooter {
+  padding: 1.5rem 2rem;
+  border-top: 2px solid var(--border-beige);
+  background: var(--bg-light-cream);
+}
+
+.footerActions {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 1rem;
+}
+
+.connectedStatus {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 12px 20px;
+  background: var(--success-bg);
+  color: var(--success-text);
+  border-radius: var(--radius-lg);
+  border: 1px solid var(--success-border);
+  font-weight: 600;
+}
+
+.successIcon {
+  font-size: 1.1rem;
+}
+
+/* ==================== RESPONSIVE DESIGN ==================== */
+@media (max-width: 768px) {
+  .modalOverlay {
+    padding: 10px;
+  }
+
+  .employerModal {
+    max-height: 95vh;
+  }
+
+  .modalHeader {
+    padding: 1.5rem 1.5rem 1rem 1.5rem;
+  }
+
+  .headerContent {
+    flex-direction: column;
+    gap: 1rem;
+  }
+
+  .headerActions {
+    align-self: flex-end;
+  }
+
+  .modalTitle {
+    font-size: 1.5rem;
+  }
+
+  .modalBody {
+    padding: 1.5rem;
+  }
+
+  .infoSection {
+    padding: 1rem;
+  }
+
+  .infoGrid {
+    grid-template-columns: 1fr;
+  }
+
+  .contactGrid {
+    grid-template-columns: 1fr;
+  }
+
+  .modalFooter {
+    padding: 1rem 1.5rem;
+  }
+
+  .footerActions {
+    flex-direction: column-reverse;
+    align-items: stretch;
+  }
+
+  .btn {
+    width: 100%;
+    justify-content: center;
+  }
+
+  .connectedStatus {
+    justify-content: center;
+  }
+}
+
+@media (max-width: 480px) {
+  .modalHeader {
+    padding: 1rem;
+  }
+
+  .modalBody {
+    padding: 1rem;
+  }
+
+  .infoSection {
+    padding: 0.75rem;
+  }
+
+  .modalFooter {
+    padding: 1rem;
+  }
+
+  .favoriteBtn,
+  .modalClose {
+    width: 40px;
+    height: 40px;
+    font-size: 1rem;
+  }
+}

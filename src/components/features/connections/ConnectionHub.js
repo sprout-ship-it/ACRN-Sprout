@@ -1,9 +1,9 @@
-// src/components/features/connections/ConnectionHub.js - FIXED VERSION
+// src/components/features/connections/ConnectionHub.js - UPDATED WITH CSS MODULE
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../../../hooks/useAuth';
 import { db } from '../../../utils/supabase';
 import LoadingSpinner from '../../ui/LoadingSpinner';
-import '../../../styles/global.css';
+import styles from './ConnectionHub.module.css';
 
 const ConnectionHub = ({ onBack }) => {
   const { user, profile } = useAuth();
@@ -344,16 +344,16 @@ const ConnectionHub = ({ onBack }) => {
   };
 
   /**
-   * Get connection type info for styling
+   * Get connection type badge class
    */
-  const getConnectionTypeInfo = (type) => {
-    const types = {
-      roommate: { label: 'Roommate Match', color: 'var(--primary-purple)', bgColor: 'rgba(160, 32, 240, 0.1)' },
-      peer_support: { label: 'Peer Support', color: 'var(--secondary-teal)', bgColor: 'rgba(32, 178, 170, 0.1)' },
-      landlord: { label: 'Property Owner', color: 'var(--gold)', bgColor: 'rgba(255, 215, 0, 0.1)' },
-      employer: { label: 'Employer', color: 'var(--coral)', bgColor: 'rgba(255, 111, 97, 0.1)' }
+  const getConnectionTypeBadgeClass = (type) => {
+    const typeClasses = {
+      roommate: styles.roommateType,
+      peer_support: styles.peerSupportType,
+      landlord: styles.landlordType,
+      employer: styles.employerType
     };
-    return types[type] || { label: type, color: 'var(--gray-600)', bgColor: 'var(--gray-100)' };
+    return `${styles.connectionTypeBadge} ${typeClasses[type] || ''}`;
   };
 
   /**
@@ -387,12 +387,12 @@ const ConnectionHub = ({ onBack }) => {
 
       {/* Error State */}
       {error && (
-        <div className="card mb-5">
-          <div className="alert alert-error">
-            <h4>Error Loading Connections</h4>
-            <p>{error}</p>
+        <div className={styles.errorState}>
+          <div className={styles.errorAlert}>
+            <h4 className={styles.errorTitle}>Error Loading Connections</h4>
+            <p className={styles.errorDescription}>{error}</p>
             <button 
-              className="btn btn-outline"
+              className={`btn btn-outline ${styles.retryButton}`}
               onClick={() => {
                 setError(null);
                 loadConnections();
@@ -406,32 +406,26 @@ const ConnectionHub = ({ onBack }) => {
 
       {/* Loading State */}
       {loading && (
-        <div className="empty-state">
-          <LoadingSpinner />
-          <p>Loading your connections...</p>
+        <div className={styles.loadingState}>
+          <div className={styles.loadingSpinner}></div>
+          <p className={styles.loadingText}>Loading your connections...</p>
         </div>
       )}
 
       {/* No Connections State */}
       {!loading && !error && connections.length === 0 && (
-        <div className="card text-center">
-          <h3>No Active Connections Yet</h3>
-          <p>Your approved matches, housing connections, and saved employers will appear here.</p>
-          <div className="mt-4">
-            <p className="text-gray-600 mb-3">Start building connections by:</p>
-            <div className="grid-auto">
-              <button className="btn btn-outline">
-                👥 Find Roommates
-              </button>
-              <button className="btn btn-outline">
-                🤝 Connect with Peer Support
-              </button>
-              <button className="btn btn-outline">
-                🏠 Search Housing
-              </button>
-              <button className="btn btn-outline">
-                💼 Browse Employers
-              </button>
+        <div className="card">
+          <div className={styles.noConnectionsState}>
+            <h3 className={styles.noConnectionsTitle}>No Active Connections Yet</h3>
+            <p className={styles.noConnectionsDescription}>
+              Your approved matches, housing connections, and saved employers will appear here.
+            </p>
+            <p className={styles.noConnectionsHint}>Start building connections by:</p>
+            <div className={styles.noConnectionsActions}>
+              <button className="btn btn-outline">👥 Find Roommates</button>
+              <button className="btn btn-outline">🤝 Connect with Peer Support</button>
+              <button className="btn btn-outline">🏠 Search Housing</button>
+              <button className="btn btn-outline">💼 Browse Employers</button>
             </div>
           </div>
         </div>
@@ -441,12 +435,12 @@ const ConnectionHub = ({ onBack }) => {
       {!loading && !error && connections.length > 0 && (
         <>
           <div className="card mb-4">
-            <div className="flex" style={{ alignItems: 'center', justifyContent: 'space-between' }}>
+            <div className={styles.connectionStats}>
               <h3 className="card-title">
                 {connections.length} Active Connection{connections.length !== 1 ? 's' : ''}
               </h3>
               <button 
-                className="btn btn-outline btn-sm"
+                className={`btn btn-outline btn-sm ${styles.refreshButton}`}
                 onClick={loadConnections}
                 disabled={loading}
               >
@@ -456,35 +450,26 @@ const ConnectionHub = ({ onBack }) => {
           </div>
 
           <div className="grid-auto mb-5">
-            {connections.map((connection) => {
-              const typeInfo = getConnectionTypeInfo(connection.type);
-              
-              return (
-                <div key={connection.id} className="card">
-                  {/* Connection Header */}
-                  <div className="card-header">
-                    <div className="flex" style={{ alignItems: 'center', gap: '1rem' }}>
-                      <div style={{ fontSize: '2rem' }}>{connection.avatar}</div>
-                      <div style={{ flex: 1 }}>
-                        <div className="card-title">{connection.name}</div>
-                        <div className="card-subtitle">
-                          {connection.company_name && `${connection.company_name} • `}
-                          {connection.property_title && `${connection.property_title} • `}
-                          Active {formatTimeAgo(connection.last_activity)}
-                        </div>
+            {connections.map((connection) => (
+              <div key={connection.id} className="card">
+                {/* Connection Header */}
+                <div className="card-header">
+                  <div className={styles.connectionHeader}>
+                    <div className={styles.connectionAvatar}>{connection.avatar}</div>
+                    <div className={styles.connectionInfo}>
+                      <div className="card-title">{connection.name}</div>
+                      <div className="card-subtitle">
+                        {connection.company_name && `${connection.company_name} • `}
+                        {connection.property_title && `${connection.property_title} • `}
+                        Active {formatTimeAgo(connection.last_activity)}
                       </div>
                     </div>
-                    
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', alignItems: 'flex-end' }}>
-                      <span 
-                        className="badge" 
-                        style={{ 
-                          background: typeInfo.bgColor, 
-                          color: typeInfo.color,
-                          border: `1px solid ${typeInfo.color}40`
-                        }}
-                      >
-                        {typeInfo.label}
+                    <div className={styles.connectionMetaInfo}>
+                      <span className={getConnectionTypeBadgeClass(connection.type)}>
+                        {connection.type === 'roommate' && 'Roommate Match'}
+                        {connection.type === 'peer_support' && 'Peer Support'}
+                        {connection.type === 'landlord' && 'Property Owner'}
+                        {connection.type === 'employer' && 'Employer'}
                       </span>
                       
                       {connection.status === 'active' && (
@@ -495,80 +480,82 @@ const ConnectionHub = ({ onBack }) => {
                       )}
                     </div>
                   </div>
+                </div>
 
-                  {/* Connection Info */}
-                  <div className="mb-4">
-                    <div className="text-gray-600 mb-3">
-                      <strong>Source:</strong> {
-                        connection.source === 'match_group' ? 'Roommate/Peer Matching' :
-                        connection.source === 'housing_request' ? 'Property Search' :
-                        connection.source === 'employer_favorite' ? 'Employer Directory' :
-                        'Unknown'
-                      }
-                    </div>
+                {/* Connection Info */}
+                <div className="mb-4">
+                  <div className={styles.sourceInfo}>
+                    <span className={styles.sourceLabel}>Source:</span> {
+                      connection.source === 'match_group' ? 'Roommate/Peer Matching' :
+                      connection.source === 'housing_request' ? 'Property Search' :
+                      connection.source === 'employer_favorite' ? 'Employer Directory' :
+                      'Unknown'
+                    }
+                  </div>
 
-                    {/* Contact Status */}
+                  {/* Contact Status */}
+                  <div className={styles.contactStatus}>
                     {connection.shared_contact ? (
-                      <div className="alert alert-success">
+                      <div className={styles.contactShared}>
                         <strong>📞 Contact Shared:</strong> You can communicate directly with {connection.name}
                       </div>
                     ) : connection.type === 'employer' ? (
-                      <div className="alert alert-info">
+                      <div className={styles.employerContact}>
                         <strong>💼 Employer Contact:</strong> Use the contact buttons below to reach out professionally
                       </div>
                     ) : (
-                      <div className="alert alert-warning">
+                      <div className={styles.contactPending}>
                         <strong>⏳ Contact Pending:</strong> Share your contact information to enable direct communication
                       </div>
                     )}
                   </div>
+                </div>
 
-                  {/* Action Buttons */}
-                  <div className="button-grid">
-                    {/* Contact/Share Button */}
-                    {connection.shared_contact ? (
-                      <button
-                        className="btn btn-primary"
-                        onClick={() => {
-                          setSelectedConnection(connection);
-                          setActiveModal('contact');
-                        }}
-                      >
-                        📞 Contact Info
-                      </button>
-                    ) : connection.type === 'employer' ? (
-                      <button
-                        className="btn btn-primary"
-                        onClick={() => {
-                          setSelectedConnection(connection);
-                          setActiveModal('templates');
-                        }}
-                      >
-                        📧 Contact Employer
-                      </button>
-                    ) : (
-                      <button
-                        className="btn btn-secondary"
-                        onClick={() => handleShareContact(connection)}
-                      >
-                        📞 Share Contact
-                      </button>
-                    )}
-                    
-                    {/* Templates/Schedule Button */}
+                {/* Action Buttons */}
+                <div className="button-grid">
+                  {/* Contact/Share Button */}
+                  {connection.shared_contact ? (
                     <button
-                      className="btn btn-outline"
+                      className="btn btn-primary"
+                      onClick={() => {
+                        setSelectedConnection(connection);
+                        setActiveModal('contact');
+                      }}
+                    >
+                      📞 Contact Info
+                    </button>
+                  ) : connection.type === 'employer' ? (
+                    <button
+                      className="btn btn-primary"
                       onClick={() => {
                         setSelectedConnection(connection);
                         setActiveModal('templates');
                       }}
                     >
-                      💬 Message Templates
+                      📧 Contact Employer
                     </button>
-                  </div>
+                  ) : (
+                    <button
+                      className="btn btn-secondary"
+                      onClick={() => handleShareContact(connection)}
+                    >
+                      📞 Share Contact
+                    </button>
+                  )}
+                  
+                  {/* Templates/Schedule Button */}
+                  <button
+                    className="btn btn-outline"
+                    onClick={() => {
+                      setSelectedConnection(connection);
+                      setActiveModal('templates');
+                    }}
+                  >
+                    💬 Message Templates
+                  </button>
                 </div>
-              );
-            })}
+              </div>
+            ))}
           </div>
         </>
       )}
@@ -588,84 +575,64 @@ const ConnectionHub = ({ onBack }) => {
       {/* Contact Information Modal */}
       {activeModal === 'contact' && selectedConnection && (
         <div className="modal-overlay" onClick={() => setActiveModal(null)}>
-          <div className="modal-content" onClick={(e) => e.stopPropagation()}>
+          <div className={`modal-content ${styles.contactModal}`} onClick={(e) => e.stopPropagation()}>
             <div className="modal-header">
               <h3 className="modal-title">Contact Information - {selectedConnection.name}</h3>
               <button className="modal-close" onClick={() => setActiveModal(null)}>×</button>
             </div>
 
             {selectedConnection.contact_info ? (
-              <div style={{ padding: '1rem' }}>
-                <div className="mb-4">
-                  <h4>📞 Contact Details</h4>
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem', marginTop: '1rem' }}>
-                    {selectedConnection.contact_info.phone && (
-                      <div style={{ 
-                        display: 'flex', 
-                        alignItems: 'center', 
-                        gap: '1rem',
-                        padding: '1rem',
-                        background: 'var(--gray-100)',
-                        borderRadius: 'var(--radius-md)'
-                      }}>
-                        <span style={{ fontWeight: '600', minWidth: '80px' }}>Phone:</span>
-                        <span style={{ flex: 1 }}>{selectedConnection.contact_info.phone}</span>
-                        <button 
-                          className="btn btn-sm btn-outline" 
-                          onClick={() => window.location.href = `tel:${selectedConnection.contact_info.phone}`}
-                        >
-                          Call
-                        </button>
-                      </div>
-                    )}
-                    
-                    {selectedConnection.contact_info.email && (
-                      <div style={{ 
-                        display: 'flex', 
-                        alignItems: 'center', 
-                        gap: '1rem',
-                        padding: '1rem',
-                        background: 'var(--gray-100)',
-                        borderRadius: 'var(--radius-md)'
-                      }}>
-                        <span style={{ fontWeight: '600', minWidth: '80px' }}>Email:</span>
-                        <span style={{ flex: 1 }}>{selectedConnection.contact_info.email}</span>
-                        <button 
-                          className="btn btn-sm btn-outline" 
-                          onClick={() => window.location.href = `mailto:${selectedConnection.contact_info.email}`}
-                        >
-                          Email
-                        </button>
-                      </div>
-                    )}
-                  </div>
+              <div className={styles.contactDetails}>
+                <h4 className={styles.contactDetailsTitle}>📞 Contact Details</h4>
+                <div>
+                  {selectedConnection.contact_info.phone && (
+                    <div className={styles.contactItem}>
+                      <span className={styles.contactLabel}>Phone:</span>
+                      <span className={styles.contactValue}>{selectedConnection.contact_info.phone}</span>
+                      <button 
+                        className={`btn btn-sm btn-outline ${styles.contactAction}`}
+                        onClick={() => window.location.href = `tel:${selectedConnection.contact_info.phone}`}
+                      >
+                        Call
+                      </button>
+                    </div>
+                  )}
+                  
+                  {selectedConnection.contact_info.email && (
+                    <div className={styles.contactItem}>
+                      <span className={styles.contactLabel}>Email:</span>
+                      <span className={styles.contactValue}>{selectedConnection.contact_info.email}</span>
+                      <button 
+                        className={`btn btn-sm btn-outline ${styles.contactAction}`}
+                        onClick={() => window.location.href = `mailto:${selectedConnection.contact_info.email}`}
+                      >
+                        Email
+                      </button>
+                    </div>
+                  )}
                 </div>
 
                 {selectedConnection.contact_info.availability && (
-                  <div className="mb-4">
-                    <h4>⏰ Availability</h4>
-                    <p style={{ 
-                      padding: '1rem',
-                      background: 'var(--info-bg)',
-                      borderRadius: 'var(--radius-md)',
-                      margin: '0.5rem 0 0 0',
-                      color: 'var(--info-text)'
-                    }}>
+                  <div className={styles.availabilitySection}>
+                    <h4 className={styles.availabilityTitle}>⏰ Availability</h4>
+                    <p className={styles.availabilityInfo}>
                       {selectedConnection.contact_info.availability}
                     </p>
                     {selectedConnection.contact_info.preferred_contact && (
-                      <p style={{ color: 'var(--gray-600)', fontSize: '0.9rem', marginTop: '0.5rem' }}>
-                        <strong>Prefers:</strong> {selectedConnection.contact_info.preferred_contact}
+                      <p className={styles.preferredContact}>
+                        <span className={styles.preferredContactLabel}>Prefers:</span> {selectedConnection.contact_info.preferred_contact}
                       </p>
                     )}
                   </div>
                 )}
               </div>
             ) : (
-              <div style={{ padding: '2rem', textAlign: 'center' }}>
-                <div className="alert alert-warning">
-                  <h4>⏳ Contact Information Not Available</h4>
-                  <p>Contact details haven't been shared yet or aren't available for this connection type.</p>
+              <div className={styles.contactNotAvailable}>
+                <div className={styles.contactUnavailableAlert}>
+                  <h4 className={styles.contactUnavailableTitle}>⏳ Contact Information Not Available</h4>
+                  <p className={styles.contactUnavailableDescription}>
+                    Contact details haven't been shared yet or aren't available for this connection type.
+                  </p>
                 </div>
               </div>
             )}
@@ -676,46 +643,36 @@ const ConnectionHub = ({ onBack }) => {
       {/* Message Templates Modal */}
       {activeModal === 'templates' && selectedConnection && (
         <div className="modal-overlay" onClick={() => setActiveModal(null)}>
-          <div className="modal-content" onClick={(e) => e.stopPropagation()}>
+          <div className={`modal-content ${styles.templatesModal}`} onClick={(e) => e.stopPropagation()}>
             <div className="modal-header">
               <h3 className="modal-title">Message Templates - {selectedConnection.name}</h3>
               <button className="modal-close" onClick={() => setActiveModal(null)}>×</button>
             </div>
 
-            <div style={{ padding: '1rem' }}>
-              <h4 style={{ marginBottom: '1rem' }}>💬 Quick Message Templates</h4>
-              <p style={{ color: 'var(--gray-600)', marginBottom: '1.5rem' }}>
+            <div className={styles.templatesSection}>
+              <h4 className={styles.templatesTitle}>💬 Quick Message Templates</h4>
+              <p className={styles.templatesDescription}>
                 Choose a template to send via email. You can customize the message before sending.
               </p>
               
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+              <div className={styles.templatesList}>
                 {messageTemplates[selectedConnection.type]?.map((template, index) => (
                   <button
                     key={index}
-                    className="btn btn-outline"
-                    style={{ 
-                      textAlign: 'left',
-                      padding: '1rem',
-                      justifyContent: 'flex-start'
-                    }}
+                    className={styles.templateButton}
                     onClick={() => handleSendTemplate(template, selectedConnection)}
                   >
-                    <strong>{template.title}</strong>
-                    <div style={{ 
-                      fontSize: '0.85rem', 
-                      color: 'var(--gray-600)', 
-                      marginTop: '0.25rem',
-                      fontWeight: 'normal'
-                    }}>
+                    <strong className={styles.templateTitle}>{template.title}</strong>
+                    <div className={styles.templatePreview}>
                       {template.template.substring(0, 100)}...
                     </div>
                   </button>
                 ))}
               </div>
               
-              <div style={{ marginTop: '1.5rem', padding: '1rem', background: 'var(--info-bg)', borderRadius: 'var(--radius-md)' }}>
-                <p style={{ fontSize: '0.9rem', color: 'var(--info-text)', margin: 0 }}>
-                  💡 <strong>Tip:</strong> Templates will open your email client with a pre-filled message. 
+              <div className={styles.templatesTip}>
+                <p className={styles.templatesTipText}>
+                  💡 <span className={styles.templatesTipIcon}>Tip:</span> Templates will open your email client with a pre-filled message. 
                   You can edit the message before sending to personalize it.
                 </p>
               </div>

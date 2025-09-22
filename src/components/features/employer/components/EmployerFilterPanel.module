@@ -1,0 +1,299 @@
+/* EmployerFilterPanel.module.css - Employer Search Filter Panel Styles */
+
+/* ==================== FILTER PANEL CONTAINER ==================== */
+.filterPanel {
+  background: white;
+  border: 2px solid var(--border-beige);
+  border-radius: var(--radius-xl);
+  margin-bottom: var(--spacing-xl);
+  overflow: hidden;
+}
+
+.filterPanelHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 1rem 1.5rem;
+  border-bottom: 1px solid var(--border-beige);
+  background: var(--bg-light-purple);
+  cursor: pointer;
+}
+
+.filterTitle {
+  margin: 0;
+  color: var(--primary-purple);
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.activeFilterCount {
+  background: var(--primary-purple);
+  color: white;
+  padding: 2px 8px;
+  border-radius: 12px;
+  font-size: 0.75rem;
+  font-weight: 600;
+}
+
+.collapseToggle {
+  background: none;
+  border: none;
+  font-size: 1.2rem;
+  color: var(--primary-purple);
+  cursor: pointer;
+  padding: 4px 8px;
+  border-radius: 4px;
+  transition: all 0.2s ease;
+}
+
+.collapseToggle:hover {
+  background: rgba(160, 32, 240, 0.1);
+}
+
+/* ==================== FILTER CONTENT ==================== */
+.filterContent {
+  padding: 1.5rem;
+  transition: all 0.3s ease;
+  overflow: hidden;
+}
+
+.filterContent.collapsed {
+  max-height: 0;
+  padding: 0 1.5rem;
+  opacity: 0;
+}
+
+.basicFilters {
+  margin-bottom: 1.5rem;
+}
+
+.filterRow {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  gap: 1rem;
+  margin-bottom: 1rem;
+}
+
+/* ==================== LOCATION INPUT GROUP ==================== */
+.locationInputGroup {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.locationInput {
+  flex: 1;
+}
+
+.locationNearbyBtn {
+  padding: 12px;
+  min-width: 48px;
+  flex-shrink: 0;
+}
+
+/* ==================== QUICK TOGGLES ==================== */
+.quickToggles {
+  background: var(--bg-light-cream);
+  padding: 1rem;
+  border-radius: var(--radius-md);
+  margin-top: 1rem;
+}
+
+.toggleGroup {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1rem;
+}
+
+/* ==================== MORE FILTERS SECTION ==================== */
+.moreFiltersToggle {
+  text-align: center;
+  margin: 1.5rem 0;
+  padding-top: 1.5rem;
+  border-top: 1px solid var(--border-beige);
+}
+
+.toggleBtn {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin: 0 auto;
+}
+
+.hiddenFilterHint {
+  background: var(--warning-bg);
+  color: var(--warning-text);
+  padding: 2px 6px;
+  border-radius: 10px;
+  font-size: 0.7rem;
+  margin-left: 0.5rem;
+}
+
+.moreFilters {
+  max-height: 0;
+  opacity: 0;
+  overflow: hidden;
+  transition: all 0.4s ease;
+}
+
+.moreFilters.expanded {
+  max-height: 2000px;
+  opacity: 1;
+}
+
+/* ==================== FILTER SECTIONS ==================== */
+.filterSection {
+  margin-bottom: 2rem;
+  padding: 1rem;
+  background: var(--gray-50);
+  border-radius: var(--radius-md);
+  border-left: 4px solid var(--secondary-teal);
+}
+
+.sectionTitle {
+  font-size: 1rem;
+  font-weight: 600;
+  color: var(--gray-800);
+  margin-bottom: 0.5rem;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.sectionDescription {
+  font-size: 0.9rem;
+  color: var(--gray-600);
+  margin-bottom: 1rem;
+}
+
+.checkboxGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 0.5rem;
+}
+
+.checkboxItemCompact {
+  padding: 0.5rem;
+  background: white;
+}
+
+/* ==================== FILTER ACTIONS ==================== */
+.filterActions {
+  border-top: 1px solid var(--border-beige);
+  padding-top: 1.5rem;
+  margin-top: 2rem;
+}
+
+.actionButtons {
+  display: flex;
+  gap: 1rem;
+  justify-content: center;
+}
+
+.searchBtn {
+  min-width: 180px;
+}
+
+/* ==================== ACTIVE FILTERS SUMMARY ==================== */
+.activeFiltersSummary {
+  margin-top: 1.5rem;
+  padding: 1rem;
+  background: var(--info-bg);
+  border: 1px solid var(--info-border);
+  border-radius: var(--radius-md);
+}
+
+.summaryLabel {
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--info-text);
+  margin-bottom: 0.5rem;
+}
+
+.summaryText {
+  font-size: 0.8rem;
+  color: var(--info-text);
+  line-height: 1.4;
+}
+
+/* ==================== RESPONSIVE DESIGN ==================== */
+@media (max-width: 768px) {
+  .filterPanelHeader {
+    display: block;
+  }
+
+  .collapseToggle {
+    display: none;
+  }
+
+  .filterContent.collapsed {
+    max-height: none;
+    padding: 1.5rem;
+    opacity: 1;
+  }
+
+  .filterRow {
+    grid-template-columns: 1fr;
+    gap: 0.75rem;
+  }
+
+  .toggleGroup {
+    grid-template-columns: 1fr;
+  }
+
+  .locationInputGroup {
+    flex-direction: column;
+  }
+
+  .locationNearbyBtn {
+    min-width: auto;
+  }
+
+  .checkboxGrid {
+    grid-template-columns: 1fr;
+  }
+
+  .actionButtons {
+    flex-direction: column;
+  }
+
+  .searchBtn {
+    min-width: auto;
+  }
+}
+
+@media (max-width: 480px) {
+  .filterContent {
+    padding: 1rem;
+  }
+
+  .filterPanelHeader {
+    padding: 1rem;
+  }
+
+  .filterSection {
+    padding: 0.75rem;
+  }
+
+  .btn {
+    padding: 10px 16px;
+    font-size: 0.9rem;
+  }
+}
+
+/* Hide collapsed content on desktop but show on mobile */
+@media (min-width: 769px) {
+  .filterPanelHeader {
+    cursor: default;
+  }
+  
+  .filterContent.collapsed {
+    max-height: none;
+    padding: 1.5rem;
+    opacity: 1;
+  }
+  
+  .collapseToggle {
+    display: none;
+  }
+}

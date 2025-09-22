@@ -2,6 +2,7 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../../../context/AuthContext';
 import { supabase } from '../../../utils/supabase';
+import styles from './EmployerManagement.module.css';
 
 // Import form sections
 import EmployerBasicInfoSection from './sections/EmployerBasicInfoSection';
@@ -480,7 +481,7 @@ const EmployerManagement = () => {
       {/* Add/Edit Employer Modal */}
       {showForm && (
         <div className="modal-overlay" onClick={() => setShowForm(false)}>
-          <div className="modal-content large" onClick={(e) => e.stopPropagation()}>
+          <div className={`modal-content ${styles.modalContentLarge}`} onClick={(e) => e.stopPropagation()}>
             <div className="modal-header">
               <h2 className="modal-title">
                 {editingEmployer ? 'Edit Employer Profile' : 'Add New Employer Profile'}
@@ -495,17 +496,17 @@ const EmployerManagement = () => {
             
             <form onSubmit={handleSubmit}>
               {/* Section Navigation */}
-              <nav className="section-nav mb-4">
+              <nav className={styles.sectionNav}>
                 {formSections.map((section, index) => (
                   <button
                     key={section.id}
                     type="button"
-                    className={`section-nav-btn ${index === currentSection ? 'active' : ''}`}
+                    className={`${styles.sectionNavBtn} ${index === currentSection ? styles.active : ''}`}
                     onClick={() => goToSection(index)}
                     disabled={loading}
                   >
-                    <span className="section-icon">{section.icon}</span>
-                    <span className="section-title">{section.title}</span>
+                    <span className={styles.sectionIcon}>{section.icon}</span>
+                    <span className={styles.sectionTitle}>{section.title}</span>
                   </button>
                 ))}
               </nav>
@@ -522,7 +523,7 @@ const EmployerManagement = () => {
               />
               
               {/* Action buttons */}
-              <div className="form-actions">
+              <div className={styles.formActions}>
                 <button
                   type="button"
                   className="btn btn-outline"
@@ -566,82 +567,6 @@ const EmployerManagement = () => {
           </div>
         </div>
       )}
-
-      {/* Enhanced modal CSS */}
-      <style jsx>{`
-        .modal-content.large {
-          max-width: 900px;
-          max-height: 90vh;
-          overflow-y: auto;
-        }
-        
-        .section-nav {
-          display: flex;
-          gap: 1rem;
-          border-bottom: 1px solid var(--border-beige);
-          padding-bottom: 1rem;
-          margin-bottom: 2rem;
-        }
-        
-        .section-nav-btn {
-          display: flex;
-          flex-direction: column;
-          align-items: center;
-          gap: 0.5rem;
-          padding: 1rem;
-          border: 1px solid var(--border-beige);
-          border-radius: 8px;
-          background: white;
-          cursor: pointer;
-          transition: all 0.2s ease;
-          flex: 1;
-          min-width: 0;
-        }
-        
-        .section-nav-btn:hover {
-          background: var(--secondary-teal-light);
-          border-color: var(--secondary-teal);
-        }
-        
-        .section-nav-btn.active {
-          background: var(--secondary-teal);
-          color: white;
-          border-color: var(--secondary-teal);
-        }
-        
-        .section-icon {
-          font-size: 1.5rem;
-        }
-        
-        .section-title {
-          font-size: 0.9rem;
-          font-weight: 600;
-          text-align: center;
-        }
-        
-        .form-actions {
-          display: flex;
-          gap: 1rem;
-          justify-content: flex-end;
-          margin-top: 2rem;
-          padding-top: 1rem;
-          border-top: 1px solid var(--border-beige);
-        }
-        
-        @media (max-width: 768px) {
-          .section-nav {
-            flex-wrap: wrap;
-          }
-          
-          .section-nav-btn {
-            flex: 1 1 calc(50% - 0.5rem);
-          }
-          
-          .section-title {
-            font-size: 0.8rem;
-          }
-        }
-      `}</style>
     </div>
   );
 };
