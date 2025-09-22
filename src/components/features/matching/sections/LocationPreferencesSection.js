@@ -1,4 +1,4 @@
-// src/components/features/matching/sections/LocationPreferencesSection.js - Updated with CSS module
+// src/components/features/matching/sections/LocationPreferencesSection.js - Refactored with enhanced CSS module usage
 import React from 'react';
 import PropTypes from 'prop-types';
 import { housingTypeOptions } from '../constants/matchingFormConstants';
@@ -70,10 +70,26 @@ const LocationPreferencesSection = ({
 
   return (
     <>
-      {/* Location & Housing Preferences */}
+      {/* Location & Housing Preferences Header */}
       <h3 className="card-title mb-4">Location & Housing Preferences</h3>
       
-      {/* ✅ UPDATED: Separate City and State fields */}
+      <div className="alert alert-info mb-4">
+        <h4 className="mb-2">
+          <span style={{ marginRight: '8px' }}>📍</span>
+          Location Matching
+        </h4>
+        <p className="mb-0">
+          We'll help you find housing and roommates in your preferred area. You can specify multiple locations 
+          or be flexible with your preferences to increase your matching opportunities.
+        </p>
+      </div>
+
+      {/* Primary Location Preferences */}
+      <div className="card-header">
+        <h4 className="card-title">Preferred Location</h4>
+        <p className="card-subtitle">Where would you like to live?</p>
+      </div>
+      
       <div className="grid-3 mb-4">
         <div className="form-group">
           <label className="label">
@@ -84,13 +100,16 @@ const LocationPreferencesSection = ({
             type="text"
             value={formData.preferredCity || ''}
             onChange={(e) => onInputChange('preferredCity', e.target.value)}
-            placeholder="City name"
+            placeholder="e.g., Austin, Dallas, Phoenix"
             disabled={loading}
             required
           />
           {errors.preferredCity && (
-            <div className="text-red-500 mt-1">{errors.preferredCity}</div>
+            <div className="text-red-500 mt-1 text-sm">{errors.preferredCity}</div>
           )}
+          <div className="text-gray-500 mt-1 text-sm">
+            Primary city you'd like to live in
+          </div>
         </div>
 
         <div className="form-group">
@@ -111,7 +130,7 @@ const LocationPreferencesSection = ({
             ))}
           </select>
           {errors.preferredState && (
-            <div className="text-red-500 mt-1">{errors.preferredState}</div>
+            <div className="text-red-500 mt-1 text-sm">{errors.preferredState}</div>
           )}
         </div>
         
@@ -122,67 +141,80 @@ const LocationPreferencesSection = ({
             type="text"
             value={formData.targetZipCodes || ''}
             onChange={(e) => onInputChange('targetZipCodes', e.target.value)}
-            placeholder="29301, 29302"
+            placeholder="29301, 29302, 29303"
             disabled={loading}
           />
           <div className="text-gray-500 mt-1 text-sm">
-            Specific ZIP codes (optional)
+            Specific ZIP codes (optional, comma-separated)
           </div>
         </div>
       </div>
 
+      {/* Budget & Financial Information */}
+      <div className="card-header">
+        <h4 className="card-title">Budget Information</h4>
+        <p className="card-subtitle">
+          Include all income sources: employment, benefits, housing assistance, family support
+        </p>
+      </div>
+
       <div className="grid-2 mb-4">
         <div className="form-group">
-          {/* ✅ UPDATED: Changed label to Total Combined Budget Maximum */}
           <label className="label">
-            Total Combined Budget Maximum <span className="text-red-500">*</span>
-          </label>
-          <input
-            className={`input ${errors.budgetMax ? 'border-red-500' : ''}`}
-            type="number"
-            value={formData.budgetMax || ''}
-            onChange={(e) => onInputChange('budgetMax', e.target.value)}
-            placeholder="Your maximum monthly budget"
-            disabled={loading}
-            min="200"
-            max="5000"
-            required
-          />
-          {errors.budgetMax && (
-            <div className="text-red-500 mt-1">{errors.budgetMax}</div>
-          )}
-          {/* ✅ UPDATED: Added helper text about including all income sources */}
-          <div className="text-gray-500 mt-1 text-sm">
-            Include all sources of income and housing support
-          </div>
-        </div>
-        
-        {/* ✅ NEW: Added minimum budget field */}
-        <div className="form-group">
-          <label className="label">
-            Minimum Budget <span className="text-red-500">*</span>
+            Minimum Monthly Budget <span className="text-red-500">*</span>
           </label>
           <input
             className={`input ${errors.budgetMin ? 'border-red-500' : ''}`}
             type="number"
             value={formData.budgetMin || ''}
             onChange={(e) => onInputChange('budgetMin', e.target.value)}
-            placeholder="Your minimum monthly budget"
+            placeholder="500"
             disabled={loading}
             min="0"
             max="4500"
+            step="50"
             required
           />
           {errors.budgetMin && (
-            <div className="text-red-500 mt-1">{errors.budgetMin}</div>
+            <div className="text-red-500 mt-1 text-sm">{errors.budgetMin}</div>
           )}
           <div className="text-gray-500 mt-1 text-sm">
-            Lowest acceptable housing cost
+            Lowest monthly amount you can afford
+          </div>
+        </div>
+        
+        <div className="form-group">
+          <label className="label">
+            Maximum Monthly Budget <span className="text-red-500">*</span>
+          </label>
+          <input
+            className={`input ${errors.budgetMax ? 'border-red-500' : ''}`}
+            type="number"
+            value={formData.budgetMax || ''}
+            onChange={(e) => onInputChange('budgetMax', e.target.value)}
+            placeholder="1200"
+            disabled={loading}
+            min="200"
+            max="5000"
+            step="50"
+            required
+          />
+          {errors.budgetMax && (
+            <div className="text-red-500 mt-1 text-sm">{errors.budgetMax}</div>
+          )}
+          <div className="text-gray-500 mt-1 text-sm">
+            Maximum you can afford (including utilities)
           </div>
         </div>
       </div>
 
-      <div className="grid-2 mb-4">
+      {/* Housing Specifications */}
+      <div className="card-header">
+        <h4 className="card-title">Housing Requirements</h4>
+        <p className="card-subtitle">Your preferences for the physical housing unit</p>
+      </div>
+
+      <div className="grid-3 mb-4">
         <div className="form-group">
           <label className="label">
             Maximum Commute Time <span className="text-red-500">*</span>
@@ -203,15 +235,15 @@ const LocationPreferencesSection = ({
             <option value="unlimited">No preference</option>
           </select>
           {errors.maxCommute && (
-            <div className="text-red-500 mt-1">{errors.maxCommute}</div>
+            <div className="text-red-500 mt-1 text-sm">{errors.maxCommute}</div>
           )}
+          <div className="text-gray-500 mt-1 text-sm">
+            To work, meetings, or services
+          </div>
         </div>
         
-        {/* ✅ NEW: Preferred number of bedrooms */}
         <div className="form-group">
-          <label className="label">
-            Preferred Bedrooms
-          </label>
+          <label className="label">Preferred Bedrooms</label>
           <select
             className="input"
             value={formData.preferredBedrooms || ''}
@@ -225,55 +257,10 @@ const LocationPreferencesSection = ({
             <option value="4">4+ bedrooms</option>
           </select>
           <div className="text-gray-500 mt-1 text-sm">
-            Preferred number of bedrooms in housing
+            Total bedrooms in the housing unit
           </div>
         </div>
-      </div>
 
-      {/* Housing Type Selection - Enhanced with Columns */}
-      <div className="form-group mb-4">
-        <label className="label">
-          Housing Type Preferences <span className="text-red-500">*</span>
-        </label>
-        
-        {/* ✅ UPDATED: Using CSS module for checkbox columns */}
-        <div className={styles.checkboxColumns || 'checkbox-columns'}>
-          {housingTypeOptions.map(type => (
-            <label key={type} className={styles.checkboxLabel || 'checkbox-label'}>
-              <input
-                type="checkbox"
-                checked={(formData.housingType || []).includes(type)}
-                onChange={(e) => onArrayChange('housingType', type, e.target.checked)}
-                disabled={loading}
-              />
-              <span className={styles.checkboxText || 'checkbox-text'}>{type}</span>
-            </label>
-          ))}
-        </div>
-        {errors.housingType && (
-          <div className="text-red-500 mt-1">{errors.housingType}</div>
-        )}
-      </div>
-
-      <div className="grid-2 mb-4">
-        <div className="form-group">
-          <label className="label">
-            Move-in Date <span className="text-red-500">*</span>
-          </label>
-          <input
-            className={`input ${errors.moveInDate ? 'border-red-500' : ''}`}
-            type="date"
-            value={formData.moveInDate || ''}
-            onChange={(e) => onInputChange('moveInDate', e.target.value)}
-            disabled={loading}
-            required
-            min={new Date().toISOString().split('T')[0]} // ✅ NEW: Can't select past dates
-          />
-          {errors.moveInDate && (
-            <div className="text-red-500 mt-1">{errors.moveInDate}</div>
-          )}
-        </div>
-        
         <div className="form-group">
           <label className="label">Preferred Lease Duration</label>
           <select
@@ -289,63 +276,209 @@ const LocationPreferencesSection = ({
             <option value="18-months">18 months</option>
             <option value="24-months">24 months</option>
           </select>
+          <div className="text-gray-500 mt-1 text-sm">
+            How long you'd like to commit
+          </div>
         </div>
       </div>
 
-      {/* ✅ UPDATED: Additional preferences section with enhanced checkbox styling */}
-      <div className="form-group mb-4">
-        <h4 className="subtitle">Additional Preferences</h4>
-        
-        {/* ✅ UPDATED: Using CSS module for enhanced checkbox styling */}
-        <div className="grid-2 mt-3">
-          <label className={styles.checkboxLabel || 'checkbox-item'}>
-            <input
-              type="checkbox"
-              checked={formData.furnishedPreference || false}
-              onChange={(e) => onInputChange('furnishedPreference', e.target.checked)}
-              disabled={loading}
-            />
-            <span className={styles.checkboxText || ''}>
-              Prefer furnished housing
-            </span>
+      <div className="grid-2 mb-4">
+        <div className="form-group">
+          <label className="label">
+            Move-in Date <span className="text-red-500">*</span>
           </label>
-          
-          <label className={styles.checkboxLabel || 'checkbox-item'}>
-            <input
-              type="checkbox"
-              checked={formData.petsAllowed || false}
-              onChange={(e) => onInputChange('petsAllowed', e.target.checked)}
-              disabled={loading}
-            />
-            <span className={styles.checkboxText || ''}>
-              Need pet-friendly housing
-            </span>
-          </label>
-          
-          <label className={styles.checkboxLabel || 'checkbox-item'}>
-            <input
-              type="checkbox"
-              checked={formData.utilitiesIncluded || false}
-              onChange={(e) => onInputChange('utilitiesIncluded', e.target.checked)}
-              disabled={loading}
-            />
-            <span className={styles.checkboxText || ''}>
-              Prefer utilities included
-            </span>
-          </label>
-          
-          <label className={styles.checkboxLabel || 'checkbox-item'}>
-            <input
-              type="checkbox"
-              checked={formData.accessibilityNeeded || false}
-              onChange={(e) => onInputChange('accessibilityNeeded', e.target.checked)}
-              disabled={loading}
-            />
-            <span className={styles.checkboxText || ''}>
-              Need accessibility features
-            </span>
-          </label>
+          <input
+            className={`input ${errors.moveInDate ? 'border-red-500' : ''}`}
+            type="date"
+            value={formData.moveInDate || ''}
+            onChange={(e) => onInputChange('moveInDate', e.target.value)}
+            disabled={loading}
+            required
+            min={new Date().toISOString().split('T')[0]}
+          />
+          {errors.moveInDate && (
+            <div className="text-red-500 mt-1 text-sm">{errors.moveInDate}</div>
+          )}
+          <div className="text-gray-500 mt-1 text-sm">
+            When you'd like to move in
+          </div>
         </div>
+
+        <div className="form-group">
+          <label className="label">Move-in Flexibility</label>
+          <select
+            className="input"
+            value={formData.moveInFlexibility || ''}
+            onChange={(e) => onInputChange('moveInFlexibility', e.target.value)}
+            disabled={loading}
+          >
+            <option value="">Select flexibility</option>
+            <option value="exact-date">Must be exact date</option>
+            <option value="within-week">Within 1 week</option>
+            <option value="within-month">Within 1 month</option>
+            <option value="very-flexible">Very flexible</option>
+          </select>
+          <div className="text-gray-500 mt-1 text-sm">
+            How flexible are your move-in dates?
+          </div>
+        </div>
+      </div>
+
+      {/* Housing Type Selection */}
+      <div className="form-group mb-4">
+        <label className="label">
+          Housing Type Preferences <span className="text-red-500">*</span>
+        </label>
+        <div className="text-gray-500 mb-3 text-sm">
+          Select all types of housing you'd consider living in
+        </div>
+        
+        <div className={styles.checkboxColumns || 'grid-2'}>
+          {housingTypeOptions.map(type => (
+            <label key={type} className={styles.checkboxLabel || 'checkbox-item'}>
+              <input
+                type="checkbox"
+                checked={(formData.housingType || []).includes(type)}
+                onChange={(e) => onArrayChange('housingType', type, e.target.checked)}
+                disabled={loading}
+              />
+              <span className={styles.checkboxText || ''}>{type}</span>
+            </label>
+          ))}
+        </div>
+        {errors.housingType && (
+          <div className="text-red-500 mt-1 text-sm">{errors.housingType}</div>
+        )}
+      </div>
+
+      {/* Additional Housing Preferences */}
+      <div className="card-header">
+        <h4 className="card-title">Additional Housing Preferences</h4>
+        <p className="card-subtitle">Optional features and amenities</p>
+      </div>
+      
+      <div className="grid-2 mb-4">
+        <label className={styles.checkboxLabel || 'checkbox-item'}>
+          <input
+            type="checkbox"
+            checked={formData.furnishedPreference || false}
+            onChange={(e) => onInputChange('furnishedPreference', e.target.checked)}
+            disabled={loading}
+          />
+          <span className={styles.checkboxText || ''}>
+            Prefer furnished housing
+          </span>
+        </label>
+        
+        <label className={styles.checkboxLabel || 'checkbox-item'}>
+          <input
+            type="checkbox"
+            checked={formData.petsAllowed || false}
+            onChange={(e) => onInputChange('petsAllowed', e.target.checked)}
+            disabled={loading}
+          />
+          <span className={styles.checkboxText || ''}>
+            Need pet-friendly housing
+          </span>
+        </label>
+        
+        <label className={styles.checkboxLabel || 'checkbox-item'}>
+          <input
+            type="checkbox"
+            checked={formData.utilitiesIncluded || false}
+            onChange={(e) => onInputChange('utilitiesIncluded', e.target.checked)}
+            disabled={loading}
+          />
+          <span className={styles.checkboxText || ''}>
+            Prefer utilities included in rent
+          </span>
+        </label>
+        
+        <label className={styles.checkboxLabel || 'checkbox-item'}>
+          <input
+            type="checkbox"
+            checked={formData.accessibilityNeeded || false}
+            onChange={(e) => onInputChange('accessibilityNeeded', e.target.checked)}
+            disabled={loading}
+          />
+          <span className={styles.checkboxText || ''}>
+            Need accessibility features
+          </span>
+        </label>
+
+        <label className={styles.checkboxLabel || 'checkbox-item'}>
+          <input
+            type="checkbox"
+            checked={formData.parkingRequired || false}
+            onChange={(e) => onInputChange('parkingRequired', e.target.checked)}
+            disabled={loading}
+          />
+          <span className={styles.checkboxText || ''}>
+            Parking required
+          </span>
+        </label>
+
+        <label className={styles.checkboxLabel || 'checkbox-item'}>
+          <input
+            type="checkbox"
+            checked={formData.publicTransitAccess || false}
+            onChange={(e) => onInputChange('publicTransitAccess', e.target.checked)}
+            disabled={loading}
+          />
+          <span className={styles.checkboxText || ''}>
+            Need public transit access
+          </span>
+        </label>
+      </div>
+
+      {/* Location Flexibility */}
+      <div className="card-header">
+        <h4 className="card-title">Location Flexibility</h4>
+        <p className="card-subtitle">How flexible are you with location preferences?</p>
+      </div>
+
+      <div className="form-group mb-4">
+        <label className="label">Willingness to Consider Other Areas</label>
+        <select
+          className="input"
+          value={formData.locationFlexibility || ''}
+          onChange={(e) => onInputChange('locationFlexibility', e.target.value)}
+          disabled={loading}
+        >
+          <option value="">Select flexibility level</option>
+          <option value="very-specific">Only my specified preferences</option>
+          <option value="nearby-areas">Nearby areas within 30 minutes</option>
+          <option value="same-metro">Same metropolitan area</option>
+          <option value="same-state">Anywhere in the same state</option>
+          <option value="very-flexible">Open to any location</option>
+        </select>
+        <div className="text-gray-500 mt-1 text-sm">
+          More flexibility increases your chances of finding a good match
+        </div>
+      </div>
+
+      {/* Budget Help Notice */}
+      <div className="alert alert-info">
+        <h4 className="mb-2">
+          <span style={{ marginRight: '8px' }}>💡</span>
+          Budget Planning Tips
+        </h4>
+        <p className="mb-2">
+          <strong>When setting your budget, consider:</strong>
+        </p>
+        <ul style={{ marginLeft: '20px', marginBottom: '10px' }}>
+          <li>Rent (your share)</li>
+          <li>Utilities (electricity, gas, water, internet)</li>
+          <li>Renter's insurance</li>
+          <li>Moving costs and deposits</li>
+          <li>Transportation costs in the new location</li>
+        </ul>
+        <p className="text-sm">
+          Our housing specialists can help you create a realistic budget. 
+          <a href="/help/budget-planning" target="_blank" style={{ color: 'var(--primary-purple)', marginLeft: '5px' }}>
+            Learn more about budget planning →
+          </a>
+        </p>
       </div>
     </>
   );
@@ -361,12 +494,16 @@ LocationPreferencesSection.propTypes = {
     maxCommute: PropTypes.string,
     housingType: PropTypes.arrayOf(PropTypes.string),
     moveInDate: PropTypes.string,
+    moveInFlexibility: PropTypes.string,
     leaseDuration: PropTypes.string,
     preferredBedrooms: PropTypes.oneOfType([PropTypes.string, PropTypes.number]),
     furnishedPreference: PropTypes.bool,
     petsAllowed: PropTypes.bool,
     utilitiesIncluded: PropTypes.bool,
-    accessibilityNeeded: PropTypes.bool
+    accessibilityNeeded: PropTypes.bool,
+    parkingRequired: PropTypes.bool,
+    publicTransitAccess: PropTypes.bool,
+    locationFlexibility: PropTypes.string
   }).isRequired,
   errors: PropTypes.object.isRequired,
   loading: PropTypes.bool.isRequired,
@@ -378,12 +515,12 @@ LocationPreferencesSection.propTypes = {
   onInputChange: PropTypes.func.isRequired,
   onArrayChange: PropTypes.func.isRequired,
   onRangeChange: PropTypes.func.isRequired,
-  styles: PropTypes.object                   // ✅ NEW: CSS module styles
+  styles: PropTypes.object
 };
 
 LocationPreferencesSection.defaultProps = {
   profile: null,
-  styles: {}                                 // ✅ NEW: Default empty object for styles
+  styles: {}
 };
 
 export default LocationPreferencesSection;
