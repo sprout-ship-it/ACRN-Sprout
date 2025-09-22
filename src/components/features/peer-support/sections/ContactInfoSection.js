@@ -1,7 +1,11 @@
-// src/components/forms/sections/peer-support/ContactInfoSection.js
+// src/components/forms/sections/peer-support/ContactInfoSection.js - UPDATED WITH CSS MODULE
 import React from 'react';
 import PropTypes from 'prop-types';
 import { stateOptions, HELP_TEXT } from '../constants/peerSupportConstants';
+
+// ✅ UPDATED: Import our new CSS foundation and component module
+import '../../../../styles/main.css';
+import styles from './ContactInfoSection.module.css';
 
 const ContactInfoSection = ({
   formData,
@@ -10,16 +14,16 @@ const ContactInfoSection = ({
   onInputChange
 }) => {
   return (
-    <>
-      <h3 className="card-title mb-4">Contact Information</h3>
+    <div className={styles.sectionContainer}>
+      <h3 className={styles.sectionTitle}>Contact Information</h3>
       
-      <div className="grid-2 mb-4">
-        <div className="form-group">
-          <label className="label">
-            Phone <span className="text-red-500">*</span>
+      <div className={styles.formGrid}>
+        <div className={styles.formGroup}>
+          <label className={styles.formLabel}>
+            Phone <span className={styles.requiredAsterisk}>*</span>
           </label>
           <input
-            className={`input ${errors.phone ? 'border-red-500' : ''}`}
+            className={`${styles.formInput} ${errors.phone ? styles.formInputError : ''}`}
             type="tel"
             value={formData.phone}
             onChange={(e) => onInputChange('phone', e.target.value)}
@@ -28,17 +32,17 @@ const ContactInfoSection = ({
             required
           />
           {errors.phone && (
-            <div className="text-red-500 mt-1">{errors.phone}</div>
+            <div className={styles.errorText}>{errors.phone}</div>
           )}
-          <div className="text-gray-500 mt-1 text-sm">
+          <div className={styles.helpText}>
             {HELP_TEXT.phone}
           </div>
         </div>
         
-        <div className="form-group">
-          <label className="label">Professional Title</label>
+        <div className={styles.formGroup}>
+          <label className={styles.formLabel}>Professional Title</label>
           <input
-            className={`input ${errors.title ? 'border-red-500' : ''}`}
+            className={`${styles.formInput} ${errors.title ? styles.formInputError : ''}`}
             type="text"
             value={formData.title}
             onChange={(e) => onInputChange('title', e.target.value)}
@@ -46,44 +50,39 @@ const ContactInfoSection = ({
             disabled={loading}
           />
           {errors.title && (
-            <div className="text-red-500 mt-1">{errors.title}</div>
+            <div className={styles.errorText}>{errors.title}</div>
           )}
-          <div className="text-gray-500 mt-1 text-sm">
+          <div className={styles.helpText}>
             {HELP_TEXT.title}
           </div>
         </div>
       </div>
 
       {/* Office/Service Address */}
-      <h4 style={{ 
-        color: 'var(--secondary-teal)', 
-        marginBottom: 'var(--spacing-lg)', 
-        paddingBottom: '10px', 
-        borderBottom: '2px solid var(--border-beige)' 
-      }}>
+      <h4 className={styles.sectionSubtitle}>
         Service Location (Optional)
       </h4>
       
-      <div className="form-group mb-4">
-        <label className="label">Street Address</label>
+      <div className={styles.formGroup}>
+        <label className={styles.formLabel}>Street Address</label>
         <input
-          className="input"
+          className={styles.formInput}
           type="text"
           value={formData.address}
           onChange={(e) => onInputChange('address', e.target.value)}
           placeholder="123 Recovery Way"
           disabled={loading}
         />
-        <div className="text-gray-500 mt-1 text-sm">
+        <div className={styles.helpText}>
           Office or primary service location (leave blank if services are primarily remote)
         </div>
       </div>
 
-      <div className="grid-3 mb-4">
-        <div className="form-group">
-          <label className="label">City</label>
+      <div className={styles.formGridThree}>
+        <div className={styles.formGroup}>
+          <label className={styles.formLabel}>City</label>
           <input
-            className="input"
+            className={styles.formInput}
             type="text"
             value={formData.city}
             onChange={(e) => onInputChange('city', e.target.value)}
@@ -92,10 +91,10 @@ const ContactInfoSection = ({
           />
         </div>
         
-        <div className="form-group">
-          <label className="label">State</label>
+        <div className={styles.formGroup}>
+          <label className={styles.formLabel}>State</label>
           <select
-            className="input"
+            className={styles.formSelect}
             value={formData.state}
             onChange={(e) => onInputChange('state', e.target.value)}
             disabled={loading}
@@ -107,10 +106,10 @@ const ContactInfoSection = ({
           </select>
         </div>
         
-        <div className="form-group">
-          <label className="label">ZIP Code</label>
+        <div className={styles.formGroup}>
+          <label className={styles.formLabel}>ZIP Code</label>
           <input
-            className="input"
+            className={styles.formInput}
             type="text"
             value={formData.zip_code}
             onChange={(e) => onInputChange('zip_code', e.target.value)}
@@ -122,10 +121,11 @@ const ContactInfoSection = ({
       </div>
 
       {/* Service Area Information */}
-      <div className="alert alert-info">
-        <strong>Note about service location:</strong> Your address information helps clients understand your service area and is used for location-based matching. If you provide remote services only, you can leave the address fields blank and specify your service coverage in the Service Settings section.
+      <div className={styles.infoAlert}>
+        <div className={styles.alertTitle}>Note about service location:</div>
+        Your address information helps clients understand your service area and is used for location-based matching. If you provide remote services only, you can leave the address fields blank and specify your service coverage in the Service Settings section.
       </div>
-    </>
+    </div>
   );
 };
 
