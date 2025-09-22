@@ -1,0 +1,260 @@
+/* PropertyAdvancedFilters.module.css - Component-specific styles */
+
+/* ==================== MAIN CONTAINER ==================== */
+.advancedFiltersCard {
+  border: 2px solid var(--border-beige);
+  overflow: hidden;
+  margin-bottom: var(--spacing-lg);
+}
+
+/* ==================== COLLAPSIBLE HEADER ==================== */
+.advancedFiltersHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: var(--spacing-lg);
+  cursor: pointer;
+  transition: var(--transition-normal);
+  background: linear-gradient(135deg, rgba(160, 32, 240, 0.02) 0%, rgba(255, 255, 255, 1) 100%);
+}
+
+.advancedFiltersHeader:hover {
+  background: linear-gradient(135deg, rgba(160, 32, 240, 0.05) 0%, rgba(255, 255, 255, 1) 100%);
+}
+
+.headerContent {
+  flex: 1;
+}
+
+.titleIcon {
+  margin-right: 0.5rem;
+  font-size: 1.2rem;
+}
+
+.toggleButton {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-sm);
+  background: none;
+  border: 2px solid var(--border-beige);
+  padding: var(--spacing-sm) var(--spacing-md);
+  border-radius: var(--radius-md);
+  color: var(--primary-purple);
+  font-weight: 600;
+  font-size: 0.9rem;
+  cursor: pointer;
+  transition: var(--transition-normal);
+  white-space: nowrap;
+}
+
+.toggleButton:hover {
+  border-color: var(--primary-purple);
+  background: rgba(160, 32, 240, 0.05);
+}
+
+.toggleIcon {
+  font-size: 0.8rem;
+  transition: transform 0.3s ease;
+}
+
+.toggleIcon.expanded {
+  transform: rotate(180deg);
+}
+
+.toggleText {
+  font-size: 0.9rem;
+}
+
+/* ==================== COLLAPSIBLE CONTENT ==================== */
+.advancedFiltersContent {
+  padding: 0 var(--spacing-lg) var(--spacing-lg) var(--spacing-lg);
+  border-top: 1px solid var(--border-beige);
+  background: white;
+}
+
+/* ==================== FILTER SECTIONS ==================== */
+.filterSection {
+  padding: var(--spacing-lg) 0;
+}
+
+.filterSection:not(:last-child) {
+  border-bottom: 1px solid var(--border-beige);
+}
+
+.sectionTitle {
+  font-size: 1rem;
+  font-weight: 600;
+  color: var(--gray-800);
+  margin-bottom: var(--spacing-md);
+}
+
+/* ==================== GRID LAYOUTS ==================== */
+.subsidiesGrid,
+.amenitiesGrid,
+.utilitiesGrid,
+.accessibilityGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap: var(--spacing-sm);
+}
+
+.policiesGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+  gap: var(--spacing-lg);
+}
+
+/* ==================== INTERACTIVE ITEMS ==================== */
+.subsidyItem,
+.amenityItem,
+.utilityItem,
+.accessibilityItem {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-sm);
+  padding: var(--spacing-sm);
+  border: 2px solid var(--border-beige);
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  transition: var(--transition-normal);
+  background: white;
+}
+
+.subsidyItem:hover,
+.amenityItem:hover,
+.utilityItem:hover,
+.accessibilityItem:hover {
+  border-color: var(--primary-purple);
+  background: rgba(160, 32, 240, 0.02);
+}
+
+.subsidyItem.selected,
+.amenityItem.selected,
+.utilityItem.selected,
+.accessibilityItem.selected {
+  border-color: var(--primary-purple);
+  background: rgba(160, 32, 240, 0.05);
+}
+
+.subsidyText,
+.amenityText,
+.utilityText,
+.accessibilityText {
+  font-size: 0.85rem;
+  color: var(--gray-700);
+  line-height: 1.3;
+}
+
+/* ==================== INPUT HINTS ==================== */
+.inputHint {
+  font-size: 0.8rem;
+  color: var(--gray-500);
+  margin-top: 0.25rem;
+  line-height: 1.3;
+  margin-bottom: var(--spacing-md);
+}
+
+/* ==================== RESPONSIVE DESIGN ==================== */
+@media (max-width: 768px) {
+  .advancedFiltersHeader {
+    flex-direction: column;
+    align-items: stretch;
+    gap: var(--spacing-md);
+  }
+
+  .toggleButton {
+    align-self: center;
+  }
+
+  .subsidiesGrid,
+  .amenitiesGrid,
+  .utilitiesGrid,
+  .accessibilityGrid {
+    grid-template-columns: 1fr;
+  }
+
+  .policiesGrid {
+    grid-template-columns: 1fr;
+    gap: var(--spacing-md);
+  }
+
+  .advancedFiltersHeader,
+  .advancedFiltersContent {
+    padding: var(--spacing-md);
+  }
+}
+
+@media (max-width: 480px) {
+  .toggleText {
+    font-size: 0.8rem;
+  }
+
+  .subsidyText,
+  .amenityText,
+  .utilityText,
+  .accessibilityText {
+    font-size: 0.8rem;
+  }
+
+  .sectionTitle {
+    font-size: 0.95rem;
+  }
+
+  .inputHint {
+    font-size: 0.75rem;
+  }
+}
+
+/* ==================== ACCESSIBILITY AND FOCUS STATES ==================== */
+.toggleButton:focus-visible,
+.subsidyItem:focus-visible,
+.amenityItem:focus-visible,
+.utilityItem:focus-visible,
+.accessibilityItem:focus-visible {
+  outline: 2px solid var(--primary-purple);
+  outline-offset: 2px;
+}
+
+/* ==================== ENHANCED VISUAL EFFECTS ==================== */
+.advancedFiltersCard::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(90deg, transparent, rgba(160, 32, 240, 0.03), transparent);
+  transition: left 0.6s ease;
+  z-index: 1;
+  pointer-events: none;
+}
+
+.advancedFiltersCard {
+  position: relative;
+  overflow: hidden;
+}
+
+.advancedFiltersCard:hover::before {
+  left: 100%;
+}
+
+.advancedFiltersCard > * {
+  position: relative;
+  z-index: 2;
+}
+
+/* ==================== LOADING STATES ==================== */
+.subsidyItem:disabled,
+.amenityItem:disabled,
+.utilityItem:disabled,
+.accessibilityItem:disabled,
+.toggleButton:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+  pointer-events: none;
+}
+
+/* ==================== SPECIAL STATES ==================== */
+.filterSection:last-child {
+  border-bottom: none;
+}

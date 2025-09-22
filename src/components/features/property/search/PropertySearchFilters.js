@@ -1,7 +1,10 @@
-// src/components/features/property/search/PropertySearchFilters.js
+// src/components/features/property/search/PropertySearchFilters.js - UPDATED WITH CSS MODULE
 import React from 'react';
 import PropTypes from 'prop-types';
 import { propertyTypes } from '../constants/propertyConstants';
+
+// ✅ UPDATED: Import CSS module
+import styles from './PropertySearchFilters.module.css';
 
 const PropertySearchFilters = ({
   basicFilters,
@@ -61,7 +64,7 @@ const PropertySearchFilters = ({
   return (
     <div className="card mb-4">
       <div className="card-header">
-        <div className="filter-header">
+        <div className={styles.filterHeader}>
           <h3 className="card-title">Basic Housing Criteria</h3>
           {userPreferences && (
             <button
@@ -69,16 +72,16 @@ const PropertySearchFilters = ({
               onClick={onUseMyPreferences}
               disabled={loading}
             >
-              <span className="btn-icon">⚙️</span>
+              <span className={styles.btnIcon}>⚙️</span>
               Use My Preferences
             </button>
           )}
         </div>
       </div>
       
-      {/* ✅ Primary Filter Controls */}
-      <div className="filter-section">
-        <div className="filter-grid">
+      {/* ✅ UPDATED: Primary Filter Controls */}
+      <div className={styles.filterSection}>
+        <div className={styles.filterGrid}>
           <div className="form-group">
             <label className="label">Location</label>
             <input
@@ -89,7 +92,7 @@ const PropertySearchFilters = ({
               onChange={(e) => onBasicFilterChange('location', e.target.value)}
               disabled={loading}
             />
-            <div className="input-hint">
+            <div className={styles.inputHint}>
               Search by city, state, or specific address
             </div>
           </div>
@@ -143,14 +146,14 @@ const PropertySearchFilters = ({
         </div>
       </div>
 
-      {/* ✅ Housing Types Selection */}
-      <div className="filter-section">
+      {/* ✅ UPDATED: Housing Types Selection */}
+      <div className={styles.filterSection}>
         <div className="form-group">
           <label className="label">Housing Types</label>
-          <div className="input-hint mb-3">
+          <div className={styles.inputHint}>
             Select all housing types that work for you
           </div>
-          <div className="housing-type-grid">
+          <div className={styles.housingTypeGrid}>
             {basicHousingTypes.map(type => (
               <div
                 key={type.value}
@@ -170,10 +173,10 @@ const PropertySearchFilters = ({
         </div>
       </div>
 
-      {/* ✅ Quick Filters & Actions */}
-      <div className="filter-section">
-        <div className="quick-filters-grid">
-          <div className="quick-filters">
+      {/* ✅ UPDATED: Quick Filters & Actions */}
+      <div className={styles.filterSection}>
+        <div className={styles.quickFiltersGrid}>
+          <div className={styles.quickFilters}>
             <div 
               className={`checkbox-item ${basicFilters.furnished ? 'selected' : ''}`}
               onClick={() => onBasicFilterChange('furnished', !basicFilters.furnished)}
@@ -201,7 +204,7 @@ const PropertySearchFilters = ({
             </div>
           </div>
 
-          <div className="action-buttons">
+          <div className={styles.actionButtons}>
             <button
               className="btn btn-primary"
               onClick={onManualSearch}
@@ -209,12 +212,12 @@ const PropertySearchFilters = ({
             >
               {loading ? (
                 <>
-                  <span className="loading-spinner small"></span>
+                  <span className={`${styles.loadingSpinner} ${styles.small}`}></span>
                   Searching...
                 </>
               ) : (
                 <>
-                  <span className="btn-icon">🔍</span>
+                  <span className={styles.btnIcon}>🔍</span>
                   Search Housing
                 </>
               )}
@@ -225,120 +228,12 @@ const PropertySearchFilters = ({
               onClick={onClearAllFilters}
               disabled={loading}
             >
-              <span className="btn-icon">🗑️</span>
+              <span className={styles.btnIcon}>🗑️</span>
               Clear Filters
             </button>
           </div>
         </div>
       </div>
-
-      {/* ✅ Component Styles */}
-      <style jsx>{`
-        .filter-header {
-          display: flex;
-          align-items: center;
-          justify-content: space-between;
-          flex-wrap: wrap;
-          gap: var(--spacing-md);
-        }
-
-        .filter-section {
-          padding: var(--spacing-lg) 0;
-        }
-
-        .filter-section:not(:last-child) {
-          border-bottom: 1px solid var(--border-beige);
-        }
-
-        .filter-grid {
-          display: grid;
-          grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-          gap: var(--spacing-lg);
-        }
-
-        .housing-type-grid {
-          display: grid;
-          grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
-          gap: var(--spacing-sm);
-        }
-
-        .quick-filters-grid {
-          display: grid;
-          grid-template-columns: 1fr auto;
-          gap: var(--spacing-lg);
-          align-items: center;
-        }
-
-        .quick-filters {
-          display: flex;
-          flex-wrap: wrap;
-          gap: var(--spacing-md);
-        }
-
-        .action-buttons {
-          display: flex;
-          gap: var(--spacing-md);
-          flex-shrink: 0;
-        }
-
-        .input-hint {
-          font-size: 0.8rem;
-          color: var(--gray-500);
-          margin-top: 0.25rem;
-        }
-
-        .btn-icon {
-          margin-right: 0.5rem;
-        }
-
-        /* Responsive adjustments */
-        @media (max-width: 768px) {
-          .filter-grid {
-            grid-template-columns: 1fr;
-            gap: var(--spacing-md);
-          }
-
-          .housing-type-grid {
-            grid-template-columns: 1fr;
-          }
-
-          .quick-filters-grid {
-            grid-template-columns: 1fr;
-            gap: var(--spacing-md);
-          }
-
-          .action-buttons {
-            width: 100%;
-            justify-content: stretch;
-          }
-
-          .action-buttons .btn {
-            flex: 1;
-          }
-
-          .filter-header {
-            flex-direction: column;
-            align-items: stretch;
-            text-align: center;
-          }
-        }
-
-        @media (max-width: 480px) {
-          .quick-filters {
-            flex-direction: column;
-            gap: var(--spacing-sm);
-          }
-
-          .action-buttons {
-            flex-direction: column;
-            gap: var(--spacing-sm);
-          }
-
-          .btn {
-            justify-content: center;
-          }
-        }
-      `}</style>
     </div>
   );
 };
@@ -363,4 +258,4 @@ PropertySearchFilters.propTypes = {
   loading: PropTypes.bool.isRequired
 };
 
-export default PropertySearchFilters
+export default PropertySearchFilters;

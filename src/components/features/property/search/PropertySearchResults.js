@@ -1,7 +1,10 @@
-// src/components/features/property/search/PropertySearchResults.js
+// src/components/features/property/search/PropertySearchResults.js - UPDATED WITH CSS MODULE
 import React from 'react';
 import PropTypes from 'prop-types';
 import PropertyCard from './PropertyCard';
+
+// ✅ UPDATED: Import CSS module
+import styles from './PropertySearchResults.module.css';
 
 const PropertySearchResults = ({
   loading,
@@ -19,13 +22,13 @@ const PropertySearchResults = ({
   onClearAllFilters,
   onSearchModeChange
 }) => {
-  // ✅ Loading State
+  // ✅ UPDATED: Loading State with CSS module
   if (loading) {
     return (
-      <div className="search-results">
-        <div className="results-header">
+      <div className={styles.searchResults}>
+        <div className={styles.resultsHeader}>
           <div className="card mb-4">
-            <div className="flex" style={{ alignItems: 'center', justifyContent: 'space-between' }}>
+            <div className={`${styles.flex} ${styles.flexSpaceBetween} ${styles.flexAlignCenter}`}>
               <div>
                 <h3 className="card-title">Searching...</h3>
                 <p className="text-gray-600">Finding the perfect housing options for you...</p>
@@ -34,9 +37,9 @@ const PropertySearchResults = ({
           </div>
         </div>
 
-        <div className="loading-container">
-          <div className="loading-spinner large"></div>
-          <p className="loading-text">
+        <div className={styles.loadingContainer}>
+          <div className={`${styles.loadingSpinner} ${styles.large}`}></div>
+          <p className={styles.loadingText}>
             {searchMode === 'recovery' 
               ? 'Searching recovery housing with specialized support services...'
               : 'Searching all available housing with recovery-friendly options...'
@@ -47,13 +50,13 @@ const PropertySearchResults = ({
     );
   }
 
-  // ✅ Empty State
+  // ✅ UPDATED: Empty State with CSS module
   if (properties.length === 0) {
     return (
-      <div className="search-results">
-        <div className="results-header">
+      <div className={styles.searchResults}>
+        <div className={styles.resultsHeader}>
           <div className="card mb-4">
-            <div className="flex" style={{ alignItems: 'center', justifyContent: 'space-between' }}>
+            <div className={`${styles.flex} ${styles.flexSpaceBetween} ${styles.flexAlignCenter}`}>
               <div>
                 <h3 className="card-title">0 Properties Found</h3>
                 <p className="text-gray-600">
@@ -69,9 +72,9 @@ const PropertySearchResults = ({
           <h3 className="empty-state-title">No properties found</h3>
           <p>Try adjusting your search criteria or switching search modes to find more options.</p>
           
-          <div className="empty-state-suggestions">
-            <h4 className="suggestions-title">Suggestions to find more results:</h4>
-            <ul className="suggestions-list">
+          <div className={styles.emptyStateSuggestions}>
+            <h4 className={styles.suggestionsTitle}>Suggestions to find more results:</h4>
+            <ul className={styles.suggestionsList}>
               <li>• Increase your maximum rent budget</li>
               <li>• Expand your location search area</li>
               <li>• Remove some specific amenity requirements</li>
@@ -82,20 +85,20 @@ const PropertySearchResults = ({
             </ul>
           </div>
           
-          <div className="empty-state-actions">
+          <div className={styles.emptyStateActions}>
             <button
               className="btn btn-primary"
               onClick={onClearAllFilters}
             >
-              <span className="btn-icon">🗑️</span>
+              <span className={styles.btnIcon}>🗑️</span>
               Clear All Filters
             </button>
             
             <button
-              className="btn btn-outline ml-2"
+              className={`btn btn-outline ${styles.ml2}`}
               onClick={() => onSearchModeChange(searchMode === 'basic' ? 'recovery' : 'basic')}
             >
-              <span className="btn-icon">🔄</span>
+              <span className={styles.btnIcon}>🔄</span>
               Try {searchMode === 'basic' ? 'Recovery Housing' : 'All Housing'} Search
             </button>
           </div>
@@ -104,13 +107,13 @@ const PropertySearchResults = ({
     );
   }
 
-  // ✅ Results Display
+  // ✅ UPDATED: Results Display with CSS module
   return (
-    <div className="search-results">
-      {/* Results Header */}
-      <div className="results-header">
+    <div className={styles.searchResults}>
+      {/* ✅ UPDATED: Results Header */}
+      <div className={styles.resultsHeader}>
         <div className="card mb-4">
-          <div className="flex" style={{ alignItems: 'center', justifyContent: 'space-between' }}>
+          <div className={`${styles.flex} ${styles.flexSpaceBetween} ${styles.flexAlignCenter}`}>
             <div>
               <h3 className="card-title">
                 {totalResults.toLocaleString()} Properties Found
@@ -124,7 +127,7 @@ const PropertySearchResults = ({
             </div>
             
             {showPagination && (
-              <div className="pagination-summary">
+              <div className={styles.paginationSummary}>
                 <span className="text-gray-600">
                   Page {currentPage} of {totalPages}
                 </span>
@@ -134,8 +137,8 @@ const PropertySearchResults = ({
         </div>
       </div>
 
-      {/* Results Grid */}
-      <div className="results-grid">
+      {/* ✅ UPDATED: Results Grid */}
+      <div className={styles.resultsGrid}>
         <div className="grid-auto">
           {properties.map(property => (
             <PropertyCard
@@ -150,202 +153,39 @@ const PropertySearchResults = ({
         </div>
       </div>
 
-      {/* Pagination */}
+      {/* ✅ UPDATED: Pagination */}
       {showPagination && (
-        <div className="pagination-container">
-          <div className="pagination">
+        <div className={styles.paginationContainer}>
+          <div className={styles.pagination}>
             <button
-              className="btn btn-outline pagination-btn"
+              className={`btn btn-outline ${styles.paginationBtn}`}
               onClick={() => onPageChange(currentPage - 1)}
               disabled={currentPage === 1}
             >
-              <span className="btn-icon">‹</span>
+              <span className={styles.btnIcon}>‹</span>
               Previous
             </button>
             
-            <div className="pagination-info">
-              <span className="current-page">
+            <div className={styles.paginationInfo}>
+              <span className={styles.currentPage}>
                 Page {currentPage} of {totalPages}
               </span>
-              <span className="results-count">
+              <span className={styles.resultsCount}>
                 {totalResults.toLocaleString()} total results
               </span>
             </div>
             
             <button
-              className="btn btn-outline pagination-btn"
+              className={`btn btn-outline ${styles.paginationBtn}`}
               onClick={() => onPageChange(currentPage + 1)}
               disabled={currentPage === totalPages}
             >
               Next
-              <span className="btn-icon">›</span>
+              <span className={styles.btnIcon}>›</span>
             </button>
           </div>
         </div>
       )}
-
-      {/* Component Styles */}
-      <style jsx>{`
-        .search-results {
-          width: 100%;
-        }
-
-        .results-header {
-          margin-bottom: var(--spacing-lg);
-        }
-
-        .pagination-summary {
-          background: var(--bg-light-cream);
-          padding: var(--spacing-sm) var(--spacing-md);
-          border-radius: var(--radius-md);
-          font-size: 0.9rem;
-        }
-
-        .results-grid {
-          margin-bottom: var(--spacing-xl);
-        }
-
-        .empty-state-suggestions {
-          max-width: 500px;
-          margin: var(--spacing-xl) auto;
-          text-align: left;
-        }
-
-        .suggestions-title {
-          font-size: 1rem;
-          font-weight: 600;
-          color: var(--gray-800);
-          margin-bottom: var(--spacing-md);
-          text-align: center;
-        }
-
-        .suggestions-list {
-          list-style: none;
-          padding: 0;
-          margin: 0 0 var(--spacing-xl) 0;
-          color: var(--gray-600);
-          line-height: 1.6;
-        }
-
-        .suggestions-list li {
-          margin-bottom: var(--spacing-sm);
-        }
-
-        .empty-state-actions {
-          display: flex;
-          gap: var(--spacing-md);
-          justify-content: center;
-          flex-wrap: wrap;
-        }
-
-        .pagination-container {
-          display: flex;
-          justify-content: center;
-          margin-top: var(--spacing-xl);
-          padding-top: var(--spacing-lg);
-          border-top: 1px solid var(--border-beige);
-        }
-
-        .pagination {
-          display: grid;
-          grid-template-columns: auto 1fr auto;
-          align-items: center;
-          gap: var(--spacing-lg);
-          max-width: 500px;
-          width: 100%;
-        }
-
-        .pagination-btn {
-          display: flex;
-          align-items: center;
-          gap: var(--spacing-sm);
-          white-space: nowrap;
-        }
-
-        .pagination-info {
-          display: flex;
-          flex-direction: column;
-          align-items: center;
-          text-align: center;
-        }
-
-        .current-page {
-          font-weight: 600;
-          color: var(--gray-800);
-          font-size: 0.95rem;
-        }
-
-        .results-count {
-          font-size: 0.8rem;
-          color: var(--gray-600);
-          margin-top: 2px;
-        }
-
-        .btn-icon {
-          font-size: 1rem;
-        }
-
-        .ml-2 {
-          margin-left: var(--spacing-sm);
-        }
-
-        /* Responsive Design */
-        @media (max-width: 768px) {
-          .pagination {
-            grid-template-columns: 1fr;
-            gap: var(--spacing-md);
-            text-align: center;
-          }
-
-          .pagination-btn {
-            justify-content: center;
-          }
-
-          .empty-state-actions {
-            flex-direction: column;
-            align-items: center;
-          }
-
-          .empty-state-actions .btn {
-            width: 200px;
-          }
-
-          .results-header .flex {
-            flex-direction: column;
-            align-items: stretch !important;
-            gap: var(--spacing-md);
-          }
-
-          .pagination-summary {
-            align-self: center;
-          }
-        }
-
-        @media (max-width: 480px) {
-          .pagination-info {
-            gap: var(--spacing-xs);
-          }
-
-          .current-page,
-          .results-count {
-            font-size: 0.8rem;
-          }
-
-          .pagination-btn {
-            padding: 10px 16px;
-            font-size: 0.85rem;
-          }
-
-          .suggestions-list {
-            font-size: 0.9rem;
-          }
-
-          .empty-state-actions .btn {
-            width: 100%;
-            max-width: 250px;
-          }
-        }
-      `}</style>
     </div>
   );
 };

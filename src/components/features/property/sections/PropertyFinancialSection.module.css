@@ -1,0 +1,330 @@
+/* PropertyFinancialSection.module.css - Component-specific styles */
+
+/* ==================== SECTION HEADINGS ==================== */
+.sectionHeading {
+  font-size: 1.1rem;
+  font-weight: 600;
+  color: var(--gray-800);
+  margin-bottom: var(--spacing-md);
+  padding-top: var(--spacing-lg);
+  border-top: 1px solid var(--border-beige);
+}
+
+.sectionHeading:first-of-type {
+  padding-top: 0;
+  border-top: none;
+}
+
+/* ==================== GRID LAYOUTS ==================== */
+.gridTwo {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--spacing-lg);
+  margin-bottom: var(--spacing-lg);
+}
+
+.gridThree {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: var(--spacing-lg);
+  margin-bottom: var(--spacing-lg);
+}
+
+/* ==================== FORM GROUP STYLING ==================== */
+.formGroup {
+  margin-bottom: var(--spacing-lg);
+}
+
+/* ==================== CHECKBOX LAYOUTS ==================== */
+.checkboxColumns {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+  gap: 1rem;
+  margin-top: 0.5rem;
+}
+
+.checkboxColumnsCompact {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 0.75rem;
+  margin-top: 0.5rem;
+}
+
+/* ==================== CHECKBOX LABELS ==================== */
+.checkboxLabel {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.5rem;
+  cursor: pointer;
+  padding: 0.5rem;
+  border-radius: var(--radius-sm);
+  transition: var(--transition-normal);
+  background: white;
+  border: 1px solid transparent;
+}
+
+.checkboxLabel:hover {
+  background-color: rgba(160, 32, 240, 0.02);
+  border-color: var(--border-beige);
+}
+
+.checkboxLabel:focus-within {
+  background-color: rgba(160, 32, 240, 0.05);
+  border-color: var(--primary-purple);
+  box-shadow: 0 0 0 2px rgba(160, 32, 240, 0.1);
+}
+
+.checkboxText {
+  font-size: 0.9rem;
+  line-height: 1.4;
+  color: var(--gray-700);
+  flex: 1;
+}
+
+/* ==================== CHECKBOX INPUT STYLING ==================== */
+.checkboxLabel input[type="checkbox"] {
+  margin-top: 0.1rem;
+  flex-shrink: 0;
+  accent-color: var(--primary-purple);
+  cursor: pointer;
+}
+
+/* ==================== HELP TEXT ==================== */
+.helpText {
+  color: var(--gray-500);
+  font-size: 0.85rem;
+  margin-top: 0.25rem;
+  line-height: 1.3;
+}
+
+.helpTextLarge {
+  color: var(--gray-500);
+  font-size: 0.85rem;
+  margin-bottom: var(--spacing-md);
+  line-height: 1.4;
+}
+
+/* ==================== ERROR STATE STYLING ==================== */
+.inputError {
+  border-color: #dc3545 !important;
+  box-shadow: 0 0 0 3px rgba(220, 53, 69, 0.1) !important;
+}
+
+.errorMessage {
+  color: #dc3545;
+  font-size: 0.8rem;
+  margin-top: 0.25rem;
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+}
+
+.errorMessage::before {
+  content: '⚠️';
+  font-size: 0.7rem;
+}
+
+/* ==================== UTILITY HIGHLIGHT SECTION ==================== */
+.utilitiesSection {
+  background: rgba(160, 32, 240, 0.02);
+  border: 1px solid rgba(160, 32, 240, 0.1);
+  border-radius: var(--radius-md);
+  padding: var(--spacing-lg);
+  margin-bottom: var(--spacing-lg);
+}
+
+.utilitiesTitle {
+  font-size: 1rem;
+  font-weight: 600;
+  color: var(--primary-purple);
+  margin-bottom: var(--spacing-sm);
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.utilitiesTitle::before {
+  content: '💡';
+  font-size: 1.2rem;
+}
+
+/* ==================== FEATURE GRID ==================== */
+.featuresGrid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--spacing-lg);
+  margin-bottom: var(--spacing-lg);
+}
+
+.featureGroup {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-sm);
+}
+
+/* ==================== RESPONSIVE DESIGN ==================== */
+@media (max-width: 768px) {
+  .gridTwo,
+  .gridThree,
+  .featuresGrid {
+    grid-template-columns: 1fr;
+    gap: var(--spacing-md);
+  }
+  
+  .checkboxColumns {
+    grid-template-columns: 1fr;
+    gap: 0.5rem;
+  }
+  
+  .checkboxColumnsCompact {
+    grid-template-columns: 1fr;
+    gap: 0.5rem;
+  }
+
+  .sectionHeading {
+    font-size: 1rem;
+    margin-bottom: var(--spacing-sm);
+    padding-top: var(--spacing-md);
+  }
+
+  .formGroup {
+    margin-bottom: var(--spacing-md);
+  }
+
+  .checkboxText {
+    font-size: 0.85rem;
+  }
+
+  .helpText,
+  .helpTextLarge {
+    font-size: 0.8rem;
+  }
+
+  .utilitiesSection {
+    padding: var(--spacing-md);
+  }
+
+  .utilitiesTitle {
+    font-size: 0.95rem;
+  }
+}
+
+@media (max-width: 480px) {
+  .checkboxLabel {
+    padding: var(--spacing-xs);
+  }
+
+  .checkboxText {
+    font-size: 0.8rem;
+  }
+
+  .helpText,
+  .helpTextLarge {
+    font-size: 0.75rem;
+  }
+
+  .sectionHeading {
+    font-size: 0.95rem;
+    margin-bottom: var(--spacing-sm);
+    padding-top: var(--spacing-sm);
+  }
+
+  .utilitiesSection {
+    padding: var(--spacing-sm);
+  }
+
+  .utilitiesTitle {
+    font-size: 0.9rem;
+  }
+
+  .utilitiesTitle::before {
+    font-size: 1rem;
+  }
+}
+
+/* ==================== ACCESSIBILITY ENHANCEMENTS ==================== */
+.checkboxLabel:focus-visible {
+  outline: 2px solid var(--primary-purple);
+  outline-offset: 2px;
+}
+
+.checkboxLabel input[type="checkbox"]:focus {
+  outline: 2px solid var(--primary-purple);
+  outline-offset: 2px;
+}
+
+/* ==================== DISABLED STATES ==================== */
+.checkboxLabel:has(input:disabled) {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.checkboxLabel:has(input:disabled):hover {
+  background-color: white;
+  border-color: transparent;
+}
+
+.input:disabled {
+  background: var(--gray-100);
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+
+/* ==================== ENHANCED VISUAL EFFECTS ==================== */
+.checkboxLabel::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(90deg, transparent, rgba(160, 32, 240, 0.02), transparent);
+  transition: left 0.6s ease;
+  z-index: -1;
+  pointer-events: none;
+}
+
+.checkboxLabel {
+  position: relative;
+  overflow: hidden;
+}
+
+.checkboxLabel:hover::before {
+  left: 100%;
+}
+
+.utilitiesSection::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(90deg, transparent, rgba(160, 32, 240, 0.03), transparent);
+  transition: left 0.8s ease;
+  z-index: -1;
+  pointer-events: none;
+}
+
+.utilitiesSection {
+  position: relative;
+  overflow: hidden;
+}
+
+.utilitiesSection:hover::before {
+  left: 100%;
+}
+
+/* ==================== FORM VALIDATION STATES ==================== */
+.input:valid:not(:placeholder-shown) {
+  border-color: var(--success-border);
+}
+
+.input:invalid:not(:placeholder-shown) {
+  border-color: #dc3545;
+}
+
+/* ==================== SPECIAL STATES ==================== */
+.sectionHeading:last-of-type {
+  margin-bottom: var(--spacing-md);
+}

@@ -1,0 +1,203 @@
+/* PropertySearchFilters.module.css - Component-specific styles */
+
+/* ==================== FILTER HEADER ==================== */
+.filterHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: var(--spacing-md);
+}
+
+/* ==================== FILTER SECTIONS ==================== */
+.filterSection {
+  padding: var(--spacing-lg) 0;
+}
+
+.filterSection:not(:last-child) {
+  border-bottom: 1px solid var(--border-beige);
+}
+
+/* ==================== GRID LAYOUTS ==================== */
+.filterGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: var(--spacing-lg);
+}
+
+.housingTypeGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  gap: var(--spacing-sm);
+}
+
+.quickFiltersGrid {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: var(--spacing-lg);
+  align-items: center;
+}
+
+/* ==================== QUICK FILTERS ==================== */
+.quickFilters {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--spacing-md);
+}
+
+/* ==================== ACTION BUTTONS ==================== */
+.actionButtons {
+  display: flex;
+  gap: var(--spacing-md);
+  flex-shrink: 0;
+}
+
+/* ==================== INPUT HINTS ==================== */
+.inputHint {
+  font-size: 0.8rem;
+  color: var(--gray-500);
+  margin-top: 0.25rem;
+  margin-bottom: var(--spacing-md);
+}
+
+/* ==================== BUTTON ICONS ==================== */
+.btnIcon {
+  margin-right: 0.5rem;
+}
+
+/* ==================== RESPONSIVE DESIGN ==================== */
+@media (max-width: 768px) {
+  .filterGrid {
+    grid-template-columns: 1fr;
+    gap: var(--spacing-md);
+  }
+
+  .housingTypeGrid {
+    grid-template-columns: 1fr;
+  }
+
+  .quickFiltersGrid {
+    grid-template-columns: 1fr;
+    gap: var(--spacing-md);
+  }
+
+  .actionButtons {
+    width: 100%;
+    justify-content: stretch;
+  }
+
+  .actionButtons .btn {
+    flex: 1;
+  }
+
+  .filterHeader {
+    flex-direction: column;
+    align-items: stretch;
+    text-align: center;
+  }
+}
+
+@media (max-width: 480px) {
+  .quickFilters {
+    flex-direction: column;
+    gap: var(--spacing-sm);
+  }
+
+  .actionButtons {
+    flex-direction: column;
+    gap: var(--spacing-sm);
+  }
+
+  .btn {
+    justify-content: center;
+  }
+
+  .filterSection {
+    padding: var(--spacing-md) 0;
+  }
+
+  .inputHint {
+    font-size: 0.75rem;
+  }
+}
+
+/* ==================== ACCESSIBILITY AND FOCUS STATES ==================== */
+.actionButtons .btn:focus-visible {
+  outline: 2px solid var(--primary-purple);
+  outline-offset: 2px;
+}
+
+/* ==================== LOADING STATES ==================== */
+.actionButtons .btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.loadingSpinner {
+  display: inline-block;
+  width: 12px;
+  height: 12px;
+  border: 2px solid currentColor;
+  border-top: 2px solid transparent;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+  margin-right: var(--spacing-xs);
+}
+
+.loadingSpinner.small {
+  width: 12px;
+  height: 12px;
+  border-width: 2px;
+}
+
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+/* ==================== ENHANCED VISUAL EFFECTS ==================== */
+.card::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(90deg, transparent, rgba(160, 32, 240, 0.02), transparent);
+  transition: left 0.6s ease;
+  z-index: 1;
+  pointer-events: none;
+}
+
+.card {
+  position: relative;
+  overflow: hidden;
+}
+
+.card:hover::before {
+  left: 100%;
+}
+
+.card > * {
+  position: relative;
+  z-index: 2;
+}
+
+/* ==================== BUTTON SPECIFIC ADJUSTMENTS ==================== */
+.actionButtons .btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  white-space: nowrap;
+  min-width: 140px;
+}
+
+.actionButtons .btn-primary {
+  min-width: 160px;
+}
+
+/* ==================== SPECIAL STATES ==================== */
+.filterSection:last-child {
+  border-bottom: none;
+  padding-bottom: 0;
+}

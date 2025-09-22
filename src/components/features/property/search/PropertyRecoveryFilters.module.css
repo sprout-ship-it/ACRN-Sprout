@@ -1,0 +1,291 @@
+/* PropertyRecoveryFilters.module.css - Component-specific styles */
+
+/* ==================== MAIN CARD CONTAINER ==================== */
+.recoveryFiltersCard {
+  border-left: 4px solid var(--secondary-teal);
+  background: linear-gradient(135deg, rgba(32, 178, 170, 0.02) 0%, rgba(255, 255, 255, 1) 100%);
+}
+
+/* ==================== TITLE STYLING ==================== */
+.titleIcon {
+  margin-right: 0.5rem;
+  font-size: 1.2rem;
+}
+
+/* ==================== FILTER SECTIONS ==================== */
+.filterSection {
+  padding: var(--spacing-lg) 0;
+}
+
+.filterSection:not(:last-child) {
+  border-bottom: 1px solid var(--border-beige);
+}
+
+.sectionTitle {
+  font-size: 1rem;
+  font-weight: 600;
+  color: var(--gray-800);
+  margin-bottom: var(--spacing-md);
+  display: flex;
+  align-items: center;
+}
+
+/* ==================== SERVICES GRID AND ITEMS ==================== */
+.servicesGrid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: var(--spacing-sm);
+}
+
+.serviceItem {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--spacing-sm);
+  padding: var(--spacing-md);
+  border: 2px solid var(--border-beige);
+  border-radius: var(--radius-md);
+  cursor: pointer;
+  transition: var(--transition-normal);
+  background: white;
+}
+
+.serviceItem:hover {
+  border-color: var(--secondary-teal);
+  background: rgba(32, 178, 170, 0.02);
+}
+
+.serviceItem.selected {
+  border-color: var(--secondary-teal);
+  background: rgba(32, 178, 170, 0.05);
+}
+
+.serviceContent {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.serviceName {
+  font-weight: 600;
+  color: var(--gray-800);
+  font-size: 0.9rem;
+}
+
+.serviceDescription {
+  font-size: 0.8rem;
+  color: var(--gray-600);
+  line-height: 1.3;
+}
+
+/* ==================== PROGRAMS GRID AND ITEMS ==================== */
+.programsGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+  gap: var(--spacing-sm);
+}
+
+.programItem {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-sm);
+  padding: var(--spacing-sm);
+  border: 2px solid var(--border-beige);
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  transition: var(--transition-normal);
+  background: white;
+}
+
+.programItem:hover {
+  border-color: var(--secondary-teal);
+  background: rgba(32, 178, 170, 0.02);
+}
+
+.programItem.selected {
+  border-color: var(--secondary-teal);
+  background: rgba(32, 178, 170, 0.05);
+}
+
+.programText {
+  font-size: 0.85rem;
+  color: var(--gray-700);
+  line-height: 1.3;
+}
+
+/* ==================== STAGE FILTERS GRID ==================== */
+.stageFiltersGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+  gap: var(--spacing-lg);
+}
+
+/* ==================== HOUSING TYPE TOGGLE ==================== */
+.housingTypeToggle {
+  background: rgba(32, 178, 170, 0.05);
+  border: 1px solid rgba(32, 178, 170, 0.2);
+  border-radius: var(--radius-md);
+  padding: var(--spacing-md);
+}
+
+.toggleItem {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--spacing-sm);
+  cursor: pointer;
+}
+
+.toggleContent {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.toggleTitle {
+  font-weight: 600;
+  color: var(--gray-800);
+  font-size: 0.95rem;
+}
+
+.toggleDescription {
+  font-size: 0.8rem;
+  color: var(--gray-600);
+  line-height: 1.3;
+}
+
+/* ==================== INPUT HINTS ==================== */
+.inputHint {
+  font-size: 0.8rem;
+  color: var(--gray-500);
+  margin-top: 0.25rem;
+  line-height: 1.3;
+  margin-bottom: var(--spacing-md);
+}
+
+/* ==================== RESPONSIVE DESIGN ==================== */
+@media (max-width: 768px) {
+  .stageFiltersGrid {
+    grid-template-columns: 1fr;
+    gap: var(--spacing-md);
+  }
+
+  .programsGrid {
+    grid-template-columns: 1fr;
+  }
+
+  .serviceItem,
+  .programItem {
+    padding: var(--spacing-sm);
+  }
+
+  .serviceName,
+  .toggleTitle {
+    font-size: 0.85rem;
+  }
+
+  .serviceDescription,
+  .toggleDescription,
+  .programText {
+    font-size: 0.75rem;
+  }
+
+  .filterSection {
+    padding: var(--spacing-md) 0;
+  }
+}
+
+@media (max-width: 480px) {
+  .servicesGrid {
+    gap: var(--spacing-xs);
+  }
+
+  .programsGrid {
+    gap: var(--spacing-xs);
+  }
+
+  .sectionTitle {
+    font-size: 0.95rem;
+  }
+
+  .titleIcon {
+    font-size: 1.1rem;
+  }
+
+  .serviceItem,
+  .programItem {
+    padding: var(--spacing-xs);
+  }
+
+  .housingTypeToggle {
+    padding: var(--spacing-sm);
+  }
+
+  .inputHint {
+    font-size: 0.75rem;
+  }
+}
+
+/* ==================== ACCESSIBILITY AND FOCUS STATES ==================== */
+.serviceItem:focus-visible,
+.programItem:focus-visible,
+.toggleItem:focus-visible {
+  outline: 2px solid var(--secondary-teal);
+  outline-offset: 2px;
+}
+
+.serviceItem:focus,
+.programItem:focus,
+.toggleItem:focus {
+  box-shadow: 0 0 0 3px rgba(32, 178, 170, 0.1);
+}
+
+/* ==================== ENHANCED VISUAL EFFECTS ==================== */
+.recoveryFiltersCard::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(90deg, transparent, rgba(32, 178, 170, 0.03), transparent);
+  transition: left 0.6s ease;
+  z-index: 1;
+  pointer-events: none;
+}
+
+.recoveryFiltersCard {
+  position: relative;
+  overflow: hidden;
+}
+
+.recoveryFiltersCard:hover::before {
+  left: 100%;
+}
+
+.recoveryFiltersCard > * {
+  position: relative;
+  z-index: 2;
+}
+
+/* ==================== LOADING STATES ==================== */
+.serviceItem:disabled,
+.programItem:disabled,
+.toggleItem:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+  pointer-events: none;
+}
+
+/* ==================== CHECKBOX STYLING ADJUSTMENTS ==================== */
+.serviceItem input[type="checkbox"],
+.programItem input[type="checkbox"],
+.toggleItem input[type="checkbox"] {
+  margin-top: 0.1rem;
+  flex-shrink: 0;
+  accent-color: var(--secondary-teal);
+}
+
+/* ==================== SPECIAL STATES ==================== */
+.filterSection:last-child {
+  border-bottom: none;
+  padding-bottom: 0;
+}

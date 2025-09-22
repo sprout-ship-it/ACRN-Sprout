@@ -1,10 +1,13 @@
-// src/components/features/property/sections/PropertyRecoverySection.js
+// src/components/features/property/sections/PropertyRecoverySection.js - UPDATED WITH CSS MODULE
 import React from 'react';
 import PropTypes from 'prop-types';
 import { 
   requiredRecoveryPrograms,
   houseRulesOptions
 } from '../constants/propertyConstants';
+
+// ✅ UPDATED: Import CSS module
+import styles from './PropertyRecoverySection.module.css';
 
 const PropertyRecoverySection = ({
   formData,
@@ -17,35 +20,38 @@ const PropertyRecoverySection = ({
     <>
       <h3 className="card-title mb-4">Recovery Requirements & House Rules</h3>
       
-      {/* Recovery Program Requirements */}
-      <div className="form-group mb-4">
-        <label className="label">
-          Required Recovery Programs
-        </label>
-        <div className="text-gray-500 mb-3 text-sm">
-          Select all recovery programs that residents must participate in or maintain.
+      {/* ✅ UPDATED: Recovery Program Requirements with enhanced styling */}
+      <div className={styles.recoveryProgramsSection}>
+        <h4 className={styles.recoveryProgramsTitle}>Required Recovery Programs</h4>
+        <div className={styles.formGroup}>
+          <label className="label">
+            Recovery Program Requirements
+          </label>
+          <div className={styles.helpTextLarge}>
+            Select all recovery programs that residents must participate in or maintain.
+          </div>
+          <div className={styles.checkboxColumns}>
+            {requiredRecoveryPrograms.map(program => (
+              <label key={program.value} className={styles.checkboxLabel}>
+                <input
+                  type="checkbox"
+                  checked={formData.required_programs?.includes(program.value) || false}
+                  onChange={(e) => onArrayChange('required_programs', program.value, e.target.checked)}
+                  disabled={loading}
+                />
+                <span className={styles.checkboxText}>{program.label}</span>
+              </label>
+            ))}
+          </div>
+          {errors.required_programs && (
+            <div className={styles.errorMessage}>{errors.required_programs}</div>
+          )}
         </div>
-        <div className="checkbox-columns">
-          {requiredRecoveryPrograms.map(program => (
-            <label key={program.value} className="checkbox-label">
-              <input
-                type="checkbox"
-                checked={formData.required_programs?.includes(program.value) || false}
-                onChange={(e) => onArrayChange('required_programs', program.value, e.target.checked)}
-                disabled={loading}
-              />
-              <span className="checkbox-text">{program.label}</span>
-            </label>
-          ))}
-        </div>
-        {errors.required_programs && (
-          <div className="text-red-500 mt-1">{errors.required_programs}</div>
-        )}
       </div>
 
-      {/* Recovery Stage Requirements */}
-      <div className="grid-2 mb-4">
-        <div className="form-group">
+      {/* ✅ UPDATED: Recovery Stage Requirements */}
+      <div className={styles.gridTwo}>
+        <div className={styles.formGroup}>
           <label className="label">Minimum Sobriety Time Required</label>
           <select
             className="input"
@@ -63,12 +69,12 @@ const PropertyRecoverySection = ({
             <option value="1_year">1 year sober</option>
             <option value="2_years">2+ years sober</option>
           </select>
-          <div className="text-gray-500 mt-1 text-sm">
+          <div className={styles.helpText}>
             Minimum time of continuous sobriety required
           </div>
         </div>
         
-        <div className="form-group">
+        <div className={styles.formGroup}>
           <label className="label">Treatment Program Completion</label>
           <select
             className="input"
@@ -85,61 +91,60 @@ const PropertyRecoverySection = ({
             <option value="currently_in_treatment">Must be currently in treatment</option>
             <option value="flexible">Flexible based on individual circumstances</option>
           </select>
-          <div className="text-gray-500 mt-1 text-sm">
+          <div className={styles.helpText}>
             Treatment program requirements for admission
           </div>
         </div>
       </div>
 
-      {/* House Rules */}
-      <div className="form-group mb-4">
+      {/* ✅ UPDATED: House Rules */}
+      <div className={styles.formGroup}>
         <label className="label">
           House Rules & Requirements
         </label>
-        <div className="text-gray-500 mb-3 text-sm">
+        <div className={styles.helpTextLarge}>
           Select all rules and requirements that apply to your property.
         </div>
-        <div className="checkbox-columns">
+        <div className={styles.checkboxColumns}>
           {houseRulesOptions.map(rule => (
-            <label key={rule} className="checkbox-label">
+            <label key={rule} className={styles.checkboxLabel}>
               <input
                 type="checkbox"
                 checked={formData.house_rules?.includes(rule) || false}
                 onChange={(e) => onArrayChange('house_rules', rule, e.target.checked)}
                 disabled={loading}
               />
-              <span className="checkbox-text">{rule}</span>
+              <span className={styles.checkboxText}>{rule}</span>
             </label>
           ))}
         </div>
         {errors.house_rules && (
-          <div className="text-red-500 mt-1">{errors.house_rules}</div>
+          <div className={styles.errorMessage}>{errors.house_rules}</div>
         )}
       </div>
 
-      {/* Additional House Rules */}
-      <div className="form-group mb-4">
+      {/* ✅ UPDATED: Additional House Rules */}
+      <div className={styles.formGroup}>
         <label className="label">Additional House Rules</label>
         <textarea
-          className="input"
+          className={`input ${styles.textareaLarge}`}
           name="additional_house_rules"
           value={formData.additional_house_rules || ''}
           onChange={onInputChange}
           placeholder="Describe any additional house rules, expectations, or requirements not covered above..."
-          style={{ minHeight: '80px', resize: 'vertical' }}
           disabled={loading}
           maxLength="500"
         />
-        <div className="text-gray-500 mt-1 text-sm">
+        <div className={styles.characterCounter}>
           {(formData.additional_house_rules?.length || 0)}/500 characters
         </div>
       </div>
 
-      {/* Resident Restrictions */}
-      <h4 className="card-subtitle mb-3">Resident Restrictions & Preferences</h4>
+      {/* ✅ UPDATED: Resident Restrictions */}
+      <h4 className={styles.sectionHeading}>Resident Restrictions & Preferences</h4>
       
-      <div className="grid-2 mb-4">
-        <div className="form-group">
+      <div className={styles.gridTwo}>
+        <div className={styles.formGroup}>
           <label className="label">Gender Restrictions</label>
           <select
             className="input"
@@ -156,7 +161,7 @@ const PropertyRecoverySection = ({
           </select>
         </div>
         
-        <div className="form-group">
+        <div className={styles.formGroup}>
           <label className="label">Age Restrictions</label>
           <input
             className="input"
@@ -167,15 +172,15 @@ const PropertyRecoverySection = ({
             placeholder="e.g., '18+', '25-55', 'Adults Only'"
             disabled={loading}
           />
-          <div className="text-gray-500 mt-1 text-sm">
+          <div className={styles.helpText}>
             Age range or requirements for residents
           </div>
         </div>
       </div>
 
-      <div className="grid-2 mb-4">
-        <div className="form-group">
-          <label className="checkbox-label">
+      <div className={styles.restrictionsGrid}>
+        <div className={styles.restrictionGroup}>
+          <label className={styles.checkboxLabel}>
             <input
               type="checkbox"
               name="pets_allowed"
@@ -183,13 +188,13 @@ const PropertyRecoverySection = ({
               onChange={onInputChange}
               disabled={loading}
             />
-            <span className="checkbox-text">Pets Allowed</span>
+            <span className={styles.checkboxText}>Pets Allowed</span>
           </label>
-          <div className="text-gray-500 mt-1 text-sm">
+          <div className={styles.helpText}>
             Residents can have pets (specify restrictions in additional rules)
           </div>
           
-          <label className="checkbox-label">
+          <label className={styles.checkboxLabel}>
             <input
               type="checkbox"
               name="smoking_allowed"
@@ -197,15 +202,15 @@ const PropertyRecoverySection = ({
               onChange={onInputChange}
               disabled={loading}
             />
-            <span className="checkbox-text">Smoking Allowed (Designated Areas)</span>
+            <span className={styles.checkboxText}>Smoking Allowed (Designated Areas)</span>
           </label>
-          <div className="text-gray-500 mt-1 text-sm">
+          <div className={styles.helpText}>
             Smoking permitted in designated outdoor areas only
           </div>
         </div>
         
-        <div className="form-group">
-          <label className="checkbox-label">
+        <div className={styles.restrictionGroup}>
+          <label className={styles.checkboxLabel}>
             <input
               type="checkbox"
               name="criminal_background_ok"
@@ -213,13 +218,13 @@ const PropertyRecoverySection = ({
               onChange={onInputChange}
               disabled={loading}
             />
-            <span className="checkbox-text">Accept Criminal Background</span>
+            <span className={styles.checkboxText}>Accept Criminal Background</span>
           </label>
-          <div className="text-gray-500 mt-1 text-sm">
+          <div className={styles.helpText}>
             Will consider applicants with criminal history
           </div>
           
-          <label className="checkbox-label">
+          <label className={styles.checkboxLabel}>
             <input
               type="checkbox"
               name="sex_offender_restrictions"
@@ -227,9 +232,9 @@ const PropertyRecoverySection = ({
               onChange={onInputChange}
               disabled={loading}
             />
-            <span className="checkbox-text">Sex Offender Restrictions Apply</span>
+            <span className={styles.checkboxText}>Sex Offender Restrictions Apply</span>
           </label>
-          <div className="text-gray-500 mt-1 text-sm">
+          <div className={styles.helpText}>
             Cannot accept registered sex offenders
           </div>
         </div>

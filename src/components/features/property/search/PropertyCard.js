@@ -1,6 +1,9 @@
-// src/components/features/property/search/PropertyCard.js
+// src/components/features/property/search/PropertyCard.js - UPDATED WITH CSS MODULE
 import React from 'react';
 import PropTypes from 'prop-types';
+
+// ✅ UPDATED: Import CSS module
+import styles from './PropertyCard.module.css';
 
 const PropertyCard = ({
   property,
@@ -12,17 +15,17 @@ const PropertyCard = ({
   const isSaved = savedProperties.has(property.id);
 
   return (
-    <div className="card property-card">
-      {/* Property Image Placeholder */}
-      <div className="property-image-placeholder">
-        <div className="property-icon">
+    <div className={`card ${styles.propertyCard}`}>
+      {/* ✅ UPDATED: Property Image Placeholder with CSS module */}
+      <div className={styles.propertyImagePlaceholder}>
+        <div className={styles.propertyIcon}>
           {property.is_recovery_housing ? '🏡' : '🏠'}
         </div>
       </div>
       
-      <div className="property-details">
-        {/* Property Badges */}
-        <div className="property-badges mb-2">
+      <div className={styles.propertyDetails}>
+        {/* ✅ UPDATED: Property Badges with CSS module */}
+        <div className={`${styles.propertyBadges} mb-2`}>
           {property.is_recovery_housing && (
             <span className="badge badge-warning">
               Recovery Housing
@@ -50,28 +53,28 @@ const PropertyCard = ({
           )}
         </div>
         
-        {/* Property Title & Location */}
-        <h4 className="property-title">{property.title}</h4>
-        <p className="property-address">
+        {/* ✅ UPDATED: Property Title & Location with CSS module */}
+        <h4 className={styles.propertyTitle}>{property.title}</h4>
+        <p className={styles.propertyAddress}>
           {property.address}, {property.city}, {property.state} {property.zip_code}
         </p>
         
-        {/* Property Price */}
-        <p className="property-price">
+        {/* ✅ UPDATED: Property Price with CSS module */}
+        <p className={styles.propertyPrice}>
           ${property.monthly_rent}/month
         </p>
         
-        {/* Property Specs */}
-        <div className="property-specs">
+        {/* ✅ UPDATED: Property Specs with CSS module */}
+        <div className={styles.propertySpecs}>
           {property.bedrooms || 'Studio'} bed • {property.bathrooms} bath
           {property.property_type && (
             <span> • {property.property_type.replace(/_/g, ' ')}</span>
           )}
         </div>
 
-        {/* Amenities Preview */}
+        {/* ✅ UPDATED: Amenities Preview with CSS module */}
         {property.amenities && property.amenities.length > 0 && (
-          <div className="property-amenities">
+          <div className={styles.propertyAmenities}>
             <small>{property.amenities.slice(0, 3).join(' • ')}</small>
             {property.amenities.length > 3 && (
               <small> • +{property.amenities.length - 3} more</small>
@@ -79,9 +82,9 @@ const PropertyCard = ({
           </div>
         )}
 
-        {/* Recovery Housing Details */}
+        {/* ✅ UPDATED: Recovery Housing Details with CSS module */}
         {property.is_recovery_housing && (
-          <div className="recovery-details">
+          <div className={styles.recoveryDetails}>
             <small>
               <strong>Recovery Support:</strong>
               {property.case_management && ' Case Management'}
@@ -91,9 +94,9 @@ const PropertyCard = ({
           </div>
         )}
 
-        {/* Action Buttons */}
-        <div className="property-actions">
-          <div className="primary-actions">
+        {/* ✅ UPDATED: Action Buttons with CSS module */}
+        <div className={styles.propertyActions}>
+          <div className={styles.primaryActions}>
             <button
               className="btn btn-primary btn-sm"
               onClick={() => onContactLandlord(property)}
@@ -110,11 +113,11 @@ const PropertyCard = ({
             </button>
           </div>
 
-          {/* Housing Inquiry Option for Registered Landlords */}
+          {/* ✅ UPDATED: Housing Inquiry Option for Registered Landlords with CSS module */}
           {property.landlord_id && (
-            <div className="secondary-actions">
+            <div className={styles.secondaryActions}>
               <button
-                className="btn btn-secondary btn-sm full-width"
+                className={`btn btn-secondary btn-sm ${styles.fullWidth}`}
                 onClick={() => onSendHousingInquiry(property)}
               >
                 Send Housing Inquiry
@@ -123,159 +126,6 @@ const PropertyCard = ({
           )}
         </div>
       </div>
-
-      {/* Component Styles */}
-      <style jsx>{`
-        .property-card {
-          transition: var(--transition-normal);
-          cursor: default;
-        }
-
-        .property-card:hover {
-          transform: translateY(-2px);
-          box-shadow: var(--shadow-lg);
-        }
-
-        .property-image-placeholder {
-          background: var(--bg-light-cream);
-          text-align: center;
-          padding: 60px 20px;
-          margin-bottom: var(--spacing-lg);
-          border-radius: var(--radius-md);
-        }
-
-        .property-icon {
-          font-size: 3rem;
-          color: var(--primary-purple);
-        }
-
-        .property-details {
-          padding: 0;
-        }
-
-        .property-badges {
-          display: flex;
-          flex-wrap: wrap;
-          gap: 0.5rem;
-          margin-bottom: var(--spacing-sm);
-        }
-
-        .property-title {
-          font-size: 1.2rem;
-          font-weight: 600;
-          color: var(--gray-900);
-          margin: 0 0 var(--spacing-sm) 0;
-          line-height: 1.3;
-        }
-
-        .property-address {
-          color: var(--gray-600);
-          font-size: 0.9rem;
-          margin: 0 0 var(--spacing-sm) 0;
-          line-height: 1.4;
-        }
-
-        .property-price {
-          font-size: 1.1rem;
-          font-weight: 600;
-          color: var(--secondary-teal);
-          margin: 0 0 var(--spacing-sm) 0;
-        }
-
-        .property-specs {
-          color: var(--gray-600);
-          font-size: 0.9rem;
-          margin-bottom: var(--spacing-md);
-          line-height: 1.4;
-        }
-
-        .property-amenities {
-          color: var(--gray-600);
-          font-size: 0.85rem;
-          margin-bottom: var(--spacing-md);
-          line-height: 1.4;
-        }
-
-        .recovery-details {
-          background: var(--info-bg);
-          border: 1px solid var(--info-border);
-          border-radius: var(--radius-sm);
-          padding: var(--spacing-sm);
-          margin-bottom: var(--spacing-md);
-          color: var(--info-text);
-          font-size: 0.85rem;
-          line-height: 1.4;
-        }
-
-        .property-actions {
-          margin-top: var(--spacing-md);
-        }
-
-        .primary-actions {
-          display: grid;
-          grid-template-columns: 1fr 1fr;
-          gap: var(--spacing-sm);
-          margin-bottom: var(--spacing-sm);
-        }
-
-        .secondary-actions {
-          margin-top: var(--spacing-sm);
-        }
-
-        .full-width {
-          width: 100%;
-        }
-
-        /* Badge spacing adjustments */
-        .badge {
-          margin-right: 0;
-        }
-
-        .badge + .badge {
-          margin-left: 0;
-        }
-
-        /* Responsive adjustments */
-        @media (max-width: 768px) {
-          .property-image-placeholder {
-            padding: 40px 20px;
-          }
-
-          .property-icon {
-            font-size: 2.5rem;
-          }
-
-          .property-title {
-            font-size: 1.1rem;
-          }
-
-          .primary-actions {
-            grid-template-columns: 1fr;
-            gap: var(--spacing-xs);
-          }
-
-          .btn-sm {
-            padding: 10px 16px;
-            font-size: 0.85rem;
-          }
-        }
-
-        @media (max-width: 480px) {
-          .property-badges {
-            gap: 0.25rem;
-          }
-
-          .badge {
-            font-size: 0.65rem;
-            padding: 3px 6px;
-          }
-
-          .property-specs,
-          .property-amenities {
-            font-size: 0.8rem;
-          }
-        }
-      `}</style>
     </div>
   );
 };

@@ -1,4 +1,4 @@
-// src/components/features/property/search/PropertyAdvancedFilters.js
+// src/components/features/property/search/PropertyAdvancedFilters.js - UPDATED WITH CSS MODULE
 import React from 'react';
 import PropTypes from 'prop-types';
 import { 
@@ -6,6 +6,9 @@ import {
   propertyAmenities,
   accessibilityFeatures 
 } from '../constants/propertyConstants';
+
+// ✅ UPDATED: Import CSS module
+import styles from './PropertyAdvancedFilters.module.css';
 
 const PropertyAdvancedFilters = ({
   advancedFilters,
@@ -53,45 +56,45 @@ const PropertyAdvancedFilters = ({
   ];
 
   return (
-    <div className="card mb-4 advanced-filters-card">
-      {/* ✅ Collapsible Header */}
-      <div className="advanced-filters-header" onClick={onToggleAdvancedFilters}>
-        <div className="header-content">
+    <div className={`card ${styles.advancedFiltersCard}`}>
+      {/* ✅ UPDATED: Collapsible Header with CSS module */}
+      <div className={styles.advancedFiltersHeader} onClick={onToggleAdvancedFilters}>
+        <div className={styles.headerContent}>
           <h3 className="card-title">
-            <span className="title-icon">⚙️</span>
+            <span className={styles.titleIcon}>⚙️</span>
             Advanced Search Options
           </h3>
           <p className="card-subtitle">
             Fine-tune your search with detailed criteria and preferences
           </p>
         </div>
-        <button className="toggle-button">
-          <span className={`toggle-icon ${showAdvancedFilters ? 'expanded' : ''}`}>
+        <button className={styles.toggleButton}>
+          <span className={`${styles.toggleIcon} ${showAdvancedFilters ? styles.expanded : ''}`}>
             ▼
           </span>
-          <span className="toggle-text">
+          <span className={styles.toggleText}>
             {showAdvancedFilters ? 'Hide' : 'Show'} Advanced Filters
           </span>
         </button>
       </div>
 
-      {/* ✅ Collapsible Content */}
+      {/* ✅ UPDATED: Collapsible Content with CSS module */}
       {showAdvancedFilters && (
-        <div className="advanced-filters-content">
+        <div className={styles.advancedFiltersContent}>
           
-          {/* ✅ Housing Assistance Programs */}
-          <div className="filter-section">
-            <h4 className="section-title">Housing Assistance & Subsidies</h4>
+          {/* ✅ UPDATED: Housing Assistance Programs */}
+          <div className={styles.filterSection}>
+            <h4 className={styles.sectionTitle}>Housing Assistance & Subsidies</h4>
             <div className="form-group">
               <label className="label">Accepted Subsidy Programs</label>
-              <div className="input-hint mb-3">
+              <div className={styles.inputHint}>
                 Select housing assistance programs you want properties to accept
               </div>
-              <div className="subsidies-grid">
+              <div className={styles.subsidiesGrid}>
                 {acceptedSubsidyPrograms.map(subsidy => (
                   <div
                     key={subsidy.value}
-                    className={`subsidy-item ${advancedFilters.acceptedSubsidies?.includes(subsidy.value) ? 'selected' : ''}`}
+                    className={`${styles.subsidyItem} ${advancedFilters.acceptedSubsidies?.includes(subsidy.value) ? styles.selected : ''}`}
                     onClick={() => onArrayFilterChange('advanced', 'acceptedSubsidies', subsidy.value, !advancedFilters.acceptedSubsidies?.includes(subsidy.value))}
                   >
                     <input
@@ -100,26 +103,26 @@ const PropertyAdvancedFilters = ({
                       onChange={() => {}} // Handled by onClick
                       disabled={loading}
                     />
-                    <span className="subsidy-text">{subsidy.label}</span>
+                    <span className={styles.subsidyText}>{subsidy.label}</span>
                   </div>
                 ))}
               </div>
             </div>
           </div>
 
-          {/* ✅ Required Amenities */}
-          <div className="filter-section">
-            <h4 className="section-title">Required Amenities</h4>
+          {/* ✅ UPDATED: Required Amenities */}
+          <div className={styles.filterSection}>
+            <h4 className={styles.sectionTitle}>Required Amenities</h4>
             <div className="form-group">
               <label className="label">Must-Have Amenities</label>
-              <div className="input-hint mb-3">
+              <div className={styles.inputHint}>
                 Select amenities that properties must have
               </div>
-              <div className="amenities-grid">
+              <div className={styles.amenitiesGrid}>
                 {propertyAmenities.map(amenity => (
                   <div
                     key={amenity}
-                    className={`amenity-item ${advancedFilters.amenities?.includes(amenity) ? 'selected' : ''}`}
+                    className={`${styles.amenityItem} ${advancedFilters.amenities?.includes(amenity) ? styles.selected : ''}`}
                     onClick={() => onArrayFilterChange('advanced', 'amenities', amenity, !advancedFilters.amenities?.includes(amenity))}
                   >
                     <input
@@ -128,26 +131,26 @@ const PropertyAdvancedFilters = ({
                       onChange={() => {}} // Handled by onClick
                       disabled={loading}
                     />
-                    <span className="amenity-text">{amenity}</span>
+                    <span className={styles.amenityText}>{amenity}</span>
                   </div>
                 ))}
               </div>
             </div>
           </div>
 
-          {/* ✅ Utilities & Services */}
-          <div className="filter-section">
-            <h4 className="section-title">Utilities & Services</h4>
+          {/* ✅ UPDATED: Utilities & Services */}
+          <div className={styles.filterSection}>
+            <h4 className={styles.sectionTitle}>Utilities & Services</h4>
             <div className="form-group">
               <label className="label">Utilities Included in Rent</label>
-              <div className="input-hint mb-3">
+              <div className={styles.inputHint}>
                 Select utilities that should be included in the monthly rent
               </div>
-              <div className="utilities-grid">
+              <div className={styles.utilitiesGrid}>
                 {utilityOptions.map(utility => (
                   <div
                     key={utility.value}
-                    className={`utility-item ${advancedFilters.utilitiesIncluded?.includes(utility.value) ? 'selected' : ''}`}
+                    className={`${styles.utilityItem} ${advancedFilters.utilitiesIncluded?.includes(utility.value) ? styles.selected : ''}`}
                     onClick={() => onArrayFilterChange('advanced', 'utilitiesIncluded', utility.value, !advancedFilters.utilitiesIncluded?.includes(utility.value))}
                   >
                     <input
@@ -156,26 +159,26 @@ const PropertyAdvancedFilters = ({
                       onChange={() => {}} // Handled by onClick
                       disabled={loading}
                     />
-                    <span className="utility-text">{utility.label}</span>
+                    <span className={styles.utilityText}>{utility.label}</span>
                   </div>
                 ))}
               </div>
             </div>
           </div>
 
-          {/* ✅ Accessibility Features */}
-          <div className="filter-section">
-            <h4 className="section-title">Accessibility Features</h4>
+          {/* ✅ UPDATED: Accessibility Features */}
+          <div className={styles.filterSection}>
+            <h4 className={styles.sectionTitle}>Accessibility Features</h4>
             <div className="form-group">
               <label className="label">Required Accessibility Features</label>
-              <div className="input-hint mb-3">
+              <div className={styles.inputHint}>
                 Select accessibility features that properties must have
               </div>
-              <div className="accessibility-grid">
+              <div className={styles.accessibilityGrid}>
                 {accessibilityFeatures.map(feature => (
                   <div
                     key={feature}
-                    className={`accessibility-item ${advancedFilters.accessibilityFeatures?.includes(feature) ? 'selected' : ''}`}
+                    className={`${styles.accessibilityItem} ${advancedFilters.accessibilityFeatures?.includes(feature) ? styles.selected : ''}`}
                     onClick={() => onArrayFilterChange('advanced', 'accessibilityFeatures', feature, !advancedFilters.accessibilityFeatures?.includes(feature))}
                   >
                     <input
@@ -184,17 +187,17 @@ const PropertyAdvancedFilters = ({
                       onChange={() => {}} // Handled by onClick
                       disabled={loading}
                     />
-                    <span className="accessibility-text">{feature}</span>
+                    <span className={styles.accessibilityText}>{feature}</span>
                   </div>
                 ))}
               </div>
             </div>
           </div>
 
-          {/* ✅ Property Policies & Requirements */}
-          <div className="filter-section">
-            <h4 className="section-title">Property Policies & Requirements</h4>
-            <div className="policies-grid">
+          {/* ✅ UPDATED: Property Policies & Requirements */}
+          <div className={styles.filterSection}>
+            <h4 className={styles.sectionTitle}>Property Policies & Requirements</h4>
+            <div className={styles.policiesGrid}>
               <div className="form-group">
                 <label className="label">Smoking Policy</label>
                 <select
@@ -253,16 +256,16 @@ const PropertyAdvancedFilters = ({
                   onChange={(e) => onAdvancedFilterChange('guestPolicy', e.target.value)}
                   disabled={loading}
                 />
-                <div className="input-hint">
+                <div className={styles.inputHint}>
                   Describe your guest policy preferences
                 </div>
               </div>
             </div>
           </div>
 
-          {/* ✅ Move-in Costs */}
-          <div className="filter-section">
-            <h4 className="section-title">Move-in Costs</h4>
+          {/* ✅ UPDATED: Move-in Costs */}
+          <div className={styles.filterSection}>
+            <h4 className={styles.sectionTitle}>Move-in Costs</h4>
             <div className="form-group">
               <label className="label">Maximum Move-in Cost</label>
               <input
@@ -275,199 +278,13 @@ const PropertyAdvancedFilters = ({
                 min="0"
                 step="100"
               />
-              <div className="input-hint">
+              <div className={styles.inputHint}>
                 Total upfront costs including deposits, fees, and first month's rent
               </div>
             </div>
           </div>
         </div>
       )}
-
-      {/* ✅ Component Styles */}
-      <style jsx>{`
-        .advanced-filters-card {
-          border: 2px solid var(--border-beige);
-          overflow: hidden;
-        }
-
-        .advanced-filters-header {
-          display: flex;
-          align-items: center;
-          justify-content: space-between;
-          padding: var(--spacing-lg);
-          cursor: pointer;
-          transition: var(--transition-normal);
-          background: linear-gradient(135deg, rgba(160, 32, 240, 0.02) 0%, rgba(255, 255, 255, 1) 100%);
-        }
-
-        .advanced-filters-header:hover {
-          background: linear-gradient(135deg, rgba(160, 32, 240, 0.05) 0%, rgba(255, 255, 255, 1) 100%);
-        }
-
-        .header-content {
-          flex: 1;
-        }
-
-        .title-icon {
-          margin-right: 0.5rem;
-          font-size: 1.2rem;
-        }
-
-        .toggle-button {
-          display: flex;
-          align-items: center;
-          gap: var(--spacing-sm);
-          background: none;
-          border: 2px solid var(--border-beige);
-          padding: var(--spacing-sm) var(--spacing-md);
-          border-radius: var(--radius-md);
-          color: var(--primary-purple);
-          font-weight: 600;
-          font-size: 0.9rem;
-          cursor: pointer;
-          transition: var(--transition-normal);
-        }
-
-        .toggle-button:hover {
-          border-color: var(--primary-purple);
-          background: rgba(160, 32, 240, 0.05);
-        }
-
-        .toggle-icon {
-          font-size: 0.8rem;
-          transition: transform 0.3s ease;
-        }
-
-        .toggle-icon.expanded {
-          transform: rotate(180deg);
-        }
-
-        .advanced-filters-content {
-          padding: 0 var(--spacing-lg) var(--spacing-lg) var(--spacing-lg);
-          border-top: 1px solid var(--border-beige);
-          background: white;
-        }
-
-        .filter-section {
-          padding: var(--spacing-lg) 0;
-        }
-
-        .filter-section:not(:last-child) {
-          border-bottom: 1px solid var(--border-beige);
-        }
-
-        .section-title {
-          font-size: 1rem;
-          font-weight: 600;
-          color: var(--gray-800);
-          margin-bottom: var(--spacing-md);
-        }
-
-        .subsidies-grid,
-        .amenities-grid,
-        .utilities-grid,
-        .accessibility-grid {
-          display: grid;
-          grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
-          gap: var(--spacing-sm);
-        }
-
-        .subsidy-item,
-        .amenity-item,
-        .utility-item,
-        .accessibility-item {
-          display: flex;
-          align-items: center;
-          gap: var(--spacing-sm);
-          padding: var(--spacing-sm);
-          border: 2px solid var(--border-beige);
-          border-radius: var(--radius-sm);
-          cursor: pointer;
-          transition: var(--transition-normal);
-          background: white;
-        }
-
-        .subsidy-item:hover,
-        .amenity-item:hover,
-        .utility-item:hover,
-        .accessibility-item:hover {
-          border-color: var(--primary-purple);
-          background: rgba(160, 32, 240, 0.02);
-        }
-
-        .subsidy-item.selected,
-        .amenity-item.selected,
-        .utility-item.selected,
-        .accessibility-item.selected {
-          border-color: var(--primary-purple);
-          background: rgba(160, 32, 240, 0.05);
-        }
-
-        .subsidy-text,
-        .amenity-text,
-        .utility-text,
-        .accessibility-text {
-          font-size: 0.85rem;
-          color: var(--gray-700);
-          line-height: 1.3;
-        }
-
-        .policies-grid {
-          display: grid;
-          grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-          gap: var(--spacing-lg);
-        }
-
-        .input-hint {
-          font-size: 0.8rem;
-          color: var(--gray-500);
-          margin-top: 0.25rem;
-          line-height: 1.3;
-        }
-
-        /* Responsive adjustments */
-        @media (max-width: 768px) {
-          .advanced-filters-header {
-            flex-direction: column;
-            align-items: stretch;
-            gap: var(--spacing-md);
-          }
-
-          .toggle-button {
-            align-self: center;
-          }
-
-          .subsidies-grid,
-          .amenities-grid,
-          .utilities-grid,
-          .accessibility-grid {
-            grid-template-columns: 1fr;
-          }
-
-          .policies-grid {
-            grid-template-columns: 1fr;
-            gap: var(--spacing-md);
-          }
-        }
-
-        @media (max-width: 480px) {
-          .advanced-filters-header,
-          .advanced-filters-content {
-            padding: var(--spacing-md);
-          }
-
-          .toggle-text {
-            font-size: 0.8rem;
-          }
-
-          .subsidy-text,
-          .amenity-text,
-          .utility-text,
-          .accessibility-text {
-            font-size: 0.8rem;
-          }
-        }
-      `}</style>
     </div>
   );
 };
