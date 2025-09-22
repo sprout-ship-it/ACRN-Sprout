@@ -8,7 +8,6 @@ import { DEFAULT_FILTERS } from '../../../utils/matching/config';
 import MatchCard from './components/MatchCard';
 import MatchDetailsModal from './components/MatchDetailsModal';
 import LoadingSpinner from '../../ui/LoadingSpinner';
-import StackingDebug from '../../debug/StackingDebug';
 
 // ✅ UPDATED: Import our new CSS foundation and component module
 import '../../../styles/main.css';
@@ -410,8 +409,7 @@ const RoommateDiscovery = ({ onRequestMatch, onBack }) => {
             />
           ))}
         </div>
-        <StackingDebug enabled={true} />
-      </>
+       </>
     );
   };
 
