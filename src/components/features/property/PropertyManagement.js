@@ -1,4 +1,4 @@
-// src/components/dashboard/PropertyManagement.js
+// src/components/dashboard/PropertyManagement.js - UPDATED WITH CSS MODULE
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../../../context/AuthContext';
 import { supabase } from '../../../utils/supabase';
@@ -12,6 +12,10 @@ import PropertyAmenitiesSection from './sections/PropertyAmenitiesSection';
 // Import the new bifurcation components
 import PropertyTypeSelector from './PropertyTypeSelector';
 import SimplifiedPropertyForm from './SimplifiedPropertyForm';
+
+// ✅ UPDATED: Import our new CSS foundation and component module
+import '../../../styles/main.css';
+import styles from './PropertyManagement.module.css';
 
 const PropertyManagement = () => {
   const { user } = useAuth();
@@ -531,69 +535,69 @@ const PropertyManagement = () => {
 
   return (
     <div className="content">
-      {/* Header */}
-      <div className="card-header mb-5">
-        <div>
-          <h1 className="welcome-title">Property Management</h1>
-          <p className="welcome-text">Manage your recovery-friendly rental properties</p>
+      {/* ✅ UPDATED: Header using CSS module */}
+      <div className={styles.headerSection}>
+        <div className={styles.headerContent}>
+          <h1 className={styles.headerTitle}>Property Management</h1>
+          <p className={styles.headerSubtitle}>Manage your recovery-friendly rental properties</p>
         </div>
         
         <button
-          className="btn btn-primary"
+          className={styles.addPropertyButton}
           onClick={handleAddProperty}
         >
           + Add Property
         </button>
       </div>
 
-      {/* Properties List */}
+      {/* ✅ UPDATED: Properties List using CSS module */}
       {properties.length === 0 ? (
-        <div className="empty-state">
-          <div className="empty-state-icon">🏠</div>
-          <h3 className="empty-state-title">No properties yet</h3>
-          <p>Add your first property to get started.</p>
+        <div className={styles.emptyState}>
+          <div className={styles.emptyStateIcon}>🏠</div>
+          <h3 className={styles.emptyStateTitle}>No properties yet</h3>
+          <p className={styles.emptyStateText}>Add your first property to get started.</p>
         </div>
       ) : (
-        <div className="grid-auto">
+        <div className={styles.propertiesGrid}>
           {properties.map(property => (
-            <div key={property.id} className="card">
-              <div className="card-header">
-                <div>
-                  <h3 className="card-title">{property.title}</h3>
-                  <p className="card-subtitle">{property.address}</p>
+            <div key={property.id} className={styles.propertyCard}>
+              <div className={styles.propertyCardHeader}>
+                <div className={styles.propertyInfo}>
+                  <h3 className={styles.propertyTitle}>{property.title}</h3>
+                  <p className={styles.propertyAddress}>{property.address}</p>
                 </div>
-                <div>
+                <div className={styles.propertyBadges}>
                   <span className={`badge ${property.status === 'available' ? 'badge-success' : 'badge-warning'}`}>
                     {property.status}
                   </span>
                   {property.is_recovery_housing && (
-                    <span className="badge badge-info ml-2">Recovery Housing</span>
+                    <span className={styles.badgeInfo}>Recovery Housing</span>
                   )}
                 </div>
               </div>
               
-              <div className="grid-2 mb-3">
-                <div className="text-gray-600">
-                  <span>Type:</span>
-                  <span className="text-gray-800 ml-1">{property.property_type?.replace(/_/g, ' ')}</span>
+              <div className={styles.propertyDetailsGrid}>
+                <div className={styles.propertyDetail}>
+                  <span className={styles.propertyDetailLabel}>Type:</span>
+                  <span className={styles.propertyDetailValue}>{property.property_type?.replace(/_/g, ' ')}</span>
                 </div>
-                <div className="text-gray-600">
-                  <span>Rent:</span>
-                  <span className="text-gray-800 ml-1">${property.monthly_rent}/mo</span>
+                <div className={styles.propertyDetail}>
+                  <span className={styles.propertyDetailLabel}>Rent:</span>
+                  <span className={styles.propertyDetailValue}>${property.monthly_rent}/mo</span>
                 </div>
-                <div className="text-gray-600">
-                  <span>Beds:</span>
-                  <span className="text-gray-800 ml-1">{property.bedrooms || 'Studio'}</span>
+                <div className={styles.propertyDetail}>
+                  <span className={styles.propertyDetailLabel}>Beds:</span>
+                  <span className={styles.propertyDetailValue}>{property.bedrooms || 'Studio'}</span>
                 </div>
                 {property.is_recovery_housing && (
-                  <div className="text-gray-600">
-                    <span>Available:</span>
-                    <span className="text-gray-800 ml-1">{property.available_beds || 0} beds</span>
+                  <div className={styles.propertyDetail}>
+                    <span className={styles.propertyDetailLabel}>Available:</span>
+                    <span className={styles.propertyDetailValue}>{property.available_beds || 0} beds</span>
                   </div>
                 )}
               </div>
               
-              <div className="grid-2">
+              <div className={styles.propertyActions}>
                 <button
                   className="btn btn-primary btn-sm"
                   onClick={() => editProperty(property)}
@@ -613,30 +617,30 @@ const PropertyManagement = () => {
         </div>
       )}
 
-      {/* ✅ NEW: Property Type Selector Modal */}
+      {/* ✅ UPDATED: Property Type Selector Modal using CSS module */}
       {showTypeSelector && (
-        <div className="modal-overlay" onClick={() => setShowTypeSelector(false)}>
-          <div className="modal-content" onClick={(e) => e.stopPropagation()}>
+        <div className={styles.modalOverlay} onClick={() => setShowTypeSelector(false)}>
+          <div className={styles.modalContent} onClick={(e) => e.stopPropagation()}>
             <PropertyTypeSelector onSelection={handlePropertyTypeSelection} />
           </div>
         </div>
       )}
 
-      {/* ✅ UPDATED: Add/Edit Property Modal with Conditional Forms */}
+      {/* ✅ UPDATED: Add/Edit Property Modal with Conditional Forms using CSS module */}
       {showForm && (
-        <div className="modal-overlay" onClick={() => setShowForm(false)}>
-          <div className="modal-content large" onClick={(e) => e.stopPropagation()}>
-            <div className="modal-header">
-              <h2 className="modal-title">
+        <div className={styles.modalOverlay} onClick={() => setShowForm(false)}>
+          <div className={`${styles.modalContent} ${styles.modalContentLarge}`} onClick={(e) => e.stopPropagation()}>
+            <div className={styles.modalHeader}>
+              <h2 className={styles.modalTitle}>
                 {editingProperty ? 'Edit Property' : 'Add New Property'}
                 {propertyFormType && (
-                  <span className="text-sm text-gray-500 ml-2">
+                  <span className={styles.modalSubtitle}>
                     ({propertyFormType === 'general_rental' ? 'General Rental' : 'Recovery Housing'})
                   </span>
                 )}
               </h2>
               <button
-                className="modal-close"
+                className={styles.modalClose}
                 onClick={() => setShowForm(false)}
               >
                 ×
@@ -657,18 +661,18 @@ const PropertyManagement = () => {
               ) : (
                 // ✅ EXISTING: Complex form with sections for recovery housing
                 <>
-                  {/* Section Navigation */}
-                  <nav className="section-nav mb-4">
+                  {/* ✅ UPDATED: Section Navigation using CSS module */}
+                  <nav className={styles.sectionNav}>
                     {formSections.map((section, index) => (
                       <button
                         key={section.id}
                         type="button"
-                        className={`section-nav-btn ${index === currentSection ? 'active' : ''}`}
+                        className={`${styles.sectionNavBtn} ${index === currentSection ? styles.active : ''}`}
                         onClick={() => goToSection(index)}
                         disabled={loading}
                       >
-                        <span className="section-icon">{section.icon}</span>
-                        <span className="section-title">{section.title}</span>
+                        <span className={styles.sectionIcon}>{section.icon}</span>
+                        <span className={styles.sectionTitle}>{section.title}</span>
                       </button>
                     ))}
                   </nav>
@@ -685,11 +689,11 @@ const PropertyManagement = () => {
                 </>
               )}
               
-              {/* ✅ UPDATED: Action buttons with different layouts for different form types */}
-              <div className="form-actions">
+              {/* ✅ UPDATED: Action buttons using CSS module */}
+              <div className={styles.formActions}>
                 <button
                   type="button"
-                  className="btn btn-outline"
+                  className={`${styles.actionButton} ${styles.actionOutline}`}
                   onClick={() => setShowForm(false)}
                   disabled={loading}
                 >
@@ -701,7 +705,7 @@ const PropertyManagement = () => {
                     {currentSection > 0 && (
                       <button
                         type="button"
-                        className="btn btn-secondary"
+                        className={`${styles.actionButton} ${styles.actionSecondary}`}
                         onClick={prevSection}
                         disabled={loading}
                       >
@@ -712,7 +716,7 @@ const PropertyManagement = () => {
                     {currentSection < formSections.length - 1 ? (
                       <button
                         type="button"
-                        className="btn btn-primary"
+                        className={`${styles.actionButton} ${styles.actionPrimary}`}
                         onClick={nextSection}
                         disabled={loading}
                       >
@@ -721,7 +725,7 @@ const PropertyManagement = () => {
                     ) : (
                       <button
                         type="submit"
-                        className="btn btn-primary"
+                        className={`${styles.actionButton} ${styles.actionPrimary}`}
                         disabled={loading}
                       >
                         {loading ? 'Saving...' : (editingProperty ? 'Update Property' : 'Add Property')}
@@ -733,7 +737,7 @@ const PropertyManagement = () => {
                 {propertyFormType === 'general_rental' && (
                   <button
                     type="submit"
-                    className="btn btn-primary"
+                    className={`${styles.actionButton} ${styles.actionPrimary}`}
                     disabled={loading}
                   >
                     {loading ? 'Saving...' : (editingProperty ? 'Update Property' : 'Add Property')}
@@ -744,87 +748,6 @@ const PropertyManagement = () => {
           </div>
         </div>
       )}
-
-      {/* Enhanced modal CSS */}
-      <style jsx>{`
-        .modal-content.large {
-          max-width: 900px;
-          max-height: 90vh;
-          overflow-y: auto;
-        }
-        
-        .section-nav {
-          display: flex;
-          gap: 1rem;
-          border-bottom: 1px solid var(--border-beige);
-          padding-bottom: 1rem;
-          margin-bottom: 2rem;
-        }
-        
-        .section-nav-btn {
-          display: flex;
-          flex-direction: column;
-          align-items: center;
-          gap: 0.5rem;
-          padding: 1rem;
-          border: 1px solid var(--border-beige);
-          border-radius: 8px;
-          background: white;
-          cursor: pointer;
-          transition: all 0.2s ease;
-          flex: 1;
-          min-width: 0;
-        }
-        
-        .section-nav-btn:hover {
-          background: var(--secondary-teal-light);
-          border-color: var(--secondary-teal);
-        }
-        
-        .section-nav-btn.active {
-          background: var(--secondary-teal);
-          color: white;
-          border-color: var(--secondary-teal);
-        }
-        
-        .section-icon {
-          font-size: 1.5rem;
-        }
-        
-        .section-title {
-          font-size: 0.9rem;
-          font-weight: 600;
-          text-align: center;
-        }
-        
-        .form-actions {
-          display: flex;
-          gap: 1rem;
-          justify-content: flex-end;
-          margin-top: 2rem;
-          padding-top: 1rem;
-          border-top: 1px solid var(--border-beige);
-        }
-        
-        .badge.badge-info {
-          background-color: #3b82f6;
-          color: white;
-        }
-        
-        @media (max-width: 768px) {
-          .section-nav {
-            flex-wrap: wrap;
-          }
-          
-          .section-nav-btn {
-            flex: 1 1 calc(50% - 0.5rem);
-          }
-          
-          .section-title {
-            font-size: 0.8rem;
-          }
-        }
-      `}</style>
     </div>
   );
 };

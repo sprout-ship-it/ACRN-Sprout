@@ -1,0 +1,286 @@
+/* AboutSection.module.css - Component-specific styles */
+
+/* ==================== SECTION LAYOUT ==================== */
+.sectionContainer {
+  width: 100%;
+}
+
+.sectionTitle {
+  font-size: 1.3rem;
+  color: var(--primary-purple);
+  margin-bottom: var(--spacing-lg);
+  font-weight: 600;
+  font-family: var(--font-serif);
+}
+
+.sectionSubtitle {
+  font-size: 1.1rem;
+  color: var(--secondary-teal);
+  margin-bottom: var(--spacing-lg);
+  padding-bottom: 10px;
+  border-bottom: 2px solid var(--border-beige);
+  font-weight: 600;
+}
+
+/* ==================== FORM LAYOUT ==================== */
+.formGroup {
+  margin-bottom: var(--spacing-lg);
+}
+
+.formLabel {
+  display: block;
+  margin-bottom: 8px;
+  font-weight: 600;
+  color: var(--gray-800);
+  font-size: 0.9rem;
+}
+
+.requiredAsterisk {
+  color: #dc3545;
+  margin-left: 3px;
+}
+
+/* ==================== TEXTAREA STYLING ==================== */
+.formTextarea {
+  width: 100%;
+  padding: var(--spacing-md);
+  border: 2px solid var(--border-beige);
+  border-radius: var(--radius-md);
+  background: white;
+  font-size: 1rem;
+  transition: var(--transition-normal);
+  font-family: var(--font-sans);
+  resize: vertical;
+  line-height: 1.6;
+}
+
+.formTextarea:focus {
+  border-color: var(--primary-purple);
+  box-shadow: 0 0 0 3px rgba(160, 32, 240, 0.1);
+  outline: none;
+}
+
+.formTextarea:disabled {
+  background: var(--gray-100);
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+
+.formTextareaError {
+  border-color: #dc3545;
+  box-shadow: 0 0 0 3px rgba(220, 53, 69, 0.1);
+}
+
+.textareaBio {
+  min-height: 120px;
+}
+
+.textareaStory {
+  min-height: 100px;
+}
+
+.textareaPhilosophy {
+  min-height: 80px;
+}
+
+.textareaQualities {
+  min-height: 80px;
+}
+
+/* ==================== CHARACTER COUNT AND VALIDATION ==================== */
+.characterCountContainer {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-top: 6px;
+  gap: var(--spacing-sm);
+}
+
+.errorText {
+  color: #dc3545;
+  font-size: 0.85rem;
+  line-height: 1.4;
+  flex: 1;
+}
+
+.characterCount {
+  color: var(--gray-500);
+  font-size: 0.85rem;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.characterCountWarning {
+  color: #dc3545;
+  font-weight: 600;
+}
+
+.minimumLengthWarning {
+  color: #dc3545;
+  font-size: 0.85rem;
+  margin-top: 6px;
+  line-height: 1.4;
+}
+
+/* ==================== HELP TEXT ==================== */
+.helpText {
+  color: var(--gray-500);
+  font-size: 0.85rem;
+  margin-bottom: var(--spacing-sm);
+  line-height: 1.4;
+}
+
+/* ==================== INFORMATIONAL ALERTS ==================== */
+.alertContainer {
+  margin-bottom: var(--spacing-lg);
+}
+
+.infoAlert {
+  background: var(--info-bg);
+  color: var(--info-text);
+  border: 1px solid var(--info-border);
+  padding: var(--spacing-md);
+  border-radius: var(--radius-md);
+  line-height: 1.5;
+}
+
+.successAlert {
+  background: var(--success-bg);
+  color: var(--success-text);
+  border: 1px solid var(--success-border);
+  padding: var(--spacing-md);
+  border-radius: var(--radius-md);
+  line-height: 1.5;
+}
+
+.alertTitle {
+  font-weight: 700;
+  margin-bottom: var(--spacing-sm);
+  display: block;
+}
+
+.alertList {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.alertListItem {
+  margin-bottom: var(--spacing-xs);
+  padding-left: var(--spacing-sm);
+  position: relative;
+  font-size: 0.9rem;
+  line-height: 1.4;
+}
+
+.alertListItem::before {
+  content: '•';
+  position: absolute;
+  left: 0;
+  color: currentColor;
+  font-weight: bold;
+}
+
+/* ==================== SPACING UTILITIES ==================== */
+.spacingTop {
+  margin-top: var(--spacing-md);
+}
+
+.spacingBottom {
+  margin-bottom: var(--spacing-md);
+}
+
+/* ==================== RESPONSIVE DESIGN ==================== */
+@media (max-width: 768px) {
+  .sectionTitle {
+    font-size: 1.2rem;
+  }
+  
+  .sectionSubtitle {
+    font-size: 1rem;
+  }
+  
+  .formTextarea {
+    padding: var(--spacing-sm);
+    font-size: 0.9rem;
+  }
+  
+  .textareaBio {
+    min-height: 100px;
+  }
+  
+  .textareaStory {
+    min-height: 80px;
+  }
+  
+  .textareaPhilosophy,
+  .textareaQualities {
+    min-height: 60px;
+  }
+  
+  .characterCountContainer {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: var(--spacing-xs);
+  }
+  
+  .characterCount {
+    align-self: flex-end;
+  }
+}
+
+@media (max-width: 480px) {
+  .formGroup {
+    margin-bottom: var(--spacing-md);
+  }
+  
+  .sectionTitle {
+    font-size: 1.1rem;
+  }
+  
+  .sectionSubtitle {
+    font-size: 0.95rem;
+  }
+  
+  .infoAlert,
+  .successAlert {
+    padding: var(--spacing-sm);
+  }
+  
+  .alertListItem {
+    font-size: 0.85rem;
+  }
+  
+  .formTextarea {
+    padding: 10px;
+  }
+  
+  .textareaBio {
+    min-height: 80px;
+  }
+  
+  .textareaStory,
+  .textareaPhilosophy,
+  .textareaQualities {
+    min-height: 60px;
+  }
+}
+
+/* ==================== ACCESSIBILITY AND FOCUS STATES ==================== */
+.formTextarea:focus-visible {
+  outline: 2px solid var(--primary-purple);
+  outline-offset: 2px;
+}
+
+.formLabel:focus-within {
+  color: var(--primary-purple);
+}
+
+/* ==================== SPECIAL STATES ==================== */
+.formGroup:last-child {
+  margin-bottom: 0;
+}
+
+.alertContainer:last-child {
+  margin-bottom: 0;
+}

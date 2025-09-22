@@ -1,4 +1,4 @@
-// src/components/forms/sections/peer-support/ServiceSettingsSection.js
+// src/components/forms/sections/peer-support/ServiceSettingsSection.js - UPDATED WITH CSS MODULE
 import React from 'react';
 import PropTypes from 'prop-types';
 import { 
@@ -9,6 +9,10 @@ import {
   VALIDATION_RULES 
 } from '../constants/peerSupportConstants';
 
+// ✅ UPDATED: Import our new CSS foundation and component module
+import '../../../../styles/main.css';
+import styles from './ServiceSettingsSection.module.css';
+
 const ServiceSettingsSection = ({
   formData,
   errors,
@@ -16,16 +20,22 @@ const ServiceSettingsSection = ({
   onInputChange,
   onArrayChange
 }) => {
+  const additionalNotesLength = formData.additional_notes?.length || 0;
+  const availableHoursLength = formData.available_hours?.length || 0;
+  
+  // Find the response time label for display
+  const responseTimeLabel = responseTimeOptions.find(opt => opt.value === formData.response_time)?.label || 'Within 24 hours';
+
   return (
-    <>
-      <h3 className="card-title mb-4">Service Settings</h3>
+    <div className={styles.sectionContainer}>
+      <h3 className={styles.sectionTitle}>Service Settings</h3>
       
       {/* Contact & Communication Preferences */}
-      <div className="grid-2 mb-4">
-        <div className="form-group">
-          <label className="label">Preferred Contact Method</label>
+      <div className={styles.formGrid}>
+        <div className={styles.formGroup}>
+          <label className={styles.formLabel}>Preferred Contact Method</label>
           <select
-            className="input"
+            className={styles.formSelect}
             value={formData.preferred_contact_method}
             onChange={(e) => onInputChange('preferred_contact_method', e.target.value)}
             disabled={loading}
@@ -36,15 +46,15 @@ const ServiceSettingsSection = ({
               </option>
             ))}
           </select>
-          <div className="text-gray-500 mt-1 text-sm">
+          <div className={styles.helpText}>
             How you prefer clients to initially contact you
           </div>
         </div>
         
-        <div className="form-group">
-          <label className="label">Response Time</label>
+        <div className={styles.formGroup}>
+          <label className={styles.formLabel}>Response Time</label>
           <select
-            className="input"
+            className={styles.formSelect}
             value={formData.response_time}
             onChange={(e) => onInputChange('response_time', e.target.value)}
             disabled={loading}
@@ -55,27 +65,22 @@ const ServiceSettingsSection = ({
               </option>
             ))}
           </select>
-          <div className="text-gray-500 mt-1 text-sm">
+          <div className={styles.helpText}>
             How quickly you typically respond to new inquiries
           </div>
         </div>
       </div>
 
       {/* Capacity & Availability */}
-      <h4 style={{ 
-        color: 'var(--secondary-teal)', 
-        marginBottom: 'var(--spacing-lg)', 
-        paddingBottom: '10px', 
-        borderBottom: '2px solid var(--border-beige)' 
-      }}>
+      <h4 className={styles.sectionSubtitle}>
         Capacity & Availability
       </h4>
 
-      <div className="grid-2 mb-4">
-        <div className="form-group">
-          <label className="label">Maximum Clients</label>
+      <div className={styles.formGrid}>
+        <div className={styles.formGroup}>
+          <label className={styles.formLabel}>Maximum Clients</label>
           <input
-            className={`input ${errors.max_clients ? 'border-red-500' : ''}`}
+            className={`${styles.formInput} ${errors.max_clients ? styles.formInputError : ''}`}
             type="number"
             min={VALIDATION_RULES.max_clients.min}
             max={VALIDATION_RULES.max_clients.max}
@@ -84,17 +89,17 @@ const ServiceSettingsSection = ({
             disabled={loading}
           />
           {errors.max_clients && (
-            <div className="text-red-500 mt-1">{errors.max_clients}</div>
+            <div className={styles.errorText}>{errors.max_clients}</div>
           )}
-          <div className="text-gray-500 mt-1 text-sm">
+          <div className={styles.helpText}>
             {HELP_TEXT.max_clients}
           </div>
         </div>
         
-        <div className="form-group">
-          <label className="label">Service Radius (miles)</label>
+        <div className={styles.formGroup}>
+          <label className={styles.formLabel}>Service Radius (miles)</label>
           <input
-            className={`input ${errors.service_radius ? 'border-red-500' : ''}`}
+            className={`${styles.formInput} ${errors.service_radius ? styles.formInputError : ''}`}
             type="number"
             min={VALIDATION_RULES.service_radius.min}
             max={VALIDATION_RULES.service_radius.max}
@@ -103,132 +108,134 @@ const ServiceSettingsSection = ({
             disabled={loading}
           />
           {errors.service_radius && (
-            <div className="text-red-500 mt-1">{errors.service_radius}</div>
+            <div className={styles.errorText}>{errors.service_radius}</div>
           )}
-          <div className="text-gray-500 mt-1 text-sm">
+          <div className={styles.helpText}>
             How far you're willing to travel for in-person services
           </div>
         </div>
       </div>
 
       {/* Available Hours */}
-      <div className="form-group mb-4">
-        <label className="label">Available Hours</label>
+      <div className={styles.formGroup}>
+        <label className={styles.formLabel}>Available Hours</label>
         <textarea
-          className="input"
+          className={styles.formTextarea}
           value={formData.available_hours}
           onChange={(e) => onInputChange('available_hours', e.target.value)}
           placeholder="e.g., Monday-Friday 9am-5pm, Saturday mornings, or 'Flexible scheduling available'"
-          style={{ minHeight: '60px', resize: 'vertical' }}
           disabled={loading}
           maxLength="200"
         />
-        <div className="text-gray-500 mt-1 text-sm">
-          {HELP_TEXT.available_hours} ({(formData.available_hours?.length || 0)}/200 characters)
+        <div className={styles.helpText}>
+          {HELP_TEXT.available_hours}
+        </div>
+        <div className={styles.characterCount}>
+          {availableHoursLength}/200 characters
         </div>
       </div>
 
       {/* Service Areas */}
-      <div className="form-group mb-4">
-        <label className="label">Service Areas</label>
-        <div className="text-gray-500 mb-3 text-sm">
+      <div className={styles.formGroup}>
+        <label className={styles.formLabel}>Service Areas</label>
+        <div className={styles.helpText}>
           {HELP_TEXT.service_area}
         </div>
-        <div className="grid-auto mt-2">
+        <div className={styles.serviceAreasGrid}>
           {serviceAreaOptions.map(area => (
             <div
               key={area}
-              className={`checkbox-item ${formData.service_area?.includes(area) ? 'selected' : ''}`}
+              className={`${styles.serviceAreaItem} ${formData.service_area?.includes(area) ? styles.selected : ''}`}
               onClick={() => onArrayChange('service_area', area, !formData.service_area?.includes(area))}
             >
               <input
                 type="checkbox"
+                className={styles.serviceAreaCheckbox}
                 checked={formData.service_area?.includes(area) || false}
                 onChange={() => {}}
                 disabled={loading}
               />
-              <span>{area}</span>
+              <span className={styles.serviceAreaLabel}>{area}</span>
             </div>
           ))}
         </div>
         {errors.service_area && (
-          <div className="text-red-500 mt-1">{errors.service_area}</div>
+          <div className={styles.errorText}>{errors.service_area}</div>
         )}
       </div>
 
       {/* Availability Status */}
-      <h4 style={{ 
-        color: 'var(--secondary-teal)', 
-        marginBottom: 'var(--spacing-lg)', 
-        paddingBottom: '10px', 
-        borderBottom: '2px solid var(--border-beige)' 
-      }}>
+      <h4 className={styles.sectionSubtitle}>
         Current Status
       </h4>
 
-      <div className="form-group mb-4">
-        <label className="checkbox-label">
-          <input
-            type="checkbox"
-            checked={formData.is_accepting_clients}
-            onChange={(e) => onInputChange('is_accepting_clients', e.target.checked)}
-            disabled={loading}
-          />
-          <span className="checkbox-text">
-            <strong>Currently accepting new clients</strong>
-            <div className="text-gray-500 text-sm mt-1">
-              Check this if you're available to take on new clients. You can update this anytime.
-            </div>
-          </span>
-        </label>
+      <div className={`${styles.checkboxControl} ${formData.is_accepting_clients ? styles.selected : ''}`}>
+        <input
+          type="checkbox"
+          className={styles.checkboxInput}
+          checked={formData.is_accepting_clients}
+          onChange={(e) => onInputChange('is_accepting_clients', e.target.checked)}
+          disabled={loading}
+        />
+        <div className={styles.checkboxContent}>
+          <div className={styles.checkboxTitle}>Currently accepting new clients</div>
+          <div className={styles.checkboxDescription}>
+            Check this if you're available to take on new clients. You can update this anytime.
+          </div>
+        </div>
       </div>
 
       {/* Additional Notes */}
-      <div className="form-group mb-4">
-        <label className="label">Additional Service Notes (Optional)</label>
+      <div className={styles.formGroup}>
+        <label className={styles.formLabel}>Additional Service Notes (Optional)</label>
         <textarea
-          className="input"
+          className={`${styles.formTextarea} ${styles.textareaLarge}`}
           value={formData.additional_notes || ''}
           onChange={(e) => onInputChange('additional_notes', e.target.value)}
           placeholder="Any additional information about your services, scheduling preferences, or special considerations..."
-          style={{ minHeight: '80px', resize: 'vertical' }}
           disabled={loading}
           maxLength="500"
         />
-        <div className="text-gray-500 mt-1 text-sm">
-          {(formData.additional_notes?.length || 0)}/500 characters
+        <div className={styles.characterCount}>
+          {additionalNotesLength}/500 characters
         </div>
       </div>
 
       {/* Service Summary */}
-      <div className="alert alert-info">
-        <div className="mb-2">
-          <strong>Service Summary:</strong>
-        </div>
-        <div className="grid-2 text-sm">
-          <div>
-            <strong>Contact:</strong> {formData.preferred_contact_method || 'Phone'}
+      <div className={styles.serviceSummary}>
+        <div className={styles.summaryTitle}>Service Summary:</div>
+        <div className={styles.summaryGrid}>
+          <div className={styles.summaryItem}>
+            <div className={styles.summaryLabel}>Contact:</div>
+            <div className={styles.summaryValue}>{formData.preferred_contact_method || 'Phone'}</div>
           </div>
-          <div>
-            <strong>Response:</strong> {responseTimeOptions.find(opt => opt.value === formData.response_time)?.label || 'Within 24 hours'}
+          <div className={styles.summaryItem}>
+            <div className={styles.summaryLabel}>Response:</div>
+            <div className={styles.summaryValue}>{responseTimeLabel}</div>
           </div>
-          <div>
-            <strong>Capacity:</strong> Up to {formData.max_clients || 10} clients
+          <div className={styles.summaryItem}>
+            <div className={styles.summaryLabel}>Capacity:</div>
+            <div className={styles.summaryValue}>Up to {formData.max_clients || 10} clients</div>
           </div>
-          <div>
-            <strong>Status:</strong> 
-            <span className={`badge ml-2 ${formData.is_accepting_clients ? 'badge-success' : 'badge-warning'}`}>
-              {formData.is_accepting_clients ? 'Accepting Clients' : 'Not Accepting'}
-            </span>
+          <div className={styles.summaryItem}>
+            <div className={styles.summaryLabel}>Status:</div>
+            <div className={styles.summaryValue}>
+              <span className={formData.is_accepting_clients ? styles.statusBadgeAccepting : styles.statusBadgeNotAccepting}>
+                {formData.is_accepting_clients ? 'Accepting Clients' : 'Not Accepting'}
+              </span>
+            </div>
           </div>
         </div>
       </div>
 
       {/* Verification Notice */}
-      <div className="alert alert-warning">
-        <strong>Profile Review:</strong> Once you complete your profile, our team will review your information and credentials. This typically takes 1-3 business days. You'll receive an email notification when your profile is approved and visible to clients.
+      <div className={styles.verificationNotice}>
+        <div className={styles.noticeTitle}>Profile Review:</div>
+        <p className={styles.noticeText}>
+          Once you complete your profile, our team will review your information and credentials. This typically takes 1-3 business days. You'll receive an email notification when your profile is approved and visible to clients.
+        </p>
       </div>
-    </>
+    </div>
   );
 };
 

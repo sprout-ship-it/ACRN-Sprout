@@ -1,0 +1,270 @@
+/* PropertySearch.module.css - Component-specific styles */
+
+/* ==================== MAIN CONTAINER ==================== */
+.searchContainer {
+  width: 100%;
+}
+
+/* ==================== HEADER SECTION ==================== */
+.headerSection {
+  text-align: center;
+  margin-bottom: var(--spacing-xl);
+}
+
+.headerTitle {
+  font-family: var(--font-serif);
+  font-size: 2rem;
+  color: var(--primary-purple);
+  margin-bottom: var(--spacing-sm);
+  font-weight: 700;
+  line-height: 1.2;
+}
+
+.headerSubtitle {
+  color: var(--gray-600);
+  font-size: 1rem;
+  line-height: 1.6;
+  margin: 0;
+  max-width: 600px;
+  margin-left: auto;
+  margin-right: auto;
+}
+
+/* ==================== SEARCH MODE TOGGLE CARD ==================== */
+.searchModeCard {
+  background: white;
+  border-radius: var(--radius-xl);
+  padding: var(--spacing-xl);
+  border: 2px solid var(--border-beige);
+  box-shadow: var(--shadow-md);
+  margin-bottom: var(--spacing-lg);
+  transition: var(--transition-normal);
+}
+
+.searchModeCard:hover {
+  box-shadow: var(--shadow-lg);
+}
+
+.searchModeTitle {
+  font-size: 1.25rem;
+  color: var(--primary-purple);
+  margin-bottom: var(--spacing-lg);
+  font-weight: 600;
+  font-family: var(--font-serif);
+}
+
+.searchModeNavigation {
+  background: white;
+  border-bottom: none;
+  padding: 0;
+}
+
+.searchModeNavList {
+  display: flex;
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  overflow-x: auto;
+  border-radius: var(--radius-lg);
+  background: var(--bg-light-cream);
+  padding: 4px;
+}
+
+.searchModeNavItem {
+  flex: 1 1 auto;
+  min-width: 150px;
+}
+
+.searchModeNavButton {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--spacing-sm);
+  width: 100%;
+  padding: var(--spacing-md) var(--spacing-lg);
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: var(--gray-600);
+  transition: var(--transition-normal);
+  border-radius: var(--radius-md);
+  white-space: nowrap;
+}
+
+.searchModeNavButton:hover {
+  color: var(--primary-purple);
+  background: rgba(160, 32, 240, 0.05);
+}
+
+.searchModeNavButton.active {
+  color: white;
+  background: var(--primary-purple);
+  box-shadow: 0 2px 8px rgba(160, 32, 240, 0.3);
+}
+
+.navIcon {
+  font-size: 1.2rem;
+}
+
+.searchModeDescription {
+  color: var(--gray-600);
+  margin-top: var(--spacing-md);
+  font-size: 0.9rem;
+  line-height: 1.5;
+  text-align: left;
+}
+
+/* ==================== FILTERS SECTIONS ==================== */
+.filtersSection {
+  margin-bottom: var(--spacing-lg);
+}
+
+/* ==================== RESPONSIVE DESIGN ==================== */
+@media (max-width: 768px) {
+  .headerTitle {
+    font-size: 1.75rem;
+  }
+
+  .headerSubtitle {
+    font-size: 0.9rem;
+  }
+
+  .searchModeCard {
+    padding: var(--spacing-lg);
+    margin-bottom: var(--spacing-md);
+  }
+
+  .searchModeTitle {
+    font-size: 1.125rem;
+  }
+
+  .searchModeNavList {
+    flex-direction: column;
+    padding: var(--spacing-xs);
+  }
+
+  .searchModeNavItem {
+    min-width: unset;
+    width: 100%;
+  }
+
+  .searchModeNavButton {
+    padding: var(--spacing-sm) var(--spacing-md);
+    font-size: 0.9rem;
+    justify-content: flex-start;
+  }
+
+  .navIcon {
+    font-size: 1.1rem;
+  }
+
+  .searchModeDescription {
+    font-size: 0.85rem;
+    text-align: center;
+  }
+}
+
+@media (max-width: 480px) {
+  .headerTitle {
+    font-size: 1.5rem;
+  }
+
+  .headerSubtitle {
+    font-size: 0.85rem;
+  }
+
+  .searchModeCard {
+    padding: var(--spacing-md);
+  }
+
+  .searchModeTitle {
+    font-size: 1rem;
+  }
+
+  .searchModeNavButton {
+    padding: var(--spacing-xs) var(--spacing-sm);
+    font-size: 0.85rem;
+  }
+
+  .navIcon {
+    font-size: 1rem;
+  }
+
+  .filtersSection {
+    margin-bottom: var(--spacing-md);
+  }
+}
+
+/* ==================== ACCESSIBILITY AND FOCUS STATES ==================== */
+.searchModeNavButton:focus-visible {
+  outline: 2px solid var(--primary-purple);
+  outline-offset: 2px;
+}
+
+.searchModeNavButton:focus {
+  box-shadow: 0 0 0 3px rgba(160, 32, 240, 0.1);
+}
+
+/* ==================== SPECIAL STATES ==================== */
+.searchModeNavButton:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.searchModeNavButton:disabled:hover {
+  color: var(--gray-600);
+  background: none;
+}
+
+/* ==================== ENHANCED VISUAL EFFECTS ==================== */
+.searchModeCard::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(90deg, transparent, rgba(160, 32, 240, 0.03), transparent);
+  transition: left 0.6s ease;
+  z-index: 1;
+  pointer-events: none;
+}
+
+.searchModeCard {
+  position: relative;
+  overflow: hidden;
+}
+
+.searchModeCard:hover::before {
+  left: 100%;
+}
+
+.searchModeCard > * {
+  position: relative;
+  z-index: 2;
+}
+
+/* ==================== LOADING STATES ==================== */
+.searchModeNavButton.loading {
+  opacity: 0.7;
+  pointer-events: none;
+}
+
+.searchModeNavButton.loading::after {
+  content: '';
+  display: inline-block;
+  width: 12px;
+  height: 12px;
+  border: 2px solid currentColor;
+  border-top: 2px solid transparent;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+  margin-left: var(--spacing-xs);
+}
+
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}

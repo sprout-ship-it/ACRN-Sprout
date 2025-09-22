@@ -1,7 +1,11 @@
-// src/components/forms/sections/peer-support/ProfessionalInfoSection.js
+// src/components/forms/sections/peer-support/ProfessionalInfoSection.js - UPDATED WITH CSS MODULE
 import React from 'react';
 import PropTypes from 'prop-types';
 import { certificationOptions, HELP_TEXT } from '../constants/peerSupportConstants';
+
+// ✅ UPDATED: Import our new CSS foundation and component module
+import '../../../../styles/main.css';
+import styles from './ProfessionalInfoSection.module.css';
 
 const ProfessionalInfoSection = ({
   formData,
@@ -11,14 +15,14 @@ const ProfessionalInfoSection = ({
   onArrayChange
 }) => {
   return (
-    <>
-      <h3 className="card-title mb-4">Professional Information</h3>
+    <div className={styles.sectionContainer}>
+      <h3 className={styles.sectionTitle}>Professional Information</h3>
       
-      <div className="grid-2 mb-4">
-        <div className="form-group">
-          <label className="label">Years of Experience</label>
+      <div className={styles.formGrid}>
+        <div className={styles.formGroup}>
+          <label className={styles.formLabel}>Years of Experience</label>
           <input
-            className={`input ${errors.years_experience ? 'border-red-500' : ''}`}
+            className={`${styles.formInput} ${errors.years_experience ? styles.formInputError : ''}`}
             type="number"
             min="0"
             max="50"
@@ -27,116 +31,111 @@ const ProfessionalInfoSection = ({
             disabled={loading}
           />
           {errors.years_experience && (
-            <div className="text-red-500 mt-1">{errors.years_experience}</div>
+            <div className={styles.errorText}>{errors.years_experience}</div>
           )}
-          <div className="text-gray-500 mt-1 text-sm">
+          <div className={styles.helpText}>
             Years of experience in peer support or related recovery services
           </div>
         </div>
         
-        <div className="form-group">
-          <label className="label">License/Certification Number</label>
+        <div className={styles.formGroup}>
+          <label className={styles.formLabel}>License/Certification Number</label>
           <input
-            className="input"
+            className={styles.formInput}
             type="text"
             value={formData.license_number}
             onChange={(e) => onInputChange('license_number', e.target.value)}
             placeholder="Optional"
             disabled={loading}
           />
-          <div className="text-gray-500 mt-1 text-sm">
+          <div className={styles.helpText}>
             Your professional license or certification number (if applicable)
           </div>
         </div>
       </div>
 
       {/* Certifications */}
-      <div className="form-group mb-4">
-        <label className="label">Certifications & Licenses</label>
-        <div className="text-gray-500 mb-3 text-sm">
+      <div className={styles.formGroup}>
+        <label className={styles.formLabel}>Certifications & Licenses</label>
+        <div className={styles.helpText}>
           {HELP_TEXT.certifications}
         </div>
-        <div className="grid-auto mt-2">
+        <div className={styles.certificationsGrid}>
           {certificationOptions.map(cert => (
             <div
               key={cert}
-              className={`checkbox-item ${formData.certifications?.includes(cert) ? 'selected' : ''}`}
+              className={`${styles.certificationItem} ${formData.certifications?.includes(cert) ? styles.selected : ''}`}
               onClick={() => onArrayChange('certifications', cert, !formData.certifications?.includes(cert))}
             >
               <input
                 type="checkbox"
+                className={styles.certificationCheckbox}
                 checked={formData.certifications?.includes(cert) || false}
                 onChange={() => {}}
                 disabled={loading}
               />
-              <span>{cert}</span>
+              <span className={styles.certificationLabel}>{cert}</span>
             </div>
           ))}
         </div>
         {errors.certifications && (
-          <div className="text-red-500 mt-1">{errors.certifications}</div>
+          <div className={styles.errorText}>{errors.certifications}</div>
         )}
       </div>
 
       {/* Additional Professional Information */}
-      <h4 style={{ 
-        color: 'var(--secondary-teal)', 
-        marginBottom: 'var(--spacing-lg)', 
-        paddingBottom: '10px', 
-        borderBottom: '2px solid var(--border-beige)' 
-      }}>
+      <h4 className={styles.sectionSubtitle}>
         Professional Background
       </h4>
 
-      <div className="form-group mb-4">
-        <label className="label">Educational Background (Optional)</label>
+      <div className={styles.formGroup}>
+        <label className={styles.formLabel}>Educational Background (Optional)</label>
         <textarea
-          className="input"
+          className={styles.formTextarea}
           value={formData.education || ''}
           onChange={(e) => onInputChange('education', e.target.value)}
           placeholder="Describe your relevant education, training programs, or professional development..."
-          style={{ minHeight: '80px', resize: 'vertical' }}
           disabled={loading}
           maxLength="500"
         />
-        <div className="text-gray-500 mt-1 text-sm">
+        <div className={styles.characterCount}>
           {(formData.education?.length || 0)}/500 characters
         </div>
       </div>
 
-      <div className="form-group mb-4">
-        <label className="label">Professional Affiliations (Optional)</label>
+      <div className={styles.formGroup}>
+        <label className={styles.formLabel}>Professional Affiliations (Optional)</label>
         <textarea
-          className="input"
+          className={styles.formTextarea}
           value={formData.affiliations || ''}
           onChange={(e) => onInputChange('affiliations', e.target.value)}
           placeholder="Professional organizations, associations, or groups you belong to..."
-          style={{ minHeight: '60px', resize: 'vertical' }}
+          style={{ minHeight: '60px' }}
           disabled={loading}
           maxLength="300"
         />
-        <div className="text-gray-500 mt-1 text-sm">
+        <div className={styles.characterCount}>
           {(formData.affiliations?.length || 0)}/300 characters
         </div>
       </div>
 
       {/* Verification Status */}
-      <div className="alert alert-info">
-        <div className="grid-2">
-          <div>
-            <strong>Profile Verification:</strong>
-            <p className="mt-1 text-sm">
+      <div className={styles.verificationAlert}>
+        <div className={styles.verificationGrid}>
+          <div className={styles.verificationContent}>
+            <div className={styles.verificationTitle}>Profile Verification:</div>
+            <p className={styles.verificationText}>
               Your professional credentials will be verified by our team to ensure quality and safety for all users.
             </p>
           </div>
-          <div className="text-center">
-            <span className={`badge ${formData.is_verified ? 'badge-success' : 'badge-warning'}`}>
+          <div className={styles.verificationBadge}>
+            <span className={formData.is_verified ? styles.badgeVerified : styles.badgePending}>
               {formData.is_verified ? 'Verified' : 'Pending Verification'}
             </span>
           </div>
         </div>
       </div>
-    </>
+    </div>
   );
 };
 

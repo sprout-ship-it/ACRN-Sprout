@@ -1,4 +1,4 @@
-// src/components/forms/sections/peer-support/ServiceInfoSection.js
+// src/components/forms/sections/peer-support/ServiceInfoSection.js - UPDATED WITH CSS MODULE
 import React from 'react';
 import PropTypes from 'prop-types';
 import { 
@@ -10,6 +10,10 @@ import {
   HELP_TEXT 
 } from '../constants/peerSupportConstants';
 
+// ✅ UPDATED: Import our new CSS foundation and component module
+import '../../../../styles/main.css';
+import styles from './ServiceInfoSection.module.css';
+
 const ServiceInfoSection = ({
   formData,
   errors,
@@ -18,199 +22,197 @@ const ServiceInfoSection = ({
   onArrayChange
 }) => {
   return (
-    <>
-      <h3 className="card-title mb-4">Services & Specialties</h3>
+    <div className={styles.sectionContainer}>
+      <h3 className={styles.sectionTitle}>Services & Specialties</h3>
       
       {/* Specialties - Required */}
-      <div className="form-group mb-4">
-        <label className="label">
-          Your Specialties <span className="text-red-500">*</span>
+      <div className={styles.formGroup}>
+        <label className={styles.formLabel}>
+          Your Specialties <span className={styles.requiredAsterisk}>*</span>
         </label>
-        <div className="text-gray-500 mb-3 text-sm">
+        <div className={styles.helpText}>
           {HELP_TEXT.specialties}
         </div>
-        <div className="grid-auto mt-2">
+        <div className={styles.specialtiesGrid}>
           {specialtyOptions.map(specialty => (
             <div
               key={specialty}
-              className={`checkbox-item ${formData.specialties?.includes(specialty) ? 'selected' : ''}`}
+              className={`${styles.specialtyItem} ${formData.specialties?.includes(specialty) ? styles.selected : ''}`}
               onClick={() => onArrayChange('specialties', specialty, !formData.specialties?.includes(specialty))}
             >
               <input
                 type="checkbox"
+                className={styles.specialtyCheckbox}
                 checked={formData.specialties?.includes(specialty) || false}
                 onChange={() => {}}
                 disabled={loading}
               />
-              <span>{specialty}</span>
+              <span className={styles.specialtyLabel}>{specialty}</span>
             </div>
           ))}
         </div>
         {errors.specialties && (
-          <div className="text-red-500 mt-1">{errors.specialties}</div>
+          <div className={styles.errorText}>{errors.specialties}</div>
         )}
       </div>
 
       {/* Recovery Approaches */}
-      <div className="form-group mb-4">
-        <label className="label">Recovery Approaches You Support</label>
-        <div className="text-gray-500 mb-3 text-sm">
+      <div className={styles.formGroup}>
+        <label className={styles.formLabel}>Recovery Approaches You Support</label>
+        <div className={styles.helpText}>
           {HELP_TEXT.recovery_approach}
         </div>
-        <div className="grid-auto mt-2">
+        <div className={styles.specialtiesGrid}>
           {recoveryApproachOptions.map(approach => (
             <div
               key={approach}
-              className={`checkbox-item ${formData.recovery_approach?.includes(approach) ? 'selected' : ''}`}
+              className={`${styles.specialtyItem} ${formData.recovery_approach?.includes(approach) ? styles.selected : ''}`}
               onClick={() => onArrayChange('recovery_approach', approach, !formData.recovery_approach?.includes(approach))}
             >
               <input
                 type="checkbox"
+                className={styles.specialtyCheckbox}
                 checked={formData.recovery_approach?.includes(approach) || false}
                 onChange={() => {}}
                 disabled={loading}
               />
-              <span>{approach}</span>
+              <span className={styles.specialtyLabel}>{approach}</span>
             </div>
           ))}
         </div>
         {errors.recovery_approach && (
-          <div className="text-red-500 mt-1">{errors.recovery_approach}</div>
+          <div className={styles.errorText}>{errors.recovery_approach}</div>
         )}
       </div>
 
       {/* Age Groups and Populations */}
-      <h4 style={{ 
-        color: 'var(--secondary-teal)', 
-        marginBottom: 'var(--spacing-lg)', 
-        paddingBottom: '10px', 
-        borderBottom: '2px solid var(--border-beige)' 
-      }}>
+      <h4 className={styles.sectionSubtitle}>
         Who You Serve
       </h4>
 
-      <div className="grid-2 mb-4">
+      <div className={styles.formGrid}>
         {/* Age Groups */}
-        <div className="form-group">
-          <label className="label">Age Groups You Serve</label>
-          <div className="text-gray-500 mb-3 text-sm">
+        <div className={styles.formGroup}>
+          <label className={styles.formLabel}>Age Groups You Serve</label>
+          <div className={styles.helpText}>
             Select the age ranges you're comfortable supporting
           </div>
-          <div className="checkbox-columns">
+          <div className={styles.checkboxColumns}>
             {ageGroupOptions.map(ageGroup => (
-              <label key={ageGroup} className="checkbox-label">
+              <div key={ageGroup} className={styles.checkboxItem}>
                 <input
                   type="checkbox"
+                  className={styles.checkboxItemInput}
                   checked={formData.age_groups_served?.includes(ageGroup) || false}
                   onChange={(e) => onArrayChange('age_groups_served', ageGroup, e.target.checked)}
                   disabled={loading}
                 />
-                <span className="checkbox-text">{ageGroup}</span>
-              </label>
+                <span className={styles.checkboxItemText}>{ageGroup}</span>
+              </div>
             ))}
           </div>
           {errors.age_groups_served && (
-            <div className="text-red-500 mt-1">{errors.age_groups_served}</div>
+            <div className={styles.errorText}>{errors.age_groups_served}</div>
           )}
         </div>
 
         {/* Population Specializations */}
-        <div className="form-group">
-          <label className="label">Population Specializations</label>
-          <div className="text-gray-500 mb-3 text-sm">
+        <div className={styles.formGroup}>
+          <label className={styles.formLabel}>Population Specializations</label>
+          <div className={styles.helpText}>
             Specific populations you have experience supporting
           </div>
-          <div className="checkbox-columns">
+          <div className={styles.checkboxColumns}>
             {populationOptions.map(population => (
-              <label key={population} className="checkbox-label">
+              <div key={population} className={styles.checkboxItem}>
                 <input
                   type="checkbox"
+                  className={styles.checkboxItemInput}
                   checked={formData.populations_served?.includes(population) || false}
                   onChange={(e) => onArrayChange('populations_served', population, e.target.checked)}
                   disabled={loading}
                 />
-                <span className="checkbox-text">{population}</span>
-              </label>
+                <span className={styles.checkboxItemText}>{population}</span>
+              </div>
             ))}
           </div>
           {errors.populations_served && (
-            <div className="text-red-500 mt-1">{errors.populations_served}</div>
+            <div className={styles.errorText}>{errors.populations_served}</div>
           )}
         </div>
       </div>
 
       {/* Service Types */}
-      <h4 style={{ 
-        color: 'var(--secondary-teal)', 
-        marginBottom: 'var(--spacing-lg)', 
-        paddingBottom: '10px', 
-        borderBottom: '2px solid var(--border-beige)' 
-      }}>
+      <h4 className={styles.sectionSubtitle}>
         Types of Services You Provide
       </h4>
 
-      <div className="form-group mb-4">
-        <div className="grid-2 mt-2">
+      <div className={styles.formGroup}>
+        <div className={styles.serviceDeliveryGrid}>
           {serviceDeliveryOptions.map(service => (
-            <label key={service.key} className="checkbox-label">
+            <div key={service.key} className={styles.checkboxItem}>
               <input
                 type="checkbox"
+                className={styles.checkboxItemInput}
                 checked={formData[service.key] || false}
                 onChange={(e) => onInputChange(service.key, e.target.checked)}
                 disabled={loading}
               />
-              <span className="checkbox-text">
-                <strong>{service.label}</strong>
-                <div className="text-gray-500 text-sm mt-1">
+              <div className={styles.checkboxItemText}>
+                <div className={styles.serviceOptionTitle}>{service.label}</div>
+                <div className={styles.checkboxItemDescription}>
                   {service.description}
                 </div>
-              </span>
-            </label>
+              </div>
+            </div>
           ))}
         </div>
       </div>
 
       {/* Service Delivery Methods */}
-      <div className="form-group mb-4">
-        <label className="label">Service Delivery Methods</label>
-        <div className="grid-2 mt-2">
-          <label className="checkbox-label">
+      <div className={styles.formGroup}>
+        <label className={styles.formLabel}>Service Delivery Methods</label>
+        <div className={styles.serviceDeliveryGrid}>
+          <div className={styles.serviceOption}>
             <input
               type="checkbox"
+              className={styles.serviceOptionInput}
               checked={formData.offers_telehealth || false}
               onChange={(e) => onInputChange('offers_telehealth', e.target.checked)}
               disabled={loading}
             />
-            <span className="checkbox-text">
-              <strong>Telehealth Services</strong>
-              <div className="text-gray-500 text-sm mt-1">
+            <div className={styles.serviceOptionContent}>
+              <div className={styles.serviceOptionTitle}>Telehealth Services</div>
+              <div className={styles.serviceOptionDescription}>
                 Remote support via phone, video, or messaging
               </div>
-            </span>
-          </label>
+            </div>
+          </div>
           
-          <label className="checkbox-label">
+          <div className={styles.serviceOption}>
             <input
               type="checkbox"
+              className={styles.serviceOptionInput}
               checked={formData.offers_in_person || false}
               onChange={(e) => onInputChange('offers_in_person', e.target.checked)}
               disabled={loading}
             />
-            <span className="checkbox-text">
-              <strong>In-Person Services</strong>
-              <div className="text-gray-500 text-sm mt-1">
+            <div className={styles.serviceOptionContent}>
+              <div className={styles.serviceOptionTitle}>In-Person Services</div>
+              <div className={styles.serviceOptionDescription}>
                 Face-to-face meetings at office or community locations
               </div>
-            </span>
-          </label>
+            </div>
+          </div>
         </div>
       </div>
 
       {/* Service Coverage Notice */}
-      <div className="alert alert-info">
-        <strong>Service Coverage:</strong> Make sure to select at least one service delivery method (telehealth or in-person) so clients know how they can access your support.
+      <div className={styles.infoAlert}>
+        <div className={styles.alertTitle}>Service Coverage:</div>
+        Make sure to select at least one service delivery method (telehealth or in-person) so clients know how they can access your support.
       </div>
-    </>
+    </div>
   );
 };
 

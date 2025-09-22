@@ -1,5 +1,10 @@
+// src/components/features/property/SimplifiedPropertyForm.js - UPDATED WITH CSS MODULE
 import React from 'react';
 import PropTypes from 'prop-types';
+
+// ✅ UPDATED: Import our new CSS foundation and component module
+import '../../../styles/main.css';
+import styles from './SimplifiedPropertyForm.module.css';
 
 const SimplifiedPropertyForm = ({
   formData,
@@ -23,18 +28,20 @@ const SimplifiedPropertyForm = ({
   ];
 
   return (
-    <div className="max-w-4xl mx-auto">
-      <h3 className="text-xl font-semibold mb-6">Rental Property Details</h3>
+    <div className={styles.formContainer}>
+      <h3 className={styles.sectionTitle}>Rental Property Details</h3>
       
       {/* Basic Property Information */}
-      <div className="bg-white p-6 rounded-lg border mb-6">
-        <h4 className="text-lg font-medium mb-4">Property Information</h4>
+      <div className={styles.sectionCard}>
+        <h4 className={styles.sectionCardTitle}>Property Information</h4>
         
-        <div className="grid md:grid-cols-2 gap-4 mb-4">
-          <div className="form-group">
-            <label className="label">Property Name/Title *</label>
+        <div className={styles.formGrid}>
+          <div className={styles.formGroup}>
+            <label className={styles.formLabel}>
+              Property Name/Title <span className={styles.requiredAsterisk}>*</span>
+            </label>
             <input
-              className={`input ${errors.property_name ? 'border-red-500' : ''}`}
+              className={`${styles.formInput} ${errors.property_name ? styles.formInputError : ''}`}
               type="text"
               name="property_name"
               value={formData.property_name}
@@ -44,14 +51,14 @@ const SimplifiedPropertyForm = ({
               required
             />
             {errors.property_name && (
-              <div className="text-red-500 mt-1 text-sm">{errors.property_name}</div>
+              <div className={styles.errorText}>{errors.property_name}</div>
             )}
           </div>
           
-          <div className="form-group">
-            <label className="label">Property Type</label>
+          <div className={styles.formGroup}>
+            <label className={styles.formLabel}>Property Type</label>
             <select
-              className="input"
+              className={styles.formSelect}
               name="property_type"
               value={formData.property_type}
               onChange={onInputChange}
@@ -68,11 +75,13 @@ const SimplifiedPropertyForm = ({
         </div>
 
         {/* Address */}
-        <div className="grid md:grid-cols-4 gap-4 mb-4">
-          <div className="form-group md:col-span-2">
-            <label className="label">Street Address *</label>
+        <div className={styles.formGridFour}>
+          <div className={`${styles.formGroup} ${styles.formGroupLarge}`} style={{ gridColumn: '1 / 3' }}>
+            <label className={styles.formLabel}>
+              Street Address <span className={styles.requiredAsterisk}>*</span>
+            </label>
             <input
-              className={`input ${errors.address ? 'border-red-500' : ''}`}
+              className={`${styles.formInput} ${errors.address ? styles.formInputError : ''}`}
               type="text"
               name="address"
               value={formData.address}
@@ -81,14 +90,16 @@ const SimplifiedPropertyForm = ({
               required
             />
             {errors.address && (
-              <div className="text-red-500 mt-1 text-sm">{errors.address}</div>
+              <div className={styles.errorText}>{errors.address}</div>
             )}
           </div>
           
-          <div className="form-group">
-            <label className="label">City *</label>
+          <div className={styles.formGroup}>
+            <label className={styles.formLabel}>
+              City <span className={styles.requiredAsterisk}>*</span>
+            </label>
             <input
-              className={`input ${errors.city ? 'border-red-500' : ''}`}
+              className={`${styles.formInput} ${errors.city ? styles.formInputError : ''}`}
               type="text"
               name="city"
               value={formData.city}
@@ -97,14 +108,16 @@ const SimplifiedPropertyForm = ({
               required
             />
             {errors.city && (
-              <div className="text-red-500 mt-1 text-sm">{errors.city}</div>
+              <div className={styles.errorText}>{errors.city}</div>
             )}
           </div>
           
-          <div className="form-group">
-            <label className="label">State *</label>
+          <div className={styles.formGroup}>
+            <label className={styles.formLabel}>
+              State <span className={styles.requiredAsterisk}>*</span>
+            </label>
             <select
-              className={`input ${errors.state ? 'border-red-500' : ''}`}
+              className={`${styles.formSelect} ${errors.state ? styles.formInputError : ''}`}
               name="state"
               value={formData.state}
               onChange={onInputChange}
@@ -117,16 +130,18 @@ const SimplifiedPropertyForm = ({
               ))}
             </select>
             {errors.state && (
-              <div className="text-red-500 mt-1 text-sm">{errors.state}</div>
+              <div className={styles.errorText}>{errors.state}</div>
             )}
           </div>
         </div>
 
-        <div className="grid md:grid-cols-2 gap-4">
-          <div className="form-group">
-            <label className="label">ZIP Code *</label>
+        <div className={styles.formGrid}>
+          <div className={styles.formGroup}>
+            <label className={styles.formLabel}>
+              ZIP Code <span className={styles.requiredAsterisk}>*</span>
+            </label>
             <input
-              className={`input ${errors.zip_code ? 'border-red-500' : ''}`}
+              className={`${styles.formInput} ${errors.zip_code ? styles.formInputError : ''}`}
               type="text"
               name="zip_code"
               value={formData.zip_code}
@@ -135,14 +150,16 @@ const SimplifiedPropertyForm = ({
               required
             />
             {errors.zip_code && (
-              <div className="text-red-500 mt-1 text-sm">{errors.zip_code}</div>
+              <div className={styles.errorText}>{errors.zip_code}</div>
             )}
           </div>
           
-          <div className="form-group">
-            <label className="label">Contact Phone *</label>
+          <div className={styles.formGroup}>
+            <label className={styles.formLabel}>
+              Contact Phone <span className={styles.requiredAsterisk}>*</span>
+            </label>
             <input
-              className={`input ${errors.phone ? 'border-red-500' : ''}`}
+              className={`${styles.formInput} ${errors.phone ? styles.formInputError : ''}`}
               type="tel"
               name="phone"
               value={formData.phone}
@@ -152,21 +169,23 @@ const SimplifiedPropertyForm = ({
               required
             />
             {errors.phone && (
-              <div className="text-red-500 mt-1 text-sm">{errors.phone}</div>
+              <div className={styles.errorText}>{errors.phone}</div>
             )}
           </div>
         </div>
       </div>
 
       {/* Property Details */}
-      <div className="bg-white p-6 rounded-lg border mb-6">
-        <h4 className="text-lg font-medium mb-4">Property Details</h4>
+      <div className={styles.sectionCard}>
+        <h4 className={styles.sectionCardTitle}>Property Details</h4>
         
-        <div className="grid md:grid-cols-3 gap-4 mb-4">
-          <div className="form-group">
-            <label className="label">Bedrooms *</label>
+        <div className={styles.formGridThree}>
+          <div className={styles.formGroup}>
+            <label className={styles.formLabel}>
+              Bedrooms <span className={styles.requiredAsterisk}>*</span>
+            </label>
             <select
-              className={`input ${errors.total_beds ? 'border-red-500' : ''}`}
+              className={`${styles.formSelect} ${errors.total_beds ? styles.formInputError : ''}`}
               name="total_beds"
               value={formData.total_beds}
               onChange={onInputChange}
@@ -182,14 +201,14 @@ const SimplifiedPropertyForm = ({
               <option value="5">5+ Bedrooms</option>
             </select>
             {errors.total_beds && (
-              <div className="text-red-500 mt-1 text-sm">{errors.total_beds}</div>
+              <div className={styles.errorText}>{errors.total_beds}</div>
             )}
           </div>
           
-          <div className="form-group">
-            <label className="label">Bathrooms</label>
+          <div className={styles.formGroup}>
+            <label className={styles.formLabel}>Bathrooms</label>
             <select
-              className="input"
+              className={styles.formSelect}
               name="bathrooms"
               value={formData.bathrooms}
               onChange={onInputChange}
@@ -205,10 +224,12 @@ const SimplifiedPropertyForm = ({
             </select>
           </div>
           
-          <div className="form-group">
-            <label className="label">Monthly Rent *</label>
+          <div className={styles.formGroup}>
+            <label className={styles.formLabel}>
+              Monthly Rent <span className={styles.requiredAsterisk}>*</span>
+            </label>
             <input
-              className={`input ${errors.rent_amount ? 'border-red-500' : ''}`}
+              className={`${styles.formInput} ${errors.rent_amount ? styles.formInputError : ''}`}
               type="number"
               name="rent_amount"
               value={formData.rent_amount}
@@ -219,16 +240,16 @@ const SimplifiedPropertyForm = ({
               required
             />
             {errors.rent_amount && (
-              <div className="text-red-500 mt-1 text-sm">{errors.rent_amount}</div>
+              <div className={styles.errorText}>{errors.rent_amount}</div>
             )}
           </div>
         </div>
 
-        <div className="grid md:grid-cols-2 gap-4">
-          <div className="form-group">
-            <label className="label">Security Deposit</label>
+        <div className={styles.formGrid}>
+          <div className={styles.formGroup}>
+            <label className={styles.formLabel}>Security Deposit</label>
             <input
-              className="input"
+              className={styles.formInput}
               type="number"
               name="security_deposit"
               value={formData.security_deposit}
@@ -239,10 +260,10 @@ const SimplifiedPropertyForm = ({
             />
           </div>
           
-          <div className="form-group">
-            <label className="label">Application Fee</label>
+          <div className={styles.formGroup}>
+            <label className={styles.formLabel}>Application Fee</label>
             <input
-              className="input"
+              className={styles.formInput}
               type="number"
               name="application_fee"
               value={formData.application_fee}
@@ -256,75 +277,79 @@ const SimplifiedPropertyForm = ({
       </div>
 
       {/* Property Features */}
-      <div className="bg-white p-6 rounded-lg border mb-6">
-        <h4 className="text-lg font-medium mb-4">Property Features</h4>
+      <div className={styles.sectionCard}>
+        <h4 className={styles.sectionCardTitle}>Property Features</h4>
         
-        <div className="grid md:grid-cols-2 gap-6 mb-4">
-          <div>
-            <label className="checkbox-label">
+        <div className={styles.checkboxGrid}>
+          <div className={styles.checkboxGroup}>
+            <div className={styles.checkboxItem}>
               <input
                 type="checkbox"
+                className={styles.checkboxInput}
                 name="furnished"
                 checked={formData.furnished || false}
                 onChange={onInputChange}
                 disabled={loading}
               />
-              <span className="checkbox-text">Furnished</span>
-            </label>
+              <span className={styles.checkboxText}>Furnished</span>
+            </div>
             
-            <label className="checkbox-label">
+            <div className={styles.checkboxItem}>
               <input
                 type="checkbox"
+                className={styles.checkboxInput}
                 name="pets_allowed"
                 checked={formData.pets_allowed || false}
                 onChange={onInputChange}
                 disabled={loading}
               />
-              <span className="checkbox-text">Pets Allowed</span>
-            </label>
+              <span className={styles.checkboxText}>Pets Allowed</span>
+            </div>
           </div>
           
-          <div>
-            <label className="checkbox-label">
+          <div className={styles.checkboxGroup}>
+            <div className={styles.checkboxItem}>
               <input
                 type="checkbox"
+                className={styles.checkboxInput}
                 name="smoking_allowed"
                 checked={formData.smoking_allowed || false}
                 onChange={onInputChange}
                 disabled={loading}
               />
-              <span className="checkbox-text">Smoking Allowed</span>
-            </label>
+              <span className={styles.checkboxText}>Smoking Allowed</span>
+            </div>
           </div>
         </div>
 
         {/* Amenities */}
-        <div className="form-group">
-          <label className="label mb-3">Amenities</label>
-          <div className="grid md:grid-cols-2 gap-2">
+        <div className={styles.formGroup}>
+          <label className={styles.formLabel}>Amenities</label>
+          <div className={styles.amenitiesGrid}>
             {basicAmenities.map(amenity => (
-              <label key={amenity.value} className="checkbox-label">
+              <div key={amenity.value} className={styles.amenityItem}>
                 <input
                   type="checkbox"
+                  className={styles.amenityInput}
                   checked={formData.amenities?.includes(amenity.value) || false}
                   onChange={(e) => onArrayChange('amenities', amenity.value, e.target.checked)}
                   disabled={loading}
                 />
-                <span className="checkbox-text">{amenity.label}</span>
-              </label>
+                <span className={styles.amenityText}>{amenity.label}</span>
+              </div>
             ))}
           </div>
         </div>
       </div>
 
       {/* Additional Information */}
-      <div className="bg-white p-6 rounded-lg border">
-        <h4 className="text-lg font-medium mb-4">Additional Information</h4>
+      <div className={styles.sectionCard}>
+        <h4 className={styles.sectionCardTitle}>Additional Information</h4>
         
-        <div className="form-group mb-4">
-          <label className="label">Contact Email</label>
+        <div className={styles.formGroup}>
+          <label className={styles.formLabel}>Contact Email</label>
           <input
-            className="input"
+            className={styles.formInput}
             type="email"
             name="contact_email"
             value={formData.contact_email}
@@ -334,14 +359,13 @@ const SimplifiedPropertyForm = ({
           />
         </div>
         
-        <div className="form-group">
-          <label className="label">Property Description</label>
+        <div className={styles.formGroup}>
+          <label className={styles.formLabel}>Property Description</label>
           <textarea
-            className="input"
+            className={styles.formTextarea}
             name="description"
             value={formData.description}
             onChange={onInputChange}
-            rows="4"
             placeholder="Describe your property, neighborhood, and any special features..."
             disabled={loading}
           />

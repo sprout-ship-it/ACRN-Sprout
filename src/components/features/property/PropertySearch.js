@@ -1,4 +1,4 @@
-// src/components/features/property/PropertySearch.js - REFACTORED
+// src/components/features/property/PropertySearch.js - UPDATED WITH CSS MODULE
 import React, { useState } from 'react';
 import { useAuth } from '../../../hooks/useAuth';
 import { supabase } from '../../../utils/supabase';
@@ -10,8 +10,9 @@ import PropertyAdvancedFilters from './search/PropertyAdvancedFilters';
 import PropertySearchResults from './search/PropertySearchResults';
 import usePropertySearch from './search/hooks/usePropertySearch';
 
-// ✅ Import global styles
-import '../../../styles/global.css';
+// ✅ UPDATED: Import our new CSS foundation and component module
+import '../../../styles/main.css';
+import styles from './PropertySearch.module.css';
 
 const PropertySearch = () => {
   const { user } = useAuth();
@@ -170,40 +171,40 @@ I'd love to discuss availability and the application process. Thank you!`,
 
   return (
     <div className="content">
-      {/* ✅ Header */}
-      <div className="text-center mb-5">
-        <h1 className="welcome-title">Find Recovery-Friendly Housing</h1>
-        <p className="welcome-text">
+      {/* ✅ UPDATED: Header using CSS module */}
+      <div className={styles.headerSection}>
+        <h1 className={styles.headerTitle}>Find Recovery-Friendly Housing</h1>
+        <p className={styles.headerSubtitle}>
           Search for housing options that support your recovery journey and meet your needs
         </p>
       </div>
 
-      {/* ✅ Search Mode Toggle */}
-      <div className="card mb-4">
-        <h3 className="card-title">Search Type</h3>
-        <div className="navigation">
-          <ul className="nav-list">
-            <li className="nav-item">
+      {/* ✅ UPDATED: Search Mode Toggle using CSS module */}
+      <div className={styles.searchModeCard}>
+        <h3 className={styles.searchModeTitle}>Search Type</h3>
+        <div className={styles.searchModeNavigation}>
+          <ul className={styles.searchModeNavList}>
+            <li className={styles.searchModeNavItem}>
               <button
-                className={`nav-button ${searchMode === 'basic' ? 'active' : ''}`}
+                className={`${styles.searchModeNavButton} ${searchMode === 'basic' ? styles.active : ''}`}
                 onClick={() => handleSearchModeChange('basic')}
               >
-                <span className="nav-icon">🏠</span>
+                <span className={styles.navIcon}>🏠</span>
                 <span>All Housing</span>
               </button>
             </li>
-            <li className="nav-item">
+            <li className={styles.searchModeNavItem}>
               <button
-                className={`nav-button ${searchMode === 'recovery' ? 'active' : ''}`}
+                className={`${styles.searchModeNavButton} ${searchMode === 'recovery' ? styles.active : ''}`}
                 onClick={() => handleSearchModeChange('recovery')}
               >
-                <span className="nav-icon">🏡</span>
+                <span className={styles.navIcon}>🏡</span>
                 <span>Recovery Housing</span>
               </button>
             </li>
           </ul>
         </div>
-        <p className="text-gray-600 mt-2">
+        <p className={styles.searchModeDescription}>
           {searchMode === 'basic' 
             ? 'Search all available housing with recovery-friendly options prioritized'
             : 'Search specifically for recovery housing with specialized support services'
@@ -211,36 +212,42 @@ I'd love to discuss availability and the application process. Thank you!`,
         </p>
       </div>
 
-      {/* ✅ Basic Search Filters */}
-      <PropertySearchFilters
-        basicFilters={basicFilters}
-        onBasicFilterChange={handleBasicFilterChange}
-        onArrayFilterChange={handleArrayFilterChange}
-        onUseMyPreferences={handleUseMyPreferences}
-        onManualSearch={performSearch}
-        onClearAllFilters={clearAllFilters}
-        userPreferences={userPreferences}
-        loading={loading}
-      />
+      {/* ✅ UPDATED: Basic Search Filters using CSS module */}
+      <div className={styles.filtersSection}>
+        <PropertySearchFilters
+          basicFilters={basicFilters}
+          onBasicFilterChange={handleBasicFilterChange}
+          onArrayFilterChange={handleArrayFilterChange}
+          onUseMyPreferences={handleUseMyPreferences}
+          onManualSearch={performSearch}
+          onClearAllFilters={clearAllFilters}
+          userPreferences={userPreferences}
+          loading={loading}
+        />
+      </div>
 
-      {/* ✅ Recovery-Specific Filters */}
-      <PropertyRecoveryFilters
-        recoveryFilters={recoveryFilters}
-        onRecoveryFilterChange={handleRecoveryFilterChange}
-        onArrayFilterChange={handleArrayFilterChange}
-        searchMode={searchMode}
-        loading={loading}
-      />
+      {/* ✅ UPDATED: Recovery-Specific Filters using CSS module */}
+      <div className={styles.filtersSection}>
+        <PropertyRecoveryFilters
+          recoveryFilters={recoveryFilters}
+          onRecoveryFilterChange={handleRecoveryFilterChange}
+          onArrayFilterChange={handleArrayFilterChange}
+          searchMode={searchMode}
+          loading={loading}
+        />
+      </div>
 
-      {/* ✅ Advanced Filters */}
-      <PropertyAdvancedFilters
-        advancedFilters={advancedFilters}
-        onAdvancedFilterChange={handleAdvancedFilterChange}
-        onArrayFilterChange={handleArrayFilterChange}
-        showAdvancedFilters={showAdvancedFilters}
-        onToggleAdvancedFilters={() => setShowAdvancedFilters(!showAdvancedFilters)}
-        loading={loading}
-      />
+      {/* ✅ UPDATED: Advanced Filters using CSS module */}
+      <div className={styles.filtersSection}>
+        <PropertyAdvancedFilters
+          advancedFilters={advancedFilters}
+          onAdvancedFilterChange={handleAdvancedFilterChange}
+          onArrayFilterChange={handleArrayFilterChange}
+          showAdvancedFilters={showAdvancedFilters}
+          onToggleAdvancedFilters={() => setShowAdvancedFilters(!showAdvancedFilters)}
+          loading={loading}
+        />
+      </div>
 
       {/* ✅ Search Results */}
       <PropertySearchResults
