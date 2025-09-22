@@ -14,7 +14,7 @@
   align-items: flex-start;
   justify-content: center;
   padding: 20px;
-  padding-top: 180px; /* Increased for header + nav */
+  padding-top: 120px; /* Reduced for larger modal */
   overflow-y: auto;
   overflow-x: hidden;
   pointer-events: auto;
@@ -29,7 +29,7 @@
   border: 2px solid var(--border-beige);
   max-width: 900px;
   width: 95%;
-  max-height: calc(100vh - 200px); /* Account for larger header */
+  max-height: calc(100vh - 140px); /* More vertical space */
   box-shadow: var(--shadow-xl);
   display: flex;
   flex-direction: column;
@@ -216,7 +216,7 @@
   scrollbar-width: thin;
   scrollbar-color: var(--gray-400) var(--gray-100);
   min-height: 0; /* Allow flexbox to shrink this */
-  max-height: calc(100vh - 380px); /* Constrain height to prevent overlap */
+  max-height: calc(100vh - 320px); /* More content space */
 }
 
 .body::-webkit-scrollbar {
@@ -826,16 +826,16 @@
 /* ==================== RESPONSIVE DESIGN ==================== */
 @media (max-width: 768px) {
   .overlay {
-    padding-top: 160px;
+    padding-top: 100px; /* Less top space on mobile */
   }
   
   .content {
-    max-height: calc(100vh - 180px);
+    max-height: calc(100vh - 120px); /* Larger on mobile */
   }
   
   .body {
     padding: 1rem;
-    max-height: calc(100vh - 320px); /* Adjusted for mobile */
+    max-height: calc(100vh - 260px); /* More content space on mobile */
   }
   
   .navigation {
@@ -890,12 +890,12 @@
 
 @media (max-width: 480px) {
   .overlay {
-    padding: 140px 10px 10px;
+    padding: 80px 10px 10px; /* Even less top space on tiny screens */
   }
   
   .content {
     width: 100%;
-    max-height: calc(100vh - 160px);
+    max-height: calc(100vh - 100px); /* Maximum size on small screens */
   }
   
   .header {
@@ -925,6 +925,6 @@
   }
   
   .body {
-    max-height: calc(100vh - 280px); /* Adjusted for very small screens */
+    max-height: calc(100vh - 220px); /* Maximum content space on small screens */
   }
 }
