@@ -1,5 +1,6 @@
-// src/components/employer/sections/EmployerJobsSection.js
-import React from 'react';
+// src/components/features/employer/sections/EmployerJobsSection.js
+import React, { useState } from 'react';
+import styles from './EmployerSections.module.css';
 
 const EmployerJobsSection = ({
   formData,
@@ -9,6 +10,8 @@ const EmployerJobsSection = ({
   onArrayChange,
   onObjectChange
 }) => {
+  const [newJobOpening, setNewJobOpening] = useState('');
+
   const jobTypeOptions = [
     { value: 'full_time', label: 'Full-Time' },
     { value: 'part_time', label: 'Part-Time' },
@@ -42,10 +45,10 @@ const EmployerJobsSection = ({
 
   // Handle adding new job opening
   const handleAddJobOpening = () => {
-    const newOpening = document.getElementById('new-job-opening').value.trim();
-    if (newOpening && !formData.current_openings?.includes(newOpening)) {
-      onArrayChange('current_openings', newOpening, true);
-      document.getElementById('new-job-opening').value = '';
+    const trimmedOpening = newJobOpening.trim();
+    if (trimmedOpening && !formData.current_openings?.includes(trimmedOpening)) {
+      onArrayChange('current_openings', trimmedOpening, true);
+      setNewJobOpening('');
     }
   };
 
@@ -54,13 +57,21 @@ const EmployerJobsSection = ({
     onArrayChange('current_openings', opening, false);
   };
 
+  // Handle key press for job opening input
+  const handleKeyPress = (e) => {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      handleAddJobOpening();
+    }
+  };
+
   return (
-    <>
-      <h3 className="card-title mb-4">Employment & Benefits Information</h3>
+    <div className={styles.section}>
+      <h3 className={styles.sectionTitle}>Employment & Benefits Information</h3>
       
-      <div className="form-group mb-4">
+      <div className="form-group">
         <label className="label">Job Types Available</label>
-        <div className="grid-auto">
+        <div className={styles.checkboxGrid}>
           {jobTypeOptions.map(type => (
             <div key={type.value} className="checkbox-item">
               <input
@@ -76,12 +87,12 @@ const EmployerJobsSection = ({
             </div>
           ))}
         </div>
-        <div className="text-gray-500 mt-2 text-sm">
+        <div className={styles.helperText}>
           Select all employment types you offer
         </div>
       </div>
 
-      <div className="form-group mb-4">
+      <div className="form-group">
         <label className="label">Remote Work Options</label>
         <select
           className="input"
@@ -97,9 +108,9 @@ const EmployerJobsSection = ({
         </select>
       </div>
 
-      <div className="form-group mb-4">
+      <div className="form-group">
         <label className="label">Benefits Offered</label>
-        <div className="grid-auto">
+        <div className={styles.checkboxGrid}>
           {benefitsOptions.map(benefit => (
             <div key={benefit.value} className="checkbox-item">
               <input
@@ -115,117 +126,113 @@ const EmployerJobsSection = ({
             </div>
           ))}
         </div>
-        <div className="text-gray-500 mt-2 text-sm">
+        <div className={styles.helperText}>
           Select all benefits you provide to employees
         </div>
       </div>
 
-      <h4 style={{ 
-        color: 'var(--secondary-teal)', 
-        marginBottom: 'var(--spacing-lg)', 
-        paddingBottom: '10px', 
-        borderBottom: '2px solid var(--border-beige)' 
-      }}>
-        Current Job Openings
-      </h4>
+      {/* Current Job Openings Subsection */}
+      <div className={styles.subsection}>
+        <h4 className={styles.subsectionTitle}>Current Job Openings</h4>
 
-      <div className="form-group mb-4">
-        <label className="label">Current Open Positions</label>
-        <div className="grid-2 mb-2">
-          <input
-            className="input"
-            type="text"
-            id="new-job-opening"
-            placeholder="Job Title (e.g., Construction Worker, Administrative Assistant)"
-            disabled={loading}
-          />
-          <button
-            type="button"
-            className="btn btn-secondary"
-            onClick={handleAddJobOpening}
-            disabled={loading}
-          >
-            Add Position
-          </button>
-        </div>
-        
-        {formData.current_openings?.length > 0 && (
-          <div className="mb-3">
-            <div className="label mb-2">Listed Positions:</div>
-            {formData.current_openings.map((opening, index) => (
-              <div key={index} className="flex" style={{ alignItems: 'center', marginBottom: '8px' }}>
-                <span className="badge badge-success mr-2">{opening}</span>
-                <button
-                  type="button"
-                  className="btn btn-sm btn-outline"
-                  onClick={() => handleRemoveJobOpening(opening)}
-                  disabled={loading}
-                  style={{ padding: '4px 8px', fontSize: '0.8rem' }}
-                >
-                  Remove
-                </button>
-              </div>
-            ))}
+        <div className="form-group">
+          <label className="label">Current Open Positions</label>
+          <div className="grid-2">
+            <input
+              className="input"
+              type="text"
+              value={newJobOpening}
+              onChange={(e) => setNewJobOpening(e.target.value)}
+              onKeyPress={handleKeyPress}
+              placeholder="Job Title (e.g., Construction Worker, Administrative Assistant)"
+              disabled={loading}
+            />
+            <button
+              type="button"
+              className="btn btn-secondary"
+              onClick={handleAddJobOpening}
+              disabled={loading || !newJobOpening.trim()}
+            >
+              Add Position
+            </button>
           </div>
-        )}
-        <div className="text-gray-500 mt-1 text-sm">
-          Add specific job titles you're currently hiring for
+          
+          {formData.current_openings?.length > 0 && (
+            <div className={styles.dynamicList}>
+              <div className="label">Listed Positions:</div>
+              {formData.current_openings.map((opening, index) => (
+                <div key={index} className={styles.listItem}>
+                  <span className="badge badge-success">{opening}</span>
+                  <button
+                    type="button"
+                    className={`btn btn-outline btn-sm ${styles.removeButton}`}
+                    onClick={() => handleRemoveJobOpening(opening)}
+                    disabled={loading}
+                  >
+                    Remove
+                  </button>
+                </div>
+              ))}
+            </div>
+          )}
+          <div className={styles.helperText}>
+            Add specific job titles you're currently hiring for
+          </div>
         </div>
-      </div>
 
-      <div className="form-group mb-4">
-        <label className="label">Application Process</label>
-        <textarea
-          className="input"
-          name="application_process"
-          value={formData.application_process}
-          onChange={onInputChange}
-          placeholder="Describe how applicants should apply (email, website, in person, etc.)..."
-          disabled={loading}
-          rows="3"
-        />
-        <div className="text-gray-500 mt-1 text-sm">
-          Provide clear instructions on how to apply
-        </div>
-      </div>
-
-      <div className="form-group mb-4">
-        <div className="flex" style={{ alignItems: 'center' }}>
-          <input
-            type="checkbox"
-            id="is_actively_hiring"
-            name="is_actively_hiring"
-            checked={formData.is_actively_hiring}
+        <div className="form-group">
+          <label className="label">Application Process</label>
+          <textarea
+            className="input"
+            name="application_process"
+            value={formData.application_process}
             onChange={onInputChange}
+            placeholder="Describe how applicants should apply (email, website, in person, etc.)..."
             disabled={loading}
-            style={{ marginRight: '8px' }}
+            rows="3"
           />
-          <label htmlFor="is_actively_hiring" className="label" style={{ margin: 0 }}>
-            Currently actively hiring
-          </label>
+          <div className={styles.helperText}>
+            Provide clear instructions on how to apply
+          </div>
         </div>
-        <div className="text-gray-500 mt-1 text-sm">
-          Check this if you're actively looking for new employees
-        </div>
-      </div>
 
-      <div className="form-group mb-4">
-        <label className="label">Additional Notes</label>
-        <textarea
-          className="input"
-          name="additional_notes"
-          value={formData.additional_notes}
-          onChange={onInputChange}
-          placeholder="Any additional information about your company or opportunities..."
-          disabled={loading}
-          rows="3"
-        />
-        <div className="text-gray-500 mt-1 text-sm">
-          Share any other important information for potential applicants
+        <div className="form-group">
+          <div className="checkbox-item">
+            <input
+              type="checkbox"
+              id="is_actively_hiring"
+              name="is_actively_hiring"
+              checked={formData.is_actively_hiring}
+              onChange={onInputChange}
+              disabled={loading}
+            />
+            <label htmlFor="is_actively_hiring">
+              Currently actively hiring
+            </label>
+          </div>
+          <div className={styles.helperText}>
+            Check this if you're actively looking for new employees
+          </div>
+        </div>
+
+        <div className="form-group">
+          <label className="label">Additional Notes</label>
+          <textarea
+            className="input"
+            name="additional_notes"
+            value={formData.additional_notes}
+            onChange={onInputChange}
+            placeholder="Any additional information about your company or opportunities..."
+            disabled={loading}
+            rows="3"
+          />
+          <div className={styles.helperText}>
+            Share any other important information for potential applicants
+          </div>
         </div>
       </div>
-    </>
+    </div>
   );
 };
 
-export default EmployerJobsSection;
+export default EmployerJobsSection

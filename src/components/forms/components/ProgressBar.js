@@ -1,6 +1,7 @@
 // src/components/forms/components/ProgressBar.js
 import React from 'react';
 import PropTypes from 'prop-types';
+import styles from './ProgressBar.module.css';
 
 const ProgressBar = ({ 
   percentage, 
@@ -28,11 +29,11 @@ const ProgressBar = ({
   const progressColor = getProgressColor(safePercentage);
 
   return (
-    <div className={`progress-container ${className}`}>
+    <div className={`${styles.progressContainer} ${className}`}>
       {/* Progress Bar */}
-      <div className="progress-bar mb-2">
+      <div className={styles.progressBar}>
         <div 
-          className="progress-fill"
+          className={styles.progressFill}
           style={{ 
             width: `${safePercentage}%`,
             background: `linear-gradient(135deg, ${progressColor}, ${progressColor}dd)`
@@ -42,145 +43,49 @@ const ProgressBar = ({
       
       {/* Progress Text */}
       {showText && (
-        <p className="progress-text">
+        <p className={styles.progressText}>
           {label} • {safePercentage}% Complete
           {safePercentage < 100 && (
             <span className="text-gray-500"> - Keep going!</span>
           )}
           {safePercentage === 100 && (
-            <span className="text-green-600"> - Complete!</span>
+            <span className={styles.completeText}> - Complete!</span>
           )}
         </p>
       )}
       
       {/* Progress Steps Indicator */}
       {safePercentage > 0 && (
-        <div className="progress-steps-mini">
-          <div className="steps-container">
+        <div className={styles.progressSteps}>
+          <div className={styles.stepsContainer}>
             {[25, 50, 75, 100].map((step, index) => (
               <div
                 key={step}
-                className={`step-indicator ${safePercentage >= step ? 'completed' : 'incomplete'}`}
+                className={`${styles.stepIndicator} ${
+                  safePercentage >= step ? styles.completed : styles.incomplete
+                }`}
                 title={`${step}% completion`}
               >
-                <div className="step-dot"></div>
-                {index < 3 && <div className="step-connector"></div>}
+                <div 
+                  className={styles.stepDot}
+                  style={safePercentage >= step ? { 
+                    background: progressColor,
+                    boxShadow: `0 0 0 2px ${progressColor}33`
+                  } : {}}
+                />
+                {index < 3 && (
+                  <div 
+                    className={styles.stepConnector}
+                    style={safePercentage >= step ? { 
+                      background: `${progressColor}66`
+                    } : {}}
+                  />
+                )}
               </div>
             ))}
           </div>
         </div>
       )}
-      
-      <style jsx>{`
-        .progress-container {
-          margin-bottom: 25px;
-        }
-
-        .progress-bar {
-          width: 100%;
-          height: 8px;
-          background: var(--border-beige, #E6D5C3);
-          border-radius: 4px;
-          overflow: hidden;
-          position: relative;
-        }
-
-        .progress-fill {
-          height: 100%;
-          transition: width 0.3s ease;
-          border-radius: 4px;
-        }
-
-        .progress-text {
-          text-align: center;
-          color: var(--gray-600, #6c757d);
-          font-size: 14px;
-          margin-top: 8px;
-          margin-bottom: 0;
-          font-weight: 500;
-        }
-
-        .text-gray-500 {
-          color: var(--gray-500, #6c757d);
-        }
-
-        .text-green-600 {
-          color: var(--success-text, #155724);
-        }
-
-        .mb-2 {
-          margin-bottom: 8px;
-        }
-        
-        .progress-steps-mini {
-          margin-top: 12px;
-          display: flex;
-          justify-content: center;
-        }
-        
-        .steps-container {
-          display: flex;
-          align-items: center;
-          gap: 8px;
-        }
-        
-        .step-indicator {
-          display: flex;
-          align-items: center;
-          gap: 8px;
-        }
-        
-        .step-dot {
-          width: 8px;
-          height: 8px;
-          border-radius: 50%;
-          transition: all 0.3s ease;
-        }
-        
-        .step-indicator.completed .step-dot {
-          background: ${progressColor};
-          box-shadow: 0 0 0 2px ${progressColor}33;
-        }
-        
-        .step-indicator.incomplete .step-dot {
-          background: var(--border-beige, #E6D5C3);
-          border: 1px solid var(--gray-300, #dee2e6);
-        }
-        
-        .step-connector {
-          width: 16px;
-          height: 2px;
-          background: var(--border-beige, #E6D5C3);
-        }
-        
-        .step-indicator.completed .step-connector {
-          background: ${progressColor}66;
-        }
-        
-        @media (max-width: 480px) {
-          .progress-steps-mini {
-            margin-top: 8px;
-          }
-          
-          .steps-container {
-            gap: 6px;
-          }
-          
-          .step-dot {
-            width: 6px;
-            height: 6px;
-          }
-          
-          .step-connector {
-            width: 12px;
-            height: 1px;
-          }
-
-          .progress-text {
-            font-size: 13px;
-          }
-        }
-      `}</style>
     </div>
   );
 };

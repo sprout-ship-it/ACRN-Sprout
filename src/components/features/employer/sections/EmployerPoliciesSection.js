@@ -1,5 +1,6 @@
-// src/components/employer/sections/EmployerPoliciesSection.js
+// src/components/features/employer/sections/EmployerPoliciesSection.js
 import React from 'react';
+import styles from './EmployerSections.module.css';
 
 const EmployerPoliciesSection = ({
   formData,
@@ -39,12 +40,12 @@ const EmployerPoliciesSection = ({
   ];
 
   return (
-    <>
-      <h3 className="card-title mb-4">Recovery-Friendly Policies & Culture</h3>
+    <div className={styles.section}>
+      <h3 className={styles.sectionTitle}>Recovery-Friendly Policies & Culture</h3>
       
-      <div className="form-group mb-4">
+      <div className="form-group">
         <label className="label">Recovery-Friendly Features</label>
-        <div className="grid-auto">
+        <div className={styles.checkboxGrid}>
           {recoveryFriendlyFeatures.map(feature => (
             <div key={feature.value} className="checkbox-item">
               <input
@@ -60,12 +61,12 @@ const EmployerPoliciesSection = ({
             </div>
           ))}
         </div>
-        <div className="text-gray-500 mt-2 text-sm">
+        <div className={styles.helperText}>
           Select all features that apply to your workplace
         </div>
       </div>
 
-      <div className="form-group mb-4">
+      <div className="form-group">
         <label className="label">Accommodation Policies</label>
         <textarea
           className="input"
@@ -76,12 +77,12 @@ const EmployerPoliciesSection = ({
           disabled={loading}
           rows="3"
         />
-        <div className="text-gray-500 mt-1 text-sm">
+        <div className={styles.helperText}>
           Explain how you accommodate employees' recovery needs
         </div>
       </div>
 
-      <div className="form-group mb-4">
+      <div className="form-group">
         <label className="label">Hiring Practices</label>
         <textarea
           className="input"
@@ -92,12 +93,12 @@ const EmployerPoliciesSection = ({
           disabled={loading}
           rows="3"
         />
-        <div className="text-gray-500 mt-1 text-sm">
+        <div className={styles.helperText}>
           Share your fair chance hiring practices
         </div>
       </div>
 
-      <div className="grid-2 mb-4">
+      <div className="grid-2">
         <div className="form-group">
           <label className="label">Drug Testing Policy</label>
           <select
@@ -112,7 +113,7 @@ const EmployerPoliciesSection = ({
               <option key={option.value} value={option.value}>{option.label}</option>
             ))}
           </select>
-          <div className="text-gray-500 mt-1 text-sm">
+          <div className={styles.helperText}>
             Be transparent about drug testing requirements
           </div>
         </div>
@@ -131,12 +132,12 @@ const EmployerPoliciesSection = ({
               <option key={option.value} value={option.value}>{option.label}</option>
             ))}
           </select>
-          <div className="text-gray-500 mt-1 text-sm">
+          <div className={styles.helperText}>
             Explain your background check approach
           </div>
         </div>
       </div>
-    </>
+    </div>
   );
 };
 

@@ -1,0 +1,180 @@
+/* EmployerSections.module.css - Shared styling for employer form sections */
+
+/* ==================== SECTION CONTAINER ==================== */
+.section {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-xl);
+}
+
+/* ==================== SECTION TITLES ==================== */
+.sectionTitle {
+  font-family: var(--font-serif);
+  font-size: 1.4rem;
+  font-weight: 700;
+  color: var(--primary-purple);
+  margin: 0 0 var(--spacing-xl) 0;
+  padding-bottom: var(--spacing-md);
+  border-bottom: 2px solid var(--border-beige);
+  position: relative;
+}
+
+.sectionTitle::before {
+  content: '';
+  position: absolute;
+  bottom: -2px;
+  left: 0;
+  width: 60px;
+  height: 2px;
+  background: var(--primary-purple);
+}
+
+/* ==================== SUBSECTION STYLING ==================== */
+.subsection {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-lg);
+  padding: var(--spacing-lg);
+  background: rgba(248, 249, 250, 0.5);
+  border-radius: var(--radius-lg);
+  border: 1px solid var(--border-beige);
+}
+
+.subsectionTitle {
+  font-family: var(--font-serif);
+  font-size: 1.1rem;
+  font-weight: 600;
+  color: var(--secondary-teal);
+  margin: 0 0 var(--spacing-md) 0;
+  padding-bottom: var(--spacing-sm);
+  border-bottom: 1px solid var(--secondary-teal);
+  position: relative;
+}
+
+.subsectionTitle::before {
+  content: '';
+  position: absolute;
+  bottom: -1px;
+  left: 0;
+  width: 40px;
+  height: 1px;
+  background: var(--secondary-teal);
+}
+
+/* ==================== SPECIAL INPUT STYLING ==================== */
+.zipInput {
+  max-width: 200px;
+}
+
+/* ==================== FORM ENHANCEMENTS ==================== */
+.section .form-group {
+  margin-bottom: var(--spacing-lg);
+}
+
+.section .grid-2 {
+  margin-bottom: var(--spacing-lg);
+}
+
+.section .grid-2:last-child {
+  margin-bottom: 0;
+}
+
+/* ==================== CHECKBOX GRID LAYOUTS ==================== */
+.checkboxGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: var(--spacing-md);
+  margin-bottom: var(--spacing-md);
+}
+
+.checkboxGrid .checkbox-item {
+  margin-bottom: 0;
+}
+
+/* ==================== HELPER TEXT STYLING ==================== */
+.helperText {
+  color: var(--gray-500);
+  font-size: 0.85rem;
+  margin-top: var(--spacing-sm);
+  line-height: 1.4;
+}
+
+/* ==================== DYNAMIC LIST STYLING ==================== */
+.dynamicList {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-md);
+}
+
+.listItem {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-sm);
+  padding: var(--spacing-sm);
+  background: white;
+  border: 1px solid var(--border-beige);
+  border-radius: var(--radius-md);
+}
+
+.listItem .badge {
+  flex: 1;
+}
+
+.removeButton {
+  padding: 0.25rem 0.5rem;
+  font-size: 0.75rem;
+  min-height: auto;
+}
+
+/* ==================== RESPONSIVE DESIGN ==================== */
+@media (max-width: 768px) {
+  .section {
+    gap: var(--spacing-lg);
+  }
+  
+  .sectionTitle {
+    font-size: 1.2rem;
+    margin-bottom: var(--spacing-lg);
+  }
+  
+  .subsection {
+    padding: var(--spacing-md);
+    gap: var(--spacing-md);
+  }
+  
+  .subsectionTitle {
+    font-size: 1rem;
+  }
+  
+  .checkboxGrid {
+    grid-template-columns: 1fr;
+  }
+  
+  .zipInput {
+    max-width: 100%;
+  }
+  
+  .listItem {
+    flex-direction: column;
+    align-items: stretch;
+    text-align: center;
+  }
+  
+  .listItem .badge {
+    flex: none;
+  }
+}
+
+@media (max-width: 480px) {
+  .sectionTitle {
+    font-size: 1.1rem;
+  }
+  
+  .subsectionTitle {
+    font-size: 0.95rem;
+  }
+  
+  .subsection {
+    padding: var(--spacing-sm);
+  }
+}

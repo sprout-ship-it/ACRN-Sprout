@@ -1,6 +1,7 @@
 // src/components/forms/components/FormActions.js
 import React from 'react';
 import PropTypes from 'prop-types';
+import styles from './FormActions.module.css';
 
 const FormActions = ({
   loading = false,
@@ -38,24 +39,20 @@ const FormActions = ({
 
   // Get submit button class based on completion
   const getSubmitButtonClass = () => {
-    let baseClass = 'btn';
-    
     if (isFormValid) {
-      baseClass += ' btn-primary';
+      return 'btn btn-primary';
     } else {
-      baseClass += ' btn-secondary';
+      return 'btn btn-secondary';
     }
-    
-    return baseClass;
   };
 
   return (
-    <div className="form-actions">
+    <div className={styles.formActions}>
       {/* Completion Status Message */}
       {!editMode && completionPercentage < 100 && (
-        <div className="completion-message">
+        <div className={styles.completionMessage}>
           {completionPercentage < 75 ? (
-            <div className="text-warning">
+            <div className="alert alert-warning">
               <small>
                 <strong>Complete at least 75% to save your profile</strong>
                 <br />
@@ -63,7 +60,7 @@ const FormActions = ({
               </small>
             </div>
           ) : (
-            <div className="text-success">
+            <div className="alert alert-success">
               <small>
                 <strong>Ready to save!</strong> Your profile is {completionPercentage}% complete.
               </small>
@@ -73,7 +70,7 @@ const FormActions = ({
       )}
 
       {/* Action Buttons */}
-      <div className="button-group">
+      <div className={styles.buttonGroup}>
         {/* Cancel Button */}
         {onCancel && (
           <button
@@ -108,7 +105,7 @@ const FormActions = ({
       </div>
 
       {/* Help Text */}
-      <div className="help-text">
+      <div className={styles.helpText}>
         {!canSubmit ? (
           <small className="text-red-500">
             Matching profiles are only available for applicants seeking housing.
@@ -126,79 +123,6 @@ const FormActions = ({
           </small>
         )}
       </div>
-
-      <style jsx>{`
-        .form-actions {
-          display: flex;
-          flex-direction: column;
-          gap: 16px;
-          margin-top: 30px;
-          padding-top: 20px;
-          border-top: 1px solid var(--border-beige, #E6D5C3);
-        }
-
-        .completion-message {
-          text-align: center;
-          padding: 12px;
-          border-radius: 6px;
-          border: 1px solid transparent;
-        }
-
-        .text-warning {
-          color: var(--warning-text, #856404);
-          background: var(--warning-bg, #fff3cd);
-          border-color: var(--warning-border, #ffeaa7);
-        }
-
-        .text-success {
-          color: var(--success-text, #155724);
-          background: var(--success-bg, #d4edda);
-          border-color: var(--success-border, #c3e6cb);
-        }
-
-        .button-group {
-          display: flex;
-          gap: 12px;
-          justify-content: flex-end;
-          align-items: center;
-        }
-
-        .help-text {
-          text-align: center;
-          font-size: 13px;
-          line-height: 1.4;
-        }
-
-        .text-red-500 {
-          color: #dc3545;
-        }
-
-        .text-gray-600 {
-          color: var(--gray-600, #6c757d);
-        }
-
-        /* Mobile Responsive */
-        @media (max-width: 768px) {
-          .button-group {
-            flex-direction: column-reverse;
-            gap: 8px;
-          }
-
-          .button-group .btn {
-            width: 100%;
-            min-width: unset;
-          }
-
-          .completion-message {
-            padding: 10px;
-            font-size: 13px;
-          }
-
-          .help-text {
-            font-size: 12px;
-          }
-        }
-      `}</style>
     </div>
   );
 };

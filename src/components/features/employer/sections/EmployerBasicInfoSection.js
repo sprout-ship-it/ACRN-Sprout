@@ -1,5 +1,6 @@
-// src/components/employer/sections/EmployerBasicInfoSection.js
+// src/components/features/employer/sections/EmployerBasicInfoSection.js
 import React from 'react';
+import styles from './EmployerSections.module.css';
 
 const EmployerBasicInfoSection = ({
   formData,
@@ -27,10 +28,10 @@ const EmployerBasicInfoSection = ({
   ];
 
   return (
-    <>
-      <h3 className="card-title mb-4">Basic Company Information</h3>
+    <div className={styles.section}>
+      <h3 className={styles.sectionTitle}>Basic Company Information</h3>
       
-      <div className="form-group mb-4">
+      <div className="form-group">
         <label className="label">
           Company Name <span className="text-red-500">*</span>
         </label>
@@ -45,11 +46,11 @@ const EmployerBasicInfoSection = ({
           required
         />
         {errors.company_name && (
-          <div className="text-red-500 mt-1">{errors.company_name}</div>
+          <div className="text-red-500 text-sm mt-1">{errors.company_name}</div>
         )}
       </div>
 
-      <div className="grid-2 mb-4">
+      <div className="grid-2">
         <div className="form-group">
           <label className="label">
             Industry <span className="text-red-500">*</span>
@@ -68,7 +69,7 @@ const EmployerBasicInfoSection = ({
             ))}
           </select>
           {errors.industry && (
-            <div className="text-red-500 mt-1">{errors.industry}</div>
+            <div className="text-red-500 text-sm mt-1">{errors.industry}</div>
           )}
         </div>
         
@@ -90,173 +91,164 @@ const EmployerBasicInfoSection = ({
             ))}
           </select>
           {errors.business_type && (
-            <div className="text-red-500 mt-1">{errors.business_type}</div>
+            <div className="text-red-500 text-sm mt-1">{errors.business_type}</div>
           )}
         </div>
       </div>
 
-      <h4 style={{ 
-        color: 'var(--secondary-teal)', 
-        marginBottom: 'var(--spacing-lg)', 
-        paddingBottom: '10px', 
-        borderBottom: '2px solid var(--border-beige)' 
-      }}>
-        Location Information
-      </h4>
+      {/* Location Information Subsection */}
+      <div className={styles.subsection}>
+        <h4 className={styles.subsectionTitle}>Location Information</h4>
 
-      <div className="form-group mb-4">
-        <label className="label">Street Address</label>
-        <input
-          className="input"
-          type="text"
-          name="address"
-          value={formData.address}
-          onChange={onInputChange}
-          placeholder="123 Business Street, Suite 100"
-          disabled={loading}
-        />
-      </div>
-
-      <div className="grid-2 mb-4">
         <div className="form-group">
-          <label className="label">
-            City <span className="text-red-500">*</span>
-          </label>
-          <input
-            className={`input ${errors.city ? 'border-red-500' : ''}`}
-            type="text"
-            name="city"
-            value={formData.city}
-            onChange={onInputChange}
-            placeholder="City"
-            disabled={loading}
-            required
-          />
-          {errors.city && (
-            <div className="text-red-500 mt-1">{errors.city}</div>
-          )}
-        </div>
-        
-        <div className="form-group">
-          <label className="label">
-            State <span className="text-red-500">*</span>
-          </label>
-          <select
-            className={`input ${errors.state ? 'border-red-500' : ''}`}
-            name="state"
-            value={formData.state}
-            onChange={onInputChange}
-            disabled={loading}
-            required
-          >
-            <option value="">Select State</option>
-            {stateOptions.map(state => (
-              <option key={state} value={state}>{state}</option>
-            ))}
-          </select>
-          {errors.state && (
-            <div className="text-red-500 mt-1">{errors.state}</div>
-          )}
-        </div>
-      </div>
-
-      <div className="form-group mb-4">
-        <label className="label">
-          ZIP Code <span className="text-red-500">*</span>
-        </label>
-        <input
-          className={`input ${errors.zip_code ? 'border-red-500' : ''}`}
-          type="text"
-          name="zip_code"
-          value={formData.zip_code}
-          onChange={onInputChange}
-          placeholder="12345"
-          disabled={loading}
-          style={{ maxWidth: '200px' }}
-          required
-        />
-        {errors.zip_code && (
-          <div className="text-red-500 mt-1">{errors.zip_code}</div>
-        )}
-      </div>
-
-      <h4 style={{ 
-        color: 'var(--secondary-teal)', 
-        marginBottom: 'var(--spacing-lg)', 
-        paddingBottom: '10px', 
-        borderBottom: '2px solid var(--border-beige)' 
-      }}>
-        Contact Information
-      </h4>
-
-      <div className="grid-2 mb-4">
-        <div className="form-group">
-          <label className="label">
-            Phone Number <span className="text-red-500">*</span>
-          </label>
-          <input
-            className={`input ${errors.phone ? 'border-red-500' : ''}`}
-            type="tel"
-            name="phone"
-            value={formData.phone}
-            onChange={onInputChange}
-            placeholder="(555) 123-4567"
-            disabled={loading}
-            required
-          />
-          {errors.phone && (
-            <div className="text-red-500 mt-1">{errors.phone}</div>
-          )}
-        </div>
-        
-        <div className="form-group">
-          <label className="label">Contact Email</label>
-          <input
-            className={`input ${errors.contact_email ? 'border-red-500' : ''}`}
-            type="email"
-            name="contact_email"
-            value={formData.contact_email}
-            onChange={onInputChange}
-            placeholder="jobs@company.com"
-            disabled={loading}
-          />
-          {errors.contact_email && (
-            <div className="text-red-500 mt-1">{errors.contact_email}</div>
-          )}
-        </div>
-      </div>
-
-      <div className="grid-2 mb-4">
-        <div className="form-group">
-          <label className="label">Company Website</label>
-          <input
-            className={`input ${errors.website ? 'border-red-500' : ''}`}
-            type="url"
-            name="website"
-            value={formData.website}
-            onChange={onInputChange}
-            placeholder="https://www.company.com"
-            disabled={loading}
-          />
-          {errors.website && (
-            <div className="text-red-500 mt-1">{errors.website}</div>
-          )}
-        </div>
-        
-        <div className="form-group">
-          <label className="label">Contact Person</label>
+          <label className="label">Street Address</label>
           <input
             className="input"
             type="text"
-            name="contact_person"
-            value={formData.contact_person}
+            name="address"
+            value={formData.address}
             onChange={onInputChange}
-            placeholder="Hiring Manager Name"
+            placeholder="123 Business Street, Suite 100"
             disabled={loading}
           />
         </div>
+
+        <div className="grid-2">
+          <div className="form-group">
+            <label className="label">
+              City <span className="text-red-500">*</span>
+            </label>
+            <input
+              className={`input ${errors.city ? 'border-red-500' : ''}`}
+              type="text"
+              name="city"
+              value={formData.city}
+              onChange={onInputChange}
+              placeholder="City"
+              disabled={loading}
+              required
+            />
+            {errors.city && (
+              <div className="text-red-500 text-sm mt-1">{errors.city}</div>
+            )}
+          </div>
+          
+          <div className="form-group">
+            <label className="label">
+              State <span className="text-red-500">*</span>
+            </label>
+            <select
+              className={`input ${errors.state ? 'border-red-500' : ''}`}
+              name="state"
+              value={formData.state}
+              onChange={onInputChange}
+              disabled={loading}
+              required
+            >
+              <option value="">Select State</option>
+              {stateOptions.map(state => (
+                <option key={state} value={state}>{state}</option>
+              ))}
+            </select>
+            {errors.state && (
+              <div className="text-red-500 text-sm mt-1">{errors.state}</div>
+            )}
+          </div>
+        </div>
+
+        <div className="form-group">
+          <label className="label">
+            ZIP Code <span className="text-red-500">*</span>
+          </label>
+          <input
+            className={`input ${errors.zip_code ? 'border-red-500' : ''} ${styles.zipInput}`}
+            type="text"
+            name="zip_code"
+            value={formData.zip_code}
+            onChange={onInputChange}
+            placeholder="12345"
+            disabled={loading}
+            required
+          />
+          {errors.zip_code && (
+            <div className="text-red-500 text-sm mt-1">{errors.zip_code}</div>
+          )}
+        </div>
       </div>
-    </>
+
+      {/* Contact Information Subsection */}
+      <div className={styles.subsection}>
+        <h4 className={styles.subsectionTitle}>Contact Information</h4>
+
+        <div className="grid-2">
+          <div className="form-group">
+            <label className="label">
+              Phone Number <span className="text-red-500">*</span>
+            </label>
+            <input
+              className={`input ${errors.phone ? 'border-red-500' : ''}`}
+              type="tel"
+              name="phone"
+              value={formData.phone}
+              onChange={onInputChange}
+              placeholder="(555) 123-4567"
+              disabled={loading}
+              required
+            />
+            {errors.phone && (
+              <div className="text-red-500 text-sm mt-1">{errors.phone}</div>
+            )}
+          </div>
+          
+          <div className="form-group">
+            <label className="label">Contact Email</label>
+            <input
+              className={`input ${errors.contact_email ? 'border-red-500' : ''}`}
+              type="email"
+              name="contact_email"
+              value={formData.contact_email}
+              onChange={onInputChange}
+              placeholder="jobs@company.com"
+              disabled={loading}
+            />
+            {errors.contact_email && (
+              <div className="text-red-500 text-sm mt-1">{errors.contact_email}</div>
+            )}
+          </div>
+        </div>
+
+        <div className="grid-2">
+          <div className="form-group">
+            <label className="label">Company Website</label>
+            <input
+              className={`input ${errors.website ? 'border-red-500' : ''}`}
+              type="url"
+              name="website"
+              value={formData.website}
+              onChange={onInputChange}
+              placeholder="https://www.company.com"
+              disabled={loading}
+            />
+            {errors.website && (
+              <div className="text-red-500 text-sm mt-1">{errors.website}</div>
+            )}
+          </div>
+          
+          <div className="form-group">
+            <label className="label">Contact Person</label>
+            <input
+              className="input"
+              type="text"
+              name="contact_person"
+              value={formData.contact_person}
+              onChange={onInputChange}
+              placeholder="Hiring Manager Name"
+              disabled={loading}
+            />
+          </div>
+        </div>
+      </div>
+    </div>
   );
 };
 

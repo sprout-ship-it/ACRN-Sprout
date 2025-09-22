@@ -1,4 +1,4 @@
-// src/components/features/matching/components/MatchCard.js - REFACTORED VERSION
+// src/components/features/matching/components/MatchCard.js - CLEANED UP VERSION
 import React from 'react';
 import PropTypes from 'prop-types';
 import styles from './MatchCard.module.css';
@@ -17,8 +17,6 @@ const MatchCard = ({
     recovery_stage,
     work_schedule,
     interests,
-    housing_type,
-    spiritual_affiliation,
     smoking_status,
     about_me,
     matchScore,
@@ -41,19 +39,19 @@ const MatchCard = ({
   };
 
   return (
-    <div className={styles.matchCard}>
-      {/* Header with Name and Large Match Score */}
+    <div className={`card ${styles.matchCard}`}>
+      {/* Header with Name and Match Score */}
       <div className={styles.header}>
         <div className={styles.nameSection}>
-          <h3 className={styles.name}>{first_name}</h3>
-          <div className={styles.basicInfo}>
+          <h3 className="card-title">{first_name}</h3>
+          <div className="card-subtitle">
             {age && <span>{age} years old</span>}
             {age && location && <span> • </span>}
             {location && <span>{location}</span>}
           </div>
         </div>
         
-        {/* Large Prominent Match Score */}
+        {/* Match Score Display */}
         <div className={`${styles.scoreDisplay} ${getScoreColorClass(matchScore)}`}>
           <div className={styles.scoreNumber}>{matchScore}%</div>
           <div className={styles.scoreLabel}>Match</div>
@@ -62,24 +60,24 @@ const MatchCard = ({
 
       {/* Status Badges */}
       {(isAlreadyMatched || isRequestSent) && (
-        <div className={styles.statusBadges}>
+        <div className={styles.statusSection}>
           {isAlreadyMatched && (
-            <span className={`${styles.statusBadge} ${styles.connected}`}>
+            <span className="badge badge-success">
               ✓ Already Connected
             </span>
           )}
           {isRequestSent && (
-            <span className={`${styles.statusBadge} ${styles.pending}`}>
+            <span className="badge badge-info">
               ⏳ Request Sent
             </span>
           )}
         </div>
       )}
 
-      {/* Key Essential Info - Minimal */}
+      {/* Essential Information */}
       <div className={styles.essentials}>
         {recovery_stage && (
-          <div className={`${styles.essentialItem} ${styles.primary}`}>
+          <div className={styles.essentialItem}>
             <span className={styles.essentialIcon}>🌱</span>
             <span className={styles.essentialText}>
               {recovery_stage.charAt(0).toUpperCase() + recovery_stage.slice(1)} Recovery
@@ -102,61 +100,63 @@ const MatchCard = ({
         )}
       </div>
 
-      {/* Compatibility Flags - Prominent Display */}
-      <div className={styles.compatibilityPreview}>
-        {/* Green Flags */}
-        {greenFlags && greenFlags.length > 0 && (
-          <div className={styles.flagsSection}>
-            <div className={styles.flagsHeader}>
-              <span className={styles.flagIcon}>✅</span>
-              <span className={styles.flagTitle}>Great Matches</span>
+      {/* Compatibility Flags */}
+      {((greenFlags && greenFlags.length > 0) || (redFlags && redFlags.length > 0)) && (
+        <div className={styles.compatibilitySection}>
+          {/* Green Flags */}
+          {greenFlags && greenFlags.length > 0 && (
+            <div className={styles.flagGroup}>
+              <div className={styles.flagHeader}>
+                <span className={styles.flagIcon}>✅</span>
+                <span className={styles.flagTitle}>Great Matches</span>
+              </div>
+              <div className={styles.flagTags}>
+                {greenFlags.slice(0, 2).map((flag, i) => (
+                  <span key={i} className={`${styles.flagTag} ${styles.greenFlag}`}>
+                    {flag}
+                  </span>
+                ))}
+                {greenFlags.length > 2 && (
+                  <span className={styles.moreCount}>+{greenFlags.length - 2} more</span>
+                )}
+              </div>
             </div>
-            <div className={styles.flagsPreview}>
-              {greenFlags.slice(0, 2).map((flag, i) => (
-                <span key={i} className={`${styles.flagTag} ${styles.flagGreen}`}>
-                  {flag}
-                </span>
-              ))}
-              {greenFlags.length > 2 && (
-                <span className={styles.moreFlags}>+{greenFlags.length - 2} more</span>
-              )}
-            </div>
-          </div>
-        )}
+          )}
 
-        {/* Red Flags */}
-        {redFlags && redFlags.length > 0 && (
-          <div className={styles.flagsSection}>
-            <div className={styles.flagsHeader}>
-              <span className={styles.flagIcon}>⚠️</span>
-              <span className={styles.flagTitle}>Consider</span>
+          {/* Red Flags */}
+          {redFlags && redFlags.length > 0 && (
+            <div className={styles.flagGroup}>
+              <div className={styles.flagHeader}>
+                <span className={styles.flagIcon}>⚠️</span>
+                <span className={styles.flagTitle}>Consider</span>
+              </div>
+              <div className={styles.flagTags}>
+                {redFlags.slice(0, 1).map((flag, i) => (
+                  <span key={i} className={`${styles.flagTag} ${styles.redFlag}`}>
+                    {flag}
+                  </span>
+                ))}
+                {redFlags.length > 1 && (
+                  <span className={styles.moreCount}>+{redFlags.length - 1} more</span>
+                )}
+              </div>
             </div>
-            <div className={styles.flagsPreview}>
-              {redFlags.slice(0, 1).map((flag, i) => (
-                <span key={i} className={`${styles.flagTag} ${styles.flagRed}`}>
-                  {flag}
-                </span>
-              ))}
-              {redFlags.length > 1 && (
-                <span className={styles.moreFlags}>+{redFlags.length - 1} more</span>
-              )}
-            </div>
-          </div>
-        )}
-      </div>
+          )}
+        </div>
+      )}
 
-      {/* Brief About Preview */}
+      {/* About Preview */}
       {about_me && (
-        <div className={styles.aboutPreview}>
+        <div className={styles.aboutSection}>
           <p className={styles.aboutText}>
-            "{truncateText(about_me, 90)}"
+            "{truncateText(about_me, 85)}"
           </p>
         </div>
       )}
 
-      {/* Quick Interests Tags */}
+      {/* Interests Preview */}
       {interests && interests.length > 0 && (
-        <div className={styles.interestsPreview}>
+        <div className={styles.interestsSection}>
           <div className={styles.interestsLabel}>Interests:</div>
           <div className={styles.interestsTags}>
             {interests.slice(0, 3).map((interest, i) => (
@@ -165,23 +165,23 @@ const MatchCard = ({
               </span>
             ))}
             {interests.length > 3 && (
-              <span className={styles.moreInterests}>+{interests.length - 3}</span>
+              <span className={styles.moreCount}>+{interests.length - 3}</span>
             )}
           </div>
         </div>
       )}
 
       {/* Action Buttons */}
-      <div className={styles.actions}>
+      <div className="button-grid">
         <button
-          className={`btn btn-outline ${styles.detailsBtn}`}
+          className="btn btn-outline"
           onClick={() => onShowDetails(match)}
         >
-          View Full Profile
+          View Profile
         </button>
         
         <button
-          className={`btn btn-primary ${styles.requestBtn} ${
+          className={`btn btn-primary ${
             isRequestSent || isAlreadyMatched ? styles.disabledBtn : ''
           }`}
           onClick={() => onRequestMatch(match)}
@@ -204,15 +204,11 @@ MatchCard.propTypes = {
     recovery_stage: PropTypes.string,
     work_schedule: PropTypes.string,
     interests: PropTypes.arrayOf(PropTypes.string),
-    housing_type: PropTypes.arrayOf(PropTypes.string),
-    spiritual_affiliation: PropTypes.string,
     smoking_status: PropTypes.string,
     about_me: PropTypes.string,
     matchScore: PropTypes.number.isRequired,
     greenFlags: PropTypes.arrayOf(PropTypes.string),
-    redFlags: PropTypes.arrayOf(PropTypes.string),
-    isRequestSent: PropTypes.bool,
-    isAlreadyMatched: PropTypes.bool
+    redFlags: PropTypes.arrayOf(PropTypes.string)
   }).isRequired,
   onShowDetails: PropTypes.func.isRequired,
   onRequestMatch: PropTypes.func.isRequired,

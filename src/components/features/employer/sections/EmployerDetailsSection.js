@@ -1,5 +1,6 @@
-// src/components/employer/sections/EmployerDetailsSection.js
+// src/components/features/employer/sections/EmployerDetailsSection.js
 import React from 'react';
+import styles from './EmployerSections.module.css';
 
 const EmployerDetailsSection = ({
   formData,
@@ -16,10 +17,10 @@ const EmployerDetailsSection = ({
   ];
 
   return (
-    <>
-      <h3 className="card-title mb-4">Company Details</h3>
+    <div className={styles.section}>
+      <h3 className={styles.sectionTitle}>Company Details</h3>
       
-      <div className="form-group mb-4">
+      <div className="form-group">
         <label className="label">
           Company Description <span className="text-red-500">*</span>
         </label>
@@ -34,14 +35,14 @@ const EmployerDetailsSection = ({
           required
         />
         {errors.description && (
-          <div className="text-red-500 mt-1">{errors.description}</div>
+          <div className="text-red-500 text-sm mt-1">{errors.description}</div>
         )}
-        <div className="text-gray-500 mt-1 text-sm">
+        <div className={styles.helperText}>
           This will help applicants understand your company's mission and values
         </div>
       </div>
 
-      <div className="grid-2 mb-4">
+      <div className="grid-2">
         <div className="form-group">
           <label className="label">Company Size</label>
           <select
@@ -74,7 +75,7 @@ const EmployerDetailsSection = ({
         </div>
       </div>
 
-      <div className="form-group mb-4">
+      <div className="form-group">
         <label className="label">Company Culture</label>
         <textarea
           className="input"
@@ -85,12 +86,12 @@ const EmployerDetailsSection = ({
           disabled={loading}
           rows="3"
         />
-        <div className="text-gray-500 mt-1 text-sm">
+        <div className={styles.helperText}>
           Help applicants understand what it's like to work at your company
         </div>
       </div>
 
-      <div className="form-group mb-4">
+      <div className="form-group">
         <label className="label">Diversity & Inclusion Commitment</label>
         <textarea
           className="input"
@@ -101,12 +102,12 @@ const EmployerDetailsSection = ({
           disabled={loading}
           rows="3"
         />
-        <div className="text-gray-500 mt-1 text-sm">
+        <div className={styles.helperText}>
           Share your commitment to creating an inclusive workplace
         </div>
       </div>
 
-      <div className="form-group mb-4">
+      <div className="form-group">
         <label className="label">Community Involvement</label>
         <textarea
           className="input"
@@ -117,11 +118,11 @@ const EmployerDetailsSection = ({
           disabled={loading}
           rows="3"
         />
-        <div className="text-gray-500 mt-1 text-sm">
+        <div className={styles.helperText}>
           Show how your company supports the recovery community
         </div>
       </div>
-    </>
+    </div>
   );
 };
 

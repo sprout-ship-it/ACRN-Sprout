@@ -1,0 +1,124 @@
+/* ProgressBar.module.css - Progress bar component styling */
+
+/* ==================== MAIN CONTAINER ==================== */
+.progressContainer {
+  margin-bottom: var(--spacing-xl);
+}
+
+/* ==================== PROGRESS BAR ==================== */
+.progressBar {
+  width: 100%;
+  height: 8px;
+  background: var(--border-beige);
+  border-radius: 4px;
+  overflow: hidden;
+  position: relative;
+  margin-bottom: var(--spacing-sm);
+}
+
+.progressFill {
+  height: 100%;
+  transition: width 0.3s ease;
+  border-radius: 4px;
+}
+
+/* ==================== PROGRESS TEXT ==================== */
+.progressText {
+  text-align: center;
+  color: var(--gray-600);
+  font-size: 0.875rem;
+  margin: var(--spacing-sm) 0 0 0;
+  font-weight: 500;
+  line-height: 1.4;
+}
+
+.completeText {
+  color: var(--success-text);
+}
+
+/* ==================== PROGRESS STEPS ==================== */
+.progressSteps {
+  margin-top: var(--spacing-md);
+  display: flex;
+  justify-content: center;
+}
+
+.stepsContainer {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-sm);
+}
+
+.stepIndicator {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-sm);
+}
+
+.stepDot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  transition: var(--transition-normal);
+  flex-shrink: 0;
+}
+
+.stepIndicator.incomplete .stepDot {
+  background: var(--border-beige);
+  border: 1px solid var(--gray-300);
+}
+
+.stepConnector {
+  width: 16px;
+  height: 2px;
+  background: var(--border-beige);
+  transition: var(--transition-normal);
+  flex-shrink: 0;
+}
+
+/* Note: .completed styles are applied dynamically via inline styles in JS 
+   to use the dynamic progress color */
+
+/* ==================== RESPONSIVE DESIGN ==================== */
+@media (max-width: 480px) {
+  .progressSteps {
+    margin-top: var(--spacing-sm);
+  }
+  
+  .stepsContainer {
+    gap: 6px;
+  }
+  
+  .stepDot {
+    width: 6px;
+    height: 6px;
+  }
+  
+  .stepConnector {
+    width: 12px;
+    height: 1px;
+  }
+
+  .progressText {
+    font-size: 0.8rem;
+  }
+}
+
+@media (max-width: 320px) {
+  .progressContainer {
+    margin-bottom: var(--spacing-lg);
+  }
+  
+  .progressText {
+    font-size: 0.75rem;
+    padding: 0 var(--spacing-sm);
+  }
+  
+  .stepsContainer {
+    gap: 4px;
+  }
+  
+  .stepConnector {
+    width: 8px;
+  }
+}
