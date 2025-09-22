@@ -1,7 +1,7 @@
 /* src/styles/main.css - MASTER STYLESHEET */
 
 /* Import foundation styles in correct order */
-@import './globals.css';      /* Variables, resets, base typography */
+@import './global.css';      /* Variables, resets, base typography */
 @import './utilities.css';    /* Reusable classes: buttons, cards, alerts, grids */
 @import './layout.css';       /* App-specific layout: header, nav, containers */
 
