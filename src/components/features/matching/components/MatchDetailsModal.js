@@ -2,6 +2,7 @@
 import React, { useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import PropTypes from 'prop-types';
+import styles from './MatchDetailsModal.module.css';
 
 const MODAL_SECTIONS = [
   {
@@ -40,25 +41,25 @@ const MODAL_SECTIONS = [
 const debugStackingContext = (element, label) => {
   if (!element) return;
   
-  const styles = window.getComputedStyle(element);
+  const computedStyles = window.getComputedStyle(element);
   const stackingProps = {
-    position: styles.position,
-    zIndex: styles.zIndex,
-    transform: styles.transform,
-    opacity: styles.opacity,
-    isolation: styles.isolation,
-    filter: styles.filter
+    position: computedStyles.position,
+    zIndex: computedStyles.zIndex,
+    transform: computedStyles.transform,
+    opacity: computedStyles.opacity,
+    isolation: computedStyles.isolation,
+    filter: computedStyles.filter
   };
   
   console.log(`🔍 ${label} stacking context:`, stackingProps);
   
   // Check if creates stacking context
   const createsContext = (
-    (styles.position !== 'static' && styles.zIndex !== 'auto') ||
-    styles.transform !== 'none' ||
-    styles.opacity !== '1' ||
-    styles.isolation === 'isolate' ||
-    styles.filter !== 'none'
+    (computedStyles.position !== 'static' && computedStyles.zIndex !== 'auto') ||
+    computedStyles.transform !== 'none' ||
+    computedStyles.opacity !== '1' ||
+    computedStyles.isolation === 'isolate' ||
+    computedStyles.filter !== 'none'
   );
   
   console.log(`📊 ${label} creates stacking context:`, createsContext);
@@ -94,8 +95,8 @@ const MatchDetailsModal = ({
   onRequestMatch,
   isRequestSent,
   isAlreadyMatched,
-  usePortal = true, // Toggle portal usage
-  debugMode = false // Toggle debug mode
+  usePortal = true,
+  debugMode = false
 }) => {
   const [activeSection, setActiveSection] = useState('overview');
   const [modalContainer, setModalContainer] = useState(null);
@@ -157,7 +158,7 @@ const MatchDetailsModal = ({
     setActiveSection(sectionId);
     
     // Reset scroll position
-    const modalBody = document.querySelector('.modal-body-enhanced');
+    const modalBody = document.querySelector(`.${styles.body}`);
     if (modalBody) {
       modalBody.scrollTop = 0;
     }
@@ -197,26 +198,26 @@ const MatchDetailsModal = ({
 
   // Helper function to get match score color class
   const getScoreColorClass = (score) => {
-    if (score >= 80) return 'score-excellent';
-    if (score >= 65) return 'score-good';
-    if (score >= 50) return 'score-fair';
-    return 'score-low';
+    if (score >= 80) return styles.scoreExcellent;
+    if (score >= 65) return styles.scoreGood;
+    if (score >= 50) return styles.scoreFair;
+    return styles.scoreLow;
   };
 
   // Helper function to render lifestyle scale
   const renderLifestyleScale = (value, label) => {
     if (!value) return null;
     return (
-      <div className="lifestyle-scale">
-        <div className="scale-label">{label}</div>
-        <div className="scale-indicator">
-          <div className="scale-track">
+      <div className={styles.lifestyleScale}>
+        <div className={styles.scaleLabel}>{label}</div>
+        <div className={styles.scaleIndicator}>
+          <div className={styles.scaleTrack}>
             <div 
-              className="scale-fill" 
+              className={styles.scaleFill} 
               style={{ width: `${(value / 5) * 100}%` }}
             />
           </div>
-          <span className="scale-value">{value}/5</span>
+          <span className={styles.scaleValue}>{value}/5</span>
         </div>
       </div>
     );
@@ -226,85 +227,85 @@ const MatchDetailsModal = ({
   const renderYesNo = (value, label) => {
     if (value === undefined || value === null) return null;
     return (
-      <div className="yes-no-item">
-        <span className="yn-label">{label}:</span>
-        <span className={`yn-value ${value ? 'yes' : 'no'}`}>
+      <div className={styles.yesNoItem}>
+        <span className={styles.ynLabel}>{label}:</span>
+        <span className={`${styles.ynValue} ${value ? styles.yes : styles.no}`}>
           {value ? 'Yes' : 'No'}
         </span>
       </div>
     );
   };
 
-  // Section rendering functions (same as before)
+  // Section rendering functions
   const renderOverviewSection = () => (
-    <div className="modal-section">
-      <div className="profile-header-enhanced">
-        <div className="profile-info">
-          <h2 className="profile-name">{first_name}</h2>
-          <div className="profile-basics">
-            {age && <span className="basic-item">{age} years old</span>}
-            {location && <span className="basic-item">{location}</span>}
+    <div className={styles.section}>
+      <div className={styles.profileHeader}>
+        <div className={styles.profileInfo}>
+          <h2 className={styles.profileName}>{first_name}</h2>
+          <div className={styles.profileBasics}>
+            {age && <span className={styles.basicItem}>{age} years old</span>}
+            {location && <span className={styles.basicItem}>{location}</span>}
             {recovery_stage && (
-              <span className="basic-item recovery-highlight">
+              <span className={`${styles.basicItem} ${styles.recoveryHighlight}`}>
                 {recovery_stage.charAt(0).toUpperCase() + recovery_stage.slice(1)} Recovery
               </span>
             )}
           </div>
         </div>
         
-        <div className={`match-score-large ${getScoreColorClass(matchScore)}`}>
-          <div className="score-number">{matchScore}%</div>
-          <div className="score-label">Compatibility</div>
+        <div className={`${styles.scoreLarge} ${getScoreColorClass(matchScore)}`}>
+          <div className={styles.scoreNumber}>{matchScore}%</div>
+          <div className={styles.scoreLabel}>Compatibility</div>
         </div>
       </div>
 
       {(isAlreadyMatched || isRequestSent) && (
-        <div className="status-section">
+        <div className={styles.statusSection}>
           {isAlreadyMatched && (
-            <div className="status-indicator connected">
-              <span className="status-icon">✓</span>
+            <div className={`${styles.statusIndicator} ${styles.connected}`}>
+              <span className={styles.statusIcon}>✓</span>
               <span>Already Connected</span>
             </div>
           )}
           {isRequestSent && (
-            <div className="status-indicator pending">
-              <span className="status-icon">⏳</span>
+            <div className={`${styles.statusIndicator} ${styles.pending}`}>
+              <span className={styles.statusIcon}>⏳</span>
               <span>Match Request Sent</span>
             </div>
           )}
         </div>
       )}
 
-      <div className="overview-stats">
-        <div className="stat-card">
-          <span className="stat-icon">⏰</span>
-          <div className="stat-content">
-            <span className="stat-label">Work Schedule</span>
-            <span className="stat-value">{work_schedule || 'Not specified'}</span>
+      <div className={styles.overviewStats}>
+        <div className={styles.statCard}>
+          <span className={styles.statIcon}>⏰</span>
+          <div className={styles.statContent}>
+            <span className={styles.statLabel}>Work Schedule</span>
+            <span className={styles.statValue}>{work_schedule || 'Not specified'}</span>
           </div>
         </div>
         
-        <div className="stat-card">
-          <span className="stat-icon">🚭</span>
-          <div className="stat-content">
-            <span className="stat-label">Smoking</span>
-            <span className="stat-value">{smoking_status || 'Not specified'}</span>
+        <div className={styles.statCard}>
+          <span className={styles.statIcon}>🚭</span>
+          <div className={styles.statContent}>
+            <span className={styles.statLabel}>Smoking</span>
+            <span className={styles.statValue}>{smoking_status || 'Not specified'}</span>
           </div>
         </div>
         
-        <div className="stat-card">
-          <span className="stat-icon">🙏</span>
-          <div className="stat-content">
-            <span className="stat-label">Spiritual</span>
-            <span className="stat-value">{spiritual_affiliation || 'Not specified'}</span>
+        <div className={styles.statCard}>
+          <span className={styles.statIcon}>🙏</span>
+          <div className={styles.statContent}>
+            <span className={styles.statLabel}>Spiritual</span>
+            <span className={styles.statValue}>{spiritual_affiliation || 'Not specified'}</span>
           </div>
         </div>
         
-        <div className="stat-card">
-          <span className="stat-icon">🛏️</span>
-          <div className="stat-content">
-            <span className="stat-label">Bedtime</span>
-            <span className="stat-value">{bedtime_preference || 'Not specified'}</span>
+        <div className={styles.statCard}>
+          <span className={styles.statIcon}>🛏️</span>
+          <div className={styles.statContent}>
+            <span className={styles.statLabel}>Bedtime</span>
+            <span className={styles.statValue}>{bedtime_preference || 'Not specified'}</span>
           </div>
         </div>
       </div>
@@ -312,43 +313,43 @@ const MatchDetailsModal = ({
   );
 
   const renderRecoverySection = () => (
-    <div className="modal-section">
-      <div className="section-grid">
-        <div className="info-card full-width">
-          <h4 className="info-title">Recovery Stage</h4>
-          <p className="info-content recovery-stage">
+    <div className={styles.section}>
+      <div className={styles.sectionGrid}>
+        <div className={`${styles.infoCard} ${styles.fullWidth}`}>
+          <h4 className={styles.infoTitle}>Recovery Stage</h4>
+          <p className={`${styles.infoContent} ${styles.recoveryStage}`}>
             {recovery_stage ? recovery_stage.charAt(0).toUpperCase() + recovery_stage.slice(1) : 'Not specified'}
           </p>
         </div>
 
         {recovery_methods && recovery_methods.length > 0 && (
-          <div className="info-card full-width">
-            <h4 className="info-title">Recovery Methods</h4>
-            <div className="tags-container">
+          <div className={`${styles.infoCard} ${styles.fullWidth}`}>
+            <h4 className={styles.infoTitle}>Recovery Methods</h4>
+            <div className={styles.tagsContainer}>
               {recovery_methods.map((method, i) => (
-                <span key={i} className="tag recovery-method-tag">{method}</span>
+                <span key={i} className={`${styles.tag} ${styles.recoveryMethodTag}`}>{method}</span>
               ))}
             </div>
           </div>
         )}
 
         {program_type && program_type.length > 0 && (
-          <div className="info-card full-width">
-            <h4 className="info-title">Recovery Programs</h4>
-            <div className="tags-container">
+          <div className={`${styles.infoCard} ${styles.fullWidth}`}>
+            <h4 className={styles.infoTitle}>Recovery Programs</h4>
+            <div className={styles.tagsContainer}>
               {program_type.map((program, i) => (
-                <span key={i} className="tag program-tag">{program}</span>
+                <span key={i} className={`${styles.tag} ${styles.programTag}`}>{program}</span>
               ))}
             </div>
           </div>
         )}
 
         {primary_issues && primary_issues.length > 0 && (
-          <div className="info-card full-width">
-            <h4 className="info-title">Primary Issues</h4>
-            <div className="tags-container">
+          <div className={`${styles.infoCard} ${styles.fullWidth}`}>
+            <h4 className={styles.infoTitle}>Primary Issues</h4>
+            <div className={styles.tagsContainer}>
               {primary_issues.map((issue, i) => (
-                <span key={i} className="tag issue-tag">
+                <span key={i} className={`${styles.tag} ${styles.issueTag}`}>
                   {issue.replace(/-/g, ' ').replace(/\b\w/g, l => l.toUpperCase())}
                 </span>
               ))}
@@ -360,19 +361,19 @@ const MatchDetailsModal = ({
   );
 
   const renderLifestyleSection = () => (
-    <div className="modal-section">
-      <div className="lifestyle-preferences">
-        <h4 className="subsection-title">Living Preferences</h4>
-        <div className="lifestyle-scales">
+    <div className={styles.section}>
+      <div className={styles.lifestylePreferences}>
+        <h4 className={styles.subsectionTitle}>Living Preferences</h4>
+        <div className={styles.lifestyleScales}>
           {renderLifestyleScale(cleanliness_level, 'Cleanliness Level')}
           {renderLifestyleScale(noise_level, 'Noise Tolerance')}
           {renderLifestyleScale(social_level, 'Social Level')}
         </div>
       </div>
       
-      <div className="lifestyle-choices">
-        <h4 className="subsection-title">Lifestyle Choices</h4>
-        <div className="yes-no-grid">
+      <div className={styles.lifestyleChoices}>
+        <h4 className={styles.subsectionTitle}>Lifestyle Choices</h4>
+        <div className={styles.yesNoGrid}>
           {renderYesNo(pets_owned, 'Owns Pets')}
           {renderYesNo(pets_comfortable, 'Comfortable with Pets')}
           {renderYesNo(overnight_guests_ok, 'Overnight Guests OK')}
@@ -383,25 +384,25 @@ const MatchDetailsModal = ({
   );
 
   const renderHousingSection = () => (
-    <div className="modal-section">
-      <div className="section-grid">
+    <div className={styles.section}>
+      <div className={styles.sectionGrid}>
         {housing_type && housing_type.length > 0 && (
-          <div className="info-card">
-            <h4 className="info-title">Preferred Housing Types</h4>
-            <div className="tags-container">
+          <div className={styles.infoCard}>
+            <h4 className={styles.infoTitle}>Preferred Housing Types</h4>
+            <div className={styles.tagsContainer}>
               {housing_type.map((type, i) => (
-                <span key={i} className="tag housing-tag">{type}</span>
+                <span key={i} className={`${styles.tag} ${styles.housingTag}`}>{type}</span>
               ))}
             </div>
           </div>
         )}
 
         {housing_subsidy && housing_subsidy.length > 0 && (
-          <div className="info-card">
-            <h4 className="info-title">Housing Assistance</h4>
-            <div className="tags-container">
+          <div className={styles.infoCard}>
+            <h4 className={styles.infoTitle}>Housing Assistance</h4>
+            <div className={styles.tagsContainer}>
               {housing_subsidy.map((subsidy, i) => (
-                <span key={i} className="tag subsidy-tag">{subsidy}</span>
+                <span key={i} className={`${styles.tag} ${styles.subsidyTag}`}>{subsidy}</span>
               ))}
             </div>
           </div>
@@ -411,18 +412,18 @@ const MatchDetailsModal = ({
   );
 
   const renderCompatibilitySection = () => (
-    <div className="modal-section">
+    <div className={styles.section}>
       {greenFlags.length > 0 && (
-        <div className="compatibility-card green">
-          <div className="compatibility-header">
-            <span className="compatibility-icon">✅</span>
-            <h4 className="compatibility-title">Compatibility Strengths</h4>
+        <div className={`${styles.compatibilityCard} ${styles.green}`}>
+          <div className={styles.compatibilityHeader}>
+            <span className={styles.compatibilityIcon}>✅</span>
+            <h4 className={styles.compatibilityTitle}>Compatibility Strengths</h4>
           </div>
-          <div className="flags-list">
+          <div className={styles.flagsList}>
             {greenFlags.map((flag, i) => (
-              <div key={i} className="flag-item">
-                <span className="flag-bullet">•</span>
-                <span className="flag-text">{flag}</span>
+              <div key={i} className={styles.flagItem}>
+                <span className={styles.flagBullet}>•</span>
+                <span className={styles.flagText}>{flag}</span>
               </div>
             ))}
           </div>
@@ -430,16 +431,16 @@ const MatchDetailsModal = ({
       )}
 
       {redFlags.length > 0 && (
-        <div className="compatibility-card red">
-          <div className="compatibility-header">
-            <span className="compatibility-icon">⚠️</span>
-            <h4 className="compatibility-title">Areas to Consider</h4>
+        <div className={`${styles.compatibilityCard} ${styles.red}`}>
+          <div className={styles.compatibilityHeader}>
+            <span className={styles.compatibilityIcon}>⚠️</span>
+            <h4 className={styles.compatibilityTitle}>Areas to Consider</h4>
           </div>
-          <div className="flags-list">
+          <div className={styles.flagsList}>
             {redFlags.map((flag, i) => (
-              <div key={i} className="flag-item">
-                <span className="flag-bullet">•</span>
-                <span className="flag-text">{flag}</span>
+              <div key={i} className={styles.flagItem}>
+                <span className={styles.flagBullet}>•</span>
+                <span className={styles.flagText}>{flag}</span>
               </div>
             ))}
           </div>
@@ -447,25 +448,25 @@ const MatchDetailsModal = ({
       )}
 
       {Object.keys(breakdown).length > 0 && (
-        <div className="compatibility-breakdown">
-          <h4 className="breakdown-title">Detailed Compatibility Scores</h4>
-          <div className="breakdown-grid">
+        <div className={styles.compatibilityBreakdown}>
+          <h4 className={styles.breakdownTitle}>Detailed Compatibility Scores</h4>
+          <div className={styles.breakdownGrid}>
             {Object.entries(breakdown).map(([category, score]) => (
-              <div key={category} className="breakdown-item">
-                <div className="breakdown-label">
+              <div key={category} className={styles.breakdownItem}>
+                <div className={styles.breakdownLabel}>
                   {category.charAt(0).toUpperCase() + category.slice(1)}
                 </div>
-                <div className="breakdown-score">
-                  <div className="score-bar">
+                <div className={styles.breakdownScore}>
+                  <div className={styles.scoreBar}>
                     <div 
-                      className="score-fill"
+                      className={styles.scoreBarFill}
                       style={{ 
                         width: `${score}%`,
                         backgroundColor: score >= 70 ? '#28a745' : score >= 50 ? '#ffc107' : '#dc3545'
                       }}
                     />
                   </div>
-                  <span className="score-value">{score}%</span>
+                  <span className={styles.breakdownScoreValue}>{score}%</span>
                 </div>
               </div>
             ))}
@@ -476,31 +477,31 @@ const MatchDetailsModal = ({
   );
 
   const renderAboutSection = () => (
-    <div className="modal-section">
+    <div className={styles.section}>
       {about_me && (
-        <div className="about-card">
-          <h4 className="about-title">About {first_name}</h4>
-          <div className="about-content">
+        <div className={styles.aboutCard}>
+          <h4 className={styles.aboutTitle}>About {first_name}</h4>
+          <div className={styles.aboutContent}>
             <p>{about_me}</p>
           </div>
         </div>
       )}
 
       {looking_for && (
-        <div className="about-card">
-          <h4 className="about-title">What {first_name} is Looking For</h4>
-          <div className="about-content">
+        <div className={styles.aboutCard}>
+          <h4 className={styles.aboutTitle}>What {first_name} is Looking For</h4>
+          <div className={styles.aboutContent}>
             <p>{looking_for}</p>
           </div>
         </div>
       )}
 
       {interests && interests.length > 0 && (
-        <div className="interests-card">
-          <h4 className="interests-title">Interests & Hobbies</h4>
-          <div className="interests-grid">
+        <div className={styles.interestsCard}>
+          <h4 className={styles.interestsTitle}>Interests & Hobbies</h4>
+          <div className={styles.interestsGrid}>
             {interests.map((interest, i) => (
-              <span key={i} className="interest-item">{interest}</span>
+              <span key={i} className={styles.interestItem}>{interest}</span>
             ))}
           </div>
         </div>
@@ -523,48 +524,48 @@ const MatchDetailsModal = ({
   // 🎭 Modal JSX
   const modalJSX = (
     <div 
-      className={`modal-overlay ${debugMode ? 'debug-stacking-context' : ''} ${!usePortal ? 'modal-emergency-override' : ''}`}
+      className={`${styles.overlay} ${debugMode ? styles.debugStackingContext : ''} ${!usePortal ? styles.emergencyOverride : ''}`}
       onClick={handleClose}
       style={{
-        pointerEvents: 'auto' // Enable clicks when in portal
+        pointerEvents: 'auto'
       }}
     >
       <div 
-        className={`modal-content-enhanced ${!usePortal ? 'modal-content-emergency-override' : ''}`}
+        className={`${styles.content} ${!usePortal ? styles.contentEmergencyOverride : ''}`}
         onClick={(e) => e.stopPropagation()}
       >
         {/* Modal Header */}
-        <div className="modal-header-enhanced">
-          <div className="modal-title-section">
-            <h2 className="modal-title">{first_name}'s Profile</h2>
-            <div className={`modal-score ${getScoreColorClass(matchScore)}`}>
+        <div className={styles.header}>
+          <div className={styles.titleSection}>
+            <h2 className={styles.title}>{first_name}'s Profile</h2>
+            <div className={`${styles.score} ${getScoreColorClass(matchScore)}`}>
               {matchScore}% Match
             </div>
           </div>
-          <button className="modal-close" onClick={handleClose}>×</button>
+          <button className={styles.closeButton} onClick={handleClose}>×</button>
         </div>
 
         {/* Section Navigation */}
-        <div className="modal-navigation">
+        <div className={styles.navigation}>
           {MODAL_SECTIONS.map((section) => (
             <button
               key={section.id}
-              className={`modal-nav-tab ${activeSection === section.id ? 'active' : ''}`}
+              className={`${styles.navTab} ${activeSection === section.id ? styles.active : ''}`}
               onClick={() => handleSectionChange(section.id)}
             >
-              <span className="nav-icon">{section.icon}</span>
-              <span className="nav-label">{section.title}</span>
+              <span className={styles.navIcon}>{section.icon}</span>
+              <span className={styles.navLabel}>{section.title}</span>
             </button>
           ))}
         </div>
 
         {/* Section Content */}
-        <div className="modal-body-enhanced">
+        <div className={styles.body}>
           {renderCurrentSection()}
         </div>
 
         {/* Modal Footer */}
-        <div className="modal-footer-enhanced">
+        <div className={styles.footer}>
           <button className="btn btn-outline" onClick={handleClose}>
             Close
           </button>

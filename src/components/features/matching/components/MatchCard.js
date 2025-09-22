@@ -1,6 +1,7 @@
-// src/components/features/matching/components/MatchCard.js - IMPROVED VERSION
+// src/components/features/matching/components/MatchCard.js - REFACTORED VERSION
 import React from 'react';
 import PropTypes from 'prop-types';
+import styles from './MatchCard.module.css';
 
 const MatchCard = ({
   match,
@@ -27,10 +28,10 @@ const MatchCard = ({
 
   // Helper function to get match score color class
   const getScoreColorClass = (score) => {
-    if (score >= 80) return 'score-excellent';
-    if (score >= 65) return 'score-good';
-    if (score >= 50) return 'score-fair';
-    return 'score-low';
+    if (score >= 80) return styles.scoreExcellent;
+    if (score >= 65) return styles.scoreGood;
+    if (score >= 50) return styles.scoreFair;
+    return styles.scoreLow;
   };
 
   // Helper function to truncate text
@@ -40,12 +41,12 @@ const MatchCard = ({
   };
 
   return (
-    <div className="match-card-enhanced">
+    <div className={styles.matchCard}>
       {/* Header with Name and Large Match Score */}
-      <div className="match-header">
-        <div className="match-name-section">
-          <h3 className="match-name">{first_name}</h3>
-          <div className="match-basic-info">
+      <div className={styles.header}>
+        <div className={styles.nameSection}>
+          <h3 className={styles.name}>{first_name}</h3>
+          <div className={styles.basicInfo}>
             {age && <span>{age} years old</span>}
             {age && location && <span> • </span>}
             {location && <span>{location}</span>}
@@ -53,67 +54,71 @@ const MatchCard = ({
         </div>
         
         {/* Large Prominent Match Score */}
-        <div className={`match-score-display ${getScoreColorClass(matchScore)}`}>
-          <div className="score-number">{matchScore}%</div>
-          <div className="score-label">Match</div>
+        <div className={`${styles.scoreDisplay} ${getScoreColorClass(matchScore)}`}>
+          <div className={styles.scoreNumber}>{matchScore}%</div>
+          <div className={styles.scoreLabel}>Match</div>
         </div>
       </div>
 
       {/* Status Badges */}
       {(isAlreadyMatched || isRequestSent) && (
-        <div className="match-status-badges">
+        <div className={styles.statusBadges}>
           {isAlreadyMatched && (
-            <span className="status-badge connected">✓ Already Connected</span>
+            <span className={`${styles.statusBadge} ${styles.connected}`}>
+              ✓ Already Connected
+            </span>
           )}
           {isRequestSent && (
-            <span className="status-badge pending">⏳ Request Sent</span>
+            <span className={`${styles.statusBadge} ${styles.pending}`}>
+              ⏳ Request Sent
+            </span>
           )}
         </div>
       )}
 
       {/* Key Essential Info - Minimal */}
-      <div className="match-essentials">
+      <div className={styles.essentials}>
         {recovery_stage && (
-          <div className="essential-item primary">
-            <span className="essential-icon">🌱</span>
-            <span className="essential-text">
+          <div className={`${styles.essentialItem} ${styles.primary}`}>
+            <span className={styles.essentialIcon}>🌱</span>
+            <span className={styles.essentialText}>
               {recovery_stage.charAt(0).toUpperCase() + recovery_stage.slice(1)} Recovery
             </span>
           </div>
         )}
         
         {work_schedule && (
-          <div className="essential-item">
-            <span className="essential-icon">⏰</span>
-            <span className="essential-text">{work_schedule}</span>
+          <div className={styles.essentialItem}>
+            <span className={styles.essentialIcon}>⏰</span>
+            <span className={styles.essentialText}>{work_schedule}</span>
           </div>
         )}
         
         {smoking_status && (
-          <div className="essential-item">
-            <span className="essential-icon">🚭</span>
-            <span className="essential-text">{smoking_status}</span>
+          <div className={styles.essentialItem}>
+            <span className={styles.essentialIcon}>🚭</span>
+            <span className={styles.essentialText}>{smoking_status}</span>
           </div>
         )}
       </div>
 
       {/* Compatibility Flags - Prominent Display */}
-      <div className="compatibility-preview">
+      <div className={styles.compatibilityPreview}>
         {/* Green Flags */}
         {greenFlags && greenFlags.length > 0 && (
-          <div className="flags-section green-flags">
-            <div className="flags-header">
-              <span className="flag-icon">✅</span>
-              <span className="flag-title">Great Matches</span>
+          <div className={styles.flagsSection}>
+            <div className={styles.flagsHeader}>
+              <span className={styles.flagIcon}>✅</span>
+              <span className={styles.flagTitle}>Great Matches</span>
             </div>
-            <div className="flags-preview">
+            <div className={styles.flagsPreview}>
               {greenFlags.slice(0, 2).map((flag, i) => (
-                <span key={i} className="flag-tag green">
+                <span key={i} className={`${styles.flagTag} ${styles.flagGreen}`}>
                   {flag}
                 </span>
               ))}
               {greenFlags.length > 2 && (
-                <span className="more-flags">+{greenFlags.length - 2} more</span>
+                <span className={styles.moreFlags}>+{greenFlags.length - 2} more</span>
               )}
             </div>
           </div>
@@ -121,19 +126,19 @@ const MatchCard = ({
 
         {/* Red Flags */}
         {redFlags && redFlags.length > 0 && (
-          <div className="flags-section red-flags">
-            <div className="flags-header">
-              <span className="flag-icon">⚠️</span>
-              <span className="flag-title">Consider</span>
+          <div className={styles.flagsSection}>
+            <div className={styles.flagsHeader}>
+              <span className={styles.flagIcon}>⚠️</span>
+              <span className={styles.flagTitle}>Consider</span>
             </div>
-            <div className="flags-preview">
+            <div className={styles.flagsPreview}>
               {redFlags.slice(0, 1).map((flag, i) => (
-                <span key={i} className="flag-tag red">
+                <span key={i} className={`${styles.flagTag} ${styles.flagRed}`}>
                   {flag}
                 </span>
               ))}
               {redFlags.length > 1 && (
-                <span className="more-flags">+{redFlags.length - 1} more</span>
+                <span className={styles.moreFlags}>+{redFlags.length - 1} more</span>
               )}
             </div>
           </div>
@@ -142,8 +147,8 @@ const MatchCard = ({
 
       {/* Brief About Preview */}
       {about_me && (
-        <div className="about-preview">
-          <p className="about-text">
+        <div className={styles.aboutPreview}>
+          <p className={styles.aboutText}>
             "{truncateText(about_me, 90)}"
           </p>
         </div>
@@ -151,33 +156,33 @@ const MatchCard = ({
 
       {/* Quick Interests Tags */}
       {interests && interests.length > 0 && (
-        <div className="interests-preview">
-          <div className="interests-label">Interests:</div>
-          <div className="interests-tags">
+        <div className={styles.interestsPreview}>
+          <div className={styles.interestsLabel}>Interests:</div>
+          <div className={styles.interestsTags}>
             {interests.slice(0, 3).map((interest, i) => (
-              <span key={i} className="interest-tag">
+              <span key={i} className={styles.interestTag}>
                 {interest}
               </span>
             ))}
             {interests.length > 3 && (
-              <span className="more-interests">+{interests.length - 3}</span>
+              <span className={styles.moreInterests}>+{interests.length - 3}</span>
             )}
           </div>
         </div>
       )}
 
       {/* Action Buttons */}
-      <div className="match-actions">
+      <div className={styles.actions}>
         <button
-          className="btn btn-outline btn-details"
+          className={`btn btn-outline ${styles.detailsBtn}`}
           onClick={() => onShowDetails(match)}
         >
           View Full Profile
         </button>
         
         <button
-          className={`btn btn-primary btn-request ${
-            isRequestSent || isAlreadyMatched ? 'btn-disabled' : ''
+          className={`btn btn-primary ${styles.requestBtn} ${
+            isRequestSent || isAlreadyMatched ? styles.disabledBtn : ''
           }`}
           onClick={() => onRequestMatch(match)}
           disabled={isRequestSent || isAlreadyMatched}

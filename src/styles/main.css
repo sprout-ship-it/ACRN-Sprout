@@ -1,0 +1,20 @@
+/* src/styles/main.css - MASTER STYLESHEET */
+
+/* Import foundation styles in correct order */
+@import './globals.css';      /* Variables, resets, base typography */
+@import './utilities.css';    /* Reusable classes: buttons, cards, alerts, grids */
+@import './layout.css';       /* App-specific layout: header, nav, containers */
+
+/* 
+  This file replaces your old global.css import.
+  
+  USAGE:
+  In your main App.js or index.js file, replace:
+    import './styles/global.css'
+  
+  With:
+    import './styles/main.css'
+  
+  That's it! All other component files can keep their existing imports.
+  The consolidated styles will be available everywhere.
+*/

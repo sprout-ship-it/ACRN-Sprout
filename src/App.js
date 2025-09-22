@@ -5,7 +5,7 @@ import { useAuth, AuthProvider } from './context/AuthContext';
 import LoadingSpinner from './components/ui/LoadingSpinner';
 import Landing from './pages/Landing';
 import MainApp from './pages/MainApp';
-import './styles/global.css';
+import './styles/main.css';
 
 // Protected Route with better loading and error handling
 const ProtectedRoute = ({ children }) => {

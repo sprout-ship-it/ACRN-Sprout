@@ -30,8 +30,6 @@ import PeerSupportHub from '../components/features/peer-support/PeerSupportHub'
 // Search Components
 import PropertySearch from '../components/features/property/PropertySearch';
 
-import '../styles/global.css';
-
 // ✅ NEW: Job Applications/Candidates management placeholder
 const CandidateManagement = () => (
   <div className="card">

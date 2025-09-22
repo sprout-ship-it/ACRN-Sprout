@@ -1,9 +1,9 @@
-// src/pages/Dashboard.js - UPDATED WITH COMMUNICATIONS
+// src/pages/Dashboard.js - UPDATED WITH CSS MODULES
 import React, { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../hooks/useAuth'
 import { db } from '../utils/supabase'
-import '../styles/global.css';
+import styles from './Dashboard.module.css'
 
 const Dashboard = () => {
   const { profile, hasRole, user, loading: authLoading } = useAuth()
@@ -173,14 +173,14 @@ const Dashboard = () => {
       return cards
     }
     
-    // Role-specific dashboard cards with your desired styling
+    // Role-specific dashboard cards with CSS module classes
     if (hasRole('applicant')) {
       cards.push(
         { 
           id: 'find-matches', 
           label: 'Find Roommates', 
           description: 'Discover compatible roommates based on your preferences', 
-          className: 'role-card-housing-seeker', // Purple
+          className: styles.roleCardHousingSeeker,
           path: '/app/find-matches',
           icon: '🔍'
         },
@@ -188,7 +188,7 @@ const Dashboard = () => {
           id: 'find-peer-support', 
           label: 'Find Peer Support', 
           description: 'Connect with experienced peer support specialists', 
-          className: 'role-card-peer-support', // Blue
+          className: styles.roleCardPeerSupport,
           path: '/app/find-peer-support',
           icon: '👥'
         },
@@ -196,7 +196,7 @@ const Dashboard = () => {
           id: 'find-employers', 
           label: 'Find Employment', 
           description: 'Discover recovery-friendly job opportunities', 
-          className: 'role-card-employer', // Red
+          className: styles.roleCardEmployer,
           path: '/app/find-employers',
           icon: '💼'
         },
@@ -204,7 +204,7 @@ const Dashboard = () => {
           id: 'browse-properties', 
           label: 'Browse Housing', 
           description: 'Search for recovery-friendly housing options', 
-          className: 'role-card-property-owner', // Yellow
+          className: styles.roleCardPropertyOwner,
           path: '/app/property-search',
           icon: '🏠'
         }
@@ -217,7 +217,7 @@ const Dashboard = () => {
           id: 'peer-dashboard', 
           label: 'Peer Support Dashboard', 
           description: 'Manage your peer support services and clients', 
-          className: 'role-card-peer-support', // Blue
+          className: styles.roleCardPeerSupport,
           path: '/app/peer-dashboard',
           icon: '👥'
         }
@@ -230,7 +230,7 @@ const Dashboard = () => {
           id: 'manage-properties', 
           label: 'Manage Properties', 
           description: 'Add, edit, and manage your rental properties', 
-          className: 'role-card-property-owner', // Yellow
+          className: styles.roleCardPropertyOwner,
           path: '/app/properties',
           icon: '🏢'
         }
@@ -243,20 +243,20 @@ const Dashboard = () => {
           id: 'manage-employers', 
           label: 'Manage Company Profiles', 
           description: 'Add, edit, and manage your employer profiles', 
-          className: 'role-card-employer', // Red
+          className: styles.roleCardEmployer,
           path: '/app/employers',
           icon: '🏢'
         }
       )
     }
     
-    // ✅ UPDATED: Universal cards with corrected routing
+    // Universal cards with CSS module classes
     cards.push(
       { 
         id: 'connections', 
         label: 'Connections', 
         description: 'View and manage your match requests and connection status', 
-        className: 'role-card-connections', // Black
+        className: styles.roleCardConnections,
         path: '/app/connections',
         icon: '🤝'
       },
@@ -264,7 +264,7 @@ const Dashboard = () => {
         id: 'communications', 
         label: 'Communications', 
         description: 'Secure communication hub for your active connections', 
-        className: 'role-card-peer-support', // Blue styling for communications
+        className: styles.roleCardPeerSupport,
         path: '/app/communications',
         icon: '💬'
       }
@@ -283,8 +283,8 @@ const Dashboard = () => {
   const getRoleSpecificWelcome = () => {
     if (authLoading || !user) {
       return (
-        <div className="welcome-section">
-          <div className="alert alert-info">
+        <div className={styles.welcomeSection}>
+          <div className={styles.alertInfo}>
             <div style={{ textAlign: 'center' }}>
               <strong>Loading your dashboard...</strong>
             </div>
@@ -295,11 +295,11 @@ const Dashboard = () => {
 
     if (!profile && profileStats.loading) {
       return (
-        <div className="welcome-section">
-          <h1 className="welcome-title">
+        <div className={styles.welcomeSection}>
+          <h1 className={styles.welcomeTitle}>
             Welcome back!
           </h1>
-          <div className="alert alert-info">
+          <div className={styles.alertInfo}>
             <div style={{ textAlign: 'center' }}>
               <strong>Loading your profile...</strong>
             </div>
@@ -310,12 +310,12 @@ const Dashboard = () => {
 
     if (!profile && !profileStats.loading) {
       return (
-        <div className="welcome-section">
-          <h1 className="welcome-title">
+        <div className={styles.welcomeSection}>
+          <h1 className={styles.welcomeTitle}>
             Welcome back!
           </h1>
           {profileError && (
-            <div className="alert alert-warning">
+            <div className={styles.alertWarning}>
               <div style={{ textAlign: 'center' }}>
                 <strong>⚠️ {profileError}</strong>
                 <br />
@@ -338,16 +338,16 @@ const Dashboard = () => {
     }).join(' & ')
 
     return (
-      <div className="welcome-section">
-        <h1 className="welcome-title">
+      <div className={styles.welcomeSection}>
+        <h1 className={styles.welcomeTitle}>
           Welcome back, {profile?.first_name || 'User'}!
         </h1>
-        <p className="welcome-text">
+        <p className={styles.welcomeText}>
           <strong>Your Role{profile?.roles?.length > 1 ? 's' : ''}:</strong> {roleLabels}
         </p>
         
         {profileError && (
-          <div className="alert alert-warning">
+          <div className={styles.alertWarning}>
             <div style={{ textAlign: 'center' }}>
               <strong>⚠️ {profileError}</strong>
             </div>
@@ -355,7 +355,7 @@ const Dashboard = () => {
         )}
         
         {!profileStats.loading && !profileError && profileStats.completionPercentage < 100 && (
-          <div className="alert alert-info">
+          <div className={styles.alertInfo}>
             <div style={{ textAlign: 'center' }}>
               <strong>Profile Completion: {profileStats.completionPercentage}%</strong>
               {profileStats.completionPercentage < 100 && (
@@ -374,14 +374,14 @@ const Dashboard = () => {
     <div>      
       {getRoleSpecificWelcome()}
       
-      {/* Dashboard Cards - These remain as detailed content cards */}
+      {/* Dashboard Cards - Using CSS modules */}
       <div className="card">
         <h3 className="card-title">Your Dashboard</h3>
         <div className="grid-auto">
           {getDashboardCards().map(card => (
             <div
               key={card.id}
-              className={`role-card ${card.className}`}
+              className={`${styles.roleCard} ${card.className}`}
               onClick={() => handleCardClick(card)}
               style={{
                 cursor: 'pointer',
@@ -391,10 +391,10 @@ const Dashboard = () => {
               <div className="text-center mb-3" style={{ fontSize: '3rem', lineHeight: 1 }}>
                 {card.icon}
               </div>
-              <h4 className="role-title">
+              <h4 className={styles.roleTitle}>
                 {card.label}
               </h4>
-              <p className="role-description">{card.description}</p>
+              <p className={styles.roleDescription}>{card.description}</p>
             </div>
           ))}
         </div>
@@ -402,20 +402,23 @@ const Dashboard = () => {
       
       {/* Multi-Role Access Summary */}
       {profile?.roles?.length > 1 && (
-        <div className="card mt-5">
+        <div className={`card ${styles.multiRoleSection}`}>
           <h3 className="card-title">Your Multi-Role Access</h3>
           <p className="card-text" style={{ textAlign: 'center', marginBottom: '20px' }}>
             You have access to multiple platform features based on your roles.
           </p>
-          <div className="grid-auto">
+          <div className={styles.multiRoleGrid}>
             {profile.roles.map(role => (
-              <div key={role} className="alert alert-success">
-                <strong>{role.charAt(0).toUpperCase() + role.slice(1)} Access:</strong>
-                <br />
-                {role === 'applicant' && 'Find roommates, browse properties, connect with peer support, find employment'}
-                {role === 'peer' && 'Offer peer support, manage clients, provide services'}
-                {role === 'landlord' && 'List properties, review applications, manage rentals'}
-                {role === 'employer' && 'Post jobs, review applications, manage company profiles'}
+              <div key={role} className={styles.roleAccessCard}>
+                <div className={styles.roleAccessTitle}>
+                  {role.charAt(0).toUpperCase() + role.slice(1)} Access:
+                </div>
+                <div className={styles.roleAccessDescription}>
+                  {role === 'applicant' && 'Find roommates, browse properties, connect with peer support, find employment'}
+                  {role === 'peer' && 'Offer peer support, manage clients, provide services'}
+                  {role === 'landlord' && 'List properties, review applications, manage rentals'}
+                  {role === 'employer' && 'Post jobs, review applications, manage company profiles'}
+                </div>
               </div>
             ))}
           </div>
