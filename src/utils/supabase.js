@@ -160,18 +160,8 @@ export const db = {
     }
   },
 
-  // Legacy alias for backward compatibility
-  matchingProfiles: {
-    create: matchingProfilesService.upsert,
-    getByUserId: matchingProfilesService.getByUserId,
-    getActiveProfiles: matchingProfilesService.getActiveProfiles,
-    update: matchingProfilesService.update,
-    // Additional methods from the new service
-    search: matchingProfilesService.searchProfiles,
-    getByLocation: matchingProfilesService.getByLocation,
-    getByRecoveryStage: matchingProfilesService.getByRecoveryStage,
-    getStatistics: matchingProfilesService.getStatistics
-  },
+// Direct service reference (preserves 'this' context)
+matchingProfiles: matchingProfilesService,
 
   // Match request operations
   matchRequests: {
