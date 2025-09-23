@@ -1,7 +1,7 @@
-// src/components/forms/hooks/useMatchingProfileForm.js
+// src/components/features/matching/hooks/useMatchingProfileForm.js - UPDATED WITH STANDARDIZED FIELD NAMES
 import { useState, useEffect } from 'react';
-import { useAuth } from '../../../../hooks/useAuth';
-import { supabase } from '../../../../utils/supabase'; // ✅ FIXED: Direct import to avoid hanging db utilities
+import { useAuth } from '../../../../context/AuthContext';
+import { supabase } from '../../../../utils/supabase';
 import { 
   defaultFormData, 
   REQUIRED_FIELDS, 
@@ -12,13 +12,25 @@ import {
 export const useMatchingProfileForm = () => {
   const { user, profile, hasRole } = useAuth();
   
-  const [formData, setFormData] = useState(defaultFormData);
+  // ✅ UPDATED: Form data structure using standardized field names internally
+  const [formData, setFormData] = useState({
+    ...defaultFormData,
+    // ✅ STANDARDIZED: Internal form state uses consistent naming
+    primary_city: '',
+    primary_state: '',
+    budget_min: 500,
+    budget_max: 2000,
+    preferred_roommate_gender: '',
+    recovery_methods: [],
+    guests_policy: ''
+  });
+  
   const [errors, setErrors] = useState({});
   const [loading, setLoading] = useState(false);
   const [initialLoading, setInitialLoading] = useState(true);
   const [successMessage, setSuccessMessage] = useState('');
 
-  // ✅ FIXED: Load existing data without referencing old preferred_location column
+  // ✅ UPDATED: Load existing data with standardized field mapping
   useEffect(() => {
     const loadExistingData = async () => {
       if (!user || !hasRole('applicant')) {
@@ -29,12 +41,11 @@ export const useMatchingProfileForm = () => {
       try {
         console.log('🔍 Loading existing data for user:', user.id);
         
-        // ✅ FIXED: Direct Supabase call to avoid hanging db utilities
         const { data: applicantForm, error } = await supabase
           .from('applicant_forms')
           .select('*')
           .eq('user_id', user.id)
-          .maybeSingle(); // Use maybeSingle instead of single to avoid errors if no record exists
+          .maybeSingle();
         
         if (error) {
           console.error('❌ Error loading applicant form:', error);
@@ -44,7 +55,7 @@ export const useMatchingProfileForm = () => {
         }
         
         if (applicantForm) {
-          console.log('🔍 Loaded applicant form data:', applicantForm);
+          console.log('🔍 Loaded applicant form data with standardized fields:', applicantForm);
           
           setFormData(prev => ({
             ...prev,
@@ -60,9 +71,9 @@ export const useMatchingProfileForm = () => {
             emergencyContactName: applicantForm.emergency_contact_name || '',
             emergencyContactPhone: applicantForm.emergency_contact_phone || '',
             
-            // ✅ FIXED: Location & Housing - ONLY using new city/state fields
-            preferredCity: applicantForm.preferred_city || '',
-            preferredState: applicantForm.preferred_state || '',
+            // ✅ STANDARDIZED: Location & Housing using new field names
+            primary_city: applicantForm.primary_city || applicantForm.preferred_city || '',
+            primary_state: applicantForm.primary_state || applicantForm.preferred_state || '',
             targetZipCodes: applicantForm.target_zip_codes?.join(', ') || '',
             searchRadius: applicantForm.search_radius?.toString() || '25',
             currentLocation: applicantForm.current_location || '',
@@ -71,20 +82,23 @@ export const useMatchingProfileForm = () => {
             housingType: applicantForm.housing_type || [],
             priceRangeMin: applicantForm.price_range_min || 500,
             priceRangeMax: applicantForm.price_range_max || 2000,
-            budgetMax: applicantForm.budget_max || 1000,
+            
+            // ✅ STANDARDIZED: Budget using new field names
+            budget_min: applicantForm.budget_min || applicantForm.price_range_min || 500,
+            budget_max: applicantForm.budget_max || applicantForm.price_range_max || 2000,
+            
             moveInDate: applicantForm.move_in_date || '',
             leaseDuration: applicantForm.lease_duration || '',
             
-            // Personal Preferences
+            // ✅ STANDARDIZED: Gender preferences using new field name
             ageRangeMin: applicantForm.age_range_min || 18,
             ageRangeMax: applicantForm.age_range_max || 65,
-            genderPreference: applicantForm.gender_preference || '',
-            preferredRoommateGender: applicantForm.preferred_roommate_gender || '',
+            preferred_roommate_gender: applicantForm.preferred_roommate_gender || applicantForm.gender_preference || '',
             smokingPreference: applicantForm.smoking_preference || '',
             smokingStatus: applicantForm.smoking_status || '',
             petPreference: applicantForm.pet_preference || '',
             
-            // Recovery Information
+            // ✅ STANDARDIZED: Recovery information using standardized field names
             recoveryStage: applicantForm.recovery_stage || '',
             primarySubstance: applicantForm.primary_substance || '',
             timeInRecovery: applicantForm.time_in_recovery || '',
@@ -95,15 +109,14 @@ export const useMatchingProfileForm = () => {
             supportMeetings: applicantForm.support_meetings || '',
             spiritualAffiliation: applicantForm.spiritual_affiliation || '',
             primaryIssues: applicantForm.primary_issues || [],
-            recoveryMethods: applicantForm.recovery_methods || [],
+            recovery_methods: applicantForm.recovery_methods || [],
             
-            // Lifestyle Preferences
+            // ✅ STANDARDIZED: Lifestyle preferences using standardized field names
             workSchedule: applicantForm.work_schedule || '',
             socialLevel: applicantForm.social_level || 3,
             cleanlinessLevel: applicantForm.cleanliness_level || 3,
             noiseLevel: applicantForm.noise_level || 3,
-            guestPolicy: applicantForm.guest_policy || '',
-            guestsPolicy: applicantForm.guests_policy || '',
+            guests_policy: applicantForm.guests_policy || applicantForm.guest_policy || '',
             bedtimePreference: applicantForm.bedtime_preference || '',
             transportation: applicantForm.transportation || '',
             choreSharingPreference: applicantForm.chore_sharing_preference || '',
@@ -135,7 +148,7 @@ export const useMatchingProfileForm = () => {
             isActive: applicantForm.is_active !== false
           }));
           
-          console.log('✅ Form data populated successfully');
+          console.log('✅ Form data populated successfully with standardized fields');
         } else {
           console.log('🔍 No existing applicant form found for user');
         }
@@ -150,38 +163,67 @@ export const useMatchingProfileForm = () => {
     loadExistingData();
   }, [user, profile, hasRole]);
 
-  // Calculate form completion percentage
+  // ✅ UPDATED: Calculate completion with standardized required fields
   const getCompletionPercentage = () => {
     let completed = 0;
-    let total = REQUIRED_FIELDS.length + REQUIRED_ARRAY_FIELDS.length;
+    let total = 0;
     
-    REQUIRED_FIELDS.forEach(field => {
+    // ✅ STANDARDIZED: Core required fields using new naming
+    const coreRequiredFields = [
+      'dateOfBirth', 'phone', 'gender', 'primary_city', 'primary_state',
+      'budget_max', 'recoveryStage', 'preferred_roommate_gender'
+    ];
+    
+    const arrayRequiredFields = [
+      'housingType', 'recovery_methods', 'primaryIssues'
+    ];
+    
+    total = coreRequiredFields.length + arrayRequiredFields.length;
+    
+    coreRequiredFields.forEach(field => {
       if (formData[field] && formData[field].toString().trim() !== '') completed++;
     });
     
-    REQUIRED_ARRAY_FIELDS.forEach(field => {
+    arrayRequiredFields.forEach(field => {
       if (formData[field] && formData[field].length > 0) completed++;
     });
     
     return Math.round((completed / total) * 100);
   };
 
-  // Validation function
+  // ✅ UPDATED: Validation with standardized field names
   const validateForm = () => {
-    console.log('🔍 Starting form validation...');
+    console.log('🔍 Starting form validation with standardized fields...');
     const newErrors = {};
     
-    // Required field validation
-    REQUIRED_FIELDS.forEach(field => {
+    // ✅ STANDARDIZED: Core required field validation
+    const requiredFields = {
+      dateOfBirth: 'Date of birth is required',
+      phone: 'Phone number is required',
+      gender: 'Gender is required',
+      primary_city: 'Preferred city is required',
+      primary_state: 'Preferred state is required',
+      budget_max: 'Maximum budget is required',
+      recoveryStage: 'Recovery stage is required',
+      preferred_roommate_gender: 'Roommate gender preference is required'
+    };
+    
+    Object.entries(requiredFields).forEach(([field, message]) => {
       if (!formData[field] || !formData[field].toString().trim()) {
-        newErrors[field] = `${field.replace(/([A-Z])/g, ' $1').toLowerCase()} is required`;
+        newErrors[field] = message;
       }
     });
     
-    // Required array field validation
-    REQUIRED_ARRAY_FIELDS.forEach(field => {
+    // ✅ STANDARDIZED: Array field validation
+    const arrayRequiredFields = {
+      housingType: 'Please select at least one housing type',
+      recovery_methods: 'Please select at least one recovery method',
+      primaryIssues: 'Please select at least one primary issue'
+    };
+    
+    Object.entries(arrayRequiredFields).forEach(([field, message]) => {
       if (!formData[field] || formData[field].length === 0) {
-        newErrors[field] = `Please select at least one ${field.replace(/([A-Z])/g, ' $1').toLowerCase()}`;
+        newErrors[field] = message;
       }
     });
 
@@ -196,44 +238,50 @@ export const useMatchingProfileForm = () => {
         age--;
       }
       
-      if (age < VALIDATION_RULES.MIN_AGE) {
-        newErrors.dateOfBirth = `You must be ${VALIDATION_RULES.MIN_AGE} or older to use this service`;
+      if (age < 18) {
+        newErrors.dateOfBirth = 'You must be 18 or older to use this service';
       }
     }
 
     // Phone validation
-    if (formData.phone && !VALIDATION_RULES.PHONE_REGEX.test(formData.phone.replace(/\D/g, ''))) {
+    if (formData.phone && !/^\(?([0-9]{3})\)?[-. ]?([0-9]{3})[-. ]?([0-9]{4})$/.test(formData.phone.replace(/\D/g, ''))) {
       newErrors.phone = 'Please enter a valid phone number';
     }
 
     // ZIP code validation
-    if (formData.zipCode && !VALIDATION_RULES.ZIP_CODE_REGEX.test(formData.zipCode)) {
+    if (formData.zipCode && !/^\d{5}(-\d{4})?$/.test(formData.zipCode)) {
       newErrors.zipCode = 'Please enter a valid ZIP code';
     }
 
-    // Budget validation
-    if (formData.budgetMax < VALIDATION_RULES.MIN_BUDGET) {
-      newErrors.budgetMax = `Budget must be at least $${VALIDATION_RULES.MIN_BUDGET}`;
+    // ✅ STANDARDIZED: Budget validation using new field names
+    if (formData.budget_max < 300) {
+      newErrors.budget_max = 'Maximum budget must be at least $300';
     }
-    if (formData.budgetMax > VALIDATION_RULES.MAX_BUDGET) {
-      newErrors.budgetMax = 'Budget seems unreasonably high. Please verify.';
+    if (formData.budget_max > 10000) {
+      newErrors.budget_max = 'Budget seems unreasonably high. Please verify.';
+    }
+    
+    if (formData.budget_min && formData.budget_min >= formData.budget_max) {
+      newErrors.budget_min = 'Minimum budget must be less than maximum budget';
     }
 
     // Text length validation
-    if (formData.aboutMe.length > VALIDATION_RULES.MAX_ABOUT_ME_LENGTH) {
-      newErrors.aboutMe = `About me must be ${VALIDATION_RULES.MAX_ABOUT_ME_LENGTH} characters or less`;
+    if (formData.aboutMe && formData.aboutMe.length > 1000) {
+      newErrors.aboutMe = 'About me must be 1000 characters or less';
     }
-    if (formData.lookingFor.length > VALIDATION_RULES.MAX_LOOKING_FOR_LENGTH) {
-      newErrors.lookingFor = `Looking for must be ${VALIDATION_RULES.MAX_LOOKING_FOR_LENGTH} characters or less`;
+    if (formData.lookingFor && formData.lookingFor.length > 1000) {
+      newErrors.lookingFor = 'Looking for must be 1000 characters or less';
     }
-    if (formData.additionalInfo.length > VALIDATION_RULES.MAX_ADDITIONAL_INFO_LENGTH) {
-      newErrors.additionalInfo = `Additional info must be ${VALIDATION_RULES.MAX_ADDITIONAL_INFO_LENGTH} characters or less`;
+    if (formData.additionalInfo && formData.additionalInfo.length > 500) {
+      newErrors.additionalInfo = 'Additional info must be 500 characters or less';
     }
 
     // Date validation
     if (formData.moveInDate) {
       const moveInDate = new Date(formData.moveInDate);
       const today = new Date();
+      today.setHours(0, 0, 0, 0); // Reset time to compare dates only
+      
       if (moveInDate < today) {
         newErrors.moveInDate = 'Move-in date cannot be in the past';
       }
@@ -261,8 +309,8 @@ export const useMatchingProfileForm = () => {
     setFormData(prev => ({
       ...prev,
       [field]: checked 
-        ? [...prev[field], value]
-        : prev[field].filter(item => item !== value)
+        ? [...(prev[field] || []), value]
+        : (prev[field] || []).filter(item => item !== value)
     }));
     
     // Clear error for this field
@@ -277,9 +325,9 @@ export const useMatchingProfileForm = () => {
     handleInputChange(field, parseInt(value));
   };
 
-  // ✅ FIXED: Direct Supabase submission to avoid hanging db utilities
+  // ✅ UPDATED: Form submission with standardized database field mapping
   const submitForm = async () => {
-    console.log('🔍 Form submission started');
+    console.log('🔍 Form submission started with standardized fields');
     
     setErrors(prev => {
       const { submit, ...otherErrors } = prev;
@@ -295,14 +343,17 @@ export const useMatchingProfileForm = () => {
     setSuccessMessage('');
     
     try {
-      console.log('📊 Preparing form data for submission...');
+      console.log('📊 Preparing standardized form data for submission...');
       
       // Parse target zip codes
       const targetZipCodes = formData.targetZipCodes
-        .split(',')
-        .map(zip => zip.trim())
-        .filter(zip => zip && /^\d{5}$/.test(zip));
+        ? formData.targetZipCodes
+            .split(',')
+            .map(zip => zip.trim())
+            .filter(zip => zip && /^\d{5}$/.test(zip))
+        : [];
 
+      // ✅ STANDARDIZED: Database submission using correct field names
       const applicantFormData = {
         user_id: user.id,
         date_of_birth: formData.dateOfBirth,
@@ -316,84 +367,97 @@ export const useMatchingProfileForm = () => {
         emergency_contact_name: formData.emergencyContactName || null,
         emergency_contact_phone: formData.emergencyContactPhone || null,
         
-        // ✅ FIXED: Only using new city/state fields
-        preferred_city: formData.preferredCity,
-        preferred_state: formData.preferredState,
+        // ✅ STANDARDIZED: Use primary_city/primary_state for database
+        primary_city: formData.primary_city,
+        primary_state: formData.primary_state,
         target_zip_codes: targetZipCodes,
-        search_radius: parseInt(formData.searchRadius),
+        search_radius: formData.searchRadius ? parseInt(formData.searchRadius) : 25,
         current_location: formData.currentLocation || null,
         relocation_timeline: formData.relocationTimeline || null,
-        max_commute: parseInt(formData.maxCommute),
-        housing_type: formData.housingType,
-        price_range_min: formData.priceRangeMin,
-        price_range_max: formData.priceRangeMax,
-        budget_max: parseInt(formData.budgetMax),
-        move_in_date: formData.moveInDate,
+        max_commute: formData.maxCommute ? parseInt(formData.maxCommute) : null,
+        housing_type: formData.housingType || [],
+        price_range_min: formData.priceRangeMin || formData.budget_min || 500,
+        price_range_max: formData.priceRangeMax || formData.budget_max || 2000,
+        
+        // ✅ STANDARDIZED: Use budget_min/budget_max for database
+        budget_min: formData.budget_min || 500,
+        budget_max: formData.budget_max || 2000,
+        
+        move_in_date: formData.moveInDate || null,
         lease_duration: formData.leaseDuration || null,
         
-        age_range_min: formData.ageRangeMin,
-        age_range_max: formData.ageRangeMax,
-        gender_preference: formData.genderPreference || null,
-        preferred_roommate_gender: formData.preferredRoommateGender,
+        // ✅ STANDARDIZED: Use preferred_roommate_gender for database
+        age_range_min: formData.ageRangeMin || 18,
+        age_range_max: formData.ageRangeMax || 65,
+        preferred_roommate_gender: formData.preferred_roommate_gender || null,
         smoking_preference: formData.smokingPreference || null,
-        smoking_status: formData.smokingStatus,
+        smoking_status: formData.smokingStatus || null,
         pet_preference: formData.petPreference || null,
         
+        // ✅ STANDARDIZED: Recovery information
         recovery_stage: formData.recoveryStage,
         primary_substance: formData.primarySubstance || null,
         time_in_recovery: formData.timeInRecovery || null,
         treatment_history: formData.treatmentHistory || null,
-        program_type: formData.programType,
+        program_type: formData.programType || [],
         sobriety_date: formData.sobrietyDate || null,
         sponsor_mentor: formData.sponsorMentor || null,
         support_meetings: formData.supportMeetings || null,
-        spiritual_affiliation: formData.spiritualAffiliation,
-        primary_issues: formData.primaryIssues,
-        recovery_methods: formData.recoveryMethods,
+        spiritual_affiliation: formData.spiritualAffiliation || null,
+        primary_issues: formData.primaryIssues || [],
+        recovery_methods: formData.recovery_methods || [],
         
-        work_schedule: formData.workSchedule,
-        social_level: parseInt(formData.socialLevel),
-        cleanliness_level: parseInt(formData.cleanlinessLevel),
-        noise_level: parseInt(formData.noiseLevel),
-        guest_policy: formData.guestPolicy || null,
-        guests_policy: formData.guestsPolicy || null,
+        // ✅ STANDARDIZED: Lifestyle preferences
+        work_schedule: formData.workSchedule || null,
+        social_level: formData.socialLevel ? parseInt(formData.socialLevel) : 3,
+        cleanliness_level: formData.cleanlinessLevel ? parseInt(formData.cleanlinessLevel) : 3,
+        noise_level: formData.noiseLevel ? parseInt(formData.noiseLevel) : 3,
+        guests_policy: formData.guests_policy || null,
         bedtime_preference: formData.bedtimePreference || null,
         transportation: formData.transportation || null,
         chore_sharing_preference: formData.choreSharingPreference || null,
         preferred_support_structure: formData.preferredSupportStructure || null,
         conflict_resolution_style: formData.conflictResolutionStyle || null,
         
-        pets_owned: formData.petsOwned,
-        pets_comfortable: formData.petsComfortable,
-        overnight_guests_ok: formData.overnightGuestsOk,
-        shared_groceries: formData.sharedGroceries,
+        // Living situation
+        pets_owned: formData.petsOwned || false,
+        pets_comfortable: formData.petsComfortable !== false,
+        overnight_guests_ok: formData.overnightGuestsOk !== false,
+        shared_groceries: formData.sharedGroceries || false,
         cooking_frequency: formData.cookingFrequency || null,
         
-        housing_subsidy: formData.housingSubsidy,
-        has_section8: formData.hasSection8,
-        accepts_subsidy: formData.acceptsSubsidy,
+        // Housing assistance
+        housing_subsidy: formData.housingSubsidy || [],
+        has_section8: formData.hasSection8 || false,
+        accepts_subsidy: formData.acceptsSubsidy !== false,
         
-        interests: formData.interests,
-        deal_breakers: formData.dealBreakers,
-        important_qualities: formData.importantQualities,
+        // Compatibility factors
+        interests: formData.interests || [],
+        deal_breakers: formData.dealBreakers || [],
+        important_qualities: formData.importantQualities || [],
         
-        about_me: formData.aboutMe,
-        looking_for: formData.lookingFor,
+        // Open-ended responses
+        about_me: formData.aboutMe || null,
+        looking_for: formData.lookingFor || null,
         additional_info: formData.additionalInfo || null,
         special_needs: formData.specialNeeds || null,
         
-        is_active: formData.isActive,
+        // Status
+        is_active: formData.isActive !== false,
         profile_completed: true
       };
       
-      console.log('🔧 Direct Supabase submission starting...', { 
+      console.log('🔧 Standardized database submission starting...', { 
         userId: user.id, 
         dataKeys: Object.keys(applicantFormData),
-        preferredCity: applicantFormData.preferred_city,
-        preferredState: applicantFormData.preferred_state
+        primaryCity: applicantFormData.primary_city,
+        primaryState: applicantFormData.primary_state,
+        budgetMax: applicantFormData.budget_max,
+        preferredRoommateGender: applicantFormData.preferred_roommate_gender,
+        recoveryMethods: applicantFormData.recovery_methods,
+        guestsPolicy: applicantFormData.guests_policy
       });
       
-      // ✅ FIXED: Direct Supabase call with timeout
       const controller = new AbortController();
       const timeoutId = setTimeout(() => controller.abort(), 30000);
       
@@ -407,7 +471,7 @@ export const useMatchingProfileForm = () => {
       clearTimeout(timeoutId);
       
       if (error) {
-        console.error('❌ Direct Supabase error:', error);
+        console.error('❌ Standardized submission error:', error);
         
         if (error.message.includes('aborted')) {
           setErrors({ submit: 'Request timed out. Please check your internet connection and try again.' });
@@ -417,13 +481,13 @@ export const useMatchingProfileForm = () => {
         return false;
       }
       
-      console.log('✅ Direct Supabase submission successful', { data });
-      setSuccessMessage('Comprehensive matching profile saved successfully!');
+      console.log('✅ Standardized form submission successful', { data });
+      setSuccessMessage('Comprehensive matching profile saved successfully with standardized fields!');
       
       return true;
       
     } catch (error) {
-      console.error('💥 Submission error:', error);
+      console.error('💥 Standardized submission error:', error);
       
       if (error.name === 'AbortError') {
         setErrors({ submit: 'Request timed out. Please try again.' });
