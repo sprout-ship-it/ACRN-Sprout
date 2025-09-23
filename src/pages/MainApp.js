@@ -59,118 +59,129 @@ const MainApp = () => {
 
   // ✅ PHASE 4: Check if user has completed their role-specific comprehensive profile
   useEffect(() => {
-    const checkProfileCompletion = async () => {
-      if (!user || !profile?.roles?.length) {
-        setProfileSetup({ hasComprehensiveProfile: false, loading: false })
-        return
-      }
 
-      try {
-        console.log('🔍 Checking profile completion for roles:', profile.roles)
-        
-        let hasCompleteProfile = false
-
-        // Check based on user's primary role
-        if (hasRole('applicant')) {
-          console.log('👤 Checking applicant comprehensive profile...')
-          const { data: applicantProfile } = await db.applicantForms.getByUserId(user.id)
-          
-          // ✅ PHASE 4: Check for comprehensive profile completion (demographic + preferences)
-          hasCompleteProfile = !!(
-            applicantProfile?.date_of_birth && 
-            applicantProfile?.phone && 
-            applicantProfile?.about_me && 
-            applicantProfile?.looking_for &&
-            applicantProfile?.profile_completed
-          )
-          
-          console.log('👤 Applicant profile check:', { 
-            hasProfile: !!applicantProfile,
-            hasDemographics: !!(applicantProfile?.date_of_birth && applicantProfile?.phone),
-            hasContent: !!(applicantProfile?.about_me && applicantProfile?.looking_for),
-            isCompleted: !!applicantProfile?.profile_completed,
-            overallComplete: hasCompleteProfile
-          })
-        }
-        
-        else if (hasRole('peer')) {
-          console.log('🤝 Checking peer support comprehensive profile...')
-          const { data: peerProfile } = await db.peerSupportProfiles.getByUserId(user.id)
-          
-          // ✅ FIXED: Check for comprehensive peer profile completion using actual schema fields
-          hasCompleteProfile = !!(
-            peerProfile?.phone && 
-            peerProfile?.bio && 
-            peerProfile?.specialties &&
-            peerProfile?.specialties?.length > 0  // Check that specialties array has items
-          )
-          
-          console.log('🤝 Peer profile check:', { 
-            hasProfile: !!peerProfile,
-            hasPhone: !!peerProfile?.phone,
-            hasBio: !!peerProfile?.bio,
-            hasSpecialties: !!(peerProfile?.specialties && peerProfile?.specialties?.length > 0),
-            overallComplete: hasCompleteProfile
-          })
-        }
-        
-        else if (hasRole('landlord')) {
-          console.log('🏢 Checking landlord profile...')
-          // ✅ PHASE 4: Landlords don't need additional profile setup beyond registration
-          // They should have phone in their registrant_profiles from registration
-          hasCompleteProfile = !!profile?.phone
-          
-          console.log('🏢 Landlord profile check:', { 
-            hasPhone: !!profile?.phone,
-            overallComplete: hasCompleteProfile
-          })
-        }
-
-        // ✅ NEW: Add employer role profile completion check
-        else if (hasRole('employer')) {
-          console.log('💼 Checking employer comprehensive profile...')
-          const { data: employerProfiles } = await db.employerProfiles.getByUserId(user.id)
-          
-          if (employerProfiles && employerProfiles.length > 0) {
-            const employerProfile = employerProfiles[0]
-            // Check for comprehensive employer profile completion
-            hasCompleteProfile = !!(
-              employerProfile?.company_name && 
-              employerProfile?.industry && 
-              employerProfile?.description && 
-              employerProfile?.recovery_friendly_features?.length > 0 &&
-              employerProfile?.profile_completed
-            )
-            
-            console.log('💼 Employer profile check:', { 
-              hasProfile: !!employerProfile,
-              hasBasicInfo: !!(employerProfile?.company_name && employerProfile?.industry),
-              hasDescription: !!employerProfile?.description,
-              hasRecoveryFeatures: !!(employerProfile?.recovery_friendly_features?.length > 0),
-              isCompleted: !!employerProfile?.profile_completed,
-              overallComplete: hasCompleteProfile
-            })
-          } else {
-            console.log('💼 No employer profile found')
-            hasCompleteProfile = false
-          }
-        }
-
-        setProfileSetup({
-          hasComprehensiveProfile: hasCompleteProfile,
-          loading: false
-        })
-
-        console.log('✅ Profile completion check complete:', {
-          userRoles: profile.roles,
-          hasComprehensiveProfile: hasCompleteProfile
-        })
-
-      } catch (error) {
-        console.error('❌ Error checking profile completion:', error)
-        setProfileSetup({ hasComprehensiveProfile: false, loading: false })
-      }
+// ✅ FIXED: Check if user has completed their role-specific comprehensive profile
+useEffect(() => {
+  const checkProfileCompletion = async () => {
+    if (!user || !profile?.roles?.length) {
+      setProfileSetup({ hasComprehensiveProfile: false, loading: false })
+      return
     }
+
+    try {
+      console.log('🔍 Checking profile completion for roles:', profile.roles)
+      
+      let hasCompleteProfile = false
+
+      // Check based on user's primary role
+      if (hasRole('applicant')) {
+        console.log('👤 Checking applicant comprehensive profile...')
+        
+        // ✅ FIXED: Use the correct service for applicant_matching_profiles
+        const { data: applicantProfile, success } = await db.matchingProfiles.getByUserId(user.id)
+        
+        // ✅ FIXED: Check for comprehensive profile completion using the actual schema fields
+        hasCompleteProfile = !!(
+          applicantProfile?.primary_city && 
+          applicantProfile?.primary_state && 
+          applicantProfile?.budget_min && 
+          applicantProfile?.budget_max &&
+          applicantProfile?.recovery_stage &&
+          applicantProfile?.about_me && 
+          applicantProfile?.looking_for &&
+          applicantProfile?.profile_completed
+        )
+        
+        console.log('👤 Applicant profile check:', { 
+          hasProfile: !!applicantProfile,
+          hasBasicInfo: !!(applicantProfile?.primary_city && applicantProfile?.budget_max),
+          hasRecoveryInfo: !!(applicantProfile?.recovery_stage),
+          hasContent: !!(applicantProfile?.about_me && applicantProfile?.looking_for),
+          isCompleted: !!applicantProfile?.profile_completed,
+          overallComplete: hasCompleteProfile
+        })
+      }
+      
+      else if (hasRole('peer')) {
+        console.log('🤝 Checking peer support comprehensive profile...')
+        const { data: peerProfile } = await db.peerSupportProfiles.getByUserId(user.id)
+        
+        hasCompleteProfile = !!(
+          peerProfile?.phone && 
+          peerProfile?.bio && 
+          peerProfile?.specialties &&
+          peerProfile?.specialties?.length > 0
+        )
+        
+        console.log('🤝 Peer profile check:', { 
+          hasProfile: !!peerProfile,
+          hasPhone: !!peerProfile?.phone,
+          hasBio: !!peerProfile?.bio,
+          hasSpecialties: !!(peerProfile?.specialties && peerProfile?.specialties?.length > 0),
+          overallComplete: hasCompleteProfile
+        })
+      }
+      
+      else if (hasRole('landlord')) {
+        console.log('🏢 Checking landlord profile...')
+        hasCompleteProfile = !!profile?.phone
+        
+        console.log('🏢 Landlord profile check:', { 
+          hasPhone: !!profile?.phone,
+          overallComplete: hasCompleteProfile
+        })
+      }
+
+      else if (hasRole('employer')) {
+        console.log('💼 Checking employer comprehensive profile...')
+        const { data: employerProfiles } = await db.employerProfiles.getByUserId(user.id)
+        
+        if (employerProfiles && employerProfiles.length > 0) {
+          const employerProfile = employerProfiles[0]
+          hasCompleteProfile = !!(
+            employerProfile?.company_name && 
+            employerProfile?.industry && 
+            employerProfile?.description && 
+            employerProfile?.recovery_friendly_features?.length > 0 &&
+            employerProfile?.profile_completed
+          )
+          
+          console.log('💼 Employer profile check:', { 
+            hasProfile: !!employerProfile,
+            hasBasicInfo: !!(employerProfile?.company_name && employerProfile?.industry),
+            hasDescription: !!employerProfile?.description,
+            hasRecoveryFeatures: !!(employerProfile?.recovery_friendly_features?.length > 0),
+            isCompleted: !!employerProfile?.profile_completed,
+            overallComplete: hasCompleteProfile
+          })
+        } else {
+          console.log('💼 No employer profile found')
+          hasCompleteProfile = false
+        }
+      }
+
+      setProfileSetup({
+        hasComprehensiveProfile: hasCompleteProfile,
+        loading: false
+      })
+
+      console.log('✅ Profile completion check complete:', {
+        userRoles: profile.roles,
+        hasComprehensiveProfile: hasCompleteProfile
+      })
+
+    } catch (error) {
+      console.error('❌ Error checking profile completion:', error)
+      setProfileSetup({ hasComprehensiveProfile: false, loading: false })
+    }
+  }
+
+  if (isAuthenticated && profile?.roles?.length) {
+    checkProfileCompletion()
+  } else {
+    setProfileSetup({ hasComprehensiveProfile: false, loading: false })
+  }
+}, [user, profile, hasRole, isAuthenticated])
 
     if (isAuthenticated && profile?.roles?.length) {
       checkProfileCompletion()
