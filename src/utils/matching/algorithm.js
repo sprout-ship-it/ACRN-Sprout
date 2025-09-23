@@ -1,16 +1,16 @@
-// src/utils/matching/algorithm.js
+// src/utils/matching/algorithm.js - UPDATED WITH STANDARDIZED FIELD NAMES
 
 /**
  * Core matching algorithm for Recovery Housing Connect
+ * ✅ UPDATED: Uses standardized field names from Week 1 database migration
  * Based on the advanced matching system with weighted compatibility factors
- * Updated to work with actual Supabase database schema
  */
 
 // Import the location compatibility function
 import { calculateLocationCompatibility as baseLocationCompatibility } from './dataTransform';
 
 /**
- * Calculate detailed compatibility between two users
+ * ✅ UPDATED: Calculate detailed compatibility with standardized field names
  * @param {Object} user1 - First user's complete profile data (profile + responses)
  * @param {Object} user2 - Second user's complete profile data (profile + responses)
  * @returns {Object} Detailed compatibility analysis
@@ -153,15 +153,15 @@ export const calculateAgeCompatibility = (user1, user2) => {
 };
 
 /**
- * Calculate budget compatibility
+ * ✅ UPDATED: Calculate budget compatibility with standardized field names
  * @param {Object} user1 - First user's data
  * @param {Object} user2 - Second user's data
  * @returns {number} Budget compatibility score (0-100)
  */
 export const calculateBudgetCompatibility = (user1, user2) => {
-  // Handle both budget_max and price_range formats
-  const budget1 = user1.budget_max || user1.price_range?.max || user1.priceRange?.max;
-  const budget2 = user2.budget_max || user2.price_range?.max || user2.priceRange?.max;
+  // ✅ STANDARDIZED: Use budget_max (applicants) and monthly_rent (properties)
+  const budget1 = user1.budget_max;
+  const budget2 = user2.budget_max;
   
   if (!budget1 || !budget2) return 50;
   
@@ -175,7 +175,7 @@ export const calculateBudgetCompatibility = (user1, user2) => {
 };
 
 /**
- * Calculate recovery compatibility (stage, methods, issues)
+ * ✅ UPDATED: Calculate recovery compatibility with standardized field names
  * @param {Object} user1 - First user's data
  * @param {Object} user2 - Second user's data
  * @returns {number} Recovery compatibility score (0-100)
@@ -194,9 +194,9 @@ export const calculateRecoveryCompatibility = (user1, user2) => {
     factors++;
   }
   
-  // Recovery methods overlap (handle both field names)
-  const methods1 = user1.recovery_methods || user1.program_type || [];
-  const methods2 = user2.recovery_methods || user2.program_type || [];
+  // ✅ STANDARDIZED: Use recovery_methods (standardized field name)
+  const methods1 = user1.recovery_methods || [];
+  const methods2 = user2.recovery_methods || [];
   
   if (methods1.length > 0 && methods2.length > 0) {
     const methodsScore = calculateArrayOverlapScore(methods1, methods2);
@@ -281,7 +281,7 @@ export const calculateInterestsCompatibility = (user1, user2) => {
  * @returns {number} Housing compatibility score (0-100)
  */
 export const calculateHousingCompatibility = (user1, user2) => {
-  // Handle both field names for housing subsidy
+  // Housing subsidy field name stays the same
   const subsidy1 = user1.housing_subsidy || [];
   const subsidy2 = user2.housing_subsidy || [];
   
@@ -292,7 +292,7 @@ export const calculateHousingCompatibility = (user1, user2) => {
 };
 
 /**
- * Calculate gender preference compatibility
+ * ✅ UPDATED: Calculate gender preference compatibility with standardized field names
  * @param {Object} user1 - First user's data
  * @param {Object} user2 - Second user's data
  * @returns {number} Gender compatibility score (0 or 100)
@@ -301,9 +301,9 @@ export const calculateGenderCompatibility = (user1, user2) => {
   const user1Gender = user1.gender;
   const user2Gender = user2.gender;
   
-  // Handle both field names for gender preference
-  const user1Pref = user1.preferred_roommate_gender || user1.gender_preference;
-  const user2Pref = user2.preferred_roommate_gender || user2.gender_preference;
+  // ✅ STANDARDIZED: Use preferred_roommate_gender (dropped gender_preference)
+  const user1Pref = user1.preferred_roommate_gender;
+  const user2Pref = user2.preferred_roommate_gender;
   
   // If no preferences specified, assume compatibility
   if (!user1Pref && !user2Pref) return 100;
@@ -319,7 +319,7 @@ export const calculateGenderCompatibility = (user1, user2) => {
 };
 
 /**
- * Calculate living preferences compatibility
+ * ✅ UPDATED: Calculate living preferences compatibility with standardized field names
  * @param {Object} user1 - First user's data
  * @param {Object} user2 - Second user's data
  * @returns {number} Preferences compatibility score (0-100)
@@ -347,9 +347,9 @@ export const calculatePreferencesCompatibility = (user1, user2) => {
     factors++;
   }
   
-  // Guest policy compatibility (handle both field names)
-  const guestPolicy1 = user1.guests_policy || user1.guest_policy;
-  const guestPolicy2 = user2.guests_policy || user2.guest_policy;
+  // ✅ STANDARDIZED: Use guests_policy (single standardized field name)
+  const guestPolicy1 = user1.guests_policy;
+  const guestPolicy2 = user2.guests_policy;
   
   if (guestPolicy1 && guestPolicy2) {
     const guestScore = calculateGuestCompatibility(guestPolicy1, guestPolicy2);
@@ -361,26 +361,77 @@ export const calculatePreferencesCompatibility = (user1, user2) => {
 };
 
 /**
- * Calculate location compatibility using enhanced method
+ * ✅ UPDATED: Calculate location compatibility using standardized field names
  * @param {Object} user1 - First user's data
  * @param {Object} user2 - Second user's data
  * @returns {number} Location compatibility score (0-100)
  */
 export const calculateLocationCompatibility = (user1, user2) => {
-  // Use the enhanced location compatibility if users have a custom function
-  if (user1.calculateLocationCompatibility) {
-    return user1.calculateLocationCompatibility(user1, user2);
+  // ✅ STANDARDIZED: Use primary_city, primary_state, primary_location
+  const location1 = user1.primary_location || 
+                   (user1.primary_city && user1.primary_state ? 
+                    `${user1.primary_city}, ${user1.primary_state}` : null);
+  
+  const location2 = user2.primary_location || 
+                   (user2.primary_city && user2.primary_state ? 
+                    `${user2.primary_city}, ${user2.primary_state}` : null);
+  
+  if (!location1 || !location2) return 50; // Default if location not specified
+  
+  // Exact match
+  if (location1.toLowerCase() === location2.toLowerCase()) return 100;
+  
+  // Check if both users are in the same state
+  const state1 = user1.primary_state || extractStateFromLocation(location1);
+  const state2 = user2.primary_state || extractStateFromLocation(location2);
+  
+  if (state1 && state2) {
+    if (state1.toLowerCase() === state2.toLowerCase()) {
+      // Same state, check if same city
+      const city1 = user1.primary_city || extractCityFromLocation(location1);
+      const city2 = user2.primary_city || extractCityFromLocation(location2);
+      
+      if (city1 && city2 && city1.toLowerCase() === city2.toLowerCase()) {
+        return 100; // Same city
+      }
+      return 75; // Same state, different city
+    }
   }
   
-  if (user2.calculateLocationCompatibility) {
-    return user2.calculateLocationCompatibility(user1, user2);
-  }
-  
-  // Fall back to the base location compatibility function
-  return baseLocationCompatibility(user1, user2);
+  // Different states - use distance-based compatibility if available
+  return calculateGeographicDistance(location1, location2);
 };
 
 // ===== HELPER FUNCTIONS =====
+
+/**
+ * Extract state from location string
+ */
+const extractStateFromLocation = (location) => {
+  if (!location) return null;
+  const parts = location.split(',').map(p => p.trim());
+  return parts.length > 1 ? parts[parts.length - 1] : null;
+};
+
+/**
+ * Extract city from location string
+ */
+const extractCityFromLocation = (location) => {
+  if (!location) return null;
+  const parts = location.split(',').map(p => p.trim());
+  return parts.length > 0 ? parts[0] : null;
+};
+
+/**
+ * Calculate geographic distance compatibility
+ */
+const calculateGeographicDistance = (location1, location2) => {
+  // Simplified distance calculation - in a real implementation,
+  // you might use a geocoding service or distance calculation API
+  
+  // For now, return moderate compatibility for different states
+  return 40;
+};
 
 /**
  * Check bedtime compatibility
@@ -443,7 +494,7 @@ const calculatePrimaryIssuesCompatibility = (issues1, issues2) => {
 };
 
 /**
- * Check gender preference
+ * ✅ UPDATED: Check gender preference with standardized values
  */
 const checkGenderPreference = (preference, userGender, otherGender) => {
   switch (preference) {

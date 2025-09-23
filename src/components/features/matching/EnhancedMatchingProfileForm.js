@@ -1,4 +1,4 @@
-// src/components/features/matching/EnhancedMatchingProfileForm.js - UPDATED WITH CSS MODULE
+// src/components/features/matching/EnhancedMatchingProfileForm.js - UPDATED WITH STANDARDIZED FIELD NAMES
 import React, { useState, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../../context/AuthContext';
@@ -127,7 +127,7 @@ const EnhancedMatchingProfileForm = ({ editMode = false, onComplete, onCancel })
     }, 100); // Small delay to ensure content is rendered
   };
 
-  // ✅ FIX 1: Add explicit event prevention to all navigation handlers
+  // ✅ UPDATED: Add explicit event prevention to all navigation handlers
   const handleNext = useCallback((e) => {
     if (e) {
       e.preventDefault();
@@ -168,7 +168,7 @@ const EnhancedMatchingProfileForm = ({ editMode = false, onComplete, onCancel })
     scrollToFirstFormField();
   }, []);
 
-  // ✅ FIX 2: Enhanced save handler with better logging and error prevention
+  // ✅ UPDATED: Enhanced save handler with better logging and error prevention
   const handleSave = useCallback(async (e) => {
     if (e) {
       e.preventDefault();
@@ -197,7 +197,7 @@ const EnhancedMatchingProfileForm = ({ editMode = false, onComplete, onCancel })
     }
   }, [loading, isSubmitting, submitForm, setSuccessMessage]);
 
-  // ✅ FIX 3: Enhanced submit handler with additional safeguards
+  // ✅ UPDATED: Enhanced submit handler with additional safeguards
   const handleSubmit = useCallback(async (e) => {
     console.log('🚨 FORM SUBMIT TRIGGERED - handleSubmit called');
     console.log('🔍 Event details:', {
@@ -217,7 +217,7 @@ const EnhancedMatchingProfileForm = ({ editMode = false, onComplete, onCancel })
     const isLastSection = currentSectionIndex === FORM_SECTIONS.length - 1;
     const hasErrors = Object.values(errors).some(error => error && error.trim() !== '');
     
-    // ✅ FIX: Additional check to prevent accidental submission
+    // ✅ UPDATED: Additional check to prevent accidental submission
     if (!isLastSection) {
       console.log('🚫 BLOCKING SUBMISSION: Not on last section', { 
         currentSectionIndex, 
@@ -312,7 +312,7 @@ const EnhancedMatchingProfileForm = ({ editMode = false, onComplete, onCancel })
     }
   }, [currentSectionIndex, loading, isSubmitting, validateForm, errors, canSubmit, submitForm, editMode, onComplete, navigate, setSuccessMessage]);
 
-  // ✅ FIX 4: Enhanced cancel handler
+  // ✅ UPDATED: Enhanced cancel handler
   const handleCancel = useCallback((e) => {
     if (e) {
       e.preventDefault();
@@ -328,7 +328,7 @@ const EnhancedMatchingProfileForm = ({ editMode = false, onComplete, onCancel })
     }
   }, [onCancel, navigate]);
 
-  // ✅ FIX 5: Add keydown handler to prevent Enter key submissions
+  // ✅ UPDATED: Add keydown handler to prevent Enter key submissions
   const handleKeyDown = useCallback((e) => {
     // Prevent Enter key from submitting form unless on submit button
     if (e.key === 'Enter' && e.target.type !== 'submit' && e.target.tagName !== 'BUTTON') {
@@ -399,8 +399,8 @@ const EnhancedMatchingProfileForm = ({ editMode = false, onComplete, onCancel })
         </h1>
         <p className="header-subtitle">
           {editMode 
-            ? 'Update your comprehensive profile information'
-            : 'Complete your comprehensive profile to find the perfect roommate match'
+            ? 'Update your comprehensive profile information with standardized field structure'
+            : 'Complete your comprehensive profile to find the perfect roommate match using our enhanced matching system'
           }
         </p>
       </div>
@@ -455,7 +455,7 @@ const EnhancedMatchingProfileForm = ({ editMode = false, onComplete, onCancel })
           </div>
         )}
 
-        {/* ✅ UPDATED: Enhanced form with better event handling */}
+        {/* ✅ UPDATED: Enhanced form with better event handling and standardized field processing */}
         <form 
           onSubmit={handleSubmit} 
           onKeyDown={handleKeyDown}
@@ -466,9 +466,15 @@ const EnhancedMatchingProfileForm = ({ editMode = false, onComplete, onCancel })
               <h2 className={styles.sectionHeader}>
                 {currentSection.icon} {currentSection.title}
               </h2>
+              {/* ✅ NEW: Show standardization info for developers */}
+              {process.env.NODE_ENV === 'development' && (
+                <div className="text-sm text-gray-500 mt-2">
+                  ✅ Using standardized field names: primary_city/primary_state, budget_max, preferred_roommate_gender
+                </div>
+              )}
             </div>
 
-            {/* Current Section Component */}
+            {/* ✅ UPDATED: Current Section Component with standardized field handling */}
             <CurrentSectionComponent
               formData={formData}
               errors={errors}
@@ -478,6 +484,28 @@ const EnhancedMatchingProfileForm = ({ editMode = false, onComplete, onCancel })
               onArrayChange={handleArrayChange}
               onRangeChange={handleRangeChange}
               styles={styles} // Pass CSS module to sections
+              // ✅ NEW: Pass field mapping info to sections for standardization
+              fieldMapping={{
+                location: {
+                  city: 'primary_city',
+                  state: 'primary_state', 
+                  computed: 'primary_location'
+                },
+                budget: {
+                  min: 'budget_min',
+                  max: 'budget_max'
+                },
+                gender: {
+                  preference: 'preferred_roommate_gender', // dropped gender_preference
+                  inclusive: 'gender_inclusive'
+                },
+                recovery: {
+                  methods: 'recovery_methods' // standardized field name
+                },
+                preferences: {
+                  guests: 'guests_policy' // single standardized field
+                }
+              }}
             />
 
             {/* ✅ UPDATED: Form Actions using dedicated component */}
@@ -498,7 +526,7 @@ const EnhancedMatchingProfileForm = ({ editMode = false, onComplete, onCancel })
           </div>
         </form>
 
-        {/* Form Completion Status */}
+        {/* ✅ UPDATED: Form Completion Status with standardization info */}
         <div className="card">
           <div className="card-header">
             <h3 className="card-title">Profile Status</h3>
@@ -523,6 +551,20 @@ const EnhancedMatchingProfileForm = ({ editMode = false, onComplete, onCancel })
             </div>
           </div>
 
+          {/* ✅ NEW: Standardization Status */}
+          <div className="mt-4">
+            <div className="grid-2">
+              <div>
+                <strong>Data Format:</strong>{' '}
+                <span className="badge badge-success">Standardized</span>
+              </div>
+              <div>
+                <strong>Field Version:</strong>{' '}
+                <span className="text-sm text-gray-600">v2.0 (Post-Migration)</span>
+              </div>
+            </div>
+          </div>
+
           {hasErrors && (
             <div className="alert alert-warning mt-4">
               <strong>Validation Issues:</strong> Please review and correct the highlighted fields before submitting.
@@ -541,27 +583,38 @@ const EnhancedMatchingProfileForm = ({ editMode = false, onComplete, onCancel })
 
           {completionPercentage < 100 && !editMode && (
             <div className="alert alert-info mt-4">
-              <strong>Almost there!</strong> Complete all required fields to activate your profile for matching.
+              <strong>Almost there!</strong> Complete all required fields to activate your profile for matching with our enhanced compatibility algorithm.
             </div>
           )}
 
           {editMode && (
             <div className="alert alert-info mt-4">
-              <strong>Edit Mode:</strong> Make changes to any section and save your updates.
+              <strong>Edit Mode:</strong> Make changes to any section and save your updates. Your profile uses the latest standardized field structure for optimal matching.
             </div>
           )}
         </div>
 
-        {/* Help Section */}
+        {/* ✅ UPDATED: Help Section with standardization info */}
         <div className="card">
           <div className="card-header">
             <h3 className="card-title">Need Help?</h3>
           </div>
           
           <p>
-            This comprehensive profile helps us find the best possible roommate matches for your recovery journey. 
+            This comprehensive profile helps us find the best possible roommate matches for your recovery journey using our enhanced matching algorithm with standardized data fields. 
             All information is kept confidential and only shared with verified potential matches.
           </p>
+          
+          {/* ✅ NEW: Field Standardization Info */}
+          <div className="mt-4 p-3 bg-blue-50 rounded">
+            <h4 className="text-sm font-semibold text-blue-900">Enhanced Matching Features</h4>
+            <ul className="text-sm text-blue-800 mt-2 space-y-1">
+              <li>• Improved location matching with primary city/state fields</li>
+              <li>• Enhanced budget compatibility using standardized budget_min/budget_max</li>
+              <li>• Better gender preference handling with preferred_roommate_gender</li>
+              <li>• More accurate recovery method matching</li>
+            </ul>
+          </div>
           
           <div className="mt-4">
             <button 

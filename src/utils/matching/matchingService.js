@@ -1,7 +1,6 @@
-// src/utils/matching/matchingService.js
+// src/utils/matching/matchingService.js - UPDATED WITH STANDARDIZED FIELD NAMES
 
 import { db } from '../supabase';
-// Remove this line: import { useMatchingProfile } from '../../hooks/useSupabase';
 import { calculateDetailedCompatibility } from './algorithm';
 import { transformProfileForAlgorithm } from './dataTransform';
 import { generateDetailedFlags } from './compatibility';
@@ -33,10 +32,6 @@ class MatchingService {
   }
 
   /**
-   * Transform database record to algorithm-compatible format
-   */
-
-  /**
    * Generate display-friendly compatibility information
    */
   generateDisplayInfo(userProfile, candidateProfile) {
@@ -52,31 +47,30 @@ class MatchingService {
     };
   }
 
-/**
- * Load user's own matching profile
- */
-async loadUserProfile(userId) {
-  try {
-    console.log('🔍 Loading user matching profile...');
-    const result = await db.applicantForms.getByUserId(userId);
-    
-    // ✅ ADD DEBUGGING:
-    console.log('🔍 Database result:', result);
-    console.log('🔍 Result.data:', result.data);
-    console.log('🔍 Has data check:', !result.hasError && result.hasData && result.data);
-    
-    if (!result.error && result.data) {
-      const transformedProfile = transformProfileForAlgorithm(result.data);
-      console.log('✅ User profile loaded:', transformedProfile);
-      return transformedProfile;
-    } else {
-      throw new Error('Please complete your matching profile first');
+  /**
+   * ✅ UPDATED: Load user's own matching profile with standardized field handling
+   */
+  async loadUserProfile(userId) {
+    try {
+      console.log('🔍 Loading user matching profile...');
+      const result = await db.applicantForms.getByUserId(userId);
+      
+      console.log('🔍 Database result:', result);
+      console.log('🔍 Result.data:', result.data);
+      console.log('🔍 Has data check:', !result.hasError && result.hasData && result.data);
+      
+      if (!result.error && result.data) {
+        const transformedProfile = transformProfileForAlgorithm(result.data);
+        console.log('✅ User profile loaded:', transformedProfile);
+        return transformedProfile;
+      } else {
+        throw new Error('Please complete your matching profile first');
+      }
+    } catch (err) {
+      console.error('💥 Error loading user profile:', err);
+      throw err;
     }
-  } catch (err) {
-    console.error('💥 Error loading user profile:', err);
-    throw err;
   }
-}
 
   /**
    * Load exclusions (users already connected or with pending requests)
@@ -157,7 +151,7 @@ async loadUserProfile(userId) {
   }
 
   /**
-   * Find compatible matches for a user
+   * ✅ UPDATED: Find compatible matches with standardized field filtering
    */
   async findMatches(userId, filters = {}) {
     try {
@@ -231,7 +225,7 @@ async loadUserProfile(userId) {
         console.log(`📤 Excluded sent requests: ${beforeExclusion} -> ${candidates.length}`);
       }
 
-      // Apply additional filters
+      // Apply additional filters with standardized field names
       candidates = this.applyFilters(candidates, finalFilters);
 
       // Calculate compatibility scores
@@ -276,7 +270,7 @@ async loadUserProfile(userId) {
   }
 
   /**
-   * Apply additional filters to candidates
+   * ✅ UPDATED: Apply additional filters using standardized field names
    */
   applyFilters(candidates, filters) {
     let filtered = candidates;
@@ -292,11 +286,18 @@ async loadUserProfile(userId) {
       );
     }
 
+    // ✅ STANDARDIZED: Use primary_location for location filtering
     if (filters.location && filters.location.trim()) {
       const searchLocation = filters.location.trim().toLowerCase();
-      filtered = filtered.filter(c => 
-        c.location && c.location.toLowerCase().includes(searchLocation)
-      );
+      filtered = filtered.filter(c => {
+        // Check primary_location, primary_city, or primary_state
+        const location = c.primary_location || 
+                        (c.primary_city && c.primary_state ? `${c.primary_city}, ${c.primary_state}` : '') ||
+                        c.primary_city || 
+                        c.primary_state;
+        
+        return location && location.toLowerCase().includes(searchLocation);
+      });
     }
 
     return filtered;

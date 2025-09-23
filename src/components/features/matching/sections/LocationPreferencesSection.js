@@ -1,4 +1,4 @@
-// src/components/features/matching/sections/LocationPreferencesSection.js - Refactored with enhanced CSS module usage
+// src/components/features/matching/sections/LocationPreferencesSection.js - UPDATED WITH STANDARDIZED FIELD NAMES
 import React from 'react';
 import PropTypes from 'prop-types';
 import { housingTypeOptions } from '../constants/matchingFormConstants';
@@ -11,7 +11,8 @@ const LocationPreferencesSection = ({
   onInputChange,
   onArrayChange,
   onRangeChange,
-  styles = {}   // CSS module styles passed from parent
+  styles = {},   // CSS module styles passed from parent
+  fieldMapping = {} // ✅ NEW: Standardized field mapping from parent
 }) => {
   // State options for dropdown
   const stateOptions = [
@@ -68,6 +69,12 @@ const LocationPreferencesSection = ({
     { value: 'WY', label: 'Wyoming' }
   ];
 
+  // ✅ STANDARDIZED: Use mapped field names from parent
+  const cityField = fieldMapping?.location?.city || 'primary_city';
+  const stateField = fieldMapping?.location?.state || 'primary_state';
+  const budgetMinField = fieldMapping?.budget?.min || 'budget_min';
+  const budgetMaxField = fieldMapping?.budget?.max || 'budget_max';
+
   return (
     <>
       {/* Location & Housing Preferences Header */}
@@ -76,15 +83,15 @@ const LocationPreferencesSection = ({
       <div className="alert alert-info mb-4">
         <h4 className="mb-2">
           <span style={{ marginRight: '8px' }}>📍</span>
-          Location Matching
+          Enhanced Location Matching
         </h4>
         <p className="mb-0">
-          We'll help you find housing and roommates in your preferred area. You can specify multiple locations 
-          or be flexible with your preferences to increase your matching opportunities.
+          We'll help you find housing and roommates in your preferred area using our improved location matching system. 
+          You can specify multiple locations or be flexible with your preferences to increase your matching opportunities.
         </p>
       </div>
 
-      {/* Primary Location Preferences */}
+      {/* ✅ UPDATED: Primary Location Preferences with standardized fields */}
       <div className="card-header">
         <h4 className="card-title">Preferred Location</h4>
         <p className="card-subtitle">Where would you like to live?</p>
@@ -96,19 +103,19 @@ const LocationPreferencesSection = ({
             Preferred City <span className="text-red-500">*</span>
           </label>
           <input
-            className={`input ${errors.preferredCity ? 'border-red-500' : ''}`}
+            className={`input ${errors[cityField] ? 'border-red-500' : ''}`}
             type="text"
-            value={formData.preferredCity || ''}
-            onChange={(e) => onInputChange('preferredCity', e.target.value)}
+            value={formData[cityField] || ''}
+            onChange={(e) => onInputChange(cityField, e.target.value)}
             placeholder="e.g., Austin, Dallas, Phoenix"
             disabled={loading}
             required
           />
-          {errors.preferredCity && (
-            <div className="text-red-500 mt-1 text-sm">{errors.preferredCity}</div>
+          {errors[cityField] && (
+            <div className="text-red-500 mt-1 text-sm">{errors[cityField]}</div>
           )}
           <div className="text-gray-500 mt-1 text-sm">
-            Primary city you'd like to live in
+            Primary city you'd like to live in (stored as: {cityField})
           </div>
         </div>
 
@@ -117,9 +124,9 @@ const LocationPreferencesSection = ({
             Preferred State <span className="text-red-500">*</span>
           </label>
           <select
-            className={`input ${errors.preferredState ? 'border-red-500' : ''}`}
-            value={formData.preferredState || ''}
-            onChange={(e) => onInputChange('preferredState', e.target.value)}
+            className={`input ${errors[stateField] ? 'border-red-500' : ''}`}
+            value={formData[stateField] || ''}
+            onChange={(e) => onInputChange(stateField, e.target.value)}
             disabled={loading}
             required
           >
@@ -129,9 +136,12 @@ const LocationPreferencesSection = ({
               </option>
             ))}
           </select>
-          {errors.preferredState && (
-            <div className="text-red-500 mt-1 text-sm">{errors.preferredState}</div>
+          {errors[stateField] && (
+            <div className="text-red-500 mt-1 text-sm">{errors[stateField]}</div>
           )}
+          <div className="text-gray-500 mt-1 text-sm">
+            Primary state (stored as: {stateField})
+          </div>
         </div>
         
         <div className="form-group">
@@ -150,7 +160,7 @@ const LocationPreferencesSection = ({
         </div>
       </div>
 
-      {/* Budget & Financial Information */}
+      {/* ✅ UPDATED: Budget & Financial Information with standardized fields */}
       <div className="card-header">
         <h4 className="card-title">Budget Information</h4>
         <p className="card-subtitle">
@@ -164,10 +174,10 @@ const LocationPreferencesSection = ({
             Minimum Monthly Budget <span className="text-red-500">*</span>
           </label>
           <input
-            className={`input ${errors.budgetMin ? 'border-red-500' : ''}`}
+            className={`input ${errors[budgetMinField] ? 'border-red-500' : ''}`}
             type="number"
-            value={formData.budgetMin || ''}
-            onChange={(e) => onInputChange('budgetMin', e.target.value)}
+            value={formData[budgetMinField] || ''}
+            onChange={(e) => onInputChange(budgetMinField, e.target.value)}
             placeholder="500"
             disabled={loading}
             min="0"
@@ -175,11 +185,11 @@ const LocationPreferencesSection = ({
             step="50"
             required
           />
-          {errors.budgetMin && (
-            <div className="text-red-500 mt-1 text-sm">{errors.budgetMin}</div>
+          {errors[budgetMinField] && (
+            <div className="text-red-500 mt-1 text-sm">{errors[budgetMinField]}</div>
           )}
           <div className="text-gray-500 mt-1 text-sm">
-            Lowest monthly amount you can afford
+            Lowest monthly amount you can afford (stored as: {budgetMinField})
           </div>
         </div>
         
@@ -188,10 +198,10 @@ const LocationPreferencesSection = ({
             Maximum Monthly Budget <span className="text-red-500">*</span>
           </label>
           <input
-            className={`input ${errors.budgetMax ? 'border-red-500' : ''}`}
+            className={`input ${errors[budgetMaxField] ? 'border-red-500' : ''}`}
             type="number"
-            value={formData.budgetMax || ''}
-            onChange={(e) => onInputChange('budgetMax', e.target.value)}
+            value={formData[budgetMaxField] || ''}
+            onChange={(e) => onInputChange(budgetMaxField, e.target.value)}
             placeholder="1200"
             disabled={loading}
             min="200"
@@ -199,11 +209,11 @@ const LocationPreferencesSection = ({
             step="50"
             required
           />
-          {errors.budgetMax && (
-            <div className="text-red-500 mt-1 text-sm">{errors.budgetMax}</div>
+          {errors[budgetMaxField] && (
+            <div className="text-red-500 mt-1 text-sm">{errors[budgetMaxField]}</div>
           )}
           <div className="text-gray-500 mt-1 text-sm">
-            Maximum you can afford (including utilities)
+            Maximum you can afford including utilities (stored as: {budgetMaxField})
           </div>
         </div>
       </div>
@@ -457,14 +467,14 @@ const LocationPreferencesSection = ({
         </div>
       </div>
 
-      {/* Budget Help Notice */}
+      {/* ✅ UPDATED: Budget Help Notice with standardization info */}
       <div className="alert alert-info">
         <h4 className="mb-2">
           <span style={{ marginRight: '8px' }}>💡</span>
-          Budget Planning Tips
+          Enhanced Budget Planning
         </h4>
         <p className="mb-2">
-          <strong>When setting your budget, consider:</strong>
+          <strong>Our improved budget matching considers:</strong>
         </p>
         <ul style={{ marginLeft: '20px', marginBottom: '10px' }}>
           <li>Rent (your share)</li>
@@ -474,7 +484,7 @@ const LocationPreferencesSection = ({
           <li>Transportation costs in the new location</li>
         </ul>
         <p className="text-sm">
-          Our housing specialists can help you create a realistic budget. 
+          Our enhanced matching system uses standardized budget fields ({budgetMinField}, {budgetMaxField}) for more accurate compatibility scoring.
           <a href="/help/budget-planning" target="_blank" style={{ color: 'var(--primary-purple)', marginLeft: '5px' }}>
             Learn more about budget planning →
           </a>
@@ -486,11 +496,11 @@ const LocationPreferencesSection = ({
 
 LocationPreferencesSection.propTypes = {
   formData: PropTypes.shape({
-    preferredCity: PropTypes.string,
-    preferredState: PropTypes.string,
+    primary_city: PropTypes.string,           // ✅ STANDARDIZED
+    primary_state: PropTypes.string,          // ✅ STANDARDIZED  
     targetZipCodes: PropTypes.string,
-    budgetMax: PropTypes.oneOfType([PropTypes.string, PropTypes.number]),
-    budgetMin: PropTypes.oneOfType([PropTypes.string, PropTypes.number]),
+    budget_max: PropTypes.oneOfType([PropTypes.string, PropTypes.number]), // ✅ STANDARDIZED
+    budget_min: PropTypes.oneOfType([PropTypes.string, PropTypes.number]), // ✅ STANDARDIZED
     maxCommute: PropTypes.string,
     housingType: PropTypes.arrayOf(PropTypes.string),
     moveInDate: PropTypes.string,
@@ -515,12 +525,14 @@ LocationPreferencesSection.propTypes = {
   onInputChange: PropTypes.func.isRequired,
   onArrayChange: PropTypes.func.isRequired,
   onRangeChange: PropTypes.func.isRequired,
-  styles: PropTypes.object
+  styles: PropTypes.object,
+  fieldMapping: PropTypes.object           // ✅ NEW: For standardized field names
 };
 
 LocationPreferencesSection.defaultProps = {
   profile: null,
-  styles: {}
+  styles: {},
+  fieldMapping: {}
 };
 
 export default LocationPreferencesSection;
