@@ -7,6 +7,7 @@ import { useMatchingProfileForm } from './hooks/useMatchingProfileForm';
 // Import form components
 import FormActions from '../../forms/components/FormActions';
 import ProgressBar from '../../forms/components/ProgressBar';
+import { shouldBlockNavigation } from '../../../utils/matching/sectionValidation';
 
 // Import all section components
 import PersonalInfoSection from './sections/PersonalInfoSection';
@@ -63,6 +64,7 @@ const EnhancedMatchingProfileForm = ({ editMode = false, onComplete, onCancel })
   const { profile, hasRole } = useAuth();
   const [currentSectionIndex, setCurrentSectionIndex] = useState(0);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [validationMessage, setValidationMessage] = useState('');
   
   const {
     formData,
