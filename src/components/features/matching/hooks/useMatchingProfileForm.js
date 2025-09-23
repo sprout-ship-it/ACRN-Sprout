@@ -41,11 +41,9 @@ export const useMatchingProfileForm = () => {
       try {
         console.log('🔍 Loading existing data for user:', user.id);
         
-        const { data: applicantForm, error } = await supabase
-          .from('applicant_matching_profiles')
-          .select('*')
-          .eq('user_id', user.id)
-          .maybeSingle();
+      const result = await db.matchingProfiles.getByUserId(user.id);
+      const applicantForm = result.success ? result.data : null;
+      const error = result.success ? null : result.error;
         
         if (error) {
           console.error('❌ Error loading applicant form:', error);
