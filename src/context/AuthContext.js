@@ -106,7 +106,7 @@ export const AuthProvider = ({ children }) => {
 
     // Set up auth state listener
     console.log('🔐 AuthProvider: Setting up auth state listener...')
-    const { data: { subscription } } = auth.onAuthStateChange(async (event, session) => {
+    const subscription = auth.onAuthStateChange(async (event, session) => {
       if (!mounted) return
 
       console.log('🔐 AuthProvider: Auth state changed:', event)
