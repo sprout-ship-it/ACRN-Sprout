@@ -22,64 +22,69 @@ const createAuthService = (supabaseClient) => {
      * @param {Object} userData - Additional user metadata
      * @returns {Promise<Object>} Authentication result
      */
-    signUp: async (email, password, userData = {}) => {
-      console.log('🔑 Auth: signUp initiated for:', email);
-      
-      try {
-        // Validate inputs
-        if (!email || !password) {
-          throw new Error('Email and password are required');
-        }
-
-        if (password.length < 6) {
-          throw new Error('Password must be at least 6 characters long');
-        }
-
-        // Prepare signup data
-        const signupOptions = {
-          email: email.toLowerCase().trim(),
-          password,
-          options: {
-            data: {
-              ...userData,
-              created_at: new Date().toISOString()
-            }
+      signUp: async (email, password, userData = {}) => {
+        console.log('🔑 Auth: signUp initiated for:', email);
+        
+        try {
+          // Validate inputs
+          if (!email || !password) {
+            throw new Error('Email and password are required');
           }
-        };
 
-        const { data, error } = await supabaseClient.auth.signUp(signupOptions);
+          if (password.length < 6) {
+            throw new Error('Password must be at least 6 characters long');
+          }
 
-        if (error) {
-          console.error('❌ Auth: signUp failed:', error.message);
+          // ✅ CRITICAL: Filter out phone data to avoid unique constraint
+          const { phone, ...filteredUserData } = userData;
+          
+          console.log('🔑 Auth: Filtered userData (no phone):', filteredUserData);
+
+          // Prepare signup data without phone
+          const signupOptions = {
+            email: email.toLowerCase().trim(),
+            password,
+            options: {
+              data: {
+                ...filteredUserData,
+                created_at: new Date().toISOString()
+              }
+            }
+          };
+
+          const { data, error } = await supabaseClient.auth.signUp(signupOptions);
+
+          if (error) {
+            console.error('❌ Auth: signUp failed:', error.message);
+            return { 
+              success: false, 
+              data: null, 
+              error: service._formatAuthError(error) 
+            };
+          }
+
+          console.log('✅ Auth: signUp successful', {
+            hasUser: !!data?.user,
+            hasSession: !!data?.session,
+            needsConfirmation: !data?.session
+          });
+
+          return { 
+            success: true, 
+            data, 
+            error: null,
+            needsEmailConfirmation: !data?.session
+          };
+
+        } catch (err) {
+          console.error('💥 Auth: signUp exception:', err);
           return { 
             success: false, 
             data: null, 
-            error: service._formatAuthError(error) 
+            error: { message: err.message, code: 'signup_exception' }
           };
         }
-
-        console.log('✅ Auth: signUp successful', {
-          hasUser: !!data?.user,
-          hasSession: !!data?.session,
-          needsConfirmation: !data?.session
-        });
-
-        return { 
-          success: true, 
-          data, 
-          error: null,
-          needsEmailConfirmation: !data?.session
-        };
-
-      } catch (err) {
-        console.error('💥 Auth: signUp exception:', err);
-        return { 
-          success: false, 
-          data: null, 
-          error: { message: err.message, code: 'signup_exception' }
-        };
-      }
-    },
+      },
 
     /**
      * Sign in existing user
