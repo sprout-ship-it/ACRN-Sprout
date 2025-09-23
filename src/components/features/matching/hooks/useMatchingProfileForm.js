@@ -1,7 +1,7 @@
 // src/components/features/matching/hooks/useMatchingProfileForm.js - UPDATED WITH STANDARDIZED FIELD NAMES
 import { useState, useEffect } from 'react';
 import { useAuth } from '../../../../context/AuthContext';
-import { supabase } from '../../../../utils/supabase';
+import { db } from '../../../../utils/supabase';
 import { 
   defaultFormData, 
   REQUIRED_FIELDS, 
@@ -42,7 +42,7 @@ export const useMatchingProfileForm = () => {
         console.log('🔍 Loading existing data for user:', user.id);
         
         const { data: applicantForm, error } = await supabase
-          .from('applicant_forms')
+          .from('applicant_matching_profiles')
           .select('*')
           .eq('user_id', user.id)
           .maybeSingle();
@@ -461,29 +461,19 @@ export const useMatchingProfileForm = () => {
       const controller = new AbortController();
       const timeoutId = setTimeout(() => controller.abort(), 30000);
       
-      const { data, error } = await supabase
-        .from('applicant_forms')
-        .upsert(applicantFormData, {
-          onConflict: 'user_id'
-        })
-        .abortSignal(controller.signal);
-      
+      const result = await db.matchingProfiles.upsert(applicantFormData);
+
       clearTimeout(timeoutId);
-      
-      if (error) {
-        console.error('❌ Standardized submission error:', error);
-        
-        if (error.message.includes('aborted')) {
-          setErrors({ submit: 'Request timed out. Please check your internet connection and try again.' });
-        } else {
-          setErrors({ submit: `Database error: ${error.message}` });
-        }
+
+      if (!result.success) {
+        console.error('❌ Submission error:', result.error);
+        setErrors({ submit: `Database error: ${result.error}` });
         return false;
       }
-      
-      console.log('✅ Standardized form submission successful', { data });
+
+      console.log('✅ Form submission successful', result.data);
       setSuccessMessage('Comprehensive matching profile saved successfully with standardized fields!');
-      
+
       return true;
       
     } catch (error) {
