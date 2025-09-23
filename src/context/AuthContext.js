@@ -1,4 +1,4 @@
-// src/context/AuthContext.js - COMPLETE UPDATED VERSION
+// src/context/AuthContext.js - FIXED VERSION
 import React, { createContext, useContext, useEffect, useState } from 'react'
 import { auth, db } from '../utils/supabase'
 
@@ -43,7 +43,7 @@ export const AuthProvider = ({ children }) => {
 
         // Get current session
         console.log('🔐 AuthProvider: Checking for existing session...')
-        const { session, error: sessionError } = await auth.getSession()
+        const sessionResult = await auth.getSession()
         
         // Clear timeout on response
         if (initTimeout) {
@@ -53,8 +53,8 @@ export const AuthProvider = ({ children }) => {
 
         if (!mounted) return
 
-        if (sessionError) {
-          console.error('❌ AuthProvider: Session error:', sessionError.message)
+        if (sessionResult.error) {
+          console.error('❌ AuthProvider: Session error:', sessionResult.error.message)
           setUser(null)
           setProfile(null)
           setLoading(false)
@@ -62,20 +62,20 @@ export const AuthProvider = ({ children }) => {
           return
         }
 
-        if (session?.user) {
+        if (sessionResult.session?.user) {
           console.log('✅ AuthProvider: Active session found, loading profile...')
-          setUser(session.user)
+          setUser(sessionResult.session.user)
           
           // Load profile with error handling
           try {
-            await loadUserProfile(session.user.id)
+            await loadUserProfile(sessionResult.session.user.id)
           } catch (profileErr) {
             console.error('⚠️ AuthProvider: Profile load failed, but keeping user logged in:', profileErr)
             // Create minimal profile to prevent blocking
             setProfile({
-              id: session.user.id,
-              email: session.user.email,
-              first_name: session.user.user_metadata?.firstName || 'User',
+              id: sessionResult.session.user.id,
+              email: sessionResult.session.user.email,
+              first_name: sessionResult.session.user.user_metadata?.firstName || 'User',
               roles: ['applicant'], // Safe default
               is_active: true
             })
@@ -200,57 +200,91 @@ export const AuthProvider = ({ children }) => {
     })
   }
 
-  // Sign up new user
+  // ✅ FIXED: Sign up new user - handle correct return format and create profile
   const signUp = async (email, password, userData) => {
     console.log('🔐 AuthProvider: Starting sign up for:', email)
     setLoading(true)
     setError(null)
 
     try {
-      const { data, error } = await auth.signUp(email, password, userData)
+      // ✅ FIXED: Handle the correct return format from authService
+      const authResult = await auth.signUp(email, password, userData)
       
-      if (error) {
-        console.error('❌ AuthProvider: Sign up error:', error.message)
-        setError(error)
+      if (!authResult.success || authResult.error) {
+        console.error('❌ AuthProvider: Sign up error:', authResult.error?.message)
+        setError(authResult.error)
         setLoading(false)
-        return { data: null, error }
+        return { data: null, error: authResult.error }
+      }
+
+      // ✅ NEW: Create profile in registrant_profiles table
+      if (authResult.data?.user && userData) {
+        console.log('👤 AuthProvider: Creating user profile...')
+        
+        try {
+          const profileData = {
+            id: authResult.data.user.id,
+            email: email.toLowerCase(),
+            first_name: userData.firstName || '',
+            last_name: userData.lastName || '',
+            roles: userData.roles || ['applicant'],
+            is_active: true,
+            created_at: new Date().toISOString()
+          }
+
+          const { error: profileError } = await db.profiles.create(profileData)
+          
+          if (profileError) {
+            console.error('❌ AuthProvider: Profile creation failed:', profileError)
+            // Don't fail the signup, but log the issue
+            console.warn('⚠️ AuthProvider: User created but profile creation failed - will be handled on first login')
+          } else {
+            console.log('✅ AuthProvider: Profile created successfully')
+          }
+          
+        } catch (profileErr) {
+          console.error('💥 AuthProvider: Profile creation exception:', profileErr)
+          // Don't fail the signup
+        }
       }
 
       console.log('✅ AuthProvider: Sign up successful')
-      return { data, error: null }
+      setLoading(false)
+      return { data: authResult.data, error: null }
 
     } catch (err) {
       console.error('💥 AuthProvider: Sign up failed:', err.message)
-      setError(err)
+      setError({ message: err.message, code: 'signup_exception' })
       setLoading(false)
-      return { data: null, error: err }
+      return { data: null, error: { message: err.message, code: 'signup_exception' } }
     }
   }
 
-  // Sign in existing user
+  // ✅ FIXED: Sign in existing user - handle correct return format
   const signIn = async (email, password) => {
     console.log('🔐 AuthProvider: Starting sign in for:', email)
     setLoading(true)
     setError(null)
 
     try {
-      const { data, error } = await auth.signIn(email, password)
+      const authResult = await auth.signIn(email, password)
       
-      if (error) {
-        console.error('❌ AuthProvider: Sign in error:', error.message)
-        setError(error)
+      if (!authResult.success || authResult.error) {
+        console.error('❌ AuthProvider: Sign in error:', authResult.error?.message)
+        setError(authResult.error)
         setLoading(false)
-        return { data: null, error }
+        return { data: null, error: authResult.error }
       }
 
       console.log('✅ AuthProvider: Sign in successful')
-      return { data, error: null }
+      setLoading(false)
+      return { data: authResult.data, error: null }
 
     } catch (err) {
       console.error('💥 AuthProvider: Sign in failed:', err.message)
-      setError(err)
+      setError({ message: err.message, code: 'signin_exception' })
       setLoading(false)
-      return { data: null, error: err }
+      return { data: null, error: { message: err.message, code: 'signin_exception' } }
     }
   }
 
@@ -266,10 +300,10 @@ export const AuthProvider = ({ children }) => {
         setTimeout(() => reject(new Error('Logout timed out')), 3000) // 3 second timeout
       )
 
-      const { error } = await Promise.race([logoutPromise, timeoutPromise])
+      const result = await Promise.race([logoutPromise, timeoutPromise])
 
-      if (error) {
-        console.error('❌ AuthProvider: Sign out error:', error.message)
+      if (result.error) {
+        console.error('❌ AuthProvider: Sign out error:', result.error.message)
       }
 
       // Always clear local state regardless of server response

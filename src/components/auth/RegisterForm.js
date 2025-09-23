@@ -1,7 +1,7 @@
-// src/components/auth/RegisterForms.js
+// src/components/auth/RegisterForm.js - FIXED VERSION
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { useAuth } from '../../hooks/useAuth';
+import { useAuth } from '../../context/AuthContext'; // ✅ FIXED: Correct import
 import LoadingSpinner from '../ui/LoadingSpinner';
 import '../../styles/global.css';
 
@@ -17,7 +17,7 @@ const RegisterForm = ({ onBackToLanding, preSelectedRole }) => {
   const [localError, setLocalError] = useState('');
   const [success, setSuccess] = useState(false);
 
-  const { signUp, loading, error, clearError } = useAuth();
+  const { signUp, loading, error, clearError } = useAuth(); // ✅ FIXED: Now uses correct context
   const navigate = useNavigate();
 
   // ✅ UPDATED: Added employer role option with role IDs matching landing page
@@ -113,9 +113,10 @@ const RegisterForm = ({ onBackToLanding, preSelectedRole }) => {
 
     console.log('🔄 RegisterForm submitting:', { email, userData });
 
-    const { success: signUpSuccess, error: signUpError } = await signUp(email, password, userData);
+    // ✅ FIXED: Handle the correct return format from AuthContext
+    const result = await signUp(email, password, userData);
     
-    if (signUpSuccess) {
+    if (result && result.data && !result.error) {
       console.log('✅ Registration successful - redirecting to simplified onboarding flow');
       setSuccess(true);
       
@@ -132,7 +133,8 @@ const RegisterForm = ({ onBackToLanding, preSelectedRole }) => {
         navigate('/app');
       }, 2000);
     } else {
-      console.error('❌ Registration failed:', signUpError);
+      console.error('❌ Registration failed:', result.error);
+      // Error will be set in the AuthContext, so it will be displayed via the error state
     }
   };
 
