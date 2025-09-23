@@ -125,15 +125,45 @@ export const AuthProvider = ({ children }) => {
         try {
           await loadUserProfile(session.user.id)
         } catch (err) {
-          console.error('⚠️ AuthProvider: Profile load failed after sign in:', err)
-          // Create minimal profile to unblock user
-          setProfile({
-            id: session.user.id,
-            email: session.user.email,
-            first_name: session.user.user_metadata?.firstName || 'User',
-            roles: ['applicant'],
-            is_active: true
-          })
+          console.error('⚠️ AuthProvider: Profile load failed after sign in, attempting to create:', err)
+          
+          // Try to create profile if it doesn't exist
+          try {
+            const userData = session.user.user_metadata
+            if (userData?.firstName) {
+              console.log('👤 AuthProvider: Creating missing profile after sign in...')
+              const profileData = {
+                id: session.user.id,
+                email: session.user.email,
+                first_name: userData.firstName || '',
+                last_name: userData.lastName || '',
+                roles: userData.roles || ['applicant'],
+                is_active: true,
+                created_at: new Date().toISOString()
+              }
+
+              const { error: profileError } = await db.profiles.create(profileData)
+              
+              if (!profileError) {
+                console.log('✅ AuthProvider: Profile created successfully after sign in')
+                setProfile(profileData)
+              } else {
+                throw profileError
+              }
+            } else {
+              throw new Error('No user metadata available for profile creation')
+            }
+          } catch (createErr) {
+            console.error('❌ AuthProvider: Profile creation failed after sign in:', createErr)
+            // Create minimal profile to unblock user
+            setProfile({
+              id: session.user.id,
+              email: session.user.email,
+              first_name: session.user.user_metadata?.firstName || 'User',
+              roles: ['applicant'],
+              is_active: true
+            })
+          }
         }
         
         setLoading(false)
@@ -200,7 +230,7 @@ export const AuthProvider = ({ children }) => {
     })
   }
 
-  // ✅ FIXED: Sign up new user - handle correct return format and create profile
+  // ✅ FIXED: Sign up new user - simplified, profile creation moved to auth state change
   const signUp = async (email, password, userData) => {
     console.log('🔐 AuthProvider: Starting sign up for:', email)
     setLoading(true)
@@ -217,38 +247,7 @@ export const AuthProvider = ({ children }) => {
         return { data: null, error: authResult.error }
       }
 
-      // ✅ NEW: Create profile in registrant_profiles table
-      if (authResult.data?.user && userData) {
-        console.log('👤 AuthProvider: Creating user profile...')
-        
-        try {
-          const profileData = {
-            id: authResult.data.user.id,
-            email: email.toLowerCase(),
-            first_name: userData.firstName || '',
-            last_name: userData.lastName || '',
-            roles: userData.roles || ['applicant'],
-            is_active: true,
-            created_at: new Date().toISOString()
-          }
-
-          const { error: profileError } = await db.profiles.create(profileData)
-          
-          if (profileError) {
-            console.error('❌ AuthProvider: Profile creation failed:', profileError)
-            // Don't fail the signup, but log the issue
-            console.warn('⚠️ AuthProvider: User created but profile creation failed - will be handled on first login')
-          } else {
-            console.log('✅ AuthProvider: Profile created successfully')
-          }
-          
-        } catch (profileErr) {
-          console.error('💥 AuthProvider: Profile creation exception:', profileErr)
-          // Don't fail the signup
-        }
-      }
-
-      console.log('✅ AuthProvider: Sign up successful')
+      console.log('✅ AuthProvider: Sign up successful - profile creation will happen in auth state change')
       setLoading(false)
       return { data: authResult.data, error: null }
 
