@@ -1,4 +1,4 @@
-// src/components/features/matching/sections/RoommatePreferencesSection.js - FIXED FIELD MAPPING
+// src/components/features/matching/sections/RoommatePreferencesSection.js - FIXED WITH STANDARDIZED FIELD NAMES
 import React from 'react';
 import PropTypes from 'prop-types';
 import {
@@ -14,12 +14,8 @@ const RoommatePreferencesSection = ({
   onInputChange,
   onArrayChange,
   onRangeChange,
-  styles = {},
-  fieldMapping = {} // ✅ FIXED: Now properly use field mapping
+  styles = {}
 }) => {
-  // ✅ FIXED: Use standardized field names from mapping
-  const genderPrefField = fieldMapping?.gender?.preference || 'preferred_roommate_gender';
-  
   return (
     <>
       {/* Roommate Preferences Header */}
@@ -36,7 +32,7 @@ const RoommatePreferencesSection = ({
         </p>
       </div>
 
-      {/* Basic Roommate Demographics */}
+      {/* Basic Roommate Demographics - FIXED: Using standardized field names */}
       <div className="card-header">
         <h4 className="card-title">Basic Roommate Demographics</h4>
         <p className="card-subtitle">
@@ -50,9 +46,9 @@ const RoommatePreferencesSection = ({
             Roommate Gender Preference <span className="text-red-500">*</span>
           </label>
           <select
-            className={`input ${errors[genderPrefField] ? 'border-red-500' : ''}`}
-            value={formData[genderPrefField] || ''}
-            onChange={(e) => onInputChange(genderPrefField, e.target.value)}
+            className={`input ${errors.preferred_roommate_gender ? 'border-red-500' : ''}`}
+            value={formData.preferred_roommate_gender || ''}
+            onChange={(e) => onInputChange('preferred_roommate_gender', e.target.value)}
             disabled={loading}
             required
           >
@@ -62,11 +58,11 @@ const RoommatePreferencesSection = ({
               </option>
             ))}
           </select>
-          {errors[genderPrefField] && (
-            <div className="text-red-500 mt-1 text-sm">{errors[genderPrefField]}</div>
+          {errors.preferred_roommate_gender && (
+            <div className="text-red-500 mt-1 text-sm">{errors.preferred_roommate_gender}</div>
           )}
           <div className="text-gray-500 mt-1 text-sm">
-            This helps ensure comfort and safety for all roommates (stored as: {genderPrefField})
+            This helps ensure comfort and safety for all roommates
           </div>
         </div>
         
@@ -75,9 +71,9 @@ const RoommatePreferencesSection = ({
             Your Smoking Status <span className="text-red-500">*</span>
           </label>
           <select
-            className={`input ${errors.smokingStatus ? 'border-red-500' : ''}`}
-            value={formData.smokingStatus || ''}
-            onChange={(e) => onInputChange('smokingStatus', e.target.value)}
+            className={`input ${errors.smoking_status ? 'border-red-500' : ''}`}
+            value={formData.smoking_status || ''}
+            onChange={(e) => onInputChange('smoking_status', e.target.value)}
             disabled={loading}
             required
           >
@@ -87,8 +83,8 @@ const RoommatePreferencesSection = ({
               </option>
             ))}
           </select>
-          {errors.smokingStatus && (
-            <div className="text-red-500 mt-1 text-sm">{errors.smokingStatus}</div>
+          {errors.smoking_status && (
+            <div className="text-red-500 mt-1 text-sm">{errors.smoking_status}</div>
           )}
           <div className="text-gray-500 mt-1 text-sm">
             Important for house rules and roommate compatibility
@@ -96,7 +92,25 @@ const RoommatePreferencesSection = ({
         </div>
       </div>
 
-      {/* Age Range Preferences */}
+      {/* Gender Inclusivity */}
+      <div className="form-group mb-4">
+        <label className={styles.checkboxLabel || 'checkbox-item'}>
+          <input
+            type="checkbox"
+            checked={formData.gender_inclusive || false}
+            onChange={(e) => onInputChange('gender_inclusive', e.target.checked)}
+            disabled={loading}
+          />
+          <span className={styles.checkboxText || ''}>
+            I'm open to gender-inclusive housing arrangements
+          </span>
+        </label>
+        <div className="text-gray-500 mt-1 text-sm">
+          Open to roommates of all gender identities and expressions
+        </div>
+      </div>
+
+      {/* Age Range Preferences - FIXED: Using standardized field names */}
       <div className="card-header">
         <h4 className="card-title">Age Range Preferences</h4>
         <p className="card-subtitle">
@@ -109,8 +123,8 @@ const RoommatePreferencesSection = ({
           <label className="label">Minimum Age Preference</label>
           <select
             className="input"
-            value={formData.ageRangeMin || 18}
-            onChange={(e) => onInputChange('ageRangeMin', parseInt(e.target.value))}
+            value={formData.age_range_min || 18}
+            onChange={(e) => onInputChange('age_range_min', parseInt(e.target.value))}
             disabled={loading}
           >
             {Array.from({ length: 48 }, (_, i) => i + 18).map(age => (
@@ -126,8 +140,8 @@ const RoommatePreferencesSection = ({
           <label className="label">Maximum Age Preference</label>
           <select
             className="input"
-            value={formData.ageRangeMax || 65}
-            onChange={(e) => onInputChange('ageRangeMax', parseInt(e.target.value))}
+            value={formData.age_range_max || 65}
+            onChange={(e) => onInputChange('age_range_max', parseInt(e.target.value))}
             disabled={loading}
           >
             {Array.from({ length: 48 }, (_, i) => i + 18).map(age => (
@@ -144,8 +158,8 @@ const RoommatePreferencesSection = ({
         <label className="label">Age Preference Flexibility</label>
         <select
           className="input"
-          value={formData.ageFlexibility || ''}
-          onChange={(e) => onInputChange('ageFlexibility', e.target.value)}
+          value={formData.age_flexibility || ''}
+          onChange={(e) => onInputChange('age_flexibility', e.target.value)}
           disabled={loading}
         >
           <option value="">Select flexibility level</option>
@@ -159,7 +173,7 @@ const RoommatePreferencesSection = ({
         </div>
       </div>
 
-      {/* Lifestyle Compatibility */}
+      {/* Lifestyle Compatibility - FIXED: Using standardized field names */}
       <div className="card-header">
         <h4 className="card-title">Lifestyle Compatibility</h4>
         <p className="card-subtitle">
@@ -172,8 +186,8 @@ const RoommatePreferencesSection = ({
           <label className="label">Pet Preference for Roommates</label>
           <select
             className="input"
-            value={formData.petPreference || ''}
-            onChange={(e) => onInputChange('petPreference', e.target.value)}
+            value={formData.pet_preference || ''}
+            onChange={(e) => onInputChange('pet_preference', e.target.value)}
             disabled={loading}
           >
             <option value="">No preference</option>
@@ -193,8 +207,8 @@ const RoommatePreferencesSection = ({
           <label className="label">Smoking Preference for Roommates</label>
           <select
             className="input"
-            value={formData.smokingPreference || ''}
-            onChange={(e) => onInputChange('smokingPreference', e.target.value)}
+            value={formData.smoking_preference || ''}
+            onChange={(e) => onInputChange('smoking_preference', e.target.value)}
             disabled={loading}
           >
             <option value="">No preference</option>
@@ -209,7 +223,7 @@ const RoommatePreferencesSection = ({
         </div>
       </div>
 
-      {/* Recovery-Specific Preferences */}
+      {/* Recovery-Specific Preferences - FIXED: Using standardized field names */}
       <div className="card-header">
         <h4 className="card-title">Recovery Journey Compatibility</h4>
         <p className="card-subtitle">
@@ -222,8 +236,8 @@ const RoommatePreferencesSection = ({
           <label className={styles.checkboxLabel || 'checkbox-item'}>
             <input
               type="checkbox"
-              checked={formData.preferRecoveryExperience || false}
-              onChange={(e) => onInputChange('preferRecoveryExperience', e.target.checked)}
+              checked={formData.prefer_recovery_experience || false}
+              onChange={(e) => onInputChange('prefer_recovery_experience', e.target.checked)}
               disabled={loading}
             />
             <span className={styles.checkboxText || ''}>
@@ -234,8 +248,8 @@ const RoommatePreferencesSection = ({
           <label className={styles.checkboxLabel || 'checkbox-item'}>
             <input
               type="checkbox"
-              checked={formData.supportiveOfRecovery || false}
-              onChange={(e) => onInputChange('supportiveOfRecovery', e.target.checked)}
+              checked={formData.supportive_of_recovery || false}
+              onChange={(e) => onInputChange('supportive_of_recovery', e.target.checked)}
               disabled={loading}
             />
             <span className={styles.checkboxText || ''}>
@@ -246,8 +260,8 @@ const RoommatePreferencesSection = ({
           <label className={styles.checkboxLabel || 'checkbox-item'}>
             <input
               type="checkbox"
-              checked={formData.substanceFreeRequired || false}
-              onChange={(e) => onInputChange('substanceFreeRequired', e.target.checked)}
+              checked={formData.substance_free_required || false}
+              onChange={(e) => onInputChange('substance_free_required', e.target.checked)}
               disabled={loading}
             />
             <span className={styles.checkboxText || ''}>
@@ -258,8 +272,8 @@ const RoommatePreferencesSection = ({
           <label className={styles.checkboxLabel || 'checkbox-item'}>
             <input
               type="checkbox"
-              checked={formData.respectPrivacy || false}
-              onChange={(e) => onInputChange('respectPrivacy', e.target.checked)}
+              checked={formData.respect_privacy || false}
+              onChange={(e) => onInputChange('respect_privacy', e.target.checked)}
               disabled={loading}
             />
             <span className={styles.checkboxText || ''}>
@@ -269,7 +283,7 @@ const RoommatePreferencesSection = ({
         </div>
       </div>
 
-      {/* Social & Living Style Preferences */}
+      {/* Social & Living Style Preferences - FIXED: Using standardized field names */}
       <div className="card-header">
         <h4 className="card-title">Social & Living Style Preferences</h4>
         <p className="card-subtitle">
@@ -282,8 +296,8 @@ const RoommatePreferencesSection = ({
           <label className="label">Social Interaction Preference</label>
           <select
             className="input"
-            value={formData.socialInteractionLevel || ''}
-            onChange={(e) => onInputChange('socialInteractionLevel', e.target.value)}
+            value={formData.social_interaction_level || ''}
+            onChange={(e) => onInputChange('social_interaction_level', e.target.value)}
             disabled={loading}
           >
             <option value="">No preference</option>
@@ -301,8 +315,8 @@ const RoommatePreferencesSection = ({
           <label className="label">Conflict Resolution Style</label>
           <select
             className="input"
-            value={formData.conflictResolutionStyle || ''}
-            onChange={(e) => onInputChange('conflictResolutionStyle', e.target.value)}
+            value={formData.conflict_resolution_style || ''}
+            onChange={(e) => onInputChange('conflict_resolution_style', e.target.value)}
             disabled={loading}
           >
             <option value="">No preference</option>
@@ -317,15 +331,15 @@ const RoommatePreferencesSection = ({
         </div>
       </div>
 
-      {/* Additional Compatibility Factors */}
+      {/* Additional Compatibility Factors - FIXED: Using standardized field names */}
       <div className="form-group mb-4">
         <label className="label">Additional Compatibility Preferences</label>
         <div className="grid-2 mt-3">
           <label className={styles.checkboxLabel || 'checkbox-item'}>
             <input
               type="checkbox"
-              checked={formData.similarSchedules || false}
-              onChange={(e) => onInputChange('similarSchedules', e.target.checked)}
+              checked={formData.similar_schedules || false}
+              onChange={(e) => onInputChange('similar_schedules', e.target.checked)}
               disabled={loading}
             />
             <span className={styles.checkboxText || ''}>
@@ -336,8 +350,8 @@ const RoommatePreferencesSection = ({
           <label className={styles.checkboxLabel || 'checkbox-item'}>
             <input
               type="checkbox"
-              checked={formData.sharedChores || false}
-              onChange={(e) => onInputChange('sharedChores', e.target.checked)}
+              checked={formData.shared_chores || false}
+              onChange={(e) => onInputChange('shared_chores', e.target.checked)}
               disabled={loading}
             />
             <span className={styles.checkboxText || ''}>
@@ -348,8 +362,8 @@ const RoommatePreferencesSection = ({
           <label className={styles.checkboxLabel || 'checkbox-item'}>
             <input
               type="checkbox"
-              checked={formData.financiallyStable || false}
-              onChange={(e) => onInputChange('financiallyStable', e.target.checked)}
+              checked={formData.financially_stable || false}
+              onChange={(e) => onInputChange('financially_stable', e.target.checked)}
               disabled={loading}
             />
             <span className={styles.checkboxText || ''}>
@@ -360,8 +374,8 @@ const RoommatePreferencesSection = ({
           <label className={styles.checkboxLabel || 'checkbox-item'}>
             <input
               type="checkbox"
-              checked={formData.respectfulGuests || false}
-              onChange={(e) => onInputChange('respectfulGuests', e.target.checked)}
+              checked={formData.respectful_guests || false}
+              onChange={(e) => onInputChange('respectful_guests', e.target.checked)}
               disabled={loading}
             />
             <span className={styles.checkboxText || ''}>
@@ -372,8 +386,8 @@ const RoommatePreferencesSection = ({
           <label className={styles.checkboxLabel || 'checkbox-item'}>
             <input
               type="checkbox"
-              checked={formData.lgbtqFriendly || false}
-              onChange={(e) => onInputChange('lgbtqFriendly', e.target.checked)}
+              checked={formData.lgbtq_friendly || false}
+              onChange={(e) => onInputChange('lgbtq_friendly', e.target.checked)}
               disabled={loading}
             />
             <span className={styles.checkboxText || ''}>
@@ -384,8 +398,8 @@ const RoommatePreferencesSection = ({
           <label className={styles.checkboxLabel || 'checkbox-item'}>
             <input
               type="checkbox"
-              checked={formData.culturallySensitive || false}
-              onChange={(e) => onInputChange('culturallySensitive', e.target.checked)}
+              checked={formData.culturally_sensitive || false}
+              onChange={(e) => onInputChange('culturally_sensitive', e.target.checked)}
               disabled={loading}
             />
             <span className={styles.checkboxText || ''}>
@@ -395,7 +409,7 @@ const RoommatePreferencesSection = ({
         </div>
       </div>
 
-      {/* Deal Breakers */}
+      {/* Deal Breakers - FIXED: Using standardized field names */}
       <div className="card-header">
         <h4 className="card-title">Absolute Deal Breakers</h4>
         <p className="card-subtitle">
@@ -409,8 +423,8 @@ const RoommatePreferencesSection = ({
           <label className={styles.checkboxLabel || 'checkbox-item'}>
             <input
               type="checkbox"
-              checked={formData.dealBreakerSubstanceUse || false}
-              onChange={(e) => onInputChange('dealBreakerSubstanceUse', e.target.checked)}
+              checked={formData.deal_breaker_substance_use || false}
+              onChange={(e) => onInputChange('deal_breaker_substance_use', e.target.checked)}
               disabled={loading}
             />
             <span className={styles.checkboxText || ''}>
@@ -421,8 +435,8 @@ const RoommatePreferencesSection = ({
           <label className={styles.checkboxLabel || 'checkbox-item'}>
             <input
               type="checkbox"
-              checked={formData.dealBreakerLoudness || false}
-              onChange={(e) => onInputChange('dealBreakerLoudness', e.target.checked)}
+              checked={formData.deal_breaker_loudness || false}
+              onChange={(e) => onInputChange('deal_breaker_loudness', e.target.checked)}
               disabled={loading}
             />
             <span className={styles.checkboxText || ''}>
@@ -433,8 +447,8 @@ const RoommatePreferencesSection = ({
           <label className={styles.checkboxLabel || 'checkbox-item'}>
             <input
               type="checkbox"
-              checked={formData.dealBreakerUncleanliness || false}
-              onChange={(e) => onInputChange('dealBreakerUncleanliness', e.target.checked)}
+              checked={formData.deal_breaker_uncleanliness || false}
+              onChange={(e) => onInputChange('deal_breaker_uncleanliness', e.target.checked)}
               disabled={loading}
             />
             <span className={styles.checkboxText || ''}>
@@ -445,8 +459,8 @@ const RoommatePreferencesSection = ({
           <label className={styles.checkboxLabel || 'checkbox-item'}>
             <input
               type="checkbox"
-              checked={formData.dealBreakerFinancialIssues || false}
-              onChange={(e) => onInputChange('dealBreakerFinancialIssues', e.target.checked)}
+              checked={formData.deal_breaker_financial_issues || false}
+              onChange={(e) => onInputChange('deal_breaker_financial_issues', e.target.checked)}
               disabled={loading}
             />
             <span className={styles.checkboxText || ''}>
@@ -457,8 +471,8 @@ const RoommatePreferencesSection = ({
           <label className={styles.checkboxLabel || 'checkbox-item'}>
             <input
               type="checkbox"
-              checked={formData.dealBreakerPets || false}
-              onChange={(e) => onInputChange('dealBreakerPets', e.target.checked)}
+              checked={formData.deal_breaker_pets || false}
+              onChange={(e) => onInputChange('deal_breaker_pets', e.target.checked)}
               disabled={loading}
             />
             <span className={styles.checkboxText || ''}>
@@ -469,8 +483,8 @@ const RoommatePreferencesSection = ({
           <label className={styles.checkboxLabel || 'checkbox-item'}>
             <input
               type="checkbox"
-              checked={formData.dealBreakerSmoking || false}
-              onChange={(e) => onInputChange('dealBreakerSmoking', e.target.checked)}
+              checked={formData.deal_breaker_smoking || false}
+              onChange={(e) => onInputChange('deal_breaker_smoking', e.target.checked)}
               disabled={loading}
             />
             <span className={styles.checkboxText || ''}>
@@ -505,31 +519,32 @@ const RoommatePreferencesSection = ({
 
 RoommatePreferencesSection.propTypes = {
   formData: PropTypes.shape({
-    preferred_roommate_gender: PropTypes.string, // ✅ FIXED: Now matches database
-    smokingStatus: PropTypes.string,
-    ageRangeMin: PropTypes.number,
-    ageRangeMax: PropTypes.number,
-    ageFlexibility: PropTypes.string,
-    petPreference: PropTypes.string,
-    smokingPreference: PropTypes.string,
-    preferRecoveryExperience: PropTypes.bool,
-    supportiveOfRecovery: PropTypes.bool,
-    substanceFreeRequired: PropTypes.bool,
-    respectPrivacy: PropTypes.bool,
-    socialInteractionLevel: PropTypes.string,
-    conflictResolutionStyle: PropTypes.string,
-    similarSchedules: PropTypes.bool,
-    sharedChores: PropTypes.bool,
-    financiallyStable: PropTypes.bool,
-    respectfulGuests: PropTypes.bool,
-    lgbtqFriendly: PropTypes.bool,
-    culturallySensitive: PropTypes.bool,
-    dealBreakerSubstanceUse: PropTypes.bool,
-    dealBreakerLoudness: PropTypes.bool,
-    dealBreakerUncleanliness: PropTypes.bool,
-    dealBreakerFinancialIssues: PropTypes.bool,
-    dealBreakerPets: PropTypes.bool,
-    dealBreakerSmoking: PropTypes.bool
+    preferred_roommate_gender: PropTypes.string,          // Already standardized
+    smoking_status: PropTypes.string,                     // FIXED: Standardized
+    gender_inclusive: PropTypes.bool,                     // FIXED: Standardized
+    age_range_min: PropTypes.number,                      // FIXED: Standardized
+    age_range_max: PropTypes.number,                      // FIXED: Standardized
+    age_flexibility: PropTypes.string,                    // FIXED: Standardized
+    pet_preference: PropTypes.string,                     // FIXED: Standardized
+    smoking_preference: PropTypes.string,                 // FIXED: Standardized
+    prefer_recovery_experience: PropTypes.bool,           // FIXED: Standardized
+    supportive_of_recovery: PropTypes.bool,               // FIXED: Standardized
+    substance_free_required: PropTypes.bool,              // FIXED: Standardized
+    respect_privacy: PropTypes.bool,                      // FIXED: Standardized
+    social_interaction_level: PropTypes.string,           // FIXED: Standardized
+    conflict_resolution_style: PropTypes.string,          // FIXED: Standardized
+    similar_schedules: PropTypes.bool,                    // FIXED: Standardized
+    shared_chores: PropTypes.bool,                        // FIXED: Standardized
+    financially_stable: PropTypes.bool,                   // FIXED: Standardized
+    respectful_guests: PropTypes.bool,                    // FIXED: Standardized
+    lgbtq_friendly: PropTypes.bool,                       // FIXED: Standardized
+    culturally_sensitive: PropTypes.bool,                 // FIXED: Standardized
+    deal_breaker_substance_use: PropTypes.bool,           // FIXED: Standardized
+    deal_breaker_loudness: PropTypes.bool,                // FIXED: Standardized
+    deal_breaker_uncleanliness: PropTypes.bool,           // FIXED: Standardized
+    deal_breaker_financial_issues: PropTypes.bool,        // FIXED: Standardized
+    deal_breaker_pets: PropTypes.bool,                    // FIXED: Standardized
+    deal_breaker_smoking: PropTypes.bool                  // FIXED: Standardized
   }).isRequired,
   errors: PropTypes.object.isRequired,
   loading: PropTypes.bool.isRequired,
@@ -541,14 +556,12 @@ RoommatePreferencesSection.propTypes = {
   onInputChange: PropTypes.func.isRequired,
   onArrayChange: PropTypes.func.isRequired,
   onRangeChange: PropTypes.func.isRequired,
-  styles: PropTypes.object,
-  fieldMapping: PropTypes.object // ✅ FIXED: Now properly documented
+  styles: PropTypes.object
 };
 
 RoommatePreferencesSection.defaultProps = {
   profile: null,
-  styles: {},
-  fieldMapping: {} // ✅ FIXED: Default empty object
+  styles: {}
 };
 
 export default RoommatePreferencesSection;

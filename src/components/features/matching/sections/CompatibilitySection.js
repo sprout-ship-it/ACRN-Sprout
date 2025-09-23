@@ -1,4 +1,4 @@
-// src/components/features/matching/sections/CompatibilitySection.js - Refactored with enhanced CSS module usage
+// src/components/features/matching/sections/CompatibilitySection.js - FIXED WITH STANDARDIZED FIELD NAMES
 import React from 'react';
 import PropTypes from 'prop-types';
 import {
@@ -32,7 +32,7 @@ const CompatibilitySection = ({
         </p>
       </div>
 
-      {/* Personal Story & Compatibility */}
+      {/* Personal Story & Compatibility - FIXED: Using standardized field names */}
       <div className="card-header">
         <h4 className="card-title">Personal Story & What You're Looking For</h4>
         <p className="card-subtitle">
@@ -45,9 +45,9 @@ const CompatibilitySection = ({
           About Me <span className="text-red-500">*</span>
         </label>
         <textarea
-          className={`input ${errors.aboutMe ? 'border-red-500' : ''}`}
-          value={formData.aboutMe || ''}
-          onChange={(e) => onInputChange('aboutMe', e.target.value)}
+          className={`input ${errors.about_me ? 'border-red-500' : ''}`}
+          value={formData.about_me || ''}
+          onChange={(e) => onInputChange('about_me', e.target.value)}
           placeholder="Tell potential roommates about yourself, your recovery journey, your personality, and what makes you a good roommate. Share what's important to you and what kind of environment helps you thrive..."
           rows="5"
           disabled={loading}
@@ -55,10 +55,10 @@ const CompatibilitySection = ({
           required
         />
         <div className="text-gray-500 mt-1 text-sm">
-          {(formData.aboutMe || '').length}/750 characters - Be authentic and highlight what makes you unique
+          {(formData.about_me || '').length}/750 characters - Be authentic and highlight what makes you unique
         </div>
-        {errors.aboutMe && (
-          <div className="text-red-500 mt-1 text-sm">{errors.aboutMe}</div>
+        {errors.about_me && (
+          <div className="text-red-500 mt-1 text-sm">{errors.about_me}</div>
         )}
       </div>
 
@@ -67,9 +67,9 @@ const CompatibilitySection = ({
           What I'm Looking For <span className="text-red-500">*</span>
         </label>
         <textarea
-          className={`input ${errors.lookingFor ? 'border-red-500' : ''}`}
-          value={formData.lookingFor || ''}
-          onChange={(e) => onInputChange('lookingFor', e.target.value)}
+          className={`input ${errors.looking_for ? 'border-red-500' : ''}`}
+          value={formData.looking_for || ''}
+          onChange={(e) => onInputChange('looking_for', e.target.value)}
           placeholder="Describe your ideal roommate and living situation. What qualities are important to you? What kind of support do you need? What does a successful roommate relationship look like to you?"
           rows="5"
           disabled={loading}
@@ -77,14 +77,14 @@ const CompatibilitySection = ({
           required
         />
         <div className="text-gray-500 mt-1 text-sm">
-          {(formData.lookingFor || '').length}/750 characters - Be specific about your needs and expectations
+          {(formData.looking_for || '').length}/750 characters - Be specific about your needs and expectations
         </div>
-        {errors.lookingFor && (
-          <div className="text-red-500 mt-1 text-sm">{errors.lookingFor}</div>
+        {errors.looking_for && (
+          <div className="text-red-500 mt-1 text-sm">{errors.looking_for}</div>
         )}
       </div>
 
-      {/* Interests & Hobbies */}
+      {/* Interests & Hobbies - FIXED: Using standardized field names */}
       <div className="card-header">
         <h4 className="card-title">Interests & Hobbies</h4>
         <p className="card-subtitle">
@@ -123,18 +123,18 @@ const CompatibilitySection = ({
         <input
           className="input"
           type="text"
-          value={formData.additionalInterests || ''}
-          onChange={(e) => onInputChange('additionalInterests', e.target.value)}
+          value={formData.additional_interests || ''}
+          onChange={(e) => onInputChange('additional_interests', e.target.value)}
           placeholder="List any other interests not mentioned above..."
           disabled={loading}
           maxLength="200"
         />
         <div className="text-gray-500 mt-1 text-sm">
-          {(formData.additionalInterests || '').length}/200 characters (optional)
+          {(formData.additional_interests || '').length}/200 characters (optional)
         </div>
       </div>
 
-      {/* Living Situation Preferences */}
+      {/* Living Situation Preferences - FIXED: Using standardized field names */}
       <div className="card-header">
         <h4 className="card-title">Living Situation Preferences</h4>
         <p className="card-subtitle">
@@ -147,8 +147,8 @@ const CompatibilitySection = ({
           <label className={styles.checkboxLabel || 'checkbox-item'}>
             <input
               type="checkbox"
-              checked={formData.petsOwned || false}
-              onChange={(e) => onInputChange('petsOwned', e.target.checked)}
+              checked={formData.pets_owned || false}
+              onChange={(e) => onInputChange('pets_owned', e.target.checked)}
               disabled={loading}
             />
             <span className={styles.checkboxText || ''}>I own pets</span>
@@ -157,8 +157,8 @@ const CompatibilitySection = ({
           <label className={styles.checkboxLabel || 'checkbox-item'}>
             <input
               type="checkbox"
-              checked={formData.petsComfortable || false}
-              onChange={(e) => onInputChange('petsComfortable', e.target.checked)}
+              checked={formData.pets_comfortable || false}
+              onChange={(e) => onInputChange('pets_comfortable', e.target.checked)}
               disabled={loading}
             />
             <span className={styles.checkboxText || ''}>I'm comfortable with roommate's pets</span>
@@ -167,8 +167,8 @@ const CompatibilitySection = ({
           <label className={styles.checkboxLabel || 'checkbox-item'}>
             <input
               type="checkbox"
-              checked={formData.overnightGuestsOk || false}
-              onChange={(e) => onInputChange('overnightGuestsOk', e.target.checked)}
+              checked={formData.overnight_guests_ok || false}
+              onChange={(e) => onInputChange('overnight_guests_ok', e.target.checked)}
               disabled={loading}
             />
             <span className={styles.checkboxText || ''}>Overnight guests are OK</span>
@@ -177,8 +177,8 @@ const CompatibilitySection = ({
           <label className={styles.checkboxLabel || 'checkbox-item'}>
             <input
               type="checkbox"
-              checked={formData.sharedGroceries || false}
-              onChange={(e) => onInputChange('sharedGroceries', e.target.checked)}
+              checked={formData.shared_groceries || false}
+              onChange={(e) => onInputChange('shared_groceries', e.target.checked)}
               disabled={loading}
             />
             <span className={styles.checkboxText || ''}>I'm open to sharing groceries/meals</span>
@@ -187,8 +187,8 @@ const CompatibilitySection = ({
           <label className={styles.checkboxLabel || 'checkbox-item'}>
             <input
               type="checkbox"
-              checked={formData.sharedTransportation || false}
-              onChange={(e) => onInputChange('sharedTransportation', e.target.checked)}
+              checked={formData.shared_transportation || false}
+              onChange={(e) => onInputChange('shared_transportation', e.target.checked)}
               disabled={loading}
             />
             <span className={styles.checkboxText || ''}>Open to sharing transportation occasionally</span>
@@ -197,8 +197,8 @@ const CompatibilitySection = ({
           <label className={styles.checkboxLabel || 'checkbox-item'}>
             <input
               type="checkbox"
-              checked={formData.sharedActivities || false}
-              onChange={(e) => onInputChange('sharedActivities', e.target.checked)}
+              checked={formData.shared_activities_interest || false}
+              onChange={(e) => onInputChange('shared_activities_interest', e.target.checked)}
               disabled={loading}
             />
             <span className={styles.checkboxText || ''}>Interested in shared activities/outings</span>
@@ -206,7 +206,7 @@ const CompatibilitySection = ({
         </div>
       </div>
 
-      {/* Housing Assistance */}
+      {/* Housing Assistance - FIXED: Using standardized field name */}
       <div className="card-header">
         <h4 className="card-title">Housing Assistance Programs</h4>
         <p className="card-subtitle">
@@ -225,8 +225,8 @@ const CompatibilitySection = ({
             <label key={subsidy.value} className={styles.checkboxLabel || 'checkbox-item'}>
               <input
                 type="checkbox"
-                checked={(formData.housingSubsidy || []).includes(subsidy.value)}
-                onChange={(e) => onArrayChange('housingSubsidy', subsidy.value, e.target.checked)}
+                checked={(formData.housing_assistance || []).includes(subsidy.value)}
+                onChange={(e) => onArrayChange('housing_assistance', subsidy.value, e.target.checked)}
                 disabled={loading}
               />
               <span className={styles.checkboxText || ''}>{subsidy.label}</span>
@@ -235,7 +235,7 @@ const CompatibilitySection = ({
         </div>
       </div>
 
-      {/* Recovery Support & Community */}
+      {/* Recovery Support & Community - FIXED: Using standardized field names */}
       <div className="card-header">
         <h4 className="card-title">Recovery Support & Community</h4>
         <p className="card-subtitle">
@@ -248,8 +248,8 @@ const CompatibilitySection = ({
           <label className={styles.checkboxLabel || 'checkbox-item'}>
             <input
               type="checkbox"
-              checked={formData.recoveryAccountability || false}
-              onChange={(e) => onInputChange('recoveryAccountability', e.target.checked)}
+              checked={formData.recovery_accountability || false}
+              onChange={(e) => onInputChange('recovery_accountability', e.target.checked)}
               disabled={loading}
             />
             <span className={styles.checkboxText || ''}>
@@ -260,8 +260,8 @@ const CompatibilitySection = ({
           <label className={styles.checkboxLabel || 'checkbox-item'}>
             <input
               type="checkbox"
-              checked={formData.sharedRecoveryActivities || false}
-              onChange={(e) => onInputChange('sharedRecoveryActivities', e.target.checked)}
+              checked={formData.shared_recovery_activities || false}
+              onChange={(e) => onInputChange('shared_recovery_activities', e.target.checked)}
               disabled={loading}
             />
             <span className={styles.checkboxText || ''}>
@@ -272,8 +272,8 @@ const CompatibilitySection = ({
           <label className={styles.checkboxLabel || 'checkbox-item'}>
             <input
               type="checkbox"
-              checked={formData.mentorshipInterest || false}
-              onChange={(e) => onInputChange('mentorshipInterest', e.target.checked)}
+              checked={formData.mentorship_interest || false}
+              onChange={(e) => onInputChange('mentorship_interest', e.target.checked)}
               disabled={loading}
             />
             <span className={styles.checkboxText || ''}>
@@ -284,8 +284,8 @@ const CompatibilitySection = ({
           <label className={styles.checkboxLabel || 'checkbox-item'}>
             <input
               type="checkbox"
-              checked={formData.recoveryCommunity || false}
-              onChange={(e) => onInputChange('recoveryCommunity', e.target.checked)}
+              checked={formData.recovery_community || false}
+              onChange={(e) => onInputChange('recovery_community', e.target.checked)}
               disabled={loading}
             />
             <span className={styles.checkboxText || ''}>
@@ -295,7 +295,7 @@ const CompatibilitySection = ({
         </div>
       </div>
 
-      {/* Goals & Aspirations */}
+      {/* Goals & Aspirations - FIXED: Using standardized field names */}
       <div className="card-header">
         <h4 className="card-title">Goals & Aspirations</h4>
         <p className="card-subtitle">
@@ -307,15 +307,15 @@ const CompatibilitySection = ({
         <label className="label">Short-term Goals (next 6-12 months)</label>
         <textarea
           className="input"
-          value={formData.shortTermGoals || ''}
-          onChange={(e) => onInputChange('shortTermGoals', e.target.value)}
+          value={formData.short_term_goals || ''}
+          onChange={(e) => onInputChange('short_term_goals', e.target.value)}
           placeholder="What are you working toward in the near future? (education, career, health, relationships, etc.)"
           rows="3"
           disabled={loading}
           maxLength="300"
         />
         <div className="text-gray-500 mt-1 text-sm">
-          {(formData.shortTermGoals || '').length}/300 characters (optional)
+          {(formData.short_term_goals || '').length}/300 characters (optional)
         </div>
       </div>
 
@@ -323,19 +323,19 @@ const CompatibilitySection = ({
         <label className="label">Long-term Vision</label>
         <textarea
           className="input"
-          value={formData.longTermVision || ''}
-          onChange={(e) => onInputChange('longTermVision', e.target.value)}
+          value={formData.long_term_vision || ''}
+          onChange={(e) => onInputChange('long_term_vision', e.target.value)}
           placeholder="What does your ideal future look like? What are you building toward in your recovery and life?"
           rows="3"
           disabled={loading}
           maxLength="300"
         />
         <div className="text-gray-500 mt-1 text-sm">
-          {(formData.longTermVision || '').length}/300 characters (optional)
+          {(formData.long_term_vision || '').length}/300 characters (optional)
         </div>
       </div>
 
-      {/* Profile Status & Visibility */}
+      {/* Profile Status & Visibility - FIXED: Using standardized field names */}
       <div className="card-header">
         <h4 className="card-title">Profile Status & Matching</h4>
         <p className="card-subtitle">
@@ -347,8 +347,8 @@ const CompatibilitySection = ({
         <label className={styles.checkboxLabel || 'checkbox-item'}>
           <input
             type="checkbox"
-            checked={formData.isActive || false}
-            onChange={(e) => onInputChange('isActive', e.target.checked)}
+            checked={formData.is_active || false}
+            onChange={(e) => onInputChange('is_active', e.target.checked)}
             disabled={loading}
           />
           <span className={styles.checkboxText || ''}>
@@ -364,8 +364,8 @@ const CompatibilitySection = ({
         <label className="label">Profile Visibility</label>
         <select
           className="input"
-          value={formData.profileVisibility || 'verified-members'}
-          onChange={(e) => onInputChange('profileVisibility', e.target.value)}
+          value={formData.profile_visibility || 'verified-members'}
+          onChange={(e) => onInputChange('profile_visibility', e.target.value)}
           disabled={loading}
         >
           <option value="verified-members">Verified members only</option>
@@ -438,25 +438,25 @@ const CompatibilitySection = ({
 
 CompatibilitySection.propTypes = {
   formData: PropTypes.shape({
-    aboutMe: PropTypes.string,
-    lookingFor: PropTypes.string,
-    interests: PropTypes.arrayOf(PropTypes.string),
-    additionalInterests: PropTypes.string,
-    petsOwned: PropTypes.bool,
-    petsComfortable: PropTypes.bool,
-    overnightGuestsOk: PropTypes.bool,
-    sharedGroceries: PropTypes.bool,
-    sharedTransportation: PropTypes.bool,
-    sharedActivities: PropTypes.bool,
-    housingSubsidy: PropTypes.arrayOf(PropTypes.string),
-    recoveryAccountability: PropTypes.bool,
-    sharedRecoveryActivities: PropTypes.bool,
-    mentorshipInterest: PropTypes.bool,
-    recoveryCommunity: PropTypes.bool,
-    shortTermGoals: PropTypes.string,
-    longTermVision: PropTypes.string,
-    isActive: PropTypes.bool,
-    profileVisibility: PropTypes.string
+    about_me: PropTypes.string,                         // FIXED: Standardized
+    looking_for: PropTypes.string,                      // FIXED: Standardized
+    interests: PropTypes.arrayOf(PropTypes.string),     // Same
+    additional_interests: PropTypes.string,              // FIXED: Standardized
+    pets_owned: PropTypes.bool,                         // FIXED: Standardized
+    pets_comfortable: PropTypes.bool,                   // FIXED: Standardized
+    overnight_guests_ok: PropTypes.bool,                // FIXED: Standardized
+    shared_groceries: PropTypes.bool,                   // FIXED: Standardized
+    shared_transportation: PropTypes.bool,              // FIXED: Standardized
+    shared_activities_interest: PropTypes.bool,         // FIXED: Standardized
+    housing_assistance: PropTypes.arrayOf(PropTypes.string), // FIXED: Standardized
+    recovery_accountability: PropTypes.bool,            // FIXED: Standardized
+    shared_recovery_activities: PropTypes.bool,         // FIXED: Standardized
+    mentorship_interest: PropTypes.bool,                // FIXED: Standardized
+    recovery_community: PropTypes.bool,                 // FIXED: Standardized
+    short_term_goals: PropTypes.string,                 // FIXED: Standardized
+    long_term_vision: PropTypes.string,                 // FIXED: Standardized
+    is_active: PropTypes.bool,                          // FIXED: Standardized
+    profile_visibility: PropTypes.string                // FIXED: Standardized
   }).isRequired,
   errors: PropTypes.object.isRequired,
   loading: PropTypes.bool.isRequired,

@@ -1,4 +1,4 @@
-// src/components/features/matching/sections/LifestylePreferencesSection.js - Refactored with enhanced CSS module usage
+// src/components/features/matching/sections/LifestylePreferencesSection.js - FIXED WITH STANDARDIZED FIELD NAMES
 import React from 'react';
 import PropTypes from 'prop-types';
 import {
@@ -20,21 +20,21 @@ const LifestylePreferencesSection = ({
   // Helper function to get lifestyle level description
   const getLifestyleLevelDescription = (type, value) => {
     const descriptions = {
-      socialLevel: {
+      social_level: {
         1: 'Very Private - Prefer minimal interaction',
         2: 'Somewhat Quiet - Occasional friendly conversations',
         3: 'Balanced - Regular interaction but respect boundaries',
         4: 'Social - Enjoy frequent interaction and activities',
         5: 'Very Social - Love being around people constantly'
       },
-      cleanlinessLevel: {
+      cleanliness_level: {
         1: 'Relaxed - Basic cleanliness is fine',
         2: 'Casual - Clean but not obsessive',
         3: 'Moderate - Regular cleaning routine',
         4: 'High Standards - Very clean and organized',
         5: 'Pristine - Everything must be spotless'
       },
-      noiseLevel: {
+      noise_tolerance: {
         1: 'Very Quiet - Need peaceful, quiet environment',
         2: 'Low Noise - Some noise OK but prefer quiet',
         3: 'Moderate - Normal household noise is fine',
@@ -61,7 +61,7 @@ const LifestylePreferencesSection = ({
         </p>
       </div>
 
-      {/* Work & Schedule Information */}
+      {/* Work & Schedule Information - FIXED: Using standardized field names */}
       <div className="card-header">
         <h4 className="card-title">Work & Schedule Information</h4>
         <p className="card-subtitle">
@@ -75,9 +75,9 @@ const LifestylePreferencesSection = ({
             Work Schedule <span className="text-red-500">*</span>
           </label>
           <select
-            className={`input ${errors.workSchedule ? 'border-red-500' : ''}`}
-            value={formData.workSchedule || ''}
-            onChange={(e) => onInputChange('workSchedule', e.target.value)}
+            className={`input ${errors.work_schedule ? 'border-red-500' : ''}`}
+            value={formData.work_schedule || ''}
+            onChange={(e) => onInputChange('work_schedule', e.target.value)}
             disabled={loading}
             required
           >
@@ -87,8 +87,8 @@ const LifestylePreferencesSection = ({
               </option>
             ))}
           </select>
-          {errors.workSchedule && (
-            <div className="text-red-500 mt-1 text-sm">{errors.workSchedule}</div>
+          {errors.work_schedule && (
+            <div className="text-red-500 mt-1 text-sm">{errors.work_schedule}</div>
           )}
           <div className="text-gray-500 mt-1 text-sm">
             Your typical work schedule affects shared space usage
@@ -99,8 +99,8 @@ const LifestylePreferencesSection = ({
           <label className="label">Bedtime Preference</label>
           <select
             className="input"
-            value={formData.bedtimePreference || ''}
-            onChange={(e) => onInputChange('bedtimePreference', e.target.value)}
+            value={formData.bedtime_preference || ''}
+            onChange={(e) => onInputChange('bedtime_preference', e.target.value)}
             disabled={loading}
           >
             {bedtimePreferenceOptions.map(option => (
@@ -119,8 +119,8 @@ const LifestylePreferencesSection = ({
         <label className="label">Work-from-Home Frequency</label>
         <select
           className="input"
-          value={formData.workFromHome || ''}
-          onChange={(e) => onInputChange('workFromHome', e.target.value)}
+          value={formData.work_from_home_frequency || ''}
+          onChange={(e) => onInputChange('work_from_home_frequency', e.target.value)}
           disabled={loading}
         >
           <option value="">Select frequency</option>
@@ -136,7 +136,7 @@ const LifestylePreferencesSection = ({
         </div>
       </div>
 
-      {/* Living Style Compatibility Scales */}
+      {/* Living Style Compatibility Scales - FIXED: Using standardized field names */}
       <div className="card-header">
         <h4 className="card-title">Living Style Compatibility</h4>
         <p className="card-subtitle">
@@ -155,8 +155,8 @@ const LifestylePreferencesSection = ({
                 type="range"
                 min="1"
                 max="5"
-                value={formData.socialLevel || 3}
-                onChange={(e) => onRangeChange('socialLevel', parseInt(e.target.value))}
+                value={formData.social_level || 3}
+                onChange={(e) => onRangeChange('social_level', parseInt(e.target.value))}
                 className={styles.rangeSlider || 'range-slider'}
                 disabled={loading}
               />
@@ -167,9 +167,9 @@ const LifestylePreferencesSection = ({
               </div>
             </div>
             <div className={styles.currentValueDisplay || 'current-value-display'}>
-              <span className={styles.currentValueNumber || 'current-value-number'}>{formData.socialLevel || 3}</span>
+              <span className={styles.currentValueNumber || 'current-value-number'}>{formData.social_level || 3}</span>
               <span className={styles.currentValueLabel || 'current-value-label'}>
-                {getLifestyleLevelDescription('socialLevel', formData.socialLevel || 3)}
+                {getLifestyleLevelDescription('social_level', formData.social_level || 3)}
               </span>
             </div>
           </div>
@@ -184,8 +184,8 @@ const LifestylePreferencesSection = ({
                 type="range"
                 min="1"
                 max="5"
-                value={formData.cleanlinessLevel || 3}
-                onChange={(e) => onRangeChange('cleanlinessLevel', parseInt(e.target.value))}
+                value={formData.cleanliness_level || 3}
+                onChange={(e) => onRangeChange('cleanliness_level', parseInt(e.target.value))}
                 className={styles.rangeSlider || 'range-slider'}
                 disabled={loading}
               />
@@ -196,15 +196,15 @@ const LifestylePreferencesSection = ({
               </div>
             </div>
             <div className={styles.currentValueDisplay || 'current-value-display'}>
-              <span className={styles.currentValueNumber || 'current-value-number'}>{formData.cleanlinessLevel || 3}</span>
+              <span className={styles.currentValueNumber || 'current-value-number'}>{formData.cleanliness_level || 3}</span>
               <span className={styles.currentValueLabel || 'current-value-label'}>
-                {getLifestyleLevelDescription('cleanlinessLevel', formData.cleanlinessLevel || 3)}
+                {getLifestyleLevelDescription('cleanliness_level', formData.cleanliness_level || 3)}
               </span>
             </div>
           </div>
         </div>
         
-        {/* Noise Level */}
+        {/* Noise Tolerance */}
         <div className="form-group">
           <div className={styles.enhancedRangeContainer || 'enhanced-range-container'}>
             <div className={styles.rangeDescription || 'range-description'}>Noise Tolerance</div>
@@ -213,8 +213,8 @@ const LifestylePreferencesSection = ({
                 type="range"
                 min="1"
                 max="5"
-                value={formData.noiseLevel || 3}
-                onChange={(e) => onRangeChange('noiseLevel', parseInt(e.target.value))}
+                value={formData.noise_tolerance || 3}
+                onChange={(e) => onRangeChange('noise_tolerance', parseInt(e.target.value))}
                 className={styles.rangeSlider || 'range-slider'}
                 disabled={loading}
               />
@@ -225,16 +225,16 @@ const LifestylePreferencesSection = ({
               </div>
             </div>
             <div className={styles.currentValueDisplay || 'current-value-display'}>
-              <span className={styles.currentValueNumber || 'current-value-number'}>{formData.noiseLevel || 3}</span>
+              <span className={styles.currentValueNumber || 'current-value-number'}>{formData.noise_tolerance || 3}</span>
               <span className={styles.currentValueLabel || 'current-value-label'}>
-                {getLifestyleLevelDescription('noiseLevel', formData.noiseLevel || 3)}
+                {getLifestyleLevelDescription('noise_tolerance', formData.noise_tolerance || 3)}
               </span>
             </div>
           </div>
         </div>
       </div>
 
-      {/* Social & Guest Preferences */}
+      {/* Social & Guest Preferences - FIXED: Using standardized field names */}
       <div className="card-header">
         <h4 className="card-title">Social & Guest Preferences</h4>
         <p className="card-subtitle">
@@ -247,8 +247,8 @@ const LifestylePreferencesSection = ({
           <label className="label">Guest Policy Preference</label>
           <select
             className="input"
-            value={formData.guestsPolicy || ''}
-            onChange={(e) => onInputChange('guestsPolicy', e.target.value)}
+            value={formData.guests_policy || ''}
+            onChange={(e) => onInputChange('guests_policy', e.target.value)}
             disabled={loading}
           >
             {guestsPolicyOptions.map(option => (
@@ -266,8 +266,8 @@ const LifestylePreferencesSection = ({
           <label className="label">Social Activities at Home</label>
           <select
             className="input"
-            value={formData.socialActivitiesAtHome || ''}
-            onChange={(e) => onInputChange('socialActivitiesAtHome', e.target.value)}
+            value={formData.social_activities_at_home || ''}
+            onChange={(e) => onInputChange('social_activities_at_home', e.target.value)}
             disabled={loading}
           >
             <option value="">Select preference</option>
@@ -283,7 +283,7 @@ const LifestylePreferencesSection = ({
         </div>
       </div>
 
-      {/* Daily Living Preferences */}
+      {/* Daily Living Preferences - FIXED: Using standardized field names */}
       <div className="card-header">
         <h4 className="card-title">Daily Living Preferences</h4>
         <p className="card-subtitle">
@@ -296,8 +296,8 @@ const LifestylePreferencesSection = ({
           <label className={styles.checkboxLabel || 'checkbox-item'}>
             <input
               type="checkbox"
-              checked={formData.earlyRiser || false}
-              onChange={(e) => onInputChange('earlyRiser', e.target.checked)}
+              checked={formData.early_riser || false}
+              onChange={(e) => onInputChange('early_riser', e.target.checked)}
               disabled={loading}
             />
             <span className={styles.checkboxText || ''}>
@@ -308,8 +308,8 @@ const LifestylePreferencesSection = ({
           <label className={styles.checkboxLabel || 'checkbox-item'}>
             <input
               type="checkbox"
-              checked={formData.nightOwl || false}
-              onChange={(e) => onInputChange('nightOwl', e.target.checked)}
+              checked={formData.night_owl || false}
+              onChange={(e) => onInputChange('night_owl', e.target.checked)}
               disabled={loading}
             />
             <span className={styles.checkboxText || ''}>
@@ -320,8 +320,8 @@ const LifestylePreferencesSection = ({
           <label className={styles.checkboxLabel || 'checkbox-item'}>
             <input
               type="checkbox"
-              checked={formData.cookingEnthusiast || false}
-              onChange={(e) => onInputChange('cookingEnthusiast', e.target.checked)}
+              checked={formData.cooking_enthusiast || false}
+              onChange={(e) => onInputChange('cooking_enthusiast', e.target.checked)}
               disabled={loading}
             />
             <span className={styles.checkboxText || ''}>
@@ -332,8 +332,8 @@ const LifestylePreferencesSection = ({
           <label className={styles.checkboxLabel || 'checkbox-item'}>
             <input
               type="checkbox"
-              checked={formData.exerciseAtHome || false}
-              onChange={(e) => onInputChange('exerciseAtHome', e.target.checked)}
+              checked={formData.exercise_at_home || false}
+              onChange={(e) => onInputChange('exercise_at_home', e.target.checked)}
               disabled={loading}
             />
             <span className={styles.checkboxText || ''}>
@@ -344,8 +344,8 @@ const LifestylePreferencesSection = ({
           <label className={styles.checkboxLabel || 'checkbox-item'}>
             <input
               type="checkbox"
-              checked={formData.musicInstruments || false}
-              onChange={(e) => onInputChange('musicInstruments', e.target.checked)}
+              checked={formData.plays_instruments || false}
+              onChange={(e) => onInputChange('plays_instruments', e.target.checked)}
               disabled={loading}
             />
             <span className={styles.checkboxText || ''}>
@@ -356,8 +356,8 @@ const LifestylePreferencesSection = ({
           <label className={styles.checkboxLabel || 'checkbox-item'}>
             <input
               type="checkbox"
-              checked={formData.tvStreaming || false}
-              onChange={(e) => onInputChange('tvStreaming', e.target.checked)}
+              checked={formData.tv_streaming_regular || false}
+              onChange={(e) => onInputChange('tv_streaming_regular', e.target.checked)}
               disabled={loading}
             />
             <span className={styles.checkboxText || ''}>
@@ -367,7 +367,30 @@ const LifestylePreferencesSection = ({
         </div>
       </div>
 
-      {/* Household Management Style */}
+      {/* Additional Daily Living Fields */}
+      <div className="grid-2 mb-4">
+        <div className="form-group">
+          <label className="label">Cooking Frequency</label>
+          <select
+            className="input"
+            value={formData.cooking_frequency || ''}
+            onChange={(e) => onInputChange('cooking_frequency', e.target.value)}
+            disabled={loading}
+          >
+            <option value="">Select frequency</option>
+            <option value="never">Never cook at home</option>
+            <option value="rarely">Rarely (1-2 times/week)</option>
+            <option value="sometimes">Sometimes (3-4 times/week)</option>
+            <option value="frequently">Frequently (5-6 times/week)</option>
+            <option value="daily">Daily cooking</option>
+          </select>
+          <div className="text-gray-500 mt-1 text-sm">
+            How often you use the kitchen for cooking
+          </div>
+        </div>
+      </div>
+
+      {/* Household Management Style - FIXED: Using standardized field names */}
       <div className="card-header">
         <h4 className="card-title">Household Management Style</h4>
         <p className="card-subtitle">
@@ -380,8 +403,8 @@ const LifestylePreferencesSection = ({
           <label className="label">Chore Sharing Preference</label>
           <select
             className="input"
-            value={formData.choreSharingStyle || ''}
-            onChange={(e) => onInputChange('choreSharingStyle', e.target.value)}
+            value={formData.chore_sharing_style || ''}
+            onChange={(e) => onInputChange('chore_sharing_style', e.target.value)}
             disabled={loading}
           >
             <option value="">Select style</option>
@@ -400,8 +423,8 @@ const LifestylePreferencesSection = ({
           <label className="label">Communication Style</label>
           <select
             className="input"
-            value={formData.communicationStyle || ''}
-            onChange={(e) => onInputChange('communicationStyle', e.target.value)}
+            value={formData.communication_style || ''}
+            onChange={(e) => onInputChange('communication_style', e.target.value)}
             disabled={loading}
           >
             <option value="">Select style</option>
@@ -417,87 +440,44 @@ const LifestylePreferencesSection = ({
         </div>
       </div>
 
-      {/* Stress & Recovery Lifestyle */}
-      <div className="card-header">
-        <h4 className="card-title">Stress Management & Recovery Lifestyle</h4>
-        <p className="card-subtitle">
-          Lifestyle factors that support your recovery and well-being
-        </p>
+      <div className="form-group mb-4">
+        <label className="label">Conflict Resolution Style</label>
+        <select
+          className="input"
+          value={formData.conflict_resolution_style || ''}
+          onChange={(e) => onInputChange('conflict_resolution_style', e.target.value)}
+          disabled={loading}
+        >
+          <option value="">Select style</option>
+          <option value="direct-communication">Direct, honest communication</option>
+          <option value="mediated-discussion">Prefer mediated discussions</option>
+          <option value="written-communication">Written communication first</option>
+          <option value="avoid-conflict">Prefer to avoid conflict</option>
+          <option value="collaborative-problem-solving">Collaborative problem-solving</option>
+        </select>
+        <div className="text-gray-500 mt-1 text-sm">
+          How you prefer to handle disagreements or conflicts
+        </div>
       </div>
 
+      {/* Additional lifestyle preferences that were missing from original */}
       <div className="form-group mb-4">
-        <div className="grid-2">
-          <label className={styles.checkboxLabel || 'checkbox-item'}>
-            <input
-              type="checkbox"
-              checked={formData.needQuietSpace || false}
-              onChange={(e) => onInputChange('needQuietSpace', e.target.checked)}
-              disabled={loading}
-            />
-            <span className={styles.checkboxText || ''}>
-              I need quiet space for meditation/reflection
-            </span>
-          </label>
-
-          <label className={styles.checkboxLabel || 'checkbox-item'}>
-            <input
-              type="checkbox"
-              checked={formData.routineImportant || false}
-              onChange={(e) => onInputChange('routineImportant', e.target.checked)}
-              disabled={loading}
-            />
-            <span className={styles.checkboxText || ''}>
-              Consistent routines are important for my recovery
-            </span>
-          </label>
-
-          <label className={styles.checkboxLabel || 'checkbox-item'}>
-            <input
-              type="checkbox"
-              checked={formData.stressTriggersNoise || false}
-              onChange={(e) => onInputChange('stressTriggersNoise', e.target.checked)}
-              disabled={loading}
-            />
-            <span className={styles.checkboxText || ''}>
-              Loud noises/chaos are stress triggers for me
-            </span>
-          </label>
-
-          <label className={styles.checkboxLabel || 'checkbox-item'}>
-            <input
-              type="checkbox"
-              checked={formData.supportiveEnvironment || false}
-              onChange={(e) => onInputChange('supportiveEnvironment', e.target.checked)}
-              disabled={loading}
-            />
-            <span className={styles.checkboxText || ''}>
-              I thrive in supportive, encouraging environments
-            </span>
-          </label>
-
-          <label className={styles.checkboxLabel || 'checkbox-item'}>
-            <input
-              type="checkbox"
-              checked={formData.activeLifestyle || false}
-              onChange={(e) => onInputChange('activeLifestyle', e.target.checked)}
-              disabled={loading}
-            />
-            <span className={styles.checkboxText || ''}>
-              I maintain an active, healthy lifestyle
-            </span>
-          </label>
-
-          <label className={styles.checkboxLabel || 'checkbox-item'}>
-            <input
-              type="checkbox"
-              checked={formData.mindfulLiving || false}
-              onChange={(e) => onInputChange('mindfulLiving', e.target.checked)}
-              disabled={loading}
-            />
-            <span className={styles.checkboxText || ''}>
-              I practice mindful/conscious living
-            </span>
-          </label>
+        <label className="label">Preferred Support Structure</label>
+        <select
+          className="input"
+          value={formData.preferred_support_structure || ''}
+          onChange={(e) => onInputChange('preferred_support_structure', e.target.value)}
+          disabled={loading}
+        >
+          <option value="">Select preference</option>
+          <option value="independent">Prefer independent living</option>
+          <option value="mutual-support">Mutual support and encouragement</option>
+          <option value="structured-support">Structured support system</option>
+          <option value="close-community">Close-knit community feel</option>
+          <option value="professional-guidance">Professional guidance included</option>
+        </select>
+        <div className="text-gray-500 mt-1 text-sm">
+          What kind of support structure works best for you
         </div>
       </div>
 
@@ -527,28 +507,25 @@ const LifestylePreferencesSection = ({
 
 LifestylePreferencesSection.propTypes = {
   formData: PropTypes.shape({
-    workSchedule: PropTypes.string,
-    workFromHome: PropTypes.string,
-    bedtimePreference: PropTypes.string,
-    socialLevel: PropTypes.number,
-    cleanlinessLevel: PropTypes.number,
-    noiseLevel: PropTypes.number,
-    guestsPolicy: PropTypes.string,
-    socialActivitiesAtHome: PropTypes.string,
-    earlyRiser: PropTypes.bool,
-    nightOwl: PropTypes.bool,
-    cookingEnthusiast: PropTypes.bool,
-    exerciseAtHome: PropTypes.bool,
-    musicInstruments: PropTypes.bool,
-    tvStreaming: PropTypes.bool,
-    choreSharingStyle: PropTypes.string,
-    communicationStyle: PropTypes.string,
-    needQuietSpace: PropTypes.bool,
-    routineImportant: PropTypes.bool,
-    stressTriggersNoise: PropTypes.bool,
-    supportiveEnvironment: PropTypes.bool,
-    activeLifestyle: PropTypes.bool,
-    mindfulLiving: PropTypes.bool
+    work_schedule: PropTypes.string,                     // FIXED: Standardized
+    work_from_home_frequency: PropTypes.string,          // FIXED: Standardized
+    bedtime_preference: PropTypes.string,                // FIXED: Standardized
+    social_level: PropTypes.number,                      // FIXED: Standardized
+    cleanliness_level: PropTypes.number,                 // FIXED: Standardized
+    noise_tolerance: PropTypes.number,                   // FIXED: Standardized
+    guests_policy: PropTypes.string,                     // FIXED: Standardized
+    social_activities_at_home: PropTypes.string,         // FIXED: Standardized
+    early_riser: PropTypes.bool,                         // FIXED: Standardized
+    night_owl: PropTypes.bool,                           // FIXED: Standardized
+    cooking_enthusiast: PropTypes.bool,                  // FIXED: Standardized
+    cooking_frequency: PropTypes.string,                 // FIXED: Standardized
+    exercise_at_home: PropTypes.bool,                    // FIXED: Standardized
+    plays_instruments: PropTypes.bool,                   // FIXED: Standardized
+    tv_streaming_regular: PropTypes.bool,                // FIXED: Standardized
+    chore_sharing_style: PropTypes.string,               // FIXED: Standardized
+    communication_style: PropTypes.string,               // FIXED: Standardized
+    conflict_resolution_style: PropTypes.string,         // FIXED: Standardized
+    preferred_support_structure: PropTypes.string        // FIXED: Standardized
   }).isRequired,
   errors: PropTypes.object.isRequired,
   loading: PropTypes.bool.isRequired,

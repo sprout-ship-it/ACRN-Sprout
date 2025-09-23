@@ -1,12 +1,11 @@
-// src/utils/database/matchingProfilesService.js - NEW: Standardized Database Integration
-import { supabase } from '../supabase';
-
+// src/utils/database/matchingProfilesService.js - FIXED: No Circular Import
 /**
  * Enhanced database service for applicant_matching_profiles table
  * Handles CRUD operations with the standardized database schema
  */
 class MatchingProfilesService {
-  constructor() {
+  constructor(supabaseClient) {
+    this.supabase = supabaseClient;
     this.tableName = 'applicant_matching_profiles';
     this.cache = new Map();
     this.cacheTimeout = 5 * 60 * 1000; // 5 minutes
@@ -21,7 +20,7 @@ class MatchingProfilesService {
    */
   async create(profileData) {
     try {
-      console.log('📊 Creating new matching profile for user:', profileData.user_id);
+      console.log('Creating new matching profile for user:', profileData.user_id);
       
       // Ensure required fields are present
       const requiredFields = ['user_id', 'primary_city', 'primary_state', 'budget_max', 'recovery_stage'];
@@ -44,24 +43,24 @@ class MatchingProfilesService {
         updated_at: new Date().toISOString()
       };
 
-      const { data, error } = await supabase
+      const { data, error } = await this.supabase
         .from(this.tableName)
         .insert(profileWithDefaults)
         .select()
         .single();
 
       if (error) {
-        console.error('❌ Error creating matching profile:', error);
+        console.error('Error creating matching profile:', error);
         throw new Error(`Database error: ${error.message}`);
       }
 
-      console.log('✅ Matching profile created successfully');
+      console.log('Matching profile created successfully');
       this.invalidateCache(profileData.user_id);
       
       return { success: true, data };
 
     } catch (err) {
-      console.error('💥 Error in create:', err);
+      console.error('Error in create:', err);
       return { success: false, error: err.message };
     }
   }
@@ -78,14 +77,14 @@ class MatchingProfilesService {
       if (useCache) {
         const cached = this.getFromCache(userId);
         if (cached) {
-          console.log('📦 Returning cached matching profile for user:', userId);
+          console.log('Returning cached matching profile for user:', userId);
           return { success: true, data: cached };
         }
       }
 
-      console.log('🔍 Fetching matching profile for user:', userId);
+      console.log('Fetching matching profile for user:', userId);
 
-      const { data, error } = await supabase
+      const { data, error } = await this.supabase
         .from(this.tableName)
         .select('*')
         .eq('user_id', userId)
@@ -104,11 +103,11 @@ class MatchingProfilesService {
         this.setCache(userId, data);
       }
 
-      console.log('✅ Matching profile retrieved successfully');
+      console.log('Matching profile retrieved successfully');
       return { success: true, data };
 
     } catch (err) {
-      console.error('💥 Error in getByUserId:', err);
+      console.error('Error in getByUserId:', err);
       return { success: false, error: err.message };
     }
   }
@@ -121,7 +120,7 @@ class MatchingProfilesService {
    */
   async update(userId, updates) {
     try {
-      console.log('🔄 Updating matching profile for user:', userId);
+      console.log('Updating matching profile for user:', userId);
 
       // Compute updated values
       const updatedData = {
@@ -161,7 +160,7 @@ class MatchingProfilesService {
         }
       }
 
-      const { data, error } = await supabase
+      const { data, error } = await this.supabase
         .from(this.tableName)
         .update(updatedData)
         .eq('user_id', userId)
@@ -169,17 +168,17 @@ class MatchingProfilesService {
         .single();
 
       if (error) {
-        console.error('❌ Error updating matching profile:', error);
+        console.error('Error updating matching profile:', error);
         throw new Error(`Database error: ${error.message}`);
       }
 
-      console.log('✅ Matching profile updated successfully');
+      console.log('Matching profile updated successfully');
       this.invalidateCache(userId);
       
       return { success: true, data };
 
     } catch (err) {
-      console.error('💥 Error in update:', err);
+      console.error('Error in update:', err);
       return { success: false, error: err.message };
     }
   }
@@ -191,7 +190,7 @@ class MatchingProfilesService {
    */
   async upsert(profileData) {
     try {
-      console.log('🔄 Upserting matching profile for user:', profileData.user_id);
+      console.log('Upserting matching profile for user:', profileData.user_id);
 
       // Check if profile exists
       const existingResult = await this.getByUserId(profileData.user_id, false);
@@ -209,7 +208,7 @@ class MatchingProfilesService {
       }
 
     } catch (err) {
-      console.error('💥 Error in upsert:', err);
+      console.error('Error in upsert:', err);
       return { success: false, error: err.message };
     }
   }
@@ -221,26 +220,26 @@ class MatchingProfilesService {
    */
   async delete(userId) {
     try {
-      console.log('🗑️ Deleting matching profile for user:', userId);
+      console.log('Deleting matching profile for user:', userId);
 
-      const { data, error } = await supabase
+      const { data, error } = await this.supabase
         .from(this.tableName)
         .delete()
         .eq('user_id', userId)
         .select();
 
       if (error) {
-        console.error('❌ Error deleting matching profile:', error);
+        console.error('Error deleting matching profile:', error);
         throw new Error(`Database error: ${error.message}`);
       }
 
-      console.log('✅ Matching profile deleted successfully');
+      console.log('Matching profile deleted successfully');
       this.invalidateCache(userId);
       
       return { success: true, data };
 
     } catch (err) {
-      console.error('💥 Error in delete:', err);
+      console.error('Error in delete:', err);
       return { success: false, error: err.message };
     }
   }
@@ -255,9 +254,9 @@ class MatchingProfilesService {
    */
   async getActiveProfiles(excludeUserId = null, filters = {}) {
     try {
-      console.log('🔍 Fetching active profiles, excluding:', excludeUserId);
+      console.log('Fetching active profiles, excluding:', excludeUserId);
 
-      let query = supabase
+      let query = this.supabase
         .from(this.tableName)
         .select('*')
         .eq('is_active', true)
@@ -289,15 +288,15 @@ class MatchingProfilesService {
         .limit(filters.limit || 100);
 
       if (error) {
-        console.error('❌ Error fetching active profiles:', error);
+        console.error('Error fetching active profiles:', error);
         throw new Error(`Database error: ${error.message}`);
       }
 
-      console.log(`✅ Retrieved ${data?.length || 0} active profiles`);
+      console.log(`Retrieved ${data?.length || 0} active profiles`);
       return { success: true, data: data || [] };
 
     } catch (err) {
-      console.error('💥 Error in getActiveProfiles:', err);
+      console.error('Error in getActiveProfiles:', err);
       return { success: false, error: err.message, data: [] };
     }
   }
@@ -311,9 +310,9 @@ class MatchingProfilesService {
    */
   async getByLocation(city, state, radius = null) {
     try {
-      console.log('🗺️ Fetching profiles by location:', { city, state, radius });
+      console.log('Fetching profiles by location:', { city, state, radius });
 
-      let query = supabase
+      let query = this.supabase
         .from(this.tableName)
         .select('*')
         .eq('is_active', true)
@@ -323,15 +322,15 @@ class MatchingProfilesService {
       const { data, error } = await query.order('updated_at', { ascending: false });
 
       if (error) {
-        console.error('❌ Error fetching profiles by location:', error);
+        console.error('Error fetching profiles by location:', error);
         throw new Error(`Database error: ${error.message}`);
       }
 
-      console.log(`✅ Retrieved ${data?.length || 0} profiles for ${city}, ${state}`);
+      console.log(`Retrieved ${data?.length || 0} profiles for ${city}, ${state}`);
       return { success: true, data: data || [] };
 
     } catch (err) {
-      console.error('💥 Error in getByLocation:', err);
+      console.error('Error in getByLocation:', err);
       return { success: false, error: err.message, data: [] };
     }
   }
@@ -343,9 +342,9 @@ class MatchingProfilesService {
    */
   async getByRecoveryStage(recoveryStage) {
     try {
-      console.log('🌱 Fetching profiles by recovery stage:', recoveryStage);
+      console.log('Fetching profiles by recovery stage:', recoveryStage);
 
-      const { data, error } = await supabase
+      const { data, error } = await this.supabase
         .from(this.tableName)
         .select('*')
         .eq('is_active', true)
@@ -353,15 +352,15 @@ class MatchingProfilesService {
         .order('updated_at', { ascending: false });
 
       if (error) {
-        console.error('❌ Error fetching profiles by recovery stage:', error);
+        console.error('Error fetching profiles by recovery stage:', error);
         throw new Error(`Database error: ${error.message}`);
       }
 
-      console.log(`✅ Retrieved ${data?.length || 0} profiles for recovery stage: ${recoveryStage}`);
+      console.log(`Retrieved ${data?.length || 0} profiles for recovery stage: ${recoveryStage}`);
       return { success: true, data: data || [] };
 
     } catch (err) {
-      console.error('💥 Error in getByRecoveryStage:', err);
+      console.error('Error in getByRecoveryStage:', err);
       return { success: false, error: err.message, data: [] };
     }
   }
@@ -373,9 +372,9 @@ class MatchingProfilesService {
    */
   async searchProfiles(searchCriteria) {
     try {
-      console.log('🔍 Searching profiles with criteria:', searchCriteria);
+      console.log('Searching profiles with criteria:', searchCriteria);
 
-      let query = supabase
+      let query = this.supabase
         .from(this.tableName)
         .select('*')
         .eq('is_active', true);
@@ -397,15 +396,15 @@ class MatchingProfilesService {
         .limit(50);
 
       if (error) {
-        console.error('❌ Error searching profiles:', error);
+        console.error('Error searching profiles:', error);
         throw new Error(`Database error: ${error.message}`);
       }
 
-      console.log(`✅ Found ${data?.length || 0} profiles matching criteria`);
+      console.log(`Found ${data?.length || 0} profiles matching criteria`);
       return { success: true, data: data || [] };
 
     } catch (err) {
-      console.error('💥 Error in searchProfiles:', err);
+      console.error('Error in searchProfiles:', err);
       return { success: false, error: err.message, data: [] };
     }
   }
@@ -517,9 +516,9 @@ class MatchingProfilesService {
    */
   async getStatistics() {
     try {
-      console.log('📊 Fetching database statistics...');
+      console.log('Fetching database statistics...');
 
-      const { data, error } = await supabase
+      const { data, error } = await this.supabase
         .from(this.tableName)
         .select('is_active, profile_completed, recovery_stage, primary_state, completion_percentage');
 
@@ -538,11 +537,11 @@ class MatchingProfilesService {
         byState: this.groupBy(data, 'primary_state')
       };
 
-      console.log('✅ Statistics retrieved');
+      console.log('Statistics retrieved');
       return { success: true, data: stats };
 
     } catch (err) {
-      console.error('💥 Error in getStatistics:', err);
+      console.error('Error in getStatistics:', err);
       return { success: false, error: err.message };
     }
   }
@@ -559,6 +558,5 @@ class MatchingProfilesService {
   }
 }
 
-// Export singleton instance
-export const matchingProfilesService = new MatchingProfilesService();
-export default matchingProfilesService;
+// Export the class, not an instance
+export default MatchingProfilesService;

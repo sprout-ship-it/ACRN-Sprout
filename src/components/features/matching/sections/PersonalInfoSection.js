@@ -1,4 +1,4 @@
-// src/components/features/matching/sections/PersonalInfoSection.js - Refactored with enhanced CSS module usage
+// src/components/features/matching/sections/PersonalInfoSection.js - FIXED WITH STANDARDIZED FIELD NAMES
 import React from 'react';
 import PropTypes from 'prop-types';
 import { genderOptions, sexOptions, states } from '../constants/matchingFormConstants';
@@ -9,8 +9,8 @@ const PersonalInfoSection = ({
   loading,
   profile,
   onInputChange,
-  onArrayChange, // Added for interface consistency
-  onRangeChange,  // Added for interface consistency
+  onArrayChange, // For interface consistency
+  onRangeChange,  // For interface consistency
   styles = {}     // CSS module styles passed from parent
 }) => {
   return (
@@ -64,23 +64,23 @@ const PersonalInfoSection = ({
         </div>
       </div>
       
-      {/* Required Personal Details */}
+      {/* Required Personal Details - FIXED: Using standardized field names */}
       <div className="grid-2 mb-4">
         <div className="form-group">
           <label className="label">
             Date of Birth <span className="text-red-500">*</span>
           </label>
           <input
-            className={`input ${errors.dateOfBirth ? 'border-red-500' : ''}`}
+            className={`input ${errors.date_of_birth ? 'border-red-500' : ''}`}
             type="date"
-            value={formData.dateOfBirth || ''}
-            onChange={(e) => onInputChange('dateOfBirth', e.target.value)}
+            value={formData.date_of_birth || ''}
+            onChange={(e) => onInputChange('date_of_birth', e.target.value)}
             disabled={loading}
             max={new Date(new Date().setFullYear(new Date().getFullYear() - 18)).toISOString().split('T')[0]}
             required
           />
-          {errors.dateOfBirth && (
-            <div className="text-red-500 mt-1 text-sm">{errors.dateOfBirth}</div>
+          {errors.date_of_birth && (
+            <div className="text-red-500 mt-1 text-sm">{errors.date_of_birth}</div>
           )}
           <div className="text-gray-500 mt-1 text-sm">
             Must be 18 or older to use this service
@@ -92,16 +92,16 @@ const PersonalInfoSection = ({
             Phone Number <span className="text-red-500">*</span>
           </label>
           <input
-            className={`input ${errors.phone ? 'border-red-500' : ''}`}
+            className={`input ${errors.primary_phone ? 'border-red-500' : ''}`}
             type="tel"
-            value={formData.phone || ''}
-            onChange={(e) => onInputChange('phone', e.target.value)}
+            value={formData.primary_phone || ''}
+            onChange={(e) => onInputChange('primary_phone', e.target.value)}
             placeholder="(555) 123-4567"
             disabled={loading}
             required
           />
-          {errors.phone && (
-            <div className="text-red-500 mt-1 text-sm">{errors.phone}</div>
+          {errors.primary_phone && (
+            <div className="text-red-500 mt-1 text-sm">{errors.primary_phone}</div>
           )}
           <div className="text-gray-500 mt-1 text-sm">
             For emergency contact and verification
@@ -109,14 +109,14 @@ const PersonalInfoSection = ({
         </div>
       </div>
       
-      {/* Identity Information */}
+      {/* Identity Information - FIXED: Using standardized field names */}
       <div className="grid-2 mb-4">
         <div className="form-group">
           <label className="label">Gender Identity</label>
           <select
             className="input"
-            value={formData.gender || ''}
-            onChange={(e) => onInputChange('gender', e.target.value)}
+            value={formData.gender_identity || ''}
+            onChange={(e) => onInputChange('gender_identity', e.target.value)}
             disabled={loading}
           >
             {genderOptions.map(option => (
@@ -134,8 +134,8 @@ const PersonalInfoSection = ({
           <label className="label">Biological Sex</label>
           <select
             className="input"
-            value={formData.sex || ''}
-            onChange={(e) => onInputChange('sex', e.target.value)}
+            value={formData.biological_sex || ''}
+            onChange={(e) => onInputChange('biological_sex', e.target.value)}
             disabled={loading}
           >
             {sexOptions.map(option => (
@@ -150,7 +150,7 @@ const PersonalInfoSection = ({
         </div>
       </div>
 
-      {/* Address Information Section */}
+      {/* Address Information Section - FIXED: Using standardized field names */}
       <div className="card-header">
         <h4 className="card-title">
           Current Address <span className="text-gray-500 text-sm font-normal">(Optional)</span>
@@ -165,8 +165,8 @@ const PersonalInfoSection = ({
         <input
           className="input"
           type="text"
-          value={formData.address || ''}
-          onChange={(e) => onInputChange('address', e.target.value)}
+          value={formData.current_address || ''}
+          onChange={(e) => onInputChange('current_address', e.target.value)}
           placeholder="123 Main Street, Apt 4B"
           disabled={loading}
         />
@@ -181,8 +181,8 @@ const PersonalInfoSection = ({
           <input
             className="input"
             type="text"
-            value={formData.city || ''}
-            onChange={(e) => onInputChange('city', e.target.value)}
+            value={formData.current_city || ''}
+            onChange={(e) => onInputChange('current_city', e.target.value)}
             placeholder="City name"
             disabled={loading}
           />
@@ -192,8 +192,8 @@ const PersonalInfoSection = ({
           <label className="label">State</label>
           <select
             className="input"
-            value={formData.state || ''}
-            onChange={(e) => onInputChange('state', e.target.value)}
+            value={formData.current_state || ''}
+            onChange={(e) => onInputChange('current_state', e.target.value)}
             disabled={loading}
           >
             <option value="">Select State</option>
@@ -206,22 +206,22 @@ const PersonalInfoSection = ({
         <div className="form-group">
           <label className="label">ZIP Code</label>
           <input
-            className={`input ${errors.zipCode ? 'border-red-500' : ''}`}
+            className={`input ${errors.current_zip_code ? 'border-red-500' : ''}`}
             type="text"
-            value={formData.zipCode || ''}
-            onChange={(e) => onInputChange('zipCode', e.target.value)}
+            value={formData.current_zip_code || ''}
+            onChange={(e) => onInputChange('current_zip_code', e.target.value)}
             placeholder="12345 or 12345-6789"
             disabled={loading}
             pattern="[0-9]{5}(-[0-9]{4})?"
             maxLength="10"
           />
-          {errors.zipCode && (
-            <div className="text-red-500 mt-1 text-sm">{errors.zipCode}</div>
+          {errors.current_zip_code && (
+            <div className="text-red-500 mt-1 text-sm">{errors.current_zip_code}</div>
           )}
         </div>
       </div>
 
-      {/* Emergency Contact Section */}
+      {/* Emergency Contact Section - FIXED: Using standardized field names */}
       <div className="card-header">
         <h4 className="card-title">
           Emergency Contact <span className="text-gray-500 text-sm font-normal">(Recommended)</span>
@@ -237,8 +237,8 @@ const PersonalInfoSection = ({
           <input
             className="input"
             type="text"
-            value={formData.emergencyContactName || ''}
-            onChange={(e) => onInputChange('emergencyContactName', e.target.value)}
+            value={formData.emergency_contact_name || ''}
+            onChange={(e) => onInputChange('emergency_contact_name', e.target.value)}
             placeholder="Full name"
             disabled={loading}
           />
@@ -252,8 +252,8 @@ const PersonalInfoSection = ({
           <input
             className="input"
             type="tel"
-            value={formData.emergencyContactPhone || ''}
-            onChange={(e) => onInputChange('emergencyContactPhone', e.target.value)}
+            value={formData.emergency_contact_phone || ''}
+            onChange={(e) => onInputChange('emergency_contact_phone', e.target.value)}
             placeholder="(555) 123-4567"
             disabled={loading}
           />
@@ -267,8 +267,8 @@ const PersonalInfoSection = ({
         <label className="label">Relationship to Emergency Contact</label>
         <select
           className="input"
-          value={formData.emergencyContactRelationship || ''}
-          onChange={(e) => onInputChange('emergencyContactRelationship', e.target.value)}
+          value={formData.emergency_contact_relationship || ''}
+          onChange={(e) => onInputChange('emergency_contact_relationship', e.target.value)}
           disabled={loading}
         >
           <option value="">Select relationship</option>
@@ -311,17 +311,17 @@ const PersonalInfoSection = ({
 
 PersonalInfoSection.propTypes = {
   formData: PropTypes.shape({
-    dateOfBirth: PropTypes.string,
-    phone: PropTypes.string,
-    gender: PropTypes.string,
-    sex: PropTypes.string,
-    address: PropTypes.string,
-    city: PropTypes.string,
-    state: PropTypes.string,
-    zipCode: PropTypes.string,
-    emergencyContactName: PropTypes.string,
-    emergencyContactPhone: PropTypes.string,
-    emergencyContactRelationship: PropTypes.string
+    date_of_birth: PropTypes.string,              // FIXED: Standardized
+    primary_phone: PropTypes.string,              // FIXED: Standardized
+    gender_identity: PropTypes.string,            // FIXED: Standardized
+    biological_sex: PropTypes.string,             // FIXED: Standardized
+    current_address: PropTypes.string,            // FIXED: Standardized
+    current_city: PropTypes.string,               // FIXED: Standardized
+    current_state: PropTypes.string,              // FIXED: Standardized
+    current_zip_code: PropTypes.string,           // FIXED: Standardized
+    emergency_contact_name: PropTypes.string,     // FIXED: Standardized
+    emergency_contact_phone: PropTypes.string,    // FIXED: Standardized
+    emergency_contact_relationship: PropTypes.string // FIXED: Standardized
   }).isRequired,
   errors: PropTypes.object.isRequired,
   loading: PropTypes.bool.isRequired,
@@ -331,8 +331,8 @@ PersonalInfoSection.propTypes = {
     email: PropTypes.string
   }),
   onInputChange: PropTypes.func.isRequired,
-  onArrayChange: PropTypes.func.isRequired,  // Added for interface consistency
-  onRangeChange: PropTypes.func.isRequired,  // Added for interface consistency
+  onArrayChange: PropTypes.func.isRequired,  // For interface consistency
+  onRangeChange: PropTypes.func.isRequired,  // For interface consistency
   styles: PropTypes.object                   // CSS module styles
 };
 

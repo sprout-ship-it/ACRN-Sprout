@@ -10,7 +10,7 @@ import createEmployerService from './database/employerService'
 import createPeerSupportService from './database/peerSupportService'
 import createMatchGroupsService from './database/matchGroupsService'
 import createCommunicationService from './database/communicationService'
-import matchingProfilesService from './database/matchingProfilesService'
+import MatchingProfilesService from './database/matchingProfilesService'
 import pssClientsService from './database/pssClients'
 
 console.log('🔧 Supabase client initializing...')
@@ -160,8 +160,8 @@ export const db = {
     }
   },
 
-// Direct service reference (preserves 'this' context)
-matchingProfiles: matchingProfilesService,
+// Create service instance with supabase client
+matchingProfiles: new MatchingProfilesService(supabase),
 
   // Match request operations
   matchRequests: {

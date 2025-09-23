@@ -1,4 +1,4 @@
-// src/components/features/matching/sections/LocationPreferencesSection.js - UPDATED WITH STANDARDIZED FIELD NAMES
+// src/components/features/matching/sections/LocationPreferencesSection.js - FIXED WITH STANDARDIZED FIELD NAMES
 import React from 'react';
 import PropTypes from 'prop-types';
 import { housingTypeOptions } from '../constants/matchingFormConstants';
@@ -11,8 +11,7 @@ const LocationPreferencesSection = ({
   onInputChange,
   onArrayChange,
   onRangeChange,
-  styles = {},   // CSS module styles passed from parent
-  fieldMapping = {} // ✅ NEW: Standardized field mapping from parent
+  styles = {}   // CSS module styles passed from parent
 }) => {
   // State options for dropdown
   const stateOptions = [
@@ -69,12 +68,6 @@ const LocationPreferencesSection = ({
     { value: 'WY', label: 'Wyoming' }
   ];
 
-  // ✅ STANDARDIZED: Use mapped field names from parent
-  const cityField = fieldMapping?.location?.city || 'primary_city';
-  const stateField = fieldMapping?.location?.state || 'primary_state';
-  const budgetMinField = fieldMapping?.budget?.min || 'budget_min';
-  const budgetMaxField = fieldMapping?.budget?.max || 'budget_max';
-
   return (
     <>
       {/* Location & Housing Preferences Header */}
@@ -91,7 +84,7 @@ const LocationPreferencesSection = ({
         </p>
       </div>
 
-      {/* ✅ UPDATED: Primary Location Preferences with standardized fields */}
+      {/* FIXED: Primary Location Preferences with standardized fields */}
       <div className="card-header">
         <h4 className="card-title">Preferred Location</h4>
         <p className="card-subtitle">Where would you like to live?</p>
@@ -103,19 +96,19 @@ const LocationPreferencesSection = ({
             Preferred City <span className="text-red-500">*</span>
           </label>
           <input
-            className={`input ${errors[cityField] ? 'border-red-500' : ''}`}
+            className={`input ${errors.primary_city ? 'border-red-500' : ''}`}
             type="text"
-            value={formData[cityField] || ''}
-            onChange={(e) => onInputChange(cityField, e.target.value)}
+            value={formData.primary_city || ''}
+            onChange={(e) => onInputChange('primary_city', e.target.value)}
             placeholder="e.g., Austin, Dallas, Phoenix"
             disabled={loading}
             required
           />
-          {errors[cityField] && (
-            <div className="text-red-500 mt-1 text-sm">{errors[cityField]}</div>
+          {errors.primary_city && (
+            <div className="text-red-500 mt-1 text-sm">{errors.primary_city}</div>
           )}
           <div className="text-gray-500 mt-1 text-sm">
-            Primary city you'd like to live in (stored as: {cityField})
+            Primary city you'd like to live in
           </div>
         </div>
 
@@ -124,9 +117,9 @@ const LocationPreferencesSection = ({
             Preferred State <span className="text-red-500">*</span>
           </label>
           <select
-            className={`input ${errors[stateField] ? 'border-red-500' : ''}`}
-            value={formData[stateField] || ''}
-            onChange={(e) => onInputChange(stateField, e.target.value)}
+            className={`input ${errors.primary_state ? 'border-red-500' : ''}`}
+            value={formData.primary_state || ''}
+            onChange={(e) => onInputChange('primary_state', e.target.value)}
             disabled={loading}
             required
           >
@@ -136,11 +129,11 @@ const LocationPreferencesSection = ({
               </option>
             ))}
           </select>
-          {errors[stateField] && (
-            <div className="text-red-500 mt-1 text-sm">{errors[stateField]}</div>
+          {errors.primary_state && (
+            <div className="text-red-500 mt-1 text-sm">{errors.primary_state}</div>
           )}
           <div className="text-gray-500 mt-1 text-sm">
-            Primary state (stored as: {stateField})
+            Primary state for housing search
           </div>
         </div>
         
@@ -149,8 +142,8 @@ const LocationPreferencesSection = ({
           <input
             className="input"
             type="text"
-            value={formData.targetZipCodes || ''}
-            onChange={(e) => onInputChange('targetZipCodes', e.target.value)}
+            value={formData.target_zip_codes || ''}
+            onChange={(e) => onInputChange('target_zip_codes', e.target.value)}
             placeholder="29301, 29302, 29303"
             disabled={loading}
           />
@@ -160,7 +153,7 @@ const LocationPreferencesSection = ({
         </div>
       </div>
 
-      {/* ✅ UPDATED: Budget & Financial Information with standardized fields */}
+      {/* FIXED: Budget & Financial Information with standardized fields */}
       <div className="card-header">
         <h4 className="card-title">Budget Information</h4>
         <p className="card-subtitle">
@@ -174,10 +167,10 @@ const LocationPreferencesSection = ({
             Minimum Monthly Budget <span className="text-red-500">*</span>
           </label>
           <input
-            className={`input ${errors[budgetMinField] ? 'border-red-500' : ''}`}
+            className={`input ${errors.budget_min ? 'border-red-500' : ''}`}
             type="number"
-            value={formData[budgetMinField] || ''}
-            onChange={(e) => onInputChange(budgetMinField, e.target.value)}
+            value={formData.budget_min || ''}
+            onChange={(e) => onInputChange('budget_min', e.target.value)}
             placeholder="500"
             disabled={loading}
             min="0"
@@ -185,11 +178,11 @@ const LocationPreferencesSection = ({
             step="50"
             required
           />
-          {errors[budgetMinField] && (
-            <div className="text-red-500 mt-1 text-sm">{errors[budgetMinField]}</div>
+          {errors.budget_min && (
+            <div className="text-red-500 mt-1 text-sm">{errors.budget_min}</div>
           )}
           <div className="text-gray-500 mt-1 text-sm">
-            Lowest monthly amount you can afford (stored as: {budgetMinField})
+            Lowest monthly amount you can afford
           </div>
         </div>
         
@@ -198,10 +191,10 @@ const LocationPreferencesSection = ({
             Maximum Monthly Budget <span className="text-red-500">*</span>
           </label>
           <input
-            className={`input ${errors[budgetMaxField] ? 'border-red-500' : ''}`}
+            className={`input ${errors.budget_max ? 'border-red-500' : ''}`}
             type="number"
-            value={formData[budgetMaxField] || ''}
-            onChange={(e) => onInputChange(budgetMaxField, e.target.value)}
+            value={formData.budget_max || ''}
+            onChange={(e) => onInputChange('budget_max', e.target.value)}
             placeholder="1200"
             disabled={loading}
             min="200"
@@ -209,16 +202,16 @@ const LocationPreferencesSection = ({
             step="50"
             required
           />
-          {errors[budgetMaxField] && (
-            <div className="text-red-500 mt-1 text-sm">{errors[budgetMaxField]}</div>
+          {errors.budget_max && (
+            <div className="text-red-500 mt-1 text-sm">{errors.budget_max}</div>
           )}
           <div className="text-gray-500 mt-1 text-sm">
-            Maximum you can afford including utilities (stored as: {budgetMaxField})
+            Maximum you can afford including utilities
           </div>
         </div>
       </div>
 
-      {/* Housing Specifications */}
+      {/* Housing Specifications - FIXED: Using standardized field names */}
       <div className="card-header">
         <h4 className="card-title">Housing Requirements</h4>
         <p className="card-subtitle">Your preferences for the physical housing unit</p>
@@ -230,9 +223,9 @@ const LocationPreferencesSection = ({
             Maximum Commute Time <span className="text-red-500">*</span>
           </label>
           <select
-            className={`input ${errors.maxCommute ? 'border-red-500' : ''}`}
-            value={formData.maxCommute || ''}
-            onChange={(e) => onInputChange('maxCommute', e.target.value)}
+            className={`input ${errors.max_commute_minutes ? 'border-red-500' : ''}`}
+            value={formData.max_commute_minutes || ''}
+            onChange={(e) => onInputChange('max_commute_minutes', e.target.value)}
             disabled={loading}
             required
           >
@@ -244,8 +237,8 @@ const LocationPreferencesSection = ({
             <option value="90">1.5 hours</option>
             <option value="unlimited">No preference</option>
           </select>
-          {errors.maxCommute && (
-            <div className="text-red-500 mt-1 text-sm">{errors.maxCommute}</div>
+          {errors.max_commute_minutes && (
+            <div className="text-red-500 mt-1 text-sm">{errors.max_commute_minutes}</div>
           )}
           <div className="text-gray-500 mt-1 text-sm">
             To work, meetings, or services
@@ -256,8 +249,8 @@ const LocationPreferencesSection = ({
           <label className="label">Preferred Bedrooms</label>
           <select
             className="input"
-            value={formData.preferredBedrooms || ''}
-            onChange={(e) => onInputChange('preferredBedrooms', e.target.value)}
+            value={formData.preferred_bedrooms || ''}
+            onChange={(e) => onInputChange('preferred_bedrooms', e.target.value)}
             disabled={loading}
           >
             <option value="">No preference</option>
@@ -275,8 +268,8 @@ const LocationPreferencesSection = ({
           <label className="label">Preferred Lease Duration</label>
           <select
             className="input"
-            value={formData.leaseDuration || ''}
-            onChange={(e) => onInputChange('leaseDuration', e.target.value)}
+            value={formData.lease_duration || ''}
+            onChange={(e) => onInputChange('lease_duration', e.target.value)}
             disabled={loading}
           >
             <option value="">Select duration</option>
@@ -298,16 +291,16 @@ const LocationPreferencesSection = ({
             Move-in Date <span className="text-red-500">*</span>
           </label>
           <input
-            className={`input ${errors.moveInDate ? 'border-red-500' : ''}`}
+            className={`input ${errors.move_in_date ? 'border-red-500' : ''}`}
             type="date"
-            value={formData.moveInDate || ''}
-            onChange={(e) => onInputChange('moveInDate', e.target.value)}
+            value={formData.move_in_date || ''}
+            onChange={(e) => onInputChange('move_in_date', e.target.value)}
             disabled={loading}
             required
             min={new Date().toISOString().split('T')[0]}
           />
-          {errors.moveInDate && (
-            <div className="text-red-500 mt-1 text-sm">{errors.moveInDate}</div>
+          {errors.move_in_date && (
+            <div className="text-red-500 mt-1 text-sm">{errors.move_in_date}</div>
           )}
           <div className="text-gray-500 mt-1 text-sm">
             When you'd like to move in
@@ -318,8 +311,8 @@ const LocationPreferencesSection = ({
           <label className="label">Move-in Flexibility</label>
           <select
             className="input"
-            value={formData.moveInFlexibility || ''}
-            onChange={(e) => onInputChange('moveInFlexibility', e.target.value)}
+            value={formData.move_in_flexibility || ''}
+            onChange={(e) => onInputChange('move_in_flexibility', e.target.value)}
             disabled={loading}
           >
             <option value="">Select flexibility</option>
@@ -334,7 +327,7 @@ const LocationPreferencesSection = ({
         </div>
       </div>
 
-      {/* Housing Type Selection */}
+      {/* Housing Type Selection - FIXED: Using standardized field name */}
       <div className="form-group mb-4">
         <label className="label">
           Housing Type Preferences <span className="text-red-500">*</span>
@@ -348,20 +341,20 @@ const LocationPreferencesSection = ({
             <label key={type} className={styles.checkboxLabel || 'checkbox-item'}>
               <input
                 type="checkbox"
-                checked={(formData.housingType || []).includes(type)}
-                onChange={(e) => onArrayChange('housingType', type, e.target.checked)}
+                checked={(formData.housing_types_accepted || []).includes(type)}
+                onChange={(e) => onArrayChange('housing_types_accepted', type, e.target.checked)}
                 disabled={loading}
               />
               <span className={styles.checkboxText || ''}>{type}</span>
             </label>
           ))}
         </div>
-        {errors.housingType && (
-          <div className="text-red-500 mt-1 text-sm">{errors.housingType}</div>
+        {errors.housing_types_accepted && (
+          <div className="text-red-500 mt-1 text-sm">{errors.housing_types_accepted}</div>
         )}
       </div>
 
-      {/* Additional Housing Preferences */}
+      {/* Additional Housing Preferences - FIXED: Using standardized field names */}
       <div className="card-header">
         <h4 className="card-title">Additional Housing Preferences</h4>
         <p className="card-subtitle">Optional features and amenities</p>
@@ -371,8 +364,8 @@ const LocationPreferencesSection = ({
         <label className={styles.checkboxLabel || 'checkbox-item'}>
           <input
             type="checkbox"
-            checked={formData.furnishedPreference || false}
-            onChange={(e) => onInputChange('furnishedPreference', e.target.checked)}
+            checked={formData.furnished_preference || false}
+            onChange={(e) => onInputChange('furnished_preference', e.target.checked)}
             disabled={loading}
           />
           <span className={styles.checkboxText || ''}>
@@ -383,8 +376,8 @@ const LocationPreferencesSection = ({
         <label className={styles.checkboxLabel || 'checkbox-item'}>
           <input
             type="checkbox"
-            checked={formData.petsAllowed || false}
-            onChange={(e) => onInputChange('petsAllowed', e.target.checked)}
+            checked={formData.pets_allowed || false}
+            onChange={(e) => onInputChange('pets_allowed', e.target.checked)}
             disabled={loading}
           />
           <span className={styles.checkboxText || ''}>
@@ -395,8 +388,8 @@ const LocationPreferencesSection = ({
         <label className={styles.checkboxLabel || 'checkbox-item'}>
           <input
             type="checkbox"
-            checked={formData.utilitiesIncluded || false}
-            onChange={(e) => onInputChange('utilitiesIncluded', e.target.checked)}
+            checked={formData.utilities_included_preference || false}
+            onChange={(e) => onInputChange('utilities_included_preference', e.target.checked)}
             disabled={loading}
           />
           <span className={styles.checkboxText || ''}>
@@ -407,8 +400,8 @@ const LocationPreferencesSection = ({
         <label className={styles.checkboxLabel || 'checkbox-item'}>
           <input
             type="checkbox"
-            checked={formData.accessibilityNeeded || false}
-            onChange={(e) => onInputChange('accessibilityNeeded', e.target.checked)}
+            checked={formData.accessibility_needed || false}
+            onChange={(e) => onInputChange('accessibility_needed', e.target.checked)}
             disabled={loading}
           />
           <span className={styles.checkboxText || ''}>
@@ -419,8 +412,8 @@ const LocationPreferencesSection = ({
         <label className={styles.checkboxLabel || 'checkbox-item'}>
           <input
             type="checkbox"
-            checked={formData.parkingRequired || false}
-            onChange={(e) => onInputChange('parkingRequired', e.target.checked)}
+            checked={formData.parking_required || false}
+            onChange={(e) => onInputChange('parking_required', e.target.checked)}
             disabled={loading}
           />
           <span className={styles.checkboxText || ''}>
@@ -431,8 +424,8 @@ const LocationPreferencesSection = ({
         <label className={styles.checkboxLabel || 'checkbox-item'}>
           <input
             type="checkbox"
-            checked={formData.publicTransitAccess || false}
-            onChange={(e) => onInputChange('publicTransitAccess', e.target.checked)}
+            checked={formData.public_transit_access || false}
+            onChange={(e) => onInputChange('public_transit_access', e.target.checked)}
             disabled={loading}
           />
           <span className={styles.checkboxText || ''}>
@@ -441,7 +434,7 @@ const LocationPreferencesSection = ({
         </label>
       </div>
 
-      {/* Location Flexibility */}
+      {/* Location Flexibility - FIXED: Using standardized field name */}
       <div className="card-header">
         <h4 className="card-title">Location Flexibility</h4>
         <p className="card-subtitle">How flexible are you with location preferences?</p>
@@ -451,8 +444,8 @@ const LocationPreferencesSection = ({
         <label className="label">Willingness to Consider Other Areas</label>
         <select
           className="input"
-          value={formData.locationFlexibility || ''}
-          onChange={(e) => onInputChange('locationFlexibility', e.target.value)}
+          value={formData.location_flexibility || ''}
+          onChange={(e) => onInputChange('location_flexibility', e.target.value)}
           disabled={loading}
         >
           <option value="">Select flexibility level</option>
@@ -467,7 +460,7 @@ const LocationPreferencesSection = ({
         </div>
       </div>
 
-      {/* ✅ UPDATED: Budget Help Notice with standardization info */}
+      {/* Budget Help Notice */}
       <div className="alert alert-info">
         <h4 className="mb-2">
           <span style={{ marginRight: '8px' }}>💡</span>
@@ -484,7 +477,7 @@ const LocationPreferencesSection = ({
           <li>Transportation costs in the new location</li>
         </ul>
         <p className="text-sm">
-          Our enhanced matching system uses standardized budget fields ({budgetMinField}, {budgetMaxField}) for more accurate compatibility scoring.
+          Our enhanced matching system uses standardized budget fields for more accurate compatibility scoring.
           <a href="/help/budget-planning" target="_blank" style={{ color: 'var(--primary-purple)', marginLeft: '5px' }}>
             Learn more about budget planning →
           </a>
@@ -496,24 +489,24 @@ const LocationPreferencesSection = ({
 
 LocationPreferencesSection.propTypes = {
   formData: PropTypes.shape({
-    primary_city: PropTypes.string,           // ✅ STANDARDIZED
-    primary_state: PropTypes.string,          // ✅ STANDARDIZED  
-    targetZipCodes: PropTypes.string,
-    budget_max: PropTypes.oneOfType([PropTypes.string, PropTypes.number]), // ✅ STANDARDIZED
-    budget_min: PropTypes.oneOfType([PropTypes.string, PropTypes.number]), // ✅ STANDARDIZED
-    maxCommute: PropTypes.string,
-    housingType: PropTypes.arrayOf(PropTypes.string),
-    moveInDate: PropTypes.string,
-    moveInFlexibility: PropTypes.string,
-    leaseDuration: PropTypes.string,
-    preferredBedrooms: PropTypes.oneOfType([PropTypes.string, PropTypes.number]),
-    furnishedPreference: PropTypes.bool,
-    petsAllowed: PropTypes.bool,
-    utilitiesIncluded: PropTypes.bool,
-    accessibilityNeeded: PropTypes.bool,
-    parkingRequired: PropTypes.bool,
-    publicTransitAccess: PropTypes.bool,
-    locationFlexibility: PropTypes.string
+    primary_city: PropTypes.string,                    // FIXED: Standardized
+    primary_state: PropTypes.string,                   // FIXED: Standardized  
+    target_zip_codes: PropTypes.string,                // FIXED: Standardized
+    budget_max: PropTypes.oneOfType([PropTypes.string, PropTypes.number]), // FIXED: Standardized
+    budget_min: PropTypes.oneOfType([PropTypes.string, PropTypes.number]), // FIXED: Standardized
+    max_commute_minutes: PropTypes.oneOfType([PropTypes.string, PropTypes.number]), // FIXED: Standardized
+    housing_types_accepted: PropTypes.arrayOf(PropTypes.string), // FIXED: Standardized
+    move_in_date: PropTypes.string,                    // FIXED: Standardized
+    move_in_flexibility: PropTypes.string,             // FIXED: Standardized
+    lease_duration: PropTypes.string,
+    preferred_bedrooms: PropTypes.oneOfType([PropTypes.string, PropTypes.number]),
+    furnished_preference: PropTypes.bool,              // FIXED: Standardized
+    pets_allowed: PropTypes.bool,
+    utilities_included_preference: PropTypes.bool,     // FIXED: Standardized
+    accessibility_needed: PropTypes.bool,              // FIXED: Standardized
+    parking_required: PropTypes.bool,                  // FIXED: Standardized
+    public_transit_access: PropTypes.bool,             // FIXED: Standardized
+    location_flexibility: PropTypes.string             // FIXED: Standardized
   }).isRequired,
   errors: PropTypes.object.isRequired,
   loading: PropTypes.bool.isRequired,
@@ -525,14 +518,12 @@ LocationPreferencesSection.propTypes = {
   onInputChange: PropTypes.func.isRequired,
   onArrayChange: PropTypes.func.isRequired,
   onRangeChange: PropTypes.func.isRequired,
-  styles: PropTypes.object,
-  fieldMapping: PropTypes.object           // ✅ NEW: For standardized field names
+  styles: PropTypes.object
 };
 
 LocationPreferencesSection.defaultProps = {
   profile: null,
-  styles: {},
-  fieldMapping: {}
+  styles: {}
 };
 
 export default LocationPreferencesSection;

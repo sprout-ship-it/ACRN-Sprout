@@ -1,4 +1,4 @@
-// src/components/features/matching/hooks/useMatchingProfileForm.js - UPDATED WITH STANDARDIZED FIELD NAMES
+// src/components/features/matching/hooks/useMatchingProfileForm.js - FULLY STANDARDIZED VERSION
 import { useState, useEffect } from 'react';
 import { useAuth } from '../../../../context/AuthContext';
 import { db } from '../../../../utils/supabase';
@@ -12,17 +12,152 @@ import {
 export const useMatchingProfileForm = () => {
   const { user, profile, hasRole } = useAuth();
   
-  // ✅ UPDATED: Form data structure using standardized field names internally
+  // FIXED: Form data structure using ONLY standardized field names from database schema
   const [formData, setFormData] = useState({
-    ...defaultFormData,
-    // ✅ STANDARDIZED: Internal form state uses consistent naming
+    // Personal Demographics (using exact database field names)
+    date_of_birth: '',
+    primary_phone: '',
+    gender_identity: '',
+    biological_sex: '',
+    current_address: '',
+    current_city: '',
+    current_state: '',
+    current_zip_code: '',
+    emergency_contact_name: '',
+    emergency_contact_phone: '',
+    emergency_contact_relationship: '',
+    
+    // Location & Housing (standardized names)
     primary_city: '',
     primary_state: '',
+    target_zip_codes: '',
+    search_radius_miles: 30,
+    location_flexibility: '',
+    max_commute_minutes: 30,
+    transportation_method: '',
+    
+    // Budget & Financial (standardized names)
     budget_min: 500,
     budget_max: 2000,
-    preferred_roommate_gender: '',
+    housing_assistance: [],
+    has_section8: false,
+    
+    // Housing Specifications
+    housing_types_accepted: [],
+    preferred_bedrooms: '',
+    move_in_date: '',
+    move_in_flexibility: '',
+    lease_duration: '',
+    furnished_preference: false,
+    utilities_included_preference: false,
+    accessibility_needed: false,
+    parking_required: false,
+    public_transit_access: false,
+    
+    // Recovery & Wellness (standardized names)
+    recovery_stage: '',
+    time_in_recovery: '',
+    sobriety_date: '',
+    primary_substance: '',
     recovery_methods: [],
-    guests_policy: ''
+    program_types: [],
+    treatment_history: '',
+    support_meetings: '',
+    sponsor_mentor: '',
+    primary_issues: [],
+    spiritual_affiliation: '',
+    want_recovery_support: false,
+    comfortable_discussing_recovery: false,
+    attend_meetings_together: false,
+    substance_free_home_required: true,
+    recovery_goal_timeframe: '',
+    recovery_context: '',
+    
+    // Roommate Preferences (standardized names)
+    preferred_roommate_gender: '',
+    gender_inclusive: false,
+    age_range_min: 18,
+    age_range_max: 65,
+    age_flexibility: '',
+    prefer_recovery_experience: false,
+    supportive_of_recovery: true,
+    substance_free_required: true,
+    respect_privacy: true,
+    social_interaction_level: '',
+    similar_schedules: false,
+    shared_chores: false,
+    financially_stable: true,
+    respectful_guests: true,
+    lgbtq_friendly: false,
+    culturally_sensitive: true,
+    
+    // Lifestyle Preferences (standardized names)
+    social_level: 3,
+    cleanliness_level: 3,
+    noise_tolerance: 3,
+    work_schedule: '',
+    work_from_home_frequency: '',
+    bedtime_preference: '',
+    early_riser: false,
+    night_owl: false,
+    guests_policy: '',
+    social_activities_at_home: '',
+    overnight_guests_ok: false,
+    cooking_enthusiast: false,
+    cooking_frequency: '',
+    exercise_at_home: false,
+    plays_instruments: false,
+    tv_streaming_regular: false,
+    
+    // Household Management (standardized names)
+    chore_sharing_style: '',
+    shared_groceries: false,
+    communication_style: '',
+    conflict_resolution_style: '',
+    preferred_support_structure: '',
+    
+    // Pets & Smoking (standardized names)
+    pets_owned: false,
+    pets_comfortable: false,
+    pet_preference: '',
+    smoking_status: '',
+    smoking_preference: '',
+    
+    // Compatibility & Goals
+    interests: [],
+    additional_interests: '',
+    shared_activities_interest: false,
+    important_qualities: [],
+    deal_breakers: [],
+    short_term_goals: '',
+    long_term_vision: '',
+    
+    // Profile Content
+    about_me: '',
+    looking_for: '',
+    additional_info: '',
+    special_needs: '',
+    
+    // Profile Status
+    is_active: true,
+    profile_completed: false,
+    profile_visibility: 'verified-members',
+    
+    // Deal Breakers (specific)
+    deal_breaker_substance_use: false,
+    deal_breaker_loudness: false,
+    deal_breaker_uncleanliness: false,
+    deal_breaker_financial_issues: true,
+    deal_breaker_pets: false,
+    deal_breaker_smoking: false,
+    
+    // Compatibility preferences
+    overnight_guests_preference: false,
+    shared_transportation: false,
+    recovery_accountability: false,
+    shared_recovery_activities: false,
+    mentorship_interest: false,
+    recovery_community: false
   });
   
   const [errors, setErrors] = useState({});
@@ -30,7 +165,7 @@ export const useMatchingProfileForm = () => {
   const [initialLoading, setInitialLoading] = useState(true);
   const [successMessage, setSuccessMessage] = useState('');
 
-  // ✅ UPDATED: Load existing data with standardized field mapping
+  // FIXED: Load existing data with direct field mapping (no conversion needed)
   useEffect(() => {
     const loadExistingData = async () => {
       if (!user || !hasRole('applicant')) {
@@ -39,119 +174,177 @@ export const useMatchingProfileForm = () => {
       }
 
       try {
-        console.log('🔍 Loading existing data for user:', user.id);
+        console.log('Loading existing data for user:', user.id);
         
-      const result = await db.matchingProfiles.getByUserId(user.id);
-      const applicantForm = result.success ? result.data : null;
-      const error = result.success ? null : result.error;
+        const result = await db.matchingProfiles.getByUserId(user.id);
+        const applicantForm = result.success ? result.data : null;
+        const error = result.success ? null : result.error;
         
         if (error) {
-          console.error('❌ Error loading applicant form:', error);
+          console.error('Error loading applicant form:', error);
           setErrors({ load: `Error loading data: ${error.message}` });
           setInitialLoading(false);
           return;
         }
         
         if (applicantForm) {
-          console.log('🔍 Loaded applicant form data with standardized fields:', applicantForm);
+          console.log('Loaded applicant form data:', applicantForm);
           
+          // FIXED: Direct mapping since field names now match exactly
           setFormData(prev => ({
             ...prev,
             // Personal Demographics
-            dateOfBirth: applicantForm.date_of_birth || '',
-            phone: applicantForm.phone || '',
-            gender: applicantForm.gender || '',
-            sex: applicantForm.sex || '',
-            address: applicantForm.address || '',
-            city: applicantForm.city || '',
-            state: applicantForm.state || '',
-            zipCode: applicantForm.zip_code || '',
-            emergencyContactName: applicantForm.emergency_contact_name || '',
-            emergencyContactPhone: applicantForm.emergency_contact_phone || '',
+            date_of_birth: applicantForm.date_of_birth || '',
+            primary_phone: applicantForm.primary_phone || '',
+            gender_identity: applicantForm.gender_identity || '',
+            biological_sex: applicantForm.biological_sex || '',
+            current_address: applicantForm.current_address || '',
+            current_city: applicantForm.current_city || '',
+            current_state: applicantForm.current_state || '',
+            current_zip_code: applicantForm.current_zip_code || '',
+            emergency_contact_name: applicantForm.emergency_contact_name || '',
+            emergency_contact_phone: applicantForm.emergency_contact_phone || '',
+            emergency_contact_relationship: applicantForm.emergency_contact_relationship || '',
             
-            // ✅ STANDARDIZED: Location & Housing using new field names
-            primary_city: applicantForm.primary_city || applicantForm.preferred_city || '',
-            primary_state: applicantForm.primary_state || applicantForm.preferred_state || '',
-            targetZipCodes: applicantForm.target_zip_codes?.join(', ') || '',
-            searchRadius: applicantForm.search_radius?.toString() || '25',
-            currentLocation: applicantForm.current_location || '',
-            relocationTimeline: applicantForm.relocation_timeline || '',
-            maxCommute: applicantForm.max_commute?.toString() || '',
-            housingType: applicantForm.housing_type || [],
-            priceRangeMin: applicantForm.price_range_min || 500,
-            priceRangeMax: applicantForm.price_range_max || 2000,
+            // Location & Housing
+            primary_city: applicantForm.primary_city || '',
+            primary_state: applicantForm.primary_state || '',
+            target_zip_codes: applicantForm.target_zip_codes?.join(', ') || '',
+            search_radius_miles: applicantForm.search_radius_miles || 30,
+            location_flexibility: applicantForm.location_flexibility || '',
+            max_commute_minutes: applicantForm.max_commute_minutes || 30,
+            transportation_method: applicantForm.transportation_method || '',
             
-            // ✅ STANDARDIZED: Budget using new field names
-            budget_min: applicantForm.budget_min || applicantForm.price_range_min || 500,
-            budget_max: applicantForm.budget_max || applicantForm.price_range_max || 2000,
+            // Budget & Financial
+            budget_min: applicantForm.budget_min || 500,
+            budget_max: applicantForm.budget_max || 2000,
+            housing_assistance: applicantForm.housing_assistance || [],
+            has_section8: applicantForm.has_section8 || false,
             
-            moveInDate: applicantForm.move_in_date || '',
-            leaseDuration: applicantForm.lease_duration || '',
+            // Housing Specifications
+            housing_types_accepted: applicantForm.housing_types_accepted || [],
+            preferred_bedrooms: applicantForm.preferred_bedrooms || '',
+            move_in_date: applicantForm.move_in_date || '',
+            move_in_flexibility: applicantForm.move_in_flexibility || '',
+            lease_duration: applicantForm.lease_duration || '',
+            furnished_preference: applicantForm.furnished_preference || false,
+            utilities_included_preference: applicantForm.utilities_included_preference || false,
+            accessibility_needed: applicantForm.accessibility_needed || false,
+            parking_required: applicantForm.parking_required || false,
+            public_transit_access: applicantForm.public_transit_access || false,
             
-            // ✅ STANDARDIZED: Gender preferences using new field name
-            ageRangeMin: applicantForm.age_range_min || 18,
-            ageRangeMax: applicantForm.age_range_max || 65,
-            preferred_roommate_gender: applicantForm.preferred_roommate_gender || applicantForm.gender_preference || '',
-            smokingPreference: applicantForm.smoking_preference || '',
-            smokingStatus: applicantForm.smoking_status || '',
-            petPreference: applicantForm.pet_preference || '',
-            
-            // ✅ STANDARDIZED: Recovery information using standardized field names
-            recoveryStage: applicantForm.recovery_stage || '',
-            primarySubstance: applicantForm.primary_substance || '',
-            timeInRecovery: applicantForm.time_in_recovery || '',
-            treatmentHistory: applicantForm.treatment_history || '',
-            programType: applicantForm.program_type || [],
-            sobrietyDate: applicantForm.sobriety_date || '',
-            sponsorMentor: applicantForm.sponsor_mentor || '',
-            supportMeetings: applicantForm.support_meetings || '',
-            spiritualAffiliation: applicantForm.spiritual_affiliation || '',
-            primaryIssues: applicantForm.primary_issues || [],
+            // Recovery & Wellness
+            recovery_stage: applicantForm.recovery_stage || '',
+            time_in_recovery: applicantForm.time_in_recovery || '',
+            sobriety_date: applicantForm.sobriety_date || '',
+            primary_substance: applicantForm.primary_substance || '',
             recovery_methods: applicantForm.recovery_methods || [],
+            program_types: applicantForm.program_types || [],
+            treatment_history: applicantForm.treatment_history || '',
+            support_meetings: applicantForm.support_meetings || '',
+            sponsor_mentor: applicantForm.sponsor_mentor || '',
+            primary_issues: applicantForm.primary_issues || [],
+            spiritual_affiliation: applicantForm.spiritual_affiliation || '',
+            want_recovery_support: applicantForm.want_recovery_support || false,
+            comfortable_discussing_recovery: applicantForm.comfortable_discussing_recovery || false,
+            attend_meetings_together: applicantForm.attend_meetings_together || false,
+            substance_free_home_required: applicantForm.substance_free_home_required !== false,
+            recovery_goal_timeframe: applicantForm.recovery_goal_timeframe || '',
+            recovery_context: applicantForm.recovery_context || '',
             
-            // ✅ STANDARDIZED: Lifestyle preferences using standardized field names
-            workSchedule: applicantForm.work_schedule || '',
-            socialLevel: applicantForm.social_level || 3,
-            cleanlinessLevel: applicantForm.cleanliness_level || 3,
-            noiseLevel: applicantForm.noise_level || 3,
-            guests_policy: applicantForm.guests_policy || applicantForm.guest_policy || '',
-            bedtimePreference: applicantForm.bedtime_preference || '',
-            transportation: applicantForm.transportation || '',
-            choreSharingPreference: applicantForm.chore_sharing_preference || '',
-            preferredSupportStructure: applicantForm.preferred_support_structure || '',
-            conflictResolutionStyle: applicantForm.conflict_resolution_style || '',
+            // Roommate Preferences
+            preferred_roommate_gender: applicantForm.preferred_roommate_gender || '',
+            gender_inclusive: applicantForm.gender_inclusive || false,
+            age_range_min: applicantForm.age_range_min || 18,
+            age_range_max: applicantForm.age_range_max || 65,
+            age_flexibility: applicantForm.age_flexibility || '',
+            prefer_recovery_experience: applicantForm.prefer_recovery_experience || false,
+            supportive_of_recovery: applicantForm.supportive_of_recovery !== false,
+            substance_free_required: applicantForm.substance_free_required !== false,
+            respect_privacy: applicantForm.respect_privacy !== false,
+            social_interaction_level: applicantForm.social_interaction_level || '',
+            similar_schedules: applicantForm.similar_schedules || false,
+            shared_chores: applicantForm.shared_chores || false,
+            financially_stable: applicantForm.financially_stable !== false,
+            respectful_guests: applicantForm.respectful_guests !== false,
+            lgbtq_friendly: applicantForm.lgbtq_friendly || false,
+            culturally_sensitive: applicantForm.culturally_sensitive !== false,
             
-            // Living Situation
-            petsOwned: applicantForm.pets_owned || false,
-            petsComfortable: applicantForm.pets_comfortable !== false,
-            overnightGuestsOk: applicantForm.overnight_guests_ok !== false,
-            sharedGroceries: applicantForm.shared_groceries || false,
-            cookingFrequency: applicantForm.cooking_frequency || '',
+            // Lifestyle Preferences
+            social_level: applicantForm.social_level || 3,
+            cleanliness_level: applicantForm.cleanliness_level || 3,
+            noise_tolerance: applicantForm.noise_tolerance || 3,
+            work_schedule: applicantForm.work_schedule || '',
+            work_from_home_frequency: applicantForm.work_from_home_frequency || '',
+            bedtime_preference: applicantForm.bedtime_preference || '',
+            early_riser: applicantForm.early_riser || false,
+            night_owl: applicantForm.night_owl || false,
+            guests_policy: applicantForm.guests_policy || '',
+            social_activities_at_home: applicantForm.social_activities_at_home || '',
+            overnight_guests_ok: applicantForm.overnight_guests_ok || false,
+            cooking_enthusiast: applicantForm.cooking_enthusiast || false,
+            cooking_frequency: applicantForm.cooking_frequency || '',
+            exercise_at_home: applicantForm.exercise_at_home || false,
+            plays_instruments: applicantForm.plays_instruments || false,
+            tv_streaming_regular: applicantForm.tv_streaming_regular || false,
             
-            // Housing Assistance
-            housingSubsidy: applicantForm.housing_subsidy || [],
-            hasSection8: applicantForm.has_section8 || false,
-            acceptsSubsidy: applicantForm.accepts_subsidy !== false,
+            // Household Management
+            chore_sharing_style: applicantForm.chore_sharing_style || '',
+            shared_groceries: applicantForm.shared_groceries || false,
+            communication_style: applicantForm.communication_style || '',
+            conflict_resolution_style: applicantForm.conflict_resolution_style || '',
+            preferred_support_structure: applicantForm.preferred_support_structure || '',
             
-            // Compatibility Factors
+            // Pets & Smoking
+            pets_owned: applicantForm.pets_owned || false,
+            pets_comfortable: applicantForm.pets_comfortable !== false,
+            pet_preference: applicantForm.pet_preference || '',
+            smoking_status: applicantForm.smoking_status || '',
+            smoking_preference: applicantForm.smoking_preference || '',
+            
+            // Compatibility & Goals
             interests: applicantForm.interests || [],
-            dealBreakers: applicantForm.deal_breakers || [],
-            importantQualities: applicantForm.important_qualities || [],
+            additional_interests: applicantForm.additional_interests || '',
+            shared_activities_interest: applicantForm.shared_activities_interest || false,
+            important_qualities: applicantForm.important_qualities || [],
+            deal_breakers: applicantForm.deal_breakers || [],
+            short_term_goals: applicantForm.short_term_goals || '',
+            long_term_vision: applicantForm.long_term_vision || '',
             
-            // Open-ended responses
-            aboutMe: applicantForm.about_me || '',
-            lookingFor: applicantForm.looking_for || '',
-            additionalInfo: applicantForm.additional_info || '',
-            specialNeeds: applicantForm.special_needs || '',
-            isActive: applicantForm.is_active !== false
+            // Profile Content
+            about_me: applicantForm.about_me || '',
+            looking_for: applicantForm.looking_for || '',
+            additional_info: applicantForm.additional_info || '',
+            special_needs: applicantForm.special_needs || '',
+            
+            // Profile Status
+            is_active: applicantForm.is_active !== false,
+            profile_completed: applicantForm.profile_completed || false,
+            profile_visibility: applicantForm.profile_visibility || 'verified-members',
+            
+            // Deal Breakers
+            deal_breaker_substance_use: applicantForm.deal_breaker_substance_use || false,
+            deal_breaker_loudness: applicantForm.deal_breaker_loudness || false,
+            deal_breaker_uncleanliness: applicantForm.deal_breaker_uncleanliness || false,
+            deal_breaker_financial_issues: applicantForm.deal_breaker_financial_issues !== false,
+            deal_breaker_pets: applicantForm.deal_breaker_pets || false,
+            deal_breaker_smoking: applicantForm.deal_breaker_smoking || false,
+            
+            // Compatibility preferences
+            overnight_guests_preference: applicantForm.overnight_guests_preference || false,
+            shared_transportation: applicantForm.shared_transportation || false,
+            recovery_accountability: applicantForm.recovery_accountability || false,
+            shared_recovery_activities: applicantForm.shared_recovery_activities || false,
+            mentorship_interest: applicantForm.mentorship_interest || false,
+            recovery_community: applicantForm.recovery_community || false
           }));
           
-          console.log('✅ Form data populated successfully with standardized fields');
+          console.log('Form data populated successfully with standardized fields');
         } else {
-          console.log('🔍 No existing applicant form found for user');
+          console.log('No existing applicant form found for user');
         }
       } catch (error) {
-        console.error('💥 Error loading applicant form data:', error);
+        console.error('Error loading applicant form data:', error);
         setErrors({ load: `Error loading data: ${error.message}` });
       } finally {
         setInitialLoading(false);
@@ -161,19 +354,19 @@ export const useMatchingProfileForm = () => {
     loadExistingData();
   }, [user, profile, hasRole]);
 
-  // ✅ UPDATED: Calculate completion with standardized required fields
+  // FIXED: Calculate completion with standardized required fields
   const getCompletionPercentage = () => {
     let completed = 0;
     let total = 0;
     
-    // ✅ STANDARDIZED: Core required fields using new naming
+    // Core required fields using standardized names
     const coreRequiredFields = [
-      'dateOfBirth', 'phone', 'gender', 'primary_city', 'primary_state',
-      'budget_max', 'recoveryStage', 'preferred_roommate_gender'
+      'date_of_birth', 'primary_phone', 'gender_identity', 'primary_city', 'primary_state',
+      'budget_max', 'recovery_stage', 'preferred_roommate_gender'
     ];
     
     const arrayRequiredFields = [
-      'housingType', 'recovery_methods', 'primaryIssues'
+      'housing_types_accepted', 'recovery_methods', 'primary_issues'
     ];
     
     total = coreRequiredFields.length + arrayRequiredFields.length;
@@ -189,20 +382,20 @@ export const useMatchingProfileForm = () => {
     return Math.round((completed / total) * 100);
   };
 
-  // ✅ UPDATED: Validation with standardized field names
+  // FIXED: Validation with standardized field names
   const validateForm = () => {
-    console.log('🔍 Starting form validation with standardized fields...');
+    console.log('Starting form validation with standardized fields...');
     const newErrors = {};
     
-    // ✅ STANDARDIZED: Core required field validation
+    // Core required field validation
     const requiredFields = {
-      dateOfBirth: 'Date of birth is required',
-      phone: 'Phone number is required',
-      gender: 'Gender is required',
+      date_of_birth: 'Date of birth is required',
+      primary_phone: 'Phone number is required',
+      gender_identity: 'Gender is required',
       primary_city: 'Preferred city is required',
       primary_state: 'Preferred state is required',
       budget_max: 'Maximum budget is required',
-      recoveryStage: 'Recovery stage is required',
+      recovery_stage: 'Recovery stage is required',
       preferred_roommate_gender: 'Roommate gender preference is required'
     };
     
@@ -212,11 +405,11 @@ export const useMatchingProfileForm = () => {
       }
     });
     
-    // ✅ STANDARDIZED: Array field validation
+    // Array field validation
     const arrayRequiredFields = {
-      housingType: 'Please select at least one housing type',
+      housing_types_accepted: 'Please select at least one housing type',
       recovery_methods: 'Please select at least one recovery method',
-      primaryIssues: 'Please select at least one primary issue'
+      primary_issues: 'Please select at least one primary issue'
     };
     
     Object.entries(arrayRequiredFields).forEach(([field, message]) => {
@@ -225,10 +418,10 @@ export const useMatchingProfileForm = () => {
       }
     });
 
-    // Age validation (must be 18+)
-    if (formData.dateOfBirth) {
+    // Age validation
+    if (formData.date_of_birth) {
       const today = new Date();
-      const birthDate = new Date(formData.dateOfBirth);
+      const birthDate = new Date(formData.date_of_birth);
       let age = today.getFullYear() - birthDate.getFullYear();
       const monthDiff = today.getMonth() - birthDate.getMonth();
       
@@ -237,21 +430,21 @@ export const useMatchingProfileForm = () => {
       }
       
       if (age < 18) {
-        newErrors.dateOfBirth = 'You must be 18 or older to use this service';
+        newErrors.date_of_birth = 'You must be 18 or older to use this service';
       }
     }
 
     // Phone validation
-    if (formData.phone && !/^\(?([0-9]{3})\)?[-. ]?([0-9]{3})[-. ]?([0-9]{4})$/.test(formData.phone.replace(/\D/g, ''))) {
-      newErrors.phone = 'Please enter a valid phone number';
+    if (formData.primary_phone && !/^\(?([0-9]{3})\)?[-. ]?([0-9]{3})[-. ]?([0-9]{4})$/.test(formData.primary_phone.replace(/\D/g, ''))) {
+      newErrors.primary_phone = 'Please enter a valid phone number';
     }
 
     // ZIP code validation
-    if (formData.zipCode && !/^\d{5}(-\d{4})?$/.test(formData.zipCode)) {
-      newErrors.zipCode = 'Please enter a valid ZIP code';
+    if (formData.current_zip_code && !/^\d{5}(-\d{4})?$/.test(formData.current_zip_code)) {
+      newErrors.current_zip_code = 'Please enter a valid ZIP code';
     }
 
-    // ✅ STANDARDIZED: Budget validation using new field names
+    // Budget validation
     if (formData.budget_max < 300) {
       newErrors.budget_max = 'Maximum budget must be at least $300';
     }
@@ -264,35 +457,35 @@ export const useMatchingProfileForm = () => {
     }
 
     // Text length validation
-    if (formData.aboutMe && formData.aboutMe.length > 1000) {
-      newErrors.aboutMe = 'About me must be 1000 characters or less';
+    if (formData.about_me && formData.about_me.length > 1000) {
+      newErrors.about_me = 'About me must be 1000 characters or less';
     }
-    if (formData.lookingFor && formData.lookingFor.length > 1000) {
-      newErrors.lookingFor = 'Looking for must be 1000 characters or less';
+    if (formData.looking_for && formData.looking_for.length > 1000) {
+      newErrors.looking_for = 'Looking for must be 1000 characters or less';
     }
-    if (formData.additionalInfo && formData.additionalInfo.length > 500) {
-      newErrors.additionalInfo = 'Additional info must be 500 characters or less';
+    if (formData.additional_info && formData.additional_info.length > 500) {
+      newErrors.additional_info = 'Additional info must be 500 characters or less';
     }
 
     // Date validation
-    if (formData.moveInDate) {
-      const moveInDate = new Date(formData.moveInDate);
+    if (formData.move_in_date) {
+      const moveInDate = new Date(formData.move_in_date);
       const today = new Date();
-      today.setHours(0, 0, 0, 0); // Reset time to compare dates only
+      today.setHours(0, 0, 0, 0);
       
       if (moveInDate < today) {
-        newErrors.moveInDate = 'Move-in date cannot be in the past';
+        newErrors.move_in_date = 'Move-in date cannot be in the past';
       }
     }
 
-    console.log('🔍 Validation errors found:', newErrors);
+    console.log('Validation errors found:', newErrors);
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
 
   // Handle input changes
   const handleInputChange = (field, value) => {
-    console.log('🔍 handleInputChange called:', { field, value });
+    console.log('handleInputChange called:', { field, value });
     setFormData(prev => ({ ...prev, [field]: value }));
     
     // Clear error for this field
@@ -303,7 +496,7 @@ export const useMatchingProfileForm = () => {
 
   // Handle array field changes
   const handleArrayChange = (field, value, checked) => {
-    console.log('🔍 handleArrayChange called:', { field, value, checked });
+    console.log('handleArrayChange called:', { field, value, checked });
     setFormData(prev => ({
       ...prev,
       [field]: checked 
@@ -319,13 +512,13 @@ export const useMatchingProfileForm = () => {
 
   // Handle range changes
   const handleRangeChange = (field, value) => {
-    console.log('🔍 handleRangeChange called:', { field, value });
+    console.log('handleRangeChange called:', { field, value });
     handleInputChange(field, parseInt(value));
   };
 
-  // ✅ UPDATED: Form submission with standardized database field mapping
+  // FIXED: Form submission using standardized database field mapping (no conversion needed)
   const submitForm = async () => {
-    console.log('🔍 Form submission started with standardized fields');
+    console.log('Form submission started with standardized fields');
     
     setErrors(prev => {
       const { submit, ...otherErrors } = prev;
@@ -333,7 +526,7 @@ export const useMatchingProfileForm = () => {
     });
     
     if (!validateForm()) {
-      console.log('🔍 Form validation failed');
+      console.log('Form validation failed');
       return false;
     }
     
@@ -341,113 +534,169 @@ export const useMatchingProfileForm = () => {
     setSuccessMessage('');
     
     try {
-      console.log('📊 Preparing standardized form data for submission...');
+      console.log('Preparing standardized form data for submission...');
       
       // Parse target zip codes
-      const targetZipCodes = formData.targetZipCodes
-        ? formData.targetZipCodes
+      const targetZipCodes = formData.target_zip_codes
+        ? formData.target_zip_codes
             .split(',')
             .map(zip => zip.trim())
             .filter(zip => zip && /^\d{5}$/.test(zip))
         : [];
 
-      // ✅ STANDARDIZED: Database submission using correct field names
+      // FIXED: Direct submission using standardized field names (no mapping needed)
       const applicantFormData = {
         user_id: user.id,
-        date_of_birth: formData.dateOfBirth,
-        phone: formData.phone,
-        gender: formData.gender || null,
-        sex: formData.sex || null,
-        address: formData.address || null,
-        city: formData.city || null,
-        state: formData.state || null,
-        zip_code: formData.zipCode || null,
-        emergency_contact_name: formData.emergencyContactName || null,
-        emergency_contact_phone: formData.emergencyContactPhone || null,
         
-        // ✅ STANDARDIZED: Use primary_city/primary_state for database
+        // Personal Demographics
+        date_of_birth: formData.date_of_birth,
+        primary_phone: formData.primary_phone,
+        gender_identity: formData.gender_identity || null,
+        biological_sex: formData.biological_sex || null,
+        current_address: formData.current_address || null,
+        current_city: formData.current_city || null,
+        current_state: formData.current_state || null,
+        current_zip_code: formData.current_zip_code || null,
+        emergency_contact_name: formData.emergency_contact_name || null,
+        emergency_contact_phone: formData.emergency_contact_phone || null,
+        emergency_contact_relationship: formData.emergency_contact_relationship || null,
+        
+        // Location & Housing
         primary_city: formData.primary_city,
         primary_state: formData.primary_state,
         target_zip_codes: targetZipCodes,
-        search_radius: formData.searchRadius ? parseInt(formData.searchRadius) : 25,
-        current_location: formData.currentLocation || null,
-        relocation_timeline: formData.relocationTimeline || null,
-        max_commute: formData.maxCommute ? parseInt(formData.maxCommute) : null,
-        housing_type: formData.housingType || [],
-        price_range_min: formData.priceRangeMin || formData.budget_min || 500,
-        price_range_max: formData.priceRangeMax || formData.budget_max || 2000,
+        search_radius_miles: formData.search_radius_miles || 30,
+        location_flexibility: formData.location_flexibility || null,
+        max_commute_minutes: formData.max_commute_minutes || null,
+        transportation_method: formData.transportation_method || null,
         
-        // ✅ STANDARDIZED: Use budget_min/budget_max for database
+        // Budget & Financial
         budget_min: formData.budget_min || 500,
         budget_max: formData.budget_max || 2000,
+        housing_assistance: formData.housing_assistance || [],
+        has_section8: formData.has_section8 || false,
         
-        move_in_date: formData.moveInDate || null,
-        lease_duration: formData.leaseDuration || null,
+        // Housing Specifications
+        housing_types_accepted: formData.housing_types_accepted || [],
+        preferred_bedrooms: formData.preferred_bedrooms || null,
+        move_in_date: formData.move_in_date || null,
+        move_in_flexibility: formData.move_in_flexibility || null,
+        lease_duration: formData.lease_duration || null,
+        furnished_preference: formData.furnished_preference || false,
+        utilities_included_preference: formData.utilities_included_preference || false,
+        accessibility_needed: formData.accessibility_needed || false,
+        parking_required: formData.parking_required || false,
+        public_transit_access: formData.public_transit_access || false,
         
-        // ✅ STANDARDIZED: Use preferred_roommate_gender for database
-        age_range_min: formData.ageRangeMin || 18,
-        age_range_max: formData.ageRangeMax || 65,
-        preferred_roommate_gender: formData.preferred_roommate_gender || null,
-        smoking_preference: formData.smokingPreference || null,
-        smoking_status: formData.smokingStatus || null,
-        pet_preference: formData.petPreference || null,
-        
-        // ✅ STANDARDIZED: Recovery information
-        recovery_stage: formData.recoveryStage,
-        primary_substance: formData.primarySubstance || null,
-        time_in_recovery: formData.timeInRecovery || null,
-        treatment_history: formData.treatmentHistory || null,
-        program_type: formData.programType || [],
-        sobriety_date: formData.sobrietyDate || null,
-        sponsor_mentor: formData.sponsorMentor || null,
-        support_meetings: formData.supportMeetings || null,
-        spiritual_affiliation: formData.spiritualAffiliation || null,
-        primary_issues: formData.primaryIssues || [],
+        // Recovery & Wellness
+        recovery_stage: formData.recovery_stage,
+        time_in_recovery: formData.time_in_recovery || null,
+        sobriety_date: formData.sobriety_date || null,
+        primary_substance: formData.primary_substance || null,
         recovery_methods: formData.recovery_methods || [],
+        program_types: formData.program_types || [],
+        treatment_history: formData.treatment_history || null,
+        support_meetings: formData.support_meetings || null,
+        sponsor_mentor: formData.sponsor_mentor || null,
+        primary_issues: formData.primary_issues || [],
+        spiritual_affiliation: formData.spiritual_affiliation || null,
+        want_recovery_support: formData.want_recovery_support || false,
+        comfortable_discussing_recovery: formData.comfortable_discussing_recovery || false,
+        attend_meetings_together: formData.attend_meetings_together || false,
+        substance_free_home_required: formData.substance_free_home_required !== false,
+        recovery_goal_timeframe: formData.recovery_goal_timeframe || null,
+        recovery_context: formData.recovery_context || null,
         
-        // ✅ STANDARDIZED: Lifestyle preferences
-        work_schedule: formData.workSchedule || null,
-        social_level: formData.socialLevel ? parseInt(formData.socialLevel) : 3,
-        cleanliness_level: formData.cleanlinessLevel ? parseInt(formData.cleanlinessLevel) : 3,
-        noise_level: formData.noiseLevel ? parseInt(formData.noiseLevel) : 3,
+        // Roommate Preferences
+        preferred_roommate_gender: formData.preferred_roommate_gender || null,
+        gender_inclusive: formData.gender_inclusive || false,
+        age_range_min: formData.age_range_min || 18,
+        age_range_max: formData.age_range_max || 65,
+        age_flexibility: formData.age_flexibility || null,
+        prefer_recovery_experience: formData.prefer_recovery_experience || false,
+        supportive_of_recovery: formData.supportive_of_recovery !== false,
+        substance_free_required: formData.substance_free_required !== false,
+        respect_privacy: formData.respect_privacy !== false,
+        social_interaction_level: formData.social_interaction_level || null,
+        similar_schedules: formData.similar_schedules || false,
+        shared_chores: formData.shared_chores || false,
+        financially_stable: formData.financially_stable !== false,
+        respectful_guests: formData.respectful_guests !== false,
+        lgbtq_friendly: formData.lgbtq_friendly || false,
+        culturally_sensitive: formData.culturally_sensitive !== false,
+        
+        // Lifestyle Preferences
+        social_level: formData.social_level || 3,
+        cleanliness_level: formData.cleanliness_level || 3,
+        noise_tolerance: formData.noise_tolerance || 3,
+        work_schedule: formData.work_schedule || null,
+        work_from_home_frequency: formData.work_from_home_frequency || null,
+        bedtime_preference: formData.bedtime_preference || null,
+        early_riser: formData.early_riser || false,
+        night_owl: formData.night_owl || false,
         guests_policy: formData.guests_policy || null,
-        bedtime_preference: formData.bedtimePreference || null,
-        transportation: formData.transportation || null,
-        chore_sharing_preference: formData.choreSharingPreference || null,
-        preferred_support_structure: formData.preferredSupportStructure || null,
-        conflict_resolution_style: formData.conflictResolutionStyle || null,
+        social_activities_at_home: formData.social_activities_at_home || null,
+        overnight_guests_ok: formData.overnight_guests_ok || false,
+        cooking_enthusiast: formData.cooking_enthusiast || false,
+        cooking_frequency: formData.cooking_frequency || null,
+        exercise_at_home: formData.exercise_at_home || false,
+        plays_instruments: formData.plays_instruments || false,
+        tv_streaming_regular: formData.tv_streaming_regular || false,
         
-        // Living situation
-        pets_owned: formData.petsOwned || false,
-        pets_comfortable: formData.petsComfortable !== false,
-        overnight_guests_ok: formData.overnightGuestsOk !== false,
-        shared_groceries: formData.sharedGroceries || false,
-        cooking_frequency: formData.cookingFrequency || null,
+        // Household Management
+        chore_sharing_style: formData.chore_sharing_style || null,
+        shared_groceries: formData.shared_groceries || false,
+        communication_style: formData.communication_style || null,
+        conflict_resolution_style: formData.conflict_resolution_style || null,
+        preferred_support_structure: formData.preferred_support_structure || null,
         
-        // Housing assistance
-        housing_subsidy: formData.housingSubsidy || [],
-        has_section8: formData.hasSection8 || false,
-        accepts_subsidy: formData.acceptsSubsidy !== false,
+        // Pets & Smoking
+        pets_owned: formData.pets_owned || false,
+        pets_comfortable: formData.pets_comfortable !== false,
+        pet_preference: formData.pet_preference || null,
+        smoking_status: formData.smoking_status || null,
+        smoking_preference: formData.smoking_preference || null,
         
-        // Compatibility factors
+        // Compatibility & Goals
         interests: formData.interests || [],
-        deal_breakers: formData.dealBreakers || [],
-        important_qualities: formData.importantQualities || [],
+        additional_interests: formData.additional_interests || null,
+        shared_activities_interest: formData.shared_activities_interest || false,
+        important_qualities: formData.important_qualities || [],
+        deal_breakers: formData.deal_breakers || [],
+        short_term_goals: formData.short_term_goals || null,
+        long_term_vision: formData.long_term_vision || null,
         
-        // Open-ended responses
-        about_me: formData.aboutMe || null,
-        looking_for: formData.lookingFor || null,
-        additional_info: formData.additionalInfo || null,
-        special_needs: formData.specialNeeds || null,
+        // Profile Content
+        about_me: formData.about_me || null,
+        looking_for: formData.looking_for || null,
+        additional_info: formData.additional_info || null,
+        special_needs: formData.special_needs || null,
         
-        // Status
-        is_active: formData.isActive !== false,
-        profile_completed: true
+        // Profile Status
+        is_active: formData.is_active !== false,
+        profile_completed: true,
+        profile_visibility: formData.profile_visibility || 'verified-members',
+        
+        // Deal Breakers
+        deal_breaker_substance_use: formData.deal_breaker_substance_use || false,
+        deal_breaker_loudness: formData.deal_breaker_loudness || false,
+        deal_breaker_uncleanliness: formData.deal_breaker_uncleanliness || false,
+        deal_breaker_financial_issues: formData.deal_breaker_financial_issues !== false,
+        deal_breaker_pets: formData.deal_breaker_pets || false,
+        deal_breaker_smoking: formData.deal_breaker_smoking || false,
+        
+        // Compatibility preferences
+        overnight_guests_preference: formData.overnight_guests_preference || false,
+        shared_transportation: formData.shared_transportation || false,
+        recovery_accountability: formData.recovery_accountability || false,
+        shared_recovery_activities: formData.shared_recovery_activities || false,
+        mentorship_interest: formData.mentorship_interest || false,
+        recovery_community: formData.recovery_community || false
       };
       
-      console.log('🔧 Standardized database submission starting...', { 
+      console.log('Standardized database submission starting...', { 
         userId: user.id, 
-        dataKeys: Object.keys(applicantFormData),
+        dataKeys: Object.keys(applicantFormData).length,
         primaryCity: applicantFormData.primary_city,
         primaryState: applicantFormData.primary_state,
         budgetMax: applicantFormData.budget_max,
@@ -464,18 +713,18 @@ export const useMatchingProfileForm = () => {
       clearTimeout(timeoutId);
 
       if (!result.success) {
-        console.error('❌ Submission error:', result.error);
+        console.error('Submission error:', result.error);
         setErrors({ submit: `Database error: ${result.error}` });
         return false;
       }
 
-      console.log('✅ Form submission successful', result.data);
+      console.log('Form submission successful', result.data);
       setSuccessMessage('Comprehensive matching profile saved successfully with standardized fields!');
 
       return true;
       
     } catch (error) {
-      console.error('💥 Standardized submission error:', error);
+      console.error('Standardized submission error:', error);
       
       if (error.name === 'AbortError') {
         setErrors({ submit: 'Request timed out. Please try again.' });
