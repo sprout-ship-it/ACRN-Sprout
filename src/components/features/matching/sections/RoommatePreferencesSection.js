@@ -1,4 +1,4 @@
-// src/components/features/matching/sections/RoommatePreferencesSection.js - Refactored with enhanced CSS module usage
+// src/components/features/matching/sections/RoommatePreferencesSection.js - FIXED FIELD MAPPING
 import React from 'react';
 import PropTypes from 'prop-types';
 import {
@@ -10,12 +10,16 @@ const RoommatePreferencesSection = ({
   formData,
   errors,
   loading,
-  profile,      // Added for interface consistency
+  profile,
   onInputChange,
-  onArrayChange, // Added for interface consistency
-  onRangeChange, // Added for interface consistency
-  styles = {}   // CSS module styles passed from parent
+  onArrayChange,
+  onRangeChange,
+  styles = {},
+  fieldMapping = {} // ✅ FIXED: Now properly use field mapping
 }) => {
+  // ✅ FIXED: Use standardized field names from mapping
+  const genderPrefField = fieldMapping?.gender?.preference || 'preferred_roommate_gender';
+  
   return (
     <>
       {/* Roommate Preferences Header */}
@@ -46,9 +50,9 @@ const RoommatePreferencesSection = ({
             Roommate Gender Preference <span className="text-red-500">*</span>
           </label>
           <select
-            className={`input ${errors.preferredRoommateGender ? 'border-red-500' : ''}`}
-            value={formData.preferredRoommateGender || ''}
-            onChange={(e) => onInputChange('preferredRoommateGender', e.target.value)}
+            className={`input ${errors[genderPrefField] ? 'border-red-500' : ''}`}
+            value={formData[genderPrefField] || ''}
+            onChange={(e) => onInputChange(genderPrefField, e.target.value)}
             disabled={loading}
             required
           >
@@ -58,11 +62,11 @@ const RoommatePreferencesSection = ({
               </option>
             ))}
           </select>
-          {errors.preferredRoommateGender && (
-            <div className="text-red-500 mt-1 text-sm">{errors.preferredRoommateGender}</div>
+          {errors[genderPrefField] && (
+            <div className="text-red-500 mt-1 text-sm">{errors[genderPrefField]}</div>
           )}
           <div className="text-gray-500 mt-1 text-sm">
-            This helps ensure comfort and safety for all roommates
+            This helps ensure comfort and safety for all roommates (stored as: {genderPrefField})
           </div>
         </div>
         
@@ -501,7 +505,7 @@ const RoommatePreferencesSection = ({
 
 RoommatePreferencesSection.propTypes = {
   formData: PropTypes.shape({
-    preferredRoommateGender: PropTypes.string,
+    preferred_roommate_gender: PropTypes.string, // ✅ FIXED: Now matches database
     smokingStatus: PropTypes.string,
     ageRangeMin: PropTypes.number,
     ageRangeMax: PropTypes.number,
@@ -537,12 +541,14 @@ RoommatePreferencesSection.propTypes = {
   onInputChange: PropTypes.func.isRequired,
   onArrayChange: PropTypes.func.isRequired,
   onRangeChange: PropTypes.func.isRequired,
-  styles: PropTypes.object
+  styles: PropTypes.object,
+  fieldMapping: PropTypes.object // ✅ FIXED: Now properly documented
 };
 
 RoommatePreferencesSection.defaultProps = {
   profile: null,
-  styles: {}
+  styles: {},
+  fieldMapping: {} // ✅ FIXED: Default empty object
 };
 
 export default RoommatePreferencesSection;

@@ -127,20 +127,40 @@ const EnhancedMatchingProfileForm = ({ editMode = false, onComplete, onCancel })
     }, 100); // Small delay to ensure content is rendered
   };
 
-  // ✅ UPDATED: Add explicit event prevention to all navigation handlers
-  const handleNext = useCallback((e) => {
-    if (e) {
-      e.preventDefault();
-      e.stopPropagation();
-    }
+const handleNext = useCallback((e) => {
+  if (e) {
+    e.preventDefault();
+    e.stopPropagation();
+  }
+  
+  console.log('🔄 Next button clicked, current section:', currentSectionIndex);
+  
+  // ✅ NEW: Validate current section before navigation
+  const currentSectionId = FORM_SECTIONS[currentSectionIndex].id;
+  const navigationCheck = shouldBlockNavigation(currentSectionId, formData);
+  
+  if (navigationCheck.shouldBlock) {
+    setValidationMessage(navigationCheck.message);
+    console.log('🚫 Navigation blocked:', navigationCheck.reason);
     
-    console.log('🔄 Next button clicked, current section:', currentSectionIndex);
-    
-    if (currentSectionIndex < FORM_SECTIONS.length - 1) {
-      setCurrentSectionIndex(prev => prev + 1);
-      scrollToFirstFormField();
-    }
-  }, [currentSectionIndex]);
+    // Scroll to first error
+    setTimeout(() => {
+      const firstError = document.querySelector('.border-red-500');
+      if (firstError) {
+        firstError.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      }
+    }, 100);
+    return;
+  }
+  
+  // Clear any validation messages
+  setValidationMessage('');
+  
+  if (currentSectionIndex < FORM_SECTIONS.length - 1) {
+    setCurrentSectionIndex(prev => prev + 1);
+    scrollToFirstFormField();
+  }
+}, [currentSectionIndex, formData]);
 
   const handlePrevious = useCallback((e) => {
     if (e) {

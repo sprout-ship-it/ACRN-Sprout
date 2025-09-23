@@ -1,4 +1,4 @@
-// src/components/features/matching/sections/RecoveryInfoSection.js - Refactored with enhanced CSS module usage
+// src/components/features/matching/sections/RecoveryInfoSection.js - FIXED FIELD MAPPING
 import React from 'react';
 import PropTypes from 'prop-types';
 import {
@@ -13,12 +13,16 @@ const RecoveryInfoSection = ({
   formData,
   errors,
   loading,
-  profile,      // Added for interface consistency
+  profile,
   onInputChange,
   onArrayChange,
-  onRangeChange, // Added for interface consistency
-  styles = {}   // CSS module styles passed from parent
+  onRangeChange,
+  styles = {},
+  fieldMapping = {} // ✅ FIXED: Now properly use field mapping
 }) => {
+  // ✅ FIXED: Use standardized field names from mapping
+  const recoveryMethodsField = fieldMapping?.recovery?.methods || 'recovery_methods';
+  
   return (
     <>
       {/* Recovery Information Header */}
@@ -144,7 +148,7 @@ const RecoveryInfoSection = ({
           Recovery Methods <span className="text-red-500">*</span>
         </label>
         <div className="text-gray-500 mb-3 text-sm">
-          Select all recovery methods you actively use or are interested in using.
+          Select all recovery methods you actively use or are interested in using. (stored as: {recoveryMethodsField})
         </div>
         
         <div className={styles.checkboxColumnsCompact || 'grid-2'}>
@@ -152,8 +156,8 @@ const RecoveryInfoSection = ({
             <label key={method} className={styles.checkboxLabel || 'checkbox-item'}>
               <input
                 type="checkbox"
-                checked={(formData.recoveryMethods || []).includes(method)}
-                onChange={(e) => onArrayChange('recoveryMethods', method, e.target.checked)}
+                checked={(formData[recoveryMethodsField] || []).includes(method)}
+                onChange={(e) => onArrayChange(recoveryMethodsField, method, e.target.checked)}
                 disabled={loading}
               />
               <span className={styles.checkboxText || ''}>
@@ -162,8 +166,8 @@ const RecoveryInfoSection = ({
             </label>
           ))}
         </div>
-        {errors.recoveryMethods && (
-          <div className="text-red-500 mt-1 text-sm">{errors.recoveryMethods}</div>
+        {errors[recoveryMethodsField] && (
+          <div className="text-red-500 mt-1 text-sm">{errors[recoveryMethodsField]}</div>
         )}
       </div>
 
@@ -377,7 +381,7 @@ RecoveryInfoSection.propTypes = {
     recoveryStage: PropTypes.string,
     spiritualAffiliation: PropTypes.string,
     primaryIssues: PropTypes.arrayOf(PropTypes.string),
-    recoveryMethods: PropTypes.arrayOf(PropTypes.string),
+    recovery_methods: PropTypes.arrayOf(PropTypes.string), // ✅ FIXED: Now matches database
     programType: PropTypes.arrayOf(PropTypes.string),
     sobrietyDate: PropTypes.string,
     recoveryGoalTimeframe: PropTypes.string,
@@ -397,12 +401,14 @@ RecoveryInfoSection.propTypes = {
   onInputChange: PropTypes.func.isRequired,
   onArrayChange: PropTypes.func.isRequired,
   onRangeChange: PropTypes.func.isRequired,
-  styles: PropTypes.object
+  styles: PropTypes.object,
+  fieldMapping: PropTypes.object // ✅ FIXED: Now properly documented
 };
 
 RecoveryInfoSection.defaultProps = {
   profile: null,
-  styles: {}
+  styles: {},
+  fieldMapping: {} // ✅ FIXED: Default empty object
 };
 
 export default RecoveryInfoSection;
