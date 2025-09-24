@@ -124,14 +124,16 @@ export const AuthProvider = ({ children }) => {
         setUser(session.user)
         setLoading(true)
         
-        try {
-          await loadUserProfile(session.user.id)
-        } catch (err) {
-          console.error('⚠️ AuthProvider: Profile load failed after sign in, attempting to create:', err)
+        const profileResult = await loadUserProfile(session.user.id)
+        
+        // ✅ FIXED: Check if profile was found, if not create one
+        if (!profileResult || profileResult.error?.code === 'NOT_FOUND') {
+          console.log('⚠️ AuthProvider: No profile found after sign in, attempting to create...')
           
-          // Try to create profile if it doesn't exist
           try {
             const userData = session.user.user_metadata
+            console.log('👤 AuthProvider: User metadata for profile creation:', userData)
+            
             if (userData?.firstName) {
               console.log('👤 AuthProvider: Creating missing profile after sign in...')
               
@@ -142,8 +144,6 @@ export const AuthProvider = ({ children }) => {
                 first_name: userData.firstName || '',
                 last_name: userData.lastName || '',
                 roles: userData.roles || ['applicant']
-                // ✅ REMOVED: id, created_at, updated_at (auto-generated)
-                // ✅ REMOVED: is_active (has default value)
               }
 
               console.log('👤 AuthProvider: Creating profile with data:', profileData)
@@ -158,11 +158,27 @@ export const AuthProvider = ({ children }) => {
                 throw createResult.error
               }
             } else {
-              throw new Error('No user metadata available for profile creation')
+              console.log('⚠️ AuthProvider: No user metadata available, creating basic profile')
+              // Create basic profile without metadata
+              const profileData = {
+                user_id: session.user.id,
+                email: session.user.email,
+                first_name: 'User',
+                last_name: '',
+                roles: ['applicant']
+              }
+              
+              const createResult = await db.profiles.create(profileData)
+              if (createResult.success && createResult.data) {
+                console.log('✅ AuthProvider: Basic profile created successfully')
+                setProfile(createResult.data)
+              } else {
+                throw new Error('Failed to create basic profile')
+              }
             }
           } catch (createErr) {
             console.error('❌ AuthProvider: Profile creation failed after sign in:', createErr)
-            // Create minimal profile to unblock user
+            // Create minimal in-memory profile to unblock user
             setProfile({
               user_id: session.user.id,
               email: session.user.email,
