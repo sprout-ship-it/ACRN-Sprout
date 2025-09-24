@@ -1,4 +1,4 @@
-// src/utils/database/profilesService.js - Profiles service module
+// src/utils/database/profileService.js - FIXED VERSION
 /**
  * Profiles service for registrant_profiles table operations
  */
@@ -16,20 +16,21 @@ const createProfilesService = (supabaseClient) => {
      */
     create: async (profileData) => {
       try {
-        console.log('👤 Profiles: Creating profile for user:', profileData.id);
+        console.log('👤 Profiles: Creating profile with data:', profileData);
 
         const { data, error } = await supabaseClient
           .from(tableName)
           .insert({
             ...profileData,
-            created_at: new Date().toISOString(),
-            updated_at: new Date().toISOString()
+            // Don't override created_at and updated_at if they're provided
+            created_at: profileData.created_at || new Date().toISOString(),
+            updated_at: profileData.updated_at || new Date().toISOString()
           })
           .select()
           .single();
 
         if (error) {
-          console.error('❌ Profiles: Create failed:', error.message);
+          console.error('❌ Profiles: Create failed:', error.message, error);
           return { success: false, data: null, error };
         }
 
@@ -43,11 +44,11 @@ const createProfilesService = (supabaseClient) => {
     },
 
     /**
-     * Get profile by ID
+     * Get profile by registrant_profiles.id
      */
     getById: async (id) => {
       try {
-        console.log('👤 Profiles: Fetching profile by ID:', id);
+        console.log('👤 Profiles: Fetching profile by registrant_profiles.id:', id);
 
         const { data, error } = await supabaseClient
           .from(tableName)
@@ -57,7 +58,7 @@ const createProfilesService = (supabaseClient) => {
 
         if (error) {
           if (error.code === 'PGRST116') {
-            console.log('ℹ️ Profiles: No profile found for ID:', id);
+            console.log('ℹ️ Profiles: No profile found for registrant_profiles.id:', id);
             return { success: false, data: null, error: { code: 'NOT_FOUND', message: 'Profile not found' } };
           }
           console.error('❌ Profiles: GetById failed:', error.message);
@@ -69,6 +70,38 @@ const createProfilesService = (supabaseClient) => {
 
       } catch (err) {
         console.error('💥 Profiles: GetById exception:', err);
+        return { success: false, data: null, error: { message: err.message } };
+      }
+    },
+
+    /**
+     * ✅ NEW: Get profile by user_id (which references auth.users.id)
+     * This is what AuthContext needs for looking up profiles by auth user ID
+     */
+    getByUserId: async (authUserId) => {
+      try {
+        console.log('👤 Profiles: Fetching profile by auth.users.id (user_id field):', authUserId);
+
+        const { data, error } = await supabaseClient
+          .from(tableName)
+          .select('*')
+          .eq('user_id', authUserId) // Query by user_id field which references auth.users.id
+          .single();
+
+        if (error) {
+          if (error.code === 'PGRST116') {
+            console.log('ℹ️ Profiles: No profile found for auth user:', authUserId);
+            return { success: false, data: null, error: { code: 'NOT_FOUND', message: 'Profile not found' } };
+          }
+          console.error('❌ Profiles: GetByUserId failed:', error.message);
+          return { success: false, data: null, error };
+        }
+
+        console.log('✅ Profiles: Profile retrieved by user_id successfully');
+        return { success: true, data, error: null };
+
+      } catch (err) {
+        console.error('💥 Profiles: GetByUserId exception:', err);
         return { success: false, data: null, error: { message: err.message } };
       }
     },
@@ -100,6 +133,37 @@ const createProfilesService = (supabaseClient) => {
 
       } catch (err) {
         console.error('💥 Profiles: Update exception:', err);
+        return { success: false, data: null, error: { message: err.message } };
+      }
+    },
+
+    /**
+     * ✅ NEW: Update profile by user_id (auth.users.id)
+     */
+    updateByUserId: async (authUserId, updates) => {
+      try {
+        console.log('👤 Profiles: Updating profile by user_id:', authUserId);
+
+        const { data, error } = await supabaseClient
+          .from(tableName)
+          .update({
+            ...updates,
+            updated_at: new Date().toISOString()
+          })
+          .eq('user_id', authUserId) // Update by user_id field
+          .select()
+          .single();
+
+        if (error) {
+          console.error('❌ Profiles: UpdateByUserId failed:', error.message);
+          return { success: false, data: null, error };
+        }
+
+        console.log('✅ Profiles: Profile updated by user_id successfully');
+        return { success: true, data, error: null };
+
+      } catch (err) {
+        console.error('💥 Profiles: UpdateByUserId exception:', err);
         return { success: false, data: null, error: { message: err.message } };
       }
     },

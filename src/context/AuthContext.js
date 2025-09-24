@@ -37,9 +37,9 @@ export const AuthProvider = ({ children }) => {
             setUser(null)
             setProfile(null)
             setLoading(false)
-            setError(null) // Don't show error for timeout, just proceed
+            setError(null)
           }
-        }, 8000) // 8 second timeout
+        }, 8000)
 
         // Get current session
         console.log('🔐 AuthProvider: Checking for existing session...')
@@ -58,7 +58,7 @@ export const AuthProvider = ({ children }) => {
           setUser(null)
           setProfile(null)
           setLoading(false)
-          setError(null) // Don't block user for session errors
+          setError(null)
           return
         }
 
@@ -74,9 +74,11 @@ export const AuthProvider = ({ children }) => {
             // Create minimal profile to prevent blocking
             setProfile({
               id: sessionResult.session.user.id,
+              user_id: sessionResult.session.user.id, // ✅ ADDED: Correct field
               email: sessionResult.session.user.email,
               first_name: sessionResult.session.user.user_metadata?.firstName || 'User',
-              roles: ['applicant'], // Safe default
+              last_name: sessionResult.session.user.user_metadata?.lastName || '',
+              roles: ['applicant'],
               is_active: true
             })
           }
@@ -99,7 +101,7 @@ export const AuthProvider = ({ children }) => {
           setUser(null)
           setProfile(null)
           setLoading(false)
-          setError(null) // Don't block user
+          setError(null)
         }
       }
     }
@@ -132,23 +134,28 @@ export const AuthProvider = ({ children }) => {
             const userData = session.user.user_metadata
             if (userData?.firstName) {
               console.log('👤 AuthProvider: Creating missing profile after sign in...')
+              
+              // ✅ FIXED: Correct schema for registrant_profiles table
               const profileData = {
-                id: session.user.id,
+                user_id: session.user.id, // ✅ FIXED: Use user_id, not id
                 email: session.user.email,
                 first_name: userData.firstName || '',
                 last_name: userData.lastName || '',
-                roles: userData.roles || ['applicant'],
-                is_active: true,
-                created_at: new Date().toISOString()
+                roles: userData.roles || ['applicant']
+                // ✅ REMOVED: id, created_at, updated_at (auto-generated)
+                // ✅ REMOVED: is_active (has default value)
               }
 
-              const { error: profileError } = await db.profiles.create(profileData)
+              console.log('👤 AuthProvider: Creating profile with data:', profileData)
+
+              const createResult = await db.profiles.create(profileData)
               
-              if (!profileError) {
+              if (createResult.success && createResult.data) {
                 console.log('✅ AuthProvider: Profile created successfully after sign in')
-                setProfile(profileData)
+                setProfile(createResult.data)
               } else {
-                throw profileError
+                console.error('❌ AuthProvider: Profile creation failed:', createResult.error)
+                throw createResult.error
               }
             } else {
               throw new Error('No user metadata available for profile creation')
@@ -157,9 +164,10 @@ export const AuthProvider = ({ children }) => {
             console.error('❌ AuthProvider: Profile creation failed after sign in:', createErr)
             // Create minimal profile to unblock user
             setProfile({
-              id: session.user.id,
+              user_id: session.user.id,
               email: session.user.email,
               first_name: session.user.user_metadata?.firstName || 'User',
+              last_name: session.user.user_metadata?.lastName || '',
               roles: ['applicant'],
               is_active: true
             })
@@ -187,34 +195,35 @@ export const AuthProvider = ({ children }) => {
     }
   }, [])
 
-  // Load user profile with timeout protection
-  const loadUserProfile = async (userId) => {
-    console.log('👤 AuthProvider: Loading profile for user:', userId)
+  // ✅ FIXED: Load user profile by auth.users.id (but look up by user_id in registrant_profiles)
+  const loadUserProfile = async (authUserId) => {
+    console.log('👤 AuthProvider: Loading profile for auth user:', authUserId)
     
     return new Promise((resolve, reject) => {
       const profileTimeout = setTimeout(() => {
         reject(new Error('Profile loading timed out'))
-      }, 6000) // 6 second timeout for profile loading
+      }, 6000)
 
-      db.profiles.getById(userId)
-        .then(({ data: profileData, error: profileError }) => {
+      // ✅ FIXED: Query by user_id field (which references auth.users.id)
+      db.profiles.getByUserId(authUserId)
+        .then((result) => {
           clearTimeout(profileTimeout)
           
-          if (profileError) {
-            if (profileError.code === 'PGRST116') {
+          if (result.error) {
+            if (result.error.code === 'NOT_FOUND' || result.error.code === 'PGRST116') {
               console.log('ℹ️ AuthProvider: No profile found (new user)')
               setProfile(null)
               resolve()
             } else {
-              console.error('❌ AuthProvider: Profile error:', profileError.message)
-              reject(profileError)
+              console.error('❌ AuthProvider: Profile error:', result.error.message)
+              reject(result.error)
             }
             return
           }
 
-          if (profileData) {
+          if (result.data) {
             console.log('✅ AuthProvider: Profile loaded successfully')
-            setProfile(profileData)
+            setProfile(result.data)
             setError(null)
             resolve()
           } else {
@@ -296,7 +305,7 @@ export const AuthProvider = ({ children }) => {
       // Race logout against aggressive timeout
       const logoutPromise = auth.signOut()
       const timeoutPromise = new Promise((_, reject) => 
-        setTimeout(() => reject(new Error('Logout timed out')), 3000) // 3 second timeout
+        setTimeout(() => reject(new Error('Logout timed out')), 3000)
       )
 
       const result = await Promise.race([logoutPromise, timeoutPromise])
@@ -312,7 +321,7 @@ export const AuthProvider = ({ children }) => {
       setError(null)
       setLoading(false)
 
-      return { error: null } // Always return success since we cleared local state
+      return { error: null }
 
     } catch (err) {
       console.error('💥 AuthProvider: Sign out failed or timed out:', err.message)
@@ -324,7 +333,7 @@ export const AuthProvider = ({ children }) => {
       setError(null)
       setLoading(false)
       
-      return { error: null } // Return success since local state is cleared
+      return { error: null }
     }
   }
 

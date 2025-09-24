@@ -61,18 +61,19 @@ export const auth = {
 
 // Database helpers - organized by service
 export const db = {
-  // Profile operations (registrant_profiles table)
-  profiles: {
-    create: profilesService.create,
-    getById: profilesService.getById,
-    update: profilesService.update,
-    delete: profilesService.delete,
-    getByRole: profilesService.getByRole,
-    search: profilesService.search,
-    getStatistics: profilesService.getStatistics,
-    batchUpdate: profilesService.batchUpdate,
-    emailExists: profilesService.emailExists
-  },
+      profiles: {
+        create: profilesService.create,
+        getById: profilesService.getById,
+        getByUserId: profilesService.getByUserId, // ✅ ADDED: New method
+        update: profilesService.update,
+        updateByUserId: profilesService.updateByUserId, // ✅ ADDED: New method  
+        delete: profilesService.delete,
+        getByRole: profilesService.getByRole,
+        search: profilesService.search,
+        getStatistics: profilesService.getStatistics,
+        batchUpdate: profilesService.batchUpdate,
+        emailExists: profilesService.emailExists
+      },
 
   // Backward compatibility alias
   registrantProfiles: {
