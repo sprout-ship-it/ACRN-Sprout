@@ -1,18 +1,18 @@
-// src/utils/matching/sectionValidation.js - NEW UTILITY
+// src/utils/matching/sectionValidation.js - FIXED WITH STANDARDIZED FIELD NAMES
 /**
  * Section-level validation utility for matching profile form
  * Validates each section and prevents navigation if critical issues exist
  */
 
 /**
- * Validation rules for each section
+ * Validation rules for each section - UPDATED with standardized field names
  */
 const SECTION_VALIDATION_RULES = {
   personal: {
-    required: ['dateOfBirth', 'phone'],
-    warnings: ['emergencyContactName', 'emergencyContactPhone'],
+    required: ['date_of_birth', 'primary_phone'],
+    warnings: ['emergency_contact_name', 'emergency_contact_phone'],
     validations: {
-      dateOfBirth: (value) => {
+      date_of_birth: (value) => {
         if (!value) return 'Date of birth is required';
         const birthDate = new Date(value);
         const today = new Date();
@@ -20,7 +20,7 @@ const SECTION_VALIDATION_RULES = {
         if (age < 18) return 'Must be 18 or older';
         return null;
       },
-      phone: (value) => {
+      primary_phone: (value) => {
         if (!value) return 'Phone number is required';
         const phoneRegex = /^\(\d{3}\)\s\d{3}-\d{4}$|^\d{10}$|^\d{3}-\d{3}-\d{4}$/;
         if (!phoneRegex.test(value.replace(/\s/g, ''))) {
@@ -32,8 +32,8 @@ const SECTION_VALIDATION_RULES = {
   },
 
   location: {
-    required: ['primary_city', 'primary_state', 'budget_min', 'budget_max', 'maxCommute', 'moveInDate'],
-    warnings: ['housingType'],
+    required: ['primary_city', 'primary_state', 'budget_min', 'budget_max', 'max_commute_minutes', 'move_in_date'],
+    warnings: ['housing_types_accepted'],
     validations: {
       primary_city: (value) => !value ? 'Primary city is required' : null,
       primary_state: (value) => !value ? 'Primary state is required' : null,
@@ -53,15 +53,15 @@ const SECTION_VALIDATION_RULES = {
         if (max < min) return 'Maximum budget must be greater than minimum budget';
         return null;
       },
-      maxCommute: (value) => !value ? 'Maximum commute time preference is required' : null,
-      moveInDate: (value) => {
+      max_commute_minutes: (value) => !value ? 'Maximum commute time preference is required' : null,
+      move_in_date: (value) => {
         if (!value) return 'Move-in date is required';
         const moveDate = new Date(value);
         const today = new Date();
         if (moveDate < today) return 'Move-in date cannot be in the past';
         return null;
       },
-      housingType: (value) => {
+      housing_types_accepted: (value) => {
         if (!value || !Array.isArray(value) || value.length === 0) {
           return 'Please select at least one housing type you would consider';
         }
@@ -71,12 +71,12 @@ const SECTION_VALIDATION_RULES = {
   },
 
   recovery: {
-    required: ['recoveryStage', 'spiritualAffiliation', 'primaryIssues', 'recovery_methods', 'programType'],
-    warnings: ['recoveryContext'],
+    required: ['recovery_stage', 'spiritual_affiliation', 'primary_issues', 'recovery_methods', 'program_types'],
+    warnings: ['recovery_context'],
     validations: {
-      recoveryStage: (value) => !value ? 'Recovery stage is required' : null,
-      spiritualAffiliation: (value) => !value ? 'Spiritual/religious approach is required' : null,
-      primaryIssues: (value) => {
+      recovery_stage: (value) => !value ? 'Recovery stage is required' : null,
+      spiritual_affiliation: (value) => !value ? 'Spiritual/religious approach is required' : null,
+      primary_issues: (value) => {
         if (!value || !Array.isArray(value) || value.length === 0) {
           return 'Please select at least one primary issue you are addressing';
         }
@@ -88,7 +88,7 @@ const SECTION_VALIDATION_RULES = {
         }
         return null;
       },
-      programType: (value) => {
+      program_types: (value) => {
         if (!value || !Array.isArray(value) || value.length === 0) {
           return 'Please select at least one program type you attend or would be comfortable with';
         }
@@ -98,20 +98,20 @@ const SECTION_VALIDATION_RULES = {
   },
 
   roommate: {
-    required: ['preferred_roommate_gender', 'smokingStatus'],
-    warnings: ['ageRangeMin', 'ageRangeMax'],
+    required: ['preferred_roommate_gender', 'smoking_status'],
+    warnings: ['age_range_min', 'age_range_max'],
     validations: {
       preferred_roommate_gender: (value) => !value ? 'Roommate gender preference is required' : null,
-      smokingStatus: (value) => !value ? 'Your smoking status is required' : null,
-      ageRangeMin: (value, formData) => {
+      smoking_status: (value) => !value ? 'Your smoking status is required' : null,
+      age_range_min: (value, formData) => {
         const min = parseInt(value || 18);
-        const max = parseInt(formData.ageRangeMax || 65);
+        const max = parseInt(formData.age_range_max || 65);
         if (min >= max) return 'Minimum age must be less than maximum age';
         return null;
       },
-      ageRangeMax: (value, formData) => {
+      age_range_max: (value, formData) => {
         const max = parseInt(value || 65);
-        const min = parseInt(formData.ageRangeMin || 18);
+        const min = parseInt(formData.age_range_min || 18);
         if (max <= min) return 'Maximum age must be greater than minimum age';
         return null;
       }
@@ -119,25 +119,25 @@ const SECTION_VALIDATION_RULES = {
   },
 
   lifestyle: {
-    required: ['workSchedule'],
-    warnings: ['socialLevel', 'cleanlinessLevel', 'noiseLevel'],
+    required: ['work_schedule'],
+    warnings: ['social_level', 'cleanliness_level', 'noise_tolerance'],
     validations: {
-      workSchedule: (value) => !value ? 'Work schedule is required' : null,
-      socialLevel: (value) => {
+      work_schedule: (value) => !value ? 'Work schedule is required' : null,
+      social_level: (value) => {
         const level = parseInt(value);
         if (isNaN(level) || level < 1 || level > 5) {
           return 'Please select your social interaction level (1-5)';
         }
         return null;
       },
-      cleanlinessLevel: (value) => {
+      cleanliness_level: (value) => {
         const level = parseInt(value);
         if (isNaN(level) || level < 1 || level > 5) {
           return 'Please select your cleanliness level (1-5)';
         }
         return null;
       },
-      noiseLevel: (value) => {
+      noise_tolerance: (value) => {
         const level = parseInt(value);
         if (isNaN(level) || level < 1 || level > 5) {
           return 'Please select your noise tolerance level (1-5)';
@@ -148,10 +148,10 @@ const SECTION_VALIDATION_RULES = {
   },
 
   compatibility: {
-    required: ['aboutMe', 'lookingFor'],
+    required: ['about_me', 'looking_for'],
     warnings: ['interests'],
     validations: {
-      aboutMe: (value) => {
+      about_me: (value) => {
         if (!value || value.trim().length === 0) {
           return 'Please tell potential roommates about yourself';
         }
@@ -160,7 +160,7 @@ const SECTION_VALIDATION_RULES = {
         }
         return null;
       },
-      lookingFor: (value) => {
+      looking_for: (value) => {
         if (!value || value.trim().length === 0) {
           return 'Please describe what you are looking for in a roommate';
         }
@@ -186,6 +186,9 @@ const SECTION_VALIDATION_RULES = {
  * @returns {Object} Validation result with errors and warnings
  */
 export const validateSection = (sectionId, formData) => {
+  console.log('🔍 Validating section:', sectionId);
+  console.log('🔍 Form data keys:', Object.keys(formData));
+  
   const rules = SECTION_VALIDATION_RULES[sectionId];
   if (!rules) {
     console.warn(`No validation rules found for section: ${sectionId}`);
@@ -200,6 +203,7 @@ export const validateSection = (sectionId, formData) => {
   // Check required fields
   rules.required.forEach(field => {
     const value = formData[field];
+    console.log(`🔍 Checking required field ${field}:`, value);
     
     // Check if field has a custom validation function
     if (rules.validations[field]) {
@@ -207,15 +211,24 @@ export const validateSection = (sectionId, formData) => {
       if (error) {
         errors[field] = error;
         requiredMissing.push(field);
+        console.log(`❌ Validation error for ${field}:`, error);
+      } else {
+        console.log(`✅ Field ${field} passed custom validation`);
       }
     } else {
       // Default required field validation
       if (value === null || value === undefined || value === '') {
-        errors[field] = `${field.replace(/([A-Z])/g, ' $1').toLowerCase()} is required`;
+        const errorMsg = `${getFieldDisplayName(field)} is required`;
+        errors[field] = errorMsg;
         requiredMissing.push(field);
+        console.log(`❌ Required field ${field} is missing:`, errorMsg);
       } else if (Array.isArray(value) && value.length === 0) {
-        errors[field] = `Please select at least one option for ${field.replace(/([A-Z])/g, ' $1').toLowerCase()}`;
+        const errorMsg = `Please select at least one option for ${getFieldDisplayName(field)}`;
+        errors[field] = errorMsg;
         requiredMissing.push(field);
+        console.log(`❌ Array field ${field} is empty:`, errorMsg);
+      } else {
+        console.log(`✅ Required field ${field} has value:`, value);
       }
     }
   });
@@ -225,16 +238,23 @@ export const validateSection = (sectionId, formData) => {
     rules.warnings.forEach(field => {
       const value = formData[field];
       if (value === null || value === undefined || value === '') {
-        warnings[field] = `Consider adding ${field.replace(/([A-Z])/g, ' $1').toLowerCase()} for better matches`;
+        warnings[field] = `Consider adding ${getFieldDisplayName(field)} for better matches`;
         warningsMissing.push(field);
       } else if (Array.isArray(value) && value.length === 0) {
-        warnings[field] = `Consider selecting options for ${field.replace(/([A-Z])/g, ' $1').toLowerCase()}`;
+        warnings[field] = `Consider selecting options for ${getFieldDisplayName(field)}`;
         warningsMissing.push(field);
       }
     });
   }
 
   const isValid = Object.keys(errors).length === 0;
+  
+  console.log(`🔍 Section ${sectionId} validation result:`, {
+    isValid,
+    errorCount: Object.keys(errors).length,
+    errors: Object.keys(errors),
+    warningCount: Object.keys(warnings).length
+  });
 
   return {
     isValid,
@@ -312,9 +332,10 @@ export const shouldBlockNavigation = (fromSectionId, formData) => {
     return {
       shouldBlock: true,
       reason: 'critical_errors',
-      message: `Please complete all required fields in this section before continuing. ${criticalErrors} required field${criticalErrors > 1 ? 's' : ''} missing.`,
+      message: `Please complete all required fields in this section before continuing. ${criticalErrors} required field${criticalErrors > 1 ? 's' : ''} missing: ${validation.requiredMissing.map(getFieldDisplayName).join(', ')}`,
       errors: validation.errors,
-      criticalCount: criticalErrors
+      criticalCount: criticalErrors,
+      missingFields: validation.requiredMissing
     };
   }
 
@@ -377,39 +398,54 @@ export const getSectionStatus = (sectionId, formData) => {
 };
 
 /**
- * Generate user-friendly field names
+ * Generate user-friendly field names - UPDATED with standardized field names
  * @param {string} fieldName - Technical field name
  * @returns {string} User-friendly name
  */
 export const getFieldDisplayName = (fieldName) => {
   const displayNames = {
-    dateOfBirth: 'Date of Birth',
-    emergencyContactName: 'Emergency Contact Name',
-    emergencyContactPhone: 'Emergency Contact Phone',
+    // Personal Info Section
+    date_of_birth: 'Date of Birth',
+    primary_phone: 'Phone Number',
+    emergency_contact_name: 'Emergency Contact Name',
+    emergency_contact_phone: 'Emergency Contact Phone',
+    
+    // Location Section  
     primary_city: 'Primary City',
     primary_state: 'Primary State',
     budget_min: 'Minimum Budget',
     budget_max: 'Maximum Budget',
-    maxCommute: 'Maximum Commute Time',
-    moveInDate: 'Move-in Date',
-    housingType: 'Housing Types',
-    recoveryStage: 'Recovery Stage',
-    spiritualAffiliation: 'Spiritual/Religious Approach',
-    primaryIssues: 'Primary Issues',
+    max_commute_minutes: 'Maximum Commute Time',
+    move_in_date: 'Move-in Date',
+    housing_types_accepted: 'Housing Types',
+    
+    // Recovery Section
+    recovery_stage: 'Recovery Stage',
+    spiritual_affiliation: 'Spiritual/Religious Approach',
+    primary_issues: 'Primary Issues',
     recovery_methods: 'Recovery Methods',
-    programType: 'Program Types',
+    program_types: 'Program Types',
+    recovery_context: 'Recovery Context',
+    
+    // Roommate Section
     preferred_roommate_gender: 'Roommate Gender Preference',
-    smokingStatus: 'Your Smoking Status',
-    workSchedule: 'Work Schedule',
-    socialLevel: 'Social Interaction Level',
-    cleanlinessLevel: 'Cleanliness Level',
-    noiseLevel: 'Noise Tolerance',
-    aboutMe: 'About Me',
-    lookingFor: 'What I\'m Looking For',
+    smoking_status: 'Your Smoking Status',
+    age_range_min: 'Minimum Age Preference',
+    age_range_max: 'Maximum Age Preference',
+    
+    // Lifestyle Section
+    work_schedule: 'Work Schedule',
+    social_level: 'Social Interaction Level',
+    cleanliness_level: 'Cleanliness Level',
+    noise_tolerance: 'Noise Tolerance',
+    
+    // Compatibility Section
+    about_me: 'About Me',
+    looking_for: 'What I\'m Looking For',
     interests: 'Interests & Hobbies'
   };
 
-  return displayNames[fieldName] || fieldName.replace(/([A-Z])/g, ' $1').replace(/^./, str => str.toUpperCase());
+  return displayNames[fieldName] || fieldName.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
 };
 
 /**
