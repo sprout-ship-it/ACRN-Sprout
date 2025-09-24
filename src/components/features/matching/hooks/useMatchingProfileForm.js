@@ -165,194 +165,199 @@ export const useMatchingProfileForm = () => {
   const [initialLoading, setInitialLoading] = useState(true);
   const [successMessage, setSuccessMessage] = useState('');
 
-  // FIXED: Load existing data with direct field mapping (no conversion needed)
-  useEffect(() => {
-    const loadExistingData = async () => {
-      if (!user || !hasRole('applicant')) {
+useEffect(() => {
+  const loadExistingData = async () => {
+    if (!user || !hasRole('applicant')) {
+      setInitialLoading(false);
+      return;
+    }
+
+    try {
+      console.log('Loading existing data for user:', user.id);
+      
+      const result = await db.matchingProfiles.getByUserId(user.id);
+      
+      // ✅ FIXED: Handle different result scenarios properly
+      if (result.success && result.data) {
+        // Existing user with profile - load their data
+        console.log('Loaded applicant form data:', result.data);
+        
+        const applicantForm = result.data;
+        
+        // Direct mapping since field names now match exactly
+        setFormData(prev => ({
+          ...prev,
+          // Personal Demographics
+          date_of_birth: applicantForm.date_of_birth || '',
+          primary_phone: applicantForm.primary_phone || '',
+          gender_identity: applicantForm.gender_identity || '',
+          biological_sex: applicantForm.biological_sex || '',
+          current_address: applicantForm.current_address || '',
+          current_city: applicantForm.current_city || '',
+          current_state: applicantForm.current_state || '',
+          current_zip_code: applicantForm.current_zip_code || '',
+          emergency_contact_name: applicantForm.emergency_contact_name || '',
+          emergency_contact_phone: applicantForm.emergency_contact_phone || '',
+          emergency_contact_relationship: applicantForm.emergency_contact_relationship || '',
+          
+          // Location & Housing
+          primary_city: applicantForm.primary_city || '',
+          primary_state: applicantForm.primary_state || '',
+          target_zip_codes: applicantForm.target_zip_codes?.join(', ') || '',
+          search_radius_miles: applicantForm.search_radius_miles || 30,
+          location_flexibility: applicantForm.location_flexibility || '',
+          max_commute_minutes: applicantForm.max_commute_minutes || 30,
+          transportation_method: applicantForm.transportation_method || '',
+          
+          // Budget & Financial
+          budget_min: applicantForm.budget_min || 500,
+          budget_max: applicantForm.budget_max || 2000,
+          housing_assistance: applicantForm.housing_assistance || [],
+          has_section8: applicantForm.has_section8 || false,
+          
+          // Housing Specifications
+          housing_types_accepted: applicantForm.housing_types_accepted || [],
+          preferred_bedrooms: applicantForm.preferred_bedrooms || '',
+          move_in_date: applicantForm.move_in_date || '',
+          move_in_flexibility: applicantForm.move_in_flexibility || '',
+          lease_duration: applicantForm.lease_duration || '',
+          furnished_preference: applicantForm.furnished_preference || false,
+          utilities_included_preference: applicantForm.utilities_included_preference || false,
+          accessibility_needed: applicantForm.accessibility_needed || false,
+          parking_required: applicantForm.parking_required || false,
+          public_transit_access: applicantForm.public_transit_access || false,
+          
+          // Recovery & Wellness
+          recovery_stage: applicantForm.recovery_stage || '',
+          time_in_recovery: applicantForm.time_in_recovery || '',
+          sobriety_date: applicantForm.sobriety_date || '',
+          primary_substance: applicantForm.primary_substance || '',
+          recovery_methods: applicantForm.recovery_methods || [],
+          program_types: applicantForm.program_types || [],
+          treatment_history: applicantForm.treatment_history || '',
+          support_meetings: applicantForm.support_meetings || '',
+          sponsor_mentor: applicantForm.sponsor_mentor || '',
+          primary_issues: applicantForm.primary_issues || [],
+          spiritual_affiliation: applicantForm.spiritual_affiliation || '',
+          want_recovery_support: applicantForm.want_recovery_support || false,
+          comfortable_discussing_recovery: applicantForm.comfortable_discussing_recovery || false,
+          attend_meetings_together: applicantForm.attend_meetings_together || false,
+          substance_free_home_required: applicantForm.substance_free_home_required !== false,
+          recovery_goal_timeframe: applicantForm.recovery_goal_timeframe || '',
+          recovery_context: applicantForm.recovery_context || '',
+          
+          // Roommate Preferences
+          preferred_roommate_gender: applicantForm.preferred_roommate_gender || '',
+          gender_inclusive: applicantForm.gender_inclusive || false,
+          age_range_min: applicantForm.age_range_min || 18,
+          age_range_max: applicantForm.age_range_max || 65,
+          age_flexibility: applicantForm.age_flexibility || '',
+          prefer_recovery_experience: applicantForm.prefer_recovery_experience || false,
+          supportive_of_recovery: applicantForm.supportive_of_recovery !== false,
+          substance_free_required: applicantForm.substance_free_required !== false,
+          respect_privacy: applicantForm.respect_privacy !== false,
+          social_interaction_level: applicantForm.social_interaction_level || '',
+          similar_schedules: applicantForm.similar_schedules || false,
+          shared_chores: applicantForm.shared_chores || false,
+          financially_stable: applicantForm.financially_stable !== false,
+          respectful_guests: applicantForm.respectful_guests !== false,
+          lgbtq_friendly: applicantForm.lgbtq_friendly || false,
+          culturally_sensitive: applicantForm.culturally_sensitive !== false,
+          
+          // Lifestyle Preferences
+          social_level: applicantForm.social_level || 3,
+          cleanliness_level: applicantForm.cleanliness_level || 3,
+          noise_tolerance: applicantForm.noise_tolerance || 3,
+          work_schedule: applicantForm.work_schedule || '',
+          work_from_home_frequency: applicantForm.work_from_home_frequency || '',
+          bedtime_preference: applicantForm.bedtime_preference || '',
+          early_riser: applicantForm.early_riser || false,
+          night_owl: applicantForm.night_owl || false,
+          guests_policy: applicantForm.guests_policy || '',
+          social_activities_at_home: applicantForm.social_activities_at_home || '',
+          overnight_guests_ok: applicantForm.overnight_guests_ok || false,
+          cooking_enthusiast: applicantForm.cooking_enthusiast || false,
+          cooking_frequency: applicantForm.cooking_frequency || '',
+          exercise_at_home: applicantForm.exercise_at_home || false,
+          plays_instruments: applicantForm.plays_instruments || false,
+          tv_streaming_regular: applicantForm.tv_streaming_regular || false,
+          
+          // Household Management
+          chore_sharing_style: applicantForm.chore_sharing_style || '',
+          shared_groceries: applicantForm.shared_groceries || false,
+          communication_style: applicantForm.communication_style || '',
+          conflict_resolution_style: applicantForm.conflict_resolution_style || '',
+          preferred_support_structure: applicantForm.preferred_support_structure || '',
+          
+          // Pets & Smoking
+          pets_owned: applicantForm.pets_owned || false,
+          pets_comfortable: applicantForm.pets_comfortable !== false,
+          pet_preference: applicantForm.pet_preference || '',
+          smoking_status: applicantForm.smoking_status || '',
+          smoking_preference: applicantForm.smoking_preference || '',
+          
+          // Compatibility & Goals
+          interests: applicantForm.interests || [],
+          additional_interests: applicantForm.additional_interests || '',
+          shared_activities_interest: applicantForm.shared_activities_interest || false,
+          important_qualities: applicantForm.important_qualities || [],
+          deal_breakers: applicantForm.deal_breakers || [],
+          short_term_goals: applicantForm.short_term_goals || '',
+          long_term_vision: applicantForm.long_term_vision || '',
+          
+          // Profile Content
+          about_me: applicantForm.about_me || '',
+          looking_for: applicantForm.looking_for || '',
+          additional_info: applicantForm.additional_info || '',
+          special_needs: applicantForm.special_needs || '',
+          
+          // Profile Status
+          is_active: applicantForm.is_active !== false,
+          profile_completed: applicantForm.profile_completed || false,
+          profile_visibility: applicantForm.profile_visibility || 'verified-members',
+          
+          // Deal Breakers
+          deal_breaker_substance_use: applicantForm.deal_breaker_substance_use || false,
+          deal_breaker_loudness: applicantForm.deal_breaker_loudness || false,
+          deal_breaker_uncleanliness: applicantForm.deal_breaker_uncleanliness || false,
+          deal_breaker_financial_issues: applicantForm.deal_breaker_financial_issues !== false,
+          deal_breaker_pets: applicantForm.deal_breaker_pets || false,
+          deal_breaker_smoking: applicantForm.deal_breaker_smoking || false,
+          
+          // Compatibility preferences
+          overnight_guests_preference: applicantForm.overnight_guests_preference || false,
+          shared_transportation: applicantForm.shared_transportation || false,
+          recovery_accountability: applicantForm.recovery_accountability || false,
+          shared_recovery_activities: applicantForm.shared_recovery_activities || false,
+          mentorship_interest: applicantForm.mentorship_interest || false,
+          recovery_community: applicantForm.recovery_community || false
+        }));
+        
+        console.log('Form data populated successfully with standardized fields');
+        
+      } else if (!result.success && result.error?.includes('No matching profile found')) {
+        // ✅ FIXED: New user scenario - this is expected, not an error
+        console.log('No existing applicant form found for user - initializing new form');
+        // Form data already initialized with defaults, just proceed
+        
+      } else {
+        // ✅ FIXED: Actual error scenario - database issues, connection problems, etc.
+        console.error('Actual error loading applicant form:', result.error);
+        setErrors({ load: `Error loading data: ${result.error || 'Unknown error'}` });
         setInitialLoading(false);
         return;
       }
+      
+    } catch (error) {
+      console.error('Exception loading applicant form data:', error);
+      setErrors({ load: `Error loading data: ${error.message}` });
+    } finally {
+      setInitialLoading(false);
+    }
+  };
 
-      try {
-        console.log('Loading existing data for user:', user.id);
-        
-        const result = await db.matchingProfiles.getByUserId(user.id);
-        const applicantForm = result.success ? result.data : null;
-        const error = result.success ? null : result.error;
-        
-        if (error) {
-          console.error('Error loading applicant form:', error);
-          setErrors({ load: `Error loading data: ${error.message}` });
-          setInitialLoading(false);
-          return;
-        }
-        
-        if (applicantForm) {
-          console.log('Loaded applicant form data:', applicantForm);
-          
-          // FIXED: Direct mapping since field names now match exactly
-          setFormData(prev => ({
-            ...prev,
-            // Personal Demographics
-            date_of_birth: applicantForm.date_of_birth || '',
-            primary_phone: applicantForm.primary_phone || '',
-            gender_identity: applicantForm.gender_identity || '',
-            biological_sex: applicantForm.biological_sex || '',
-            current_address: applicantForm.current_address || '',
-            current_city: applicantForm.current_city || '',
-            current_state: applicantForm.current_state || '',
-            current_zip_code: applicantForm.current_zip_code || '',
-            emergency_contact_name: applicantForm.emergency_contact_name || '',
-            emergency_contact_phone: applicantForm.emergency_contact_phone || '',
-            emergency_contact_relationship: applicantForm.emergency_contact_relationship || '',
-            
-            // Location & Housing
-            primary_city: applicantForm.primary_city || '',
-            primary_state: applicantForm.primary_state || '',
-            target_zip_codes: applicantForm.target_zip_codes?.join(', ') || '',
-            search_radius_miles: applicantForm.search_radius_miles || 30,
-            location_flexibility: applicantForm.location_flexibility || '',
-            max_commute_minutes: applicantForm.max_commute_minutes || 30,
-            transportation_method: applicantForm.transportation_method || '',
-            
-            // Budget & Financial
-            budget_min: applicantForm.budget_min || 500,
-            budget_max: applicantForm.budget_max || 2000,
-            housing_assistance: applicantForm.housing_assistance || [],
-            has_section8: applicantForm.has_section8 || false,
-            
-            // Housing Specifications
-            housing_types_accepted: applicantForm.housing_types_accepted || [],
-            preferred_bedrooms: applicantForm.preferred_bedrooms || '',
-            move_in_date: applicantForm.move_in_date || '',
-            move_in_flexibility: applicantForm.move_in_flexibility || '',
-            lease_duration: applicantForm.lease_duration || '',
-            furnished_preference: applicantForm.furnished_preference || false,
-            utilities_included_preference: applicantForm.utilities_included_preference || false,
-            accessibility_needed: applicantForm.accessibility_needed || false,
-            parking_required: applicantForm.parking_required || false,
-            public_transit_access: applicantForm.public_transit_access || false,
-            
-            // Recovery & Wellness
-            recovery_stage: applicantForm.recovery_stage || '',
-            time_in_recovery: applicantForm.time_in_recovery || '',
-            sobriety_date: applicantForm.sobriety_date || '',
-            primary_substance: applicantForm.primary_substance || '',
-            recovery_methods: applicantForm.recovery_methods || [],
-            program_types: applicantForm.program_types || [],
-            treatment_history: applicantForm.treatment_history || '',
-            support_meetings: applicantForm.support_meetings || '',
-            sponsor_mentor: applicantForm.sponsor_mentor || '',
-            primary_issues: applicantForm.primary_issues || [],
-            spiritual_affiliation: applicantForm.spiritual_affiliation || '',
-            want_recovery_support: applicantForm.want_recovery_support || false,
-            comfortable_discussing_recovery: applicantForm.comfortable_discussing_recovery || false,
-            attend_meetings_together: applicantForm.attend_meetings_together || false,
-            substance_free_home_required: applicantForm.substance_free_home_required !== false,
-            recovery_goal_timeframe: applicantForm.recovery_goal_timeframe || '',
-            recovery_context: applicantForm.recovery_context || '',
-            
-            // Roommate Preferences
-            preferred_roommate_gender: applicantForm.preferred_roommate_gender || '',
-            gender_inclusive: applicantForm.gender_inclusive || false,
-            age_range_min: applicantForm.age_range_min || 18,
-            age_range_max: applicantForm.age_range_max || 65,
-            age_flexibility: applicantForm.age_flexibility || '',
-            prefer_recovery_experience: applicantForm.prefer_recovery_experience || false,
-            supportive_of_recovery: applicantForm.supportive_of_recovery !== false,
-            substance_free_required: applicantForm.substance_free_required !== false,
-            respect_privacy: applicantForm.respect_privacy !== false,
-            social_interaction_level: applicantForm.social_interaction_level || '',
-            similar_schedules: applicantForm.similar_schedules || false,
-            shared_chores: applicantForm.shared_chores || false,
-            financially_stable: applicantForm.financially_stable !== false,
-            respectful_guests: applicantForm.respectful_guests !== false,
-            lgbtq_friendly: applicantForm.lgbtq_friendly || false,
-            culturally_sensitive: applicantForm.culturally_sensitive !== false,
-            
-            // Lifestyle Preferences
-            social_level: applicantForm.social_level || 3,
-            cleanliness_level: applicantForm.cleanliness_level || 3,
-            noise_tolerance: applicantForm.noise_tolerance || 3,
-            work_schedule: applicantForm.work_schedule || '',
-            work_from_home_frequency: applicantForm.work_from_home_frequency || '',
-            bedtime_preference: applicantForm.bedtime_preference || '',
-            early_riser: applicantForm.early_riser || false,
-            night_owl: applicantForm.night_owl || false,
-            guests_policy: applicantForm.guests_policy || '',
-            social_activities_at_home: applicantForm.social_activities_at_home || '',
-            overnight_guests_ok: applicantForm.overnight_guests_ok || false,
-            cooking_enthusiast: applicantForm.cooking_enthusiast || false,
-            cooking_frequency: applicantForm.cooking_frequency || '',
-            exercise_at_home: applicantForm.exercise_at_home || false,
-            plays_instruments: applicantForm.plays_instruments || false,
-            tv_streaming_regular: applicantForm.tv_streaming_regular || false,
-            
-            // Household Management
-            chore_sharing_style: applicantForm.chore_sharing_style || '',
-            shared_groceries: applicantForm.shared_groceries || false,
-            communication_style: applicantForm.communication_style || '',
-            conflict_resolution_style: applicantForm.conflict_resolution_style || '',
-            preferred_support_structure: applicantForm.preferred_support_structure || '',
-            
-            // Pets & Smoking
-            pets_owned: applicantForm.pets_owned || false,
-            pets_comfortable: applicantForm.pets_comfortable !== false,
-            pet_preference: applicantForm.pet_preference || '',
-            smoking_status: applicantForm.smoking_status || '',
-            smoking_preference: applicantForm.smoking_preference || '',
-            
-            // Compatibility & Goals
-            interests: applicantForm.interests || [],
-            additional_interests: applicantForm.additional_interests || '',
-            shared_activities_interest: applicantForm.shared_activities_interest || false,
-            important_qualities: applicantForm.important_qualities || [],
-            deal_breakers: applicantForm.deal_breakers || [],
-            short_term_goals: applicantForm.short_term_goals || '',
-            long_term_vision: applicantForm.long_term_vision || '',
-            
-            // Profile Content
-            about_me: applicantForm.about_me || '',
-            looking_for: applicantForm.looking_for || '',
-            additional_info: applicantForm.additional_info || '',
-            special_needs: applicantForm.special_needs || '',
-            
-            // Profile Status
-            is_active: applicantForm.is_active !== false,
-            profile_completed: applicantForm.profile_completed || false,
-            profile_visibility: applicantForm.profile_visibility || 'verified-members',
-            
-            // Deal Breakers
-            deal_breaker_substance_use: applicantForm.deal_breaker_substance_use || false,
-            deal_breaker_loudness: applicantForm.deal_breaker_loudness || false,
-            deal_breaker_uncleanliness: applicantForm.deal_breaker_uncleanliness || false,
-            deal_breaker_financial_issues: applicantForm.deal_breaker_financial_issues !== false,
-            deal_breaker_pets: applicantForm.deal_breaker_pets || false,
-            deal_breaker_smoking: applicantForm.deal_breaker_smoking || false,
-            
-            // Compatibility preferences
-            overnight_guests_preference: applicantForm.overnight_guests_preference || false,
-            shared_transportation: applicantForm.shared_transportation || false,
-            recovery_accountability: applicantForm.recovery_accountability || false,
-            shared_recovery_activities: applicantForm.shared_recovery_activities || false,
-            mentorship_interest: applicantForm.mentorship_interest || false,
-            recovery_community: applicantForm.recovery_community || false
-          }));
-          
-          console.log('Form data populated successfully with standardized fields');
-        } else {
-          console.log('No existing applicant form found for user');
-        }
-      } catch (error) {
-        console.error('Error loading applicant form data:', error);
-        setErrors({ load: `Error loading data: ${error.message}` });
-      } finally {
-        setInitialLoading(false);
-      }
-    };
-
-    loadExistingData();
-  }, [user, profile, hasRole]);
+  loadExistingData();
+}, [user, profile, hasRole]);
 
   // FIXED: Calculate completion with standardized required fields
   const getCompletionPercentage = () => {
