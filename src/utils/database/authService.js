@@ -25,65 +25,75 @@ const createAuthService = (supabaseClient) => {
 // TEMPORARY DEBUG VERSION - Replace your authService.js signUp method with this
 // This strips down the signup call to the absolute minimum to isolate the issue
 
-signUp: async (email, password, userData = {}) => {
-  console.log('🔑 Auth: signUp initiated for:', email);
-  console.log('🔑 Auth: Original userData:', userData);
-  
-  try {
-    // Validate inputs
-    if (!email || !password) {
-      throw new Error('Email and password are required');
-    }
+// Replace your authService.js signUp method with this restored version
 
-    if (password.length < 6) {
-      throw new Error('Password must be at least 6 characters long');
-    }
+      signUp: async (email, password, userData = {}) => {
+        console.log('🔑 Auth: signUp initiated for:', email);
+        
+        try {
+          // Validate inputs
+          if (!email || !password) {
+            throw new Error('Email and password are required');
+          }
 
-    // ✅ CRITICAL TEST: Try with NO user metadata first
-    console.log('🔑 Auth: Attempting signup with NO metadata (debugging)');
-    
-    const signupOptions = {
-      email: email.toLowerCase().trim(),
-      password
-      // NO OPTIONS AT ALL - completely minimal
-    };
+          if (password.length < 6) {
+            throw new Error('Password must be at least 6 characters long');
+          }
 
-    console.log('🔑 Auth: Signup options:', signupOptions);
+          // ✅ RESTORED: Filter out phone data to avoid unique constraint issues
+          const { phone, ...filteredUserData } = userData;
+          
+          console.log('🔑 Auth: Filtered userData (no phone):', filteredUserData);
 
-    const { data, error } = await supabaseClient.auth.signUp(signupOptions);
+          // ✅ RESTORED: Prepare signup data with metadata for profile creation
+          const signupOptions = {
+            email: email.toLowerCase().trim(),
+            password,
+            options: {
+              data: {
+                ...filteredUserData,
+                created_at: new Date().toISOString()
+              }
+            }
+          };
 
-    if (error) {
-      console.error('❌ Auth: signUp failed:', error.message, error);
-      return { 
-        success: false, 
-        data: null, 
-        error: service._formatAuthError(error) 
-      };
-    }
+          console.log('🔑 Auth: Signup options with metadata:', signupOptions);
 
-    console.log('✅ Auth: signUp successful', {
-      hasUser: !!data?.user,
-      hasSession: !!data?.session,
-      needsConfirmation: !data?.session,
-      userId: data?.user?.id
-    });
+          const { data, error } = await supabaseClient.auth.signUp(signupOptions);
 
-    return { 
-      success: true, 
-      data, 
-      error: null,
-      needsEmailConfirmation: !data?.session
-    };
+          if (error) {
+            console.error('❌ Auth: signUp failed:', error.message, error);
+            return { 
+              success: false, 
+              data: null, 
+              error: service._formatAuthError(error) 
+            };
+          }
 
-  } catch (err) {
-    console.error('💥 Auth: signUp exception:', err);
-    return { 
-      success: false, 
-      data: null, 
-      error: { message: err.message, code: 'signup_exception' }
-    };
-  }
-},
+          console.log('✅ Auth: signUp successful', {
+            hasUser: !!data?.user,
+            hasSession: !!data?.session,
+            needsConfirmation: !data?.session,
+            userId: data?.user?.id,
+            userMetadata: data?.user?.user_metadata
+          });
+
+          return { 
+            success: true, 
+            data, 
+            error: null,
+            needsEmailConfirmation: !data?.session
+          };
+
+        } catch (err) {
+          console.error('💥 Auth: signUp exception:', err);
+          return { 
+            success: false, 
+            data: null, 
+            error: { message: err.message, code: 'signup_exception' }
+          };
+        }
+      },
     /**
      * Sign in existing user
      * @param {string} email - User email
