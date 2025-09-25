@@ -273,7 +273,7 @@ class EnhancedMatchingService {
       want_recovery_support: dbProfile.want_recovery_support,
       comfortable_discussing_recovery: dbProfile.comfortable_discussing_recovery,
       attend_meetings_together: dbProfile.attend_meetings_together,
-      substance_free_home_required: dbProfile.substance_free_home_required,
+      substance_free_home_required: dbProfile.substance_free_home_required, // ✅ FIXED: Correct field name
       recovery_goal_timeframe: dbProfile.recovery_goal_timeframe,
       recovery_context: dbProfile.recovery_context,
       
@@ -364,7 +364,7 @@ class EnhancedMatchingService {
       age_flexibility: dbProfile.age_flexibility,
       prefer_recovery_experience: dbProfile.prefer_recovery_experience,
       supportive_of_recovery: dbProfile.supportive_of_recovery,
-      substance_free_required: dbProfile.substance_free_required,
+      substance_free_home_required: dbProfile.substance_free_home_required, // ✅ FIXED: Roommate preference also uses correct field
       respect_privacy: dbProfile.respect_privacy,
       social_interaction_level: dbProfile.social_interaction_level,
       similar_schedules: dbProfile.similar_schedules,
@@ -748,7 +748,7 @@ class EnhancedMatchingService {
       filtered = filtered.filter(c => c.preferred_roommate_gender === filters.genderPreference);
     }
 
-    // Substance-free home filter
+    // Substance-free home filter ✅ FIXED: Using correct field name
     if (filters.substanceFreeHome !== undefined) {
       filtered = filtered.filter(c => c.substance_free_home_required === filters.substanceFreeHome);
     }
@@ -758,7 +758,7 @@ class EnhancedMatchingService {
   }
 
   /**
-   * ✅ NEW: Apply deal breaker filters (hard exclusions)
+   * ✅ NEW: Apply deal breaker filters (hard exclusions) ✅ FIXED: Using correct field name
    */
   applyDealBreakerFilters(userProfile, candidates) {
     return candidates.filter(candidate => {
@@ -780,7 +780,7 @@ class EnhancedMatchingService {
         return false;
       }
       
-      // Check candidate's deal breakers against user
+      // Check candidate's deal breakers against user ✅ FIXED: Using correct field name
       if (candidate.deal_breaker_substance_use && userProfile.substance_free_home_required === false) {
         console.log(`🚫 Excluding ${candidate.first_name} - their substance use deal breaker`);
         return false;

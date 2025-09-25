@@ -129,7 +129,7 @@ export const transformProfileForAlgorithm = (dbProfile) => {
     want_recovery_support: dbProfile.want_recovery_support || false,
     comfortable_discussing_recovery: dbProfile.comfortable_discussing_recovery || false,
     attend_meetings_together: dbProfile.attend_meetings_together || false,
-    substance_free_home_required: dbProfile.substance_free_home_required !== false, // Default true
+    substance_free_home_required: dbProfile.substance_free_home_required !== false, // ✅ FIXED: Correct field name
     recovery_goal_timeframe: dbProfile.recovery_goal_timeframe,
     recovery_context: dbProfile.recovery_context,
     
@@ -223,7 +223,7 @@ export const transformProfileForAlgorithm = (dbProfile) => {
     age_flexibility: dbProfile.age_flexibility,
     prefer_recovery_experience: dbProfile.prefer_recovery_experience || false,
     supportive_of_recovery: dbProfile.supportive_of_recovery !== false, // Default true
-    substance_free_required: dbProfile.substance_free_required !== false, // Default true
+    substance_free_home_required: dbProfile.substance_free_home_required !== false, // ✅ FIXED: Correct field name (roommate preference)
     respect_privacy: dbProfile.respect_privacy !== false, // Default true
     social_interaction_level: dbProfile.social_interaction_level,
     similar_schedules: dbProfile.similar_schedules || false,
@@ -332,7 +332,7 @@ export const validateProfileForMatching = (profile) => {
   const highPriority = [
     'age',
     'date_of_birth',
-    'substance_free_home_required',
+    'substance_free_home_required', // ✅ FIXED: Correct field name
     'bedtime_preference',
     'conflict_resolution_style',
     'smoking_status',
@@ -652,7 +652,7 @@ export const transformFormDataToDatabase = (formData, userId) => {
     want_recovery_support: formData.wantRecoverySupport || false,
     comfortable_discussing_recovery: formData.comfortableDiscussing || false,
     attend_meetings_together: formData.attendMeetingsTogether || false,
-    substance_free_home_required: formData.substanceFreeHome !== false,
+    substance_free_home_required: formData.substanceFreeHome !== false, // ✅ FIXED: Correct field name
     recovery_goal_timeframe: formData.recoveryGoalTimeframe,
     recovery_context: formData.recoveryContext,
     

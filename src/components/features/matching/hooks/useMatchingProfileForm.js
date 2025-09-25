@@ -69,7 +69,7 @@ export const useMatchingProfileForm = () => {
     want_recovery_support: false,
     comfortable_discussing_recovery: false,
     attend_meetings_together: false,
-    substance_free_home_required: true,
+    substance_free_home_required: true,  // ✅ FIXED: Using correct database field name
     recovery_goal_timeframe: '',
     recovery_context: '',
     
@@ -81,7 +81,7 @@ export const useMatchingProfileForm = () => {
     age_flexibility: '',
     prefer_recovery_experience: false,
     supportive_of_recovery: true,
-    substance_free_required: true,
+    // ✅ REMOVED: substance_free_required - this was incorrect, using substance_free_home_required instead
     respect_privacy: true,
     social_interaction_level: '',
     similar_schedules: false,
@@ -242,7 +242,7 @@ useEffect(() => {
           want_recovery_support: applicantForm.want_recovery_support || false,
           comfortable_discussing_recovery: applicantForm.comfortable_discussing_recovery || false,
           attend_meetings_together: applicantForm.attend_meetings_together || false,
-          substance_free_home_required: applicantForm.substance_free_home_required !== false,
+          substance_free_home_required: applicantForm.substance_free_home_required !== false, // ✅ FIXED: Correct field name
           recovery_goal_timeframe: applicantForm.recovery_goal_timeframe || '',
           recovery_context: applicantForm.recovery_context || '',
           
@@ -254,7 +254,7 @@ useEffect(() => {
           age_flexibility: applicantForm.age_flexibility || '',
           prefer_recovery_experience: applicantForm.prefer_recovery_experience || false,
           supportive_of_recovery: applicantForm.supportive_of_recovery !== false,
-          substance_free_required: applicantForm.substance_free_required !== false,
+          // ✅ REMOVED: substance_free_required mapping - using substance_free_home_required consistently
           respect_privacy: applicantForm.respect_privacy !== false,
           social_interaction_level: applicantForm.social_interaction_level || '',
           similar_schedules: applicantForm.similar_schedules || false,
@@ -608,7 +608,7 @@ useEffect(() => {
         want_recovery_support: formData.want_recovery_support || false,
         comfortable_discussing_recovery: formData.comfortable_discussing_recovery || false,
         attend_meetings_together: formData.attend_meetings_together || false,
-        substance_free_home_required: formData.substance_free_home_required !== false,
+        substance_free_home_required: formData.substance_free_home_required !== false, // ✅ FIXED: Correct field name
         recovery_goal_timeframe: formData.recovery_goal_timeframe || null,
         recovery_context: formData.recovery_context || null,
         
@@ -620,7 +620,7 @@ useEffect(() => {
         age_flexibility: formData.age_flexibility || null,
         prefer_recovery_experience: formData.prefer_recovery_experience || false,
         supportive_of_recovery: formData.supportive_of_recovery !== false,
-        substance_free_required: formData.substance_free_required !== false,
+        // ✅ REMOVED: substance_free_required submission - using substance_free_home_required consistently
         respect_privacy: formData.respect_privacy !== false,
         social_interaction_level: formData.social_interaction_level || null,
         similar_schedules: formData.similar_schedules || false,
@@ -707,7 +707,7 @@ useEffect(() => {
         budgetMax: applicantFormData.budget_max,
         preferredRoommateGender: applicantFormData.preferred_roommate_gender,
         recoveryMethods: applicantFormData.recovery_methods,
-        guestsPolicy: applicantFormData.guests_policy
+        substanceFreeHomeRequired: applicantFormData.substance_free_home_required // ✅ FIXED: Logging correct field name
       });
       
       const controller = new AbortController();

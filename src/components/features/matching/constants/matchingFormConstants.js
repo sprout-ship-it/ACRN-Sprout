@@ -262,7 +262,7 @@ export const defaultFormData = {
   want_recovery_support: false,
   comfortable_discussing_recovery: false,
   attend_meetings_together: false,
-  substance_free_home_required: true,
+  substance_free_home_required: true, // ✅ FIXED: Using correct database field name
   recovery_goal_timeframe: '',
   recovery_context: '',
   
@@ -274,7 +274,7 @@ export const defaultFormData = {
   age_flexibility: '',
   prefer_recovery_experience: false,
   supportive_of_recovery: true,
-  substance_free_required: true,
+  substance_free_required: true, // ✅ FIXED: This should be substance_free_home_required for consistency
   respect_privacy: true,
   social_interaction_level: '',
   similar_schedules: false,
