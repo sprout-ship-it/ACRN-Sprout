@@ -569,6 +569,7 @@ useEffect(() => {
         // Location & Housing
         primary_city: formData.primary_city,
         primary_state: formData.primary_state,
+        // ✅ REMOVED: primary_location - this is a generated column, database computes it automatically
         target_zip_codes: targetZipCodes,
         search_radius_miles: formData.search_radius_miles || 30,
         location_flexibility: formData.location_flexibility || null,
