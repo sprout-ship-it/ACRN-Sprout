@@ -1,8 +1,9 @@
-// src/utils/matching/dataTransform.js - ENHANCED WITH COMPLETE SCHEMA INTEGRATION
+// src/utils/matching/dataTransform.js - FIXED: COMPLETE primary_location removal
 
 /**
  * ✅ ENHANCED: Data transformation utilities for converting between standardized database schema 
  * and matching algorithm expectations. Full integration with applicant_matching_profiles table.
+ * ✅ CRITICAL FIX: primary_location completely excluded from all database write operations
  */
 
 /**
@@ -68,6 +69,7 @@ export const transformProfileForAlgorithm = (dbProfile) => {
     // ===== LOCATION (Standardized) =====
     primary_city: dbProfile.primary_city,
     primary_state: dbProfile.primary_state,
+    // ✅ SAFE: Read primary_location from database (for algorithm use only)
     primary_location: dbProfile.primary_location || 
                      (dbProfile.primary_city && dbProfile.primary_state ? 
                       `${dbProfile.primary_city}, ${dbProfile.primary_state}` : null),
@@ -129,7 +131,7 @@ export const transformProfileForAlgorithm = (dbProfile) => {
     want_recovery_support: dbProfile.want_recovery_support || false,
     comfortable_discussing_recovery: dbProfile.comfortable_discussing_recovery || false,
     attend_meetings_together: dbProfile.attend_meetings_together || false,
-    substance_free_home_required: dbProfile.substance_free_home_required !== false, // ✅ FIXED: Correct field name
+    substance_free_home_required: dbProfile.substance_free_home_required !== false,
     recovery_goal_timeframe: dbProfile.recovery_goal_timeframe,
     recovery_context: dbProfile.recovery_context,
     
@@ -223,7 +225,7 @@ export const transformProfileForAlgorithm = (dbProfile) => {
     age_flexibility: dbProfile.age_flexibility,
     prefer_recovery_experience: dbProfile.prefer_recovery_experience || false,
     supportive_of_recovery: dbProfile.supportive_of_recovery !== false, // Default true
-    substance_free_home_required: dbProfile.substance_free_home_required !== false, // ✅ FIXED: Correct field name (roommate preference)
+    substance_free_home_required: dbProfile.substance_free_home_required !== false,
     respect_privacy: dbProfile.respect_privacy !== false, // Default true
     social_interaction_level: dbProfile.social_interaction_level,
     similar_schedules: dbProfile.similar_schedules || false,
@@ -332,7 +334,7 @@ export const validateProfileForMatching = (profile) => {
   const highPriority = [
     'age',
     'date_of_birth',
-    'substance_free_home_required', // ✅ FIXED: Correct field name
+    'substance_free_home_required',
     'bedtime_preference',
     'conflict_resolution_style',
     'smoking_status',
@@ -573,10 +575,10 @@ export const calculateLocationCompatibility = (profile1, profile2) => {
 };
 
 /**
- * ✅ NEW: Transform form submission data to database format
+ * ✅ CRITICAL FIX: Transform form submission data to database format - EXCLUDING primary_location
  * @param {Object} formData - Form data from EnhancedMatchingProfileForm
  * @param {string} userId - User ID
- * @returns {Object} Database-ready record
+ * @returns {Object} Database-ready record WITHOUT primary_location
  */
 export const transformFormDataToDatabase = (formData, userId) => {
   if (!formData || !userId) {
@@ -601,7 +603,8 @@ export const transformFormDataToDatabase = (formData, userId) => {
   const completionPercentage = Math.round((completedFields.length / requiredFields.length) * 100);
   const isCompleted = completionPercentage >= 80;
 
-  return {
+  // ✅ CRITICAL FIX: Create database object WITHOUT primary_location
+  const databaseRecord = {
     user_id: userId,
     
     // Personal information
@@ -614,9 +617,10 @@ export const transformFormDataToDatabase = (formData, userId) => {
     preferred_roommate_gender: formData.preferredRoommateGender,
     gender_inclusive: formData.genderInclusive || false,
     
-    // Location
+    // Location - EXCLUDING primary_location (generated column)
     primary_city: formData.primary_city,
     primary_state: formData.primary_state,
+    // ❌ CRITICAL: primary_location COMPLETELY REMOVED - database generates this
     current_address: formData.address,
     current_city: formData.city,
     current_state: formData.state,
@@ -652,7 +656,7 @@ export const transformFormDataToDatabase = (formData, userId) => {
     want_recovery_support: formData.wantRecoverySupport || false,
     comfortable_discussing_recovery: formData.comfortableDiscussing || false,
     attend_meetings_together: formData.attendMeetingsTogether || false,
-    substance_free_home_required: formData.substanceFreeHome !== false, // ✅ FIXED: Correct field name
+    substance_free_home_required: formData.substanceFreeHome !== false,
     recovery_goal_timeframe: formData.recoveryGoalTimeframe,
     recovery_context: formData.recoveryContext,
     
@@ -739,6 +743,21 @@ export const transformFormDataToDatabase = (formData, userId) => {
     // Timestamps
     updated_at: new Date().toISOString()
   };
+
+  // ✅ CRITICAL SAFEGUARD: Double-check that primary_location is NOT included
+  if ('primary_location' in databaseRecord) {
+    console.error('CRITICAL ERROR: primary_location found in database record - removing it!');
+    delete databaseRecord.primary_location;
+  }
+
+  console.log('Database record created (primary_location excluded):', {
+    userId,
+    fieldCount: Object.keys(databaseRecord).length,
+    completionPercentage,
+    containsPrimaryLocation: 'primary_location' in databaseRecord // Should be false
+  });
+
+  return databaseRecord;
 };
 
 /**

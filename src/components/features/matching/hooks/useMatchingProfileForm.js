@@ -1,4 +1,4 @@
-// src/components/features/matching/hooks/useMatchingProfileForm.js - FULLY STANDARDIZED VERSION
+// src/components/features/matching/hooks/useMatchingProfileForm.js - FIXED: primary_location removal
 import { useState, useEffect } from 'react';
 import { useAuth } from '../../../../context/AuthContext';
 import { db } from '../../../../utils/supabase';
@@ -27,9 +27,10 @@ export const useMatchingProfileForm = () => {
     emergency_contact_phone: '',
     emergency_contact_relationship: '',
     
-    // Location & Housing (standardized names)
+    // Location & Housing (standardized names) - EXCLUDING primary_location
     primary_city: '',
     primary_state: '',
+    // ❌ COMPLETELY REMOVED: primary_location - this is a generated column
     target_zip_codes: '',
     search_radius_miles: 30,
     location_flexibility: '',
@@ -69,7 +70,7 @@ export const useMatchingProfileForm = () => {
     want_recovery_support: false,
     comfortable_discussing_recovery: false,
     attend_meetings_together: false,
-    substance_free_home_required: true,  // ✅ FIXED: Using correct database field name
+    substance_free_home_required: true,
     recovery_goal_timeframe: '',
     recovery_context: '',
     
@@ -81,7 +82,6 @@ export const useMatchingProfileForm = () => {
     age_flexibility: '',
     prefer_recovery_experience: false,
     supportive_of_recovery: true,
-    // ✅ REMOVED: substance_free_required - this was incorrect, using substance_free_home_required instead
     respect_privacy: true,
     social_interaction_level: '',
     similar_schedules: false,
@@ -177,14 +177,12 @@ useEffect(() => {
       
       const result = await db.matchingProfiles.getByUserId(user.id);
       
-      // ✅ FIXED: Handle different result scenarios properly
       if (result.success && result.data) {
-        // Existing user with profile - load their data
         console.log('Loaded applicant form data:', result.data);
         
         const applicantForm = result.data;
         
-        // Direct mapping since field names now match exactly
+        // Direct mapping since field names now match exactly - EXCLUDING primary_location
         setFormData(prev => ({
           ...prev,
           // Personal Demographics
@@ -200,9 +198,10 @@ useEffect(() => {
           emergency_contact_phone: applicantForm.emergency_contact_phone || '',
           emergency_contact_relationship: applicantForm.emergency_contact_relationship || '',
           
-          // Location & Housing
+          // Location & Housing - EXCLUDING primary_location (generated column)
           primary_city: applicantForm.primary_city || '',
           primary_state: applicantForm.primary_state || '',
+          // ❌ COMPLETELY REMOVED: primary_location mapping
           target_zip_codes: applicantForm.target_zip_codes?.join(', ') || '',
           search_radius_miles: applicantForm.search_radius_miles || 30,
           location_flexibility: applicantForm.location_flexibility || '',
@@ -242,7 +241,7 @@ useEffect(() => {
           want_recovery_support: applicantForm.want_recovery_support || false,
           comfortable_discussing_recovery: applicantForm.comfortable_discussing_recovery || false,
           attend_meetings_together: applicantForm.attend_meetings_together || false,
-          substance_free_home_required: applicantForm.substance_free_home_required !== false, // ✅ FIXED: Correct field name
+          substance_free_home_required: applicantForm.substance_free_home_required !== false,
           recovery_goal_timeframe: applicantForm.recovery_goal_timeframe || '',
           recovery_context: applicantForm.recovery_context || '',
           
@@ -254,7 +253,6 @@ useEffect(() => {
           age_flexibility: applicantForm.age_flexibility || '',
           prefer_recovery_experience: applicantForm.prefer_recovery_experience || false,
           supportive_of_recovery: applicantForm.supportive_of_recovery !== false,
-          // ✅ REMOVED: substance_free_required mapping - using substance_free_home_required consistently
           respect_privacy: applicantForm.respect_privacy !== false,
           social_interaction_level: applicantForm.social_interaction_level || '',
           similar_schedules: applicantForm.similar_schedules || false,
@@ -336,12 +334,9 @@ useEffect(() => {
         console.log('Form data populated successfully with standardized fields');
         
       } else if (!result.success && result.error?.includes('No matching profile found')) {
-        // ✅ FIXED: New user scenario - this is expected, not an error
         console.log('No existing applicant form found for user - initializing new form');
-        // Form data already initialized with defaults, just proceed
         
       } else {
-        // ✅ FIXED: Actual error scenario - database issues, connection problems, etc.
         console.error('Actual error loading applicant form:', result.error);
         setErrors({ load: `Error loading data: ${result.error || 'Unknown error'}` });
         setInitialLoading(false);
@@ -359,7 +354,7 @@ useEffect(() => {
   loadExistingData();
 }, [user, profile, hasRole]);
 
-  // FIXED: Calculate completion with standardized required fields
+  // Calculate completion with standardized required fields
   const getCompletionPercentage = () => {
     let completed = 0;
     let total = 0;
@@ -387,7 +382,7 @@ useEffect(() => {
     return Math.round((completed / total) * 100);
   };
 
-  // FIXED: Validation with standardized field names
+  // Validation with standardized field names
   const validateForm = () => {
     console.log('Starting form validation with standardized fields...');
     const newErrors = {};
@@ -521,9 +516,9 @@ useEffect(() => {
     handleInputChange(field, parseInt(value));
   };
 
-  // FIXED: Form submission using standardized database field mapping (no conversion needed)
+  // FIXED: Form submission ensuring primary_location is NEVER included
   const submitForm = async () => {
-    console.log('Form submission started with standardized fields');
+    console.log('Form submission started with standardized fields - EXCLUDING primary_location');
     
     setErrors(prev => {
       const { submit, ...otherErrors } = prev;
@@ -549,7 +544,7 @@ useEffect(() => {
             .filter(zip => zip && /^\d{5}$/.test(zip))
         : [];
 
-      // FIXED: Direct submission using standardized field names (no mapping needed)
+      // FIXED: Create applicantFormData object COMPLETELY EXCLUDING primary_location
       const applicantFormData = {
         user_id: user.id,
         
@@ -566,10 +561,10 @@ useEffect(() => {
         emergency_contact_phone: formData.emergency_contact_phone || null,
         emergency_contact_relationship: formData.emergency_contact_relationship || null,
         
-        // Location & Housing
+        // Location & Housing - COMPLETELY EXCLUDING primary_location
         primary_city: formData.primary_city,
         primary_state: formData.primary_state,
-        // ✅ REMOVED: primary_location - this is a generated column, database computes it automatically
+        // ❌ CRITICAL FIX: primary_location is NEVER included - it's generated by database
         target_zip_codes: targetZipCodes,
         search_radius_miles: formData.search_radius_miles || 30,
         location_flexibility: formData.location_flexibility || null,
@@ -609,7 +604,7 @@ useEffect(() => {
         want_recovery_support: formData.want_recovery_support || false,
         comfortable_discussing_recovery: formData.comfortable_discussing_recovery || false,
         attend_meetings_together: formData.attend_meetings_together || false,
-        substance_free_home_required: formData.substance_free_home_required !== false, // ✅ FIXED: Correct field name
+        substance_free_home_required: formData.substance_free_home_required !== false,
         recovery_goal_timeframe: formData.recovery_goal_timeframe || null,
         recovery_context: formData.recovery_context || null,
         
@@ -621,7 +616,6 @@ useEffect(() => {
         age_flexibility: formData.age_flexibility || null,
         prefer_recovery_experience: formData.prefer_recovery_experience || false,
         supportive_of_recovery: formData.supportive_of_recovery !== false,
-        // ✅ REMOVED: substance_free_required submission - using substance_free_home_required consistently
         respect_privacy: formData.respect_privacy !== false,
         social_interaction_level: formData.social_interaction_level || null,
         similar_schedules: formData.similar_schedules || false,
@@ -700,7 +694,13 @@ useEffect(() => {
         recovery_community: formData.recovery_community || false
       };
       
-      console.log('Standardized database submission starting...', { 
+      // CRITICAL: Double-check that primary_location is NOT in the object
+      if ('primary_location' in applicantFormData) {
+        console.error('CRITICAL ERROR: primary_location found in submission data - removing it');
+        delete applicantFormData.primary_location;
+      }
+      
+      console.log('Database submission data prepared (primary_location excluded):', { 
         userId: user.id, 
         dataKeys: Object.keys(applicantFormData).length,
         primaryCity: applicantFormData.primary_city,
@@ -708,7 +708,8 @@ useEffect(() => {
         budgetMax: applicantFormData.budget_max,
         preferredRoommateGender: applicantFormData.preferred_roommate_gender,
         recoveryMethods: applicantFormData.recovery_methods,
-        substanceFreeHomeRequired: applicantFormData.substance_free_home_required // ✅ FIXED: Logging correct field name
+        substanceFreeHomeRequired: applicantFormData.substance_free_home_required,
+        containsPrimaryLocation: 'primary_location' in applicantFormData // Should be false
       });
       
       const controller = new AbortController();
@@ -724,7 +725,7 @@ useEffect(() => {
         return false;
       }
 
-      console.log('Form submission successful', result.data);
+      console.log('Form submission successful (primary_location excluded)', result.data);
       setSuccessMessage('Comprehensive matching profile saved successfully with standardized fields!');
 
       return true;
