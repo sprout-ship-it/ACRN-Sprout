@@ -31,44 +31,44 @@ const SECTION_VALIDATION_RULES = {
     }
   },
 
-  location: {
-    required: ['primary_city', 'primary_state', 'budget_min', 'budget_max', 'max_commute_minutes', 'move_in_date'],
-    warnings: ['housing_types_accepted'],
-    validations: {
-      primary_city: (value) => !value ? 'Primary city is required' : null,
-      primary_state: (value) => !value ? 'Primary state is required' : null,
-      budget_min: (value) => {
-        if (!value) return 'Minimum budget is required';
-        const min = parseInt(value);
-        if (min < 200) return 'Minimum budget should be at least $200';
-        if (min > 4500) return 'Minimum budget cannot exceed $4,500';
-        return null;
-      },
-      budget_max: (value, formData) => {
-        if (!value) return 'Maximum budget is required';
-        const max = parseInt(value);
-        const min = parseInt(formData.budget_min || 0);
-        if (max < 300) return 'Maximum budget should be at least $300';
-        if (max > 5000) return 'Maximum budget cannot exceed $5,000';
-        if (max < min) return 'Maximum budget must be greater than minimum budget';
-        return null;
-      },
-      max_commute_minutes: (value) => !value ? 'Maximum commute time preference is required' : null,
-      move_in_date: (value) => {
-        if (!value) return 'Move-in date is required';
-        const moveDate = new Date(value);
-        const today = new Date();
-        if (moveDate < today) return 'Move-in date cannot be in the past';
-        return null;
-      },
-      housing_types_accepted: (value) => {
-        if (!value || !Array.isArray(value) || value.length === 0) {
-          return 'Please select at least one housing type you would consider';
-        }
-        return null;
+location: {
+  required: ['primary_city', 'primary_state', 'budget_min', 'budget_max', 'max_commute_minutes', 'move_in_date', 'housing_types_accepted'],
+  warnings: [],
+  validations: {
+    primary_city: (value) => !value ? 'Primary city is required' : null,
+    primary_state: (value) => !value ? 'Primary state is required' : null,
+    budget_min: (value) => {
+      if (!value) return 'Minimum budget is required';
+      const min = parseInt(value);
+      if (min < 200) return 'Minimum budget should be at least $200';
+      if (min > 4500) return 'Minimum budget cannot exceed $4,500';
+      return null;
+    },
+    budget_max: (value, formData) => {
+      if (!value) return 'Maximum budget is required';
+      const max = parseInt(value);
+      const min = parseInt(formData.budget_min || 0);
+      if (max < 300) return 'Maximum budget should be at least $300';
+      if (max > 5000) return 'Maximum budget cannot exceed $5,000';
+      if (max < min) return 'Maximum budget must be greater than minimum budget';
+      return null;
+    },
+    max_commute_minutes: (value) => !value ? 'Maximum commute time preference is required' : null,
+    move_in_date: (value) => {
+      if (!value) return 'Move-in date is required';
+      const moveDate = new Date(value);
+      const today = new Date();
+      if (moveDate < today) return 'Move-in date cannot be in the past';
+      return null;
+    },
+    housing_types_accepted: (value) => {
+      if (!value || !Array.isArray(value) || value.length === 0) {
+        return 'Please select at least one housing type you would consider';
       }
+      return null;
     }
-  },
+  }
+},
 
   recovery: {
     required: ['recovery_stage', 'spiritual_affiliation', 'primary_issues', 'recovery_methods', 'program_types'],
