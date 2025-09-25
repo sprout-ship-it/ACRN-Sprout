@@ -260,8 +260,8 @@ const RoommatePreferencesSection = ({
           <label className={styles.checkboxLabel || 'checkbox-item'}>
             <input
               type="checkbox"
-              checked={formData.substance_free_required || false}
-              onChange={(e) => onInputChange('substance_free_required', e.target.checked)}
+            checked={formData.substance_free_home_required || false}
+            onChange={(e) => onInputChange('substance_free_home_required', e.target.checked)}
               disabled={loading}
             />
             <span className={styles.checkboxText || ''}>
