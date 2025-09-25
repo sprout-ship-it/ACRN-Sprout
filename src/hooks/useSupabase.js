@@ -1,4 +1,4 @@
-// src/hooks/useSupabase.js
+// src/hooks/useSupabase.js - FIXED VERSION
 import { useState, useCallback } from 'react';
 import { db } from '../utils/supabase';
 import { useAuth } from './useAuth';
@@ -55,6 +55,18 @@ export const useSupabase = () => {
     clearError,
     executeOperation
   };
+};
+
+// ✅ FIXED: Helper function to remove generated columns from data
+const removeGeneratedColumns = (data, generatedColumns = []) => {
+  if (!data || typeof data !== 'object') return data;
+  
+  const cleanData = { ...data };
+  generatedColumns.forEach(column => {
+    delete cleanData[column];
+  });
+  
+  return cleanData;
 };
 
 /**
@@ -137,14 +149,23 @@ export const useBasicProfile = () => {
 
 /**
  * Hook for matching profile operations
+ * ✅ FIXED: Remove generated columns before database operations
  */
 export const useMatchingProfile = () => {
   const { executeOperation } = useSupabase();
   const { user } = useAuth();
 
+  // ✅ FIXED: Define generated columns that should be excluded
+  const GENERATED_COLUMNS = ['primary_location'];
+
   const createMatchingProfile = useCallback(async (profileData) => {
+    // ✅ FIXED: Remove generated columns from the data
+    const cleanData = removeGeneratedColumns(profileData, GENERATED_COLUMNS);
+    
+    console.log('Creating matching profile with clean data:', cleanData);
+    
     return executeOperation(
-      () => db.matchingProfiles.create({ ...profileData, user_id: user.id }),
+      () => db.matchingProfiles.create({ ...cleanData, user_id: user.id }),
       { successMessage: 'Matching profile created successfully' }
     );
   }, [executeOperation, user]);
@@ -152,8 +173,13 @@ export const useMatchingProfile = () => {
   const updateMatchingProfile = useCallback(async (updates) => {
     if (!user) throw new Error('No authenticated user');
     
+    // ✅ FIXED: Remove generated columns from the updates
+    const cleanUpdates = removeGeneratedColumns(updates, GENERATED_COLUMNS);
+    
+    console.log('Updating matching profile with clean data:', cleanUpdates);
+    
     return executeOperation(
-      () => db.matchingProfiles.update(user.id, updates),
+      () => db.matchingProfiles.update(user.id, cleanUpdates),
       { successMessage: 'Matching profile updated successfully' }
     );
   }, [executeOperation, user]);
