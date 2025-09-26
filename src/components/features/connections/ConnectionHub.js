@@ -1,4 +1,4 @@
-// src/components/features/connections/ConnectionHub.js - UPDATED WITH CSS MODULE
+// src/components/features/connections/ConnectionHub.js - UPDATED FOR CURRENT SCHEMA
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../../../hooks/useAuth';
 import { db } from '../../../utils/supabase';
@@ -93,23 +93,23 @@ const ConnectionHub = ({ onBack }) => {
    * Load all active connections from different sources
    */
   const loadConnections = async () => {
-    if (!user?.id) return;
+    if (!user?.id || !profile?.id) return;
 
     setLoading(true);
     setError(null);
 
     try {
-      console.log('🔄 Loading all connections for user:', user.id);
+      console.log('🔄 Loading all connections for profile:', profile.id);
       
       const allConnections = [];
 
       // 1. Load roommate and peer support matches from match_groups
       try {
-        const matchResult = await db.matchGroups.getByUserId(user.id);
+        const matchResult = await db.matchGroups.getByUserId(profile.id);
         if (matchResult.data && !matchResult.error) {
           for (const match of matchResult.data) {
             // Determine the other user in the match
-            let otherUserId = null;
+            let otherProfileId = null;
             let connectionType = 'roommate';
             let avatar = '👥';
             
@@ -117,42 +117,46 @@ const ConnectionHub = ({ onBack }) => {
               // This is a peer support connection
               connectionType = 'peer_support';
               avatar = '🤝';
-              if (match.peer_support_id === user.id) {
+              if (match.peer_support_id === profile.id) {
                 // Current user is the peer supporter
-                otherUserId = match.applicant_1_id || match.applicant_2_id;
+                otherProfileId = match.applicant_1_id || match.applicant_2_id;
               } else {
                 // Current user is the applicant
-                otherUserId = match.peer_support_id;
+                otherProfileId = match.peer_support_id;
               }
-            } else if (match.landlord_id) {
-              // This is a housing connection
+            } else if (match.property_id) {
+              // This is a housing connection - need to get landlord from property
               connectionType = 'landlord';
               avatar = '🏠';
-              if (match.landlord_id === user.id) {
-                // Current user is the landlord
-                otherUserId = match.applicant_1_id || match.applicant_2_id;
-              } else {
-                // Current user is an applicant
-                otherUserId = match.landlord_id;
+              
+              // Get property details to find landlord
+              const propertyResult = await db.properties.getById(match.property_id);
+              if (propertyResult.data && !propertyResult.error) {
+                const property = propertyResult.data;
+                // Get landlord profile from landlord_id
+                const landlordResult = await db.landlordProfiles.getById(property.landlord_id);
+                if (landlordResult.data && !landlordResult.error) {
+                  otherProfileId = landlordResult.data.user_id;
+                }
               }
             } else {
               // This is a roommate connection
               connectionType = 'roommate';
               avatar = '👥';
-              otherUserId = match.applicant_1_id === user.id ? match.applicant_2_id : match.applicant_1_id;
+              otherProfileId = match.applicant_1_id === profile.id ? match.applicant_2_id : match.applicant_1_id;
             }
             
-            if (otherUserId) {
-              // Get other user's profile
-              const profileResult = await db.profiles.getById(otherUserId);
+            if (otherProfileId) {
+              // Get other user's registrant profile
+              const profileResult = await db.profiles.getById(otherProfileId);
               
               if (profileResult.data && !profileResult.error) {
                 const otherProfile = profileResult.data;
                 
                 allConnections.push({
                   id: match.id,
-                  user_id: otherUserId,
-                  name: otherProfile.first_name || 'Anonymous',
+                  profile_id: otherProfileId,
+                  name: `${otherProfile.first_name} ${otherProfile.last_name}` || 'Anonymous',
                   type: connectionType,
                   status: match.status === 'active' ? 'active' : match.status,
                   source: 'match_group',
@@ -161,7 +165,7 @@ const ConnectionHub = ({ onBack }) => {
                   last_activity: match.updated_at || match.created_at,
                   shared_contact: match.contact_shared || false,
                   contact_info: match.shared_contact_info || null,
-                  property: match.property || null,
+                  property_id: match.property_id || null,
                   avatar: avatar
                 });
               }
@@ -172,38 +176,52 @@ const ConnectionHub = ({ onBack }) => {
         console.warn('Error loading match groups:', err);
       }
 
-      // 2. Load housing connections from match_requests (approved housing requests)
+      // 2. Load housing connections from match_requests (property-specific requests)
       try {
-        const housingResult = await db.matchRequests.getByUserId(user.id);
+        const housingResult = await db.matchRequests.getByUserId(profile.id);
         if (housingResult.data && !housingResult.error) {
           const approvedHousingRequests = housingResult.data.filter(
-            req => req.request_type === 'housing' && req.status === 'matched'
+            req => req.request_type === 'housing' && req.status === 'accepted' && req.property_id
           );
 
           for (const request of approvedHousingRequests) {
-            const landlordId = request.target_id;
-            
-            // Get landlord profile
-            const profileResult = await db.profiles.getById(landlordId);
-            
-            if (profileResult.data && !profileResult.error) {
-              const landlordProfile = profileResult.data;
+            // Get property details
+            const propertyResult = await db.properties.getById(request.property_id);
+            if (propertyResult.data && !propertyResult.error) {
+              const property = propertyResult.data;
               
-              allConnections.push({
-                id: `housing_${request.id}`,
-                user_id: landlordId,
-                name: landlordProfile.first_name || 'Property Owner',
-                type: 'landlord',
-                status: 'active',
-                source: 'housing_request',
-                request_id: request.id,
-                property_title: 'Property',
-                created_at: request.created_at,
-                last_activity: request.updated_at || request.created_at,
-                shared_contact: false,
-                contact_info: null,
-                avatar: '🏠'
-              });
+              // Get landlord profile
+              const landlordResult = await db.landlordProfiles.getById(property.landlord_id);
+              if (landlordResult.data && !landlordResult.error) {
+                const landlordProfile = landlordResult.data;
+                
+                // Get registrant profile for landlord
+                const registrantResult = await db.profiles.getById(landlordProfile.user_id);
+                if (registrantResult.data && !registrantResult.error) {
+                  const registrant = registrantResult.data;
+                  
+                  allConnections.push({
+                    id: `housing_${request.id}`,
+                    profile_id: landlordProfile.user_id,
+                    name: `${registrant.first_name} ${registrant.last_name}` || 'Property Owner',
+                    type: 'landlord',
+                    status: 'active',
+                    source: 'housing_request',
+                    request_id: request.id,
+                    property_title: property.title || 'Property',
+                    property_id: property.id,
+                    created_at: request.created_at,
+                    last_activity: request.updated_at || request.created_at,
+                    shared_contact: false,
+                    contact_info: {
+                      phone: landlordProfile.primary_phone,
+                      email: landlordProfile.contact_email || registrant.email,
+                      preferred_contact: landlordProfile.preferred_contact_method || 'email'
+                    },
+                    avatar: '🏠'
+                  });
+                }
+              }
             }
           }
         }
@@ -211,43 +229,40 @@ const ConnectionHub = ({ onBack }) => {
         console.warn('Error loading housing connections:', err);
       }
 
-      // 3. Load employer favorites (if the table exists)
+      // 3. Load employer favorites (conditional - may not exist yet)
       try {
-        if (db.employerFavorites) {
-          const favoritesResult = await db.employerFavorites.getByUserId(user.id);
+        // Check if employer favorites service exists
+        if (db.employerFavorites && typeof db.employerFavorites.getByUserId === 'function') {
+          const favoritesResult = await db.employerFavorites.getByUserId(profile.id);
           if (favoritesResult.data && !favoritesResult.error) {
             for (const favorite of favoritesResult.data) {
-              // The employer favorites view should include employer profile data
-              const employerData = favorite;
-              
-              if (employerData.company_name) {
-                allConnections.push({
-                  id: `employer_${favorite.id}`,
-                  user_id: favorite.employer_user_id,
-                  name: employerData.company_name || 'Employer',
-                  type: 'employer',
-                  status: 'favorited',
-                  source: 'employer_favorite',
-                  favorite_id: favorite.id,
-                  company_name: employerData.company_name,
-                  created_at: favorite.created_at,
-                  last_activity: favorite.created_at,
-                  shared_contact: false,
-                  contact_info: {
-                    email: employerData.contact_email,
-                    phone: employerData.phone,
-                    preferred_contact: 'email',
-                    availability: 'Business hours'
-                  },
-                  avatar: '💼'
-                });
-              }
+              // Use the view data that includes employer profile information
+              allConnections.push({
+                id: `employer_${favorite.id}`,
+                profile_id: favorite.employer_user_id,
+                name: favorite.business_type || 'Employer',
+                type: 'employer',
+                status: 'favorited',
+                source: 'employer_favorite',
+                favorite_id: favorite.id,
+                company_name: favorite.business_type,
+                industry: favorite.industry,
+                created_at: favorite.created_at,
+                last_activity: favorite.created_at,
+                shared_contact: true, // Employer info is public
+                contact_info: {
+                  email: favorite.contact_email,
+                  phone: favorite.primary_phone,
+                  preferred_contact: 'email',
+                  availability: 'Business hours'
+                },
+                avatar: '💼'
+              });
             }
           }
         }
       } catch (err) {
-        console.warn('Error loading employer favorites:', err);
-        // This is expected if employer_favorites table doesn't exist yet
+        console.warn('Error loading employer favorites (service may not exist yet):', err);
       }
 
       // Sort connections by most recent activity
@@ -268,15 +283,15 @@ const ConnectionHub = ({ onBack }) => {
    * Share contact information with a connection
    */
   const handleShareContact = async (connection) => {
-    if (!user?.id) return;
+    if (!user?.id || !profile?.id) return;
 
     try {
       console.log('📞 Sharing contact with:', connection.name);
 
       // For match_group connections, update the contact sharing
-      if (connection.source === 'match_group') {
+      if (connection.source === 'match_group' && connection.match_group_id) {
         const contactInfo = {
-          phone: profile?.phone || '',
+          phone: profile?.primary_phone || '',
           email: user.email || '',
           preferred_contact: 'email',
           availability: 'Evenings after 6pm',
@@ -372,8 +387,10 @@ const ConnectionHub = ({ onBack }) => {
 
   // Load connections on mount
   useEffect(() => {
-    loadConnections();
-  }, [user?.id]);
+    if (profile?.id) {
+      loadConnections();
+    }
+  }, [profile?.id]);
 
   return (
     <div className="content">
@@ -407,8 +424,7 @@ const ConnectionHub = ({ onBack }) => {
       {/* Loading State */}
       {loading && (
         <div className={styles.loadingState}>
-          <div className={styles.loadingSpinner}></div>
-          <p className={styles.loadingText}>Loading your connections...</p>
+          <LoadingSpinner size="large" text="Loading your connections..." />
         </div>
       )}
 

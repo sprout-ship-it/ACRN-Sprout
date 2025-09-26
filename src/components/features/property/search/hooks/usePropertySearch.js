@@ -2,7 +2,7 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { supabase } from '../../../../../utils/supabase';
 
-// ✅ UPDATED: Custom hook for property search logic and state management - ALIGNED WITH NEW SCHEMA
+// ✅ UPDATED: Custom hook for property search logic - FULLY ALIGNED WITH SCHEMA.SQL
 const usePropertySearch = (user) => {
   // ✅ Search state management
   const [loading, setLoading] = useState(false);
@@ -39,6 +39,7 @@ const usePropertySearch = (user) => {
     acceptedSubsidies: [],
     amenities: [],
     utilitiesIncluded: [],
+    accessibilityFeatures: [],
     smokingPolicy: '',
     guestPolicy: '',
     backgroundCheck: '',
@@ -49,16 +50,28 @@ const usePropertySearch = (user) => {
   // ✅ Debouncing ref for search optimization
   const searchTimeoutRef = useRef(null);
 
-  // ✅ FIXED: Load user preferences from applicant_matching_profiles (NEW TABLE NAME)
+  // ✅ CORRECTED: Load user preferences from applicant_matching_profiles (EXACT SCHEMA ALIGNMENT)
   const loadUserPreferences = useCallback(async () => {
     if (!user?.id) return;
 
     try {
       console.log('👤 Loading user housing preferences from applicant_matching_profiles...');
       
-      // ✅ UPDATED: Query the correct table with correct field mappings
+      // ✅ Get registrant_profiles.id first since applicant_matching_profiles.user_id references that
+      const { data: registrantData, error: registrantError } = await supabase
+        .from('registrant_profiles')
+        .select('id')
+        .eq('user_id', user.id)
+        .single();
+
+      if (registrantError || !registrantData) {
+        console.log('ℹ️ No registrant profile found for user');
+        return;
+      }
+
+      // ✅ UPDATED: Query with exact schema field names
       const { data, error } = await supabase
-        .from('applicant_matching_profiles') // ✅ FIXED: Updated table name
+        .from('applicant_matching_profiles')
         .select(`
           user_id,
           primary_city,
@@ -78,7 +91,7 @@ const usePropertySearch = (user) => {
           public_transit_access,
           utilities_included_preference
         `)
-        .eq('user_id', user.id)
+        .eq('user_id', registrantData.id)
         .single();
 
       if (error) {
@@ -99,20 +112,34 @@ const usePropertySearch = (user) => {
     }
   }, [user?.id]);
 
-  // ✅ Load saved properties (placeholder for future feature)
+  // ✅ Load saved properties from favorites table (SCHEMA ALIGNED)
   const loadSavedProperties = useCallback(async () => {
-    // Future: Load from user_saved_properties table or favorites
-    // const { data } = await supabase
-    //   .from('favorites')
-    //   .select('favorited_user_id')
-    //   .eq('user_id', user.id)
-    //   .eq('favorite_type', 'housing');
-    // setSavedProperties(new Set(data?.map(item => item.favorited_user_id) || []));
-    
-    setSavedProperties(new Set());
+    if (!user?.id) return;
+
+    try {
+      // ✅ CORRECTED: Use proper favorites table structure from schema
+      const { data: registrantData } = await supabase
+        .from('registrant_profiles')
+        .select('id')
+        .eq('user_id', user.id)
+        .single();
+
+      if (registrantData) {
+        const { data } = await supabase
+          .from('favorites')
+          .select('favorited_property_id')
+          .eq('favoriting_user_id', registrantData.id)
+          .eq('favorite_type', 'property');
+        
+        setSavedProperties(new Set(data?.map(item => item.favorited_property_id) || []));
+      }
+    } catch (err) {
+      console.error('Error loading saved properties:', err);
+      setSavedProperties(new Set());
+    }
   }, [user?.id]);
 
-  // ✅ ENHANCED: Robust property search with better error handling
+  // ✅ CORRECTED: Property search with exact schema field names
   const performSearch = useCallback(async (resetPage = true) => {
     if (resetPage) {
       setCurrentPage(1);
@@ -122,11 +149,12 @@ const usePropertySearch = (user) => {
     try {
       console.log('🔍 Searching properties with mode:', searchMode, 'Page:', currentPage);
       
-      // ✅ Build robust query based on search mode
+      // ✅ CORRECTED: Build query with exact schema field names
       let query = supabase
         .from('properties')
         .select('*', { count: 'exact' })
-        .eq('status', 'available');
+        .eq('status', 'available')
+        .eq('accepting_applications', true);
 
       // ✅ Enhanced location filtering
       if (basicFilters.location.trim()) {
@@ -156,13 +184,13 @@ const usePropertySearch = (user) => {
         query = query.gte('bedrooms', parseInt(basicFilters.minBedrooms));
       }
 
-      // ✅ Housing type filtering
+      // ✅ CORRECTED: Housing type filtering with exact schema property_type values
       if (basicFilters.housingType.length > 0) {
         const typeConditions = basicFilters.housingType.map(type => `property_type.eq.${type}`).join(',');
         query = query.or(typeConditions);
       }
 
-      // ✅ Property feature filters
+      // ✅ CORRECTED: Property feature filters with exact schema field names
       if (basicFilters.furnished) {
         query = query.eq('furnished', true);
       }
@@ -171,33 +199,42 @@ const usePropertySearch = (user) => {
         query = query.eq('pets_allowed', true);
       }
 
-      // ✅ Recovery housing mode filtering
+      // ✅ CORRECTED: Recovery housing mode filtering with exact schema fields
       if (searchMode === 'recovery') {
         if (recoveryFilters.recoveryHousingOnly) {
-          query = query.eq('is_recovery_friendly', true);
+          query = query.eq('is_recovery_housing', true); // ✅ FIXED: Correct field name
         }
         
+        // ✅ CORRECTED: Use individual boolean fields instead of non-existent recovery_features array
         if (recoveryFilters.caseManagement) {
-          query = query.contains('recovery_features', ['case_management']);
+          query = query.eq('case_management', true);
         }
         
         if (recoveryFilters.counselingServices) {
-          query = query.contains('recovery_features', ['counseling_services']);
+          query = query.eq('counseling_services', true);
         }
         
         if (recoveryFilters.supportGroups) {
-          query = query.contains('recovery_features', ['support_groups']);
+          // Note: This would need to be mapped to job_training, medical_services, etc. 
+          // or we need to add a support_groups field to the schema
+          // For now, we'll look for properties with any support services
+          query = query.or('counseling_services.eq.true,case_management.eq.true,job_training.eq.true');
         }
 
+        // ✅ CORRECTED: Use exact schema field for required programs
         if (recoveryFilters.requiredPrograms.length > 0) {
-          query = query.overlaps('recovery_features', recoveryFilters.requiredPrograms);
+          query = query.overlaps('required_programs', recoveryFilters.requiredPrograms);
+        }
+
+        // ✅ NEW: Add sobriety time filtering if provided
+        if (recoveryFilters.soberness) {
+          query = query.eq('min_sobriety_time', recoveryFilters.soberness);
         }
       }
 
-      // ✅ Advanced filters application
+      // ✅ CORRECTED: Advanced filters with exact schema field names
       if (advancedFilters.acceptedSubsidies.length > 0) {
-        // Note: This field might need to be added to properties table if not exists
-        // query = query.overlaps('accepted_subsidies', advancedFilters.acceptedSubsidies);
+        query = query.overlaps('accepted_subsidies', advancedFilters.acceptedSubsidies);
       }
 
       if (advancedFilters.amenities.length > 0) {
@@ -208,13 +245,24 @@ const usePropertySearch = (user) => {
         query = query.overlaps('utilities_included', advancedFilters.utilitiesIncluded);
       }
 
+      if (advancedFilters.accessibilityFeatures.length > 0) {
+        query = query.overlaps('accessibility_features', advancedFilters.accessibilityFeatures);
+      }
+
       if (advancedFilters.smokingPolicy) {
         query = query.eq('smoking_allowed', advancedFilters.smokingPolicy === 'allowed');
       }
 
       if (advancedFilters.leaseLength) {
-        // Assuming lease_length field exists or using lease_length from schema.sql
-        query = query.ilike('lease_length', `%${advancedFilters.leaseLength}%`);
+        // ✅ CORRECTED: Use lease_duration from schema
+        query = query.ilike('lease_duration', `%${advancedFilters.leaseLength}%`);
+      }
+
+      if (advancedFilters.moveInCost) {
+        // Calculate total move-in cost (rent + deposit + fees)
+        const maxMoveInCost = parseInt(advancedFilters.moveInCost);
+        // This is a complex calculation, so we'll filter on monthly_rent as a proxy
+        query = query.lte('monthly_rent', Math.floor(maxMoveInCost / 2));
       }
 
       // ✅ Pagination
@@ -225,12 +273,13 @@ const usePropertySearch = (user) => {
       
       query = query.range(from, to);
 
-      // ✅ Smart ordering based on search mode
+      // ✅ CORRECTED: Smart ordering with exact schema field names
       if (searchMode === 'recovery') {
-        query = query.order('is_recovery_friendly', { ascending: false })
+        query = query.order('is_recovery_housing', { ascending: false })
                     .order('monthly_rent', { ascending: true });
       } else {
-        query = query.order('is_recovery_friendly', { ascending: false })
+        // Prioritize recovery housing in general search too
+        query = query.order('is_recovery_housing', { ascending: false })
                     .order('monthly_rent', { ascending: true });
       }
 
@@ -330,18 +379,18 @@ const usePropertySearch = (user) => {
     debouncedSearch(true);
   }, [debouncedSearch]);
 
-  // ✅ UPDATED: Auto-populate filters from user preferences (ALIGNED WITH NEW SCHEMA)
+  // ✅ CORRECTED: Auto-populate filters from user preferences (EXACT SCHEMA ALIGNMENT)
   const applyUserPreferences = useCallback(() => {
     if (userPreferences) {
       console.log('🔄 Applying user preferences from applicant_matching_profiles...');
       
-      // ✅ UPDATED: Map new schema fields to filter fields
+      // ✅ CORRECTED: Map exact schema fields to filter fields
       const autoFilters = {
         location: userPreferences.primary_city ? 
           `${userPreferences.primary_city}, ${userPreferences.primary_state}` : '',
         state: userPreferences.primary_state || '',
         maxRent: userPreferences.budget_max?.toString() || '',
-        minBedrooms: userPreferences.preferred_bedrooms?.toString() || '',
+        minBedrooms: userPreferences.preferred_bedrooms || '',
         housingType: userPreferences.housing_types_accepted || [],
         furnished: userPreferences.furnished_preference || false,
         petsAllowed: userPreferences.pets_owned || userPreferences.pets_comfortable || false
@@ -349,7 +398,7 @@ const usePropertySearch = (user) => {
       
       setBasicFilters(prev => ({ ...prev, ...autoFilters }));
       
-      // ✅ NEW: Apply recovery-specific preferences if available
+      // ✅ CORRECTED: Apply recovery-specific preferences with exact schema fields
       if (userPreferences.recovery_stage || userPreferences.substance_free_home_required) {
         setRecoveryFilters(prev => ({
           ...prev,
@@ -358,10 +407,10 @@ const usePropertySearch = (user) => {
         }));
       }
       
-      // ✅ NEW: Apply advanced preferences
+      // ✅ CORRECTED: Apply advanced preferences with exact schema fields
       const advancedPrefs = {};
       if (userPreferences.accessibility_needed) {
-        advancedPrefs.amenities = ['wheelchair_accessible'];
+        advancedPrefs.accessibilityFeatures = ['wheelchair_accessible'];
       }
       
       if (Object.keys(advancedPrefs).length > 0) {
@@ -403,8 +452,9 @@ const usePropertySearch = (user) => {
       acceptedSubsidies: [],
       amenities: [],
       utilitiesIncluded: [],
+      accessibilityFeatures: [],
       smokingPolicy: '',
-      guestProperty: '',
+      guestPolicy: '',
       backgroundCheck: '',
       leaseLength: '',
       moveInCost: ''
@@ -419,21 +469,37 @@ const usePropertySearch = (user) => {
     performSearch(false); // Don't reset page, just search with new page
   }, [performSearch]);
 
-  // ✅ Save property (placeholder for future feature)
-  const handleSaveProperty = useCallback((property) => {
-    setSavedProperties(prev => new Set([...prev, property.id]));
+  // ✅ CORRECTED: Save property using exact schema favorites structure
+  const handleSaveProperty = useCallback(async (property) => {
+    if (!user?.id) return false;
+
+    try {
+      // Get registrant profile id
+      const { data: registrantData } = await supabase
+        .from('registrant_profiles')
+        .select('id')
+        .eq('user_id', user.id)
+        .single();
+
+      if (registrantData) {
+        // ✅ CORRECTED: Use exact schema favorites structure
+        await supabase
+          .from('favorites')
+          .insert({ 
+            favoriting_user_id: registrantData.id,
+            favorited_property_id: property.id,
+            favorite_type: 'property'
+          });
+
+        setSavedProperties(prev => new Set([...prev, property.id]));
+        return true;
+      }
+    } catch (error) {
+      console.error('Error saving property:', error);
+    }
     
-    // Future: Save to database via favorites system
-    // await supabase
-    //   .from('favorites')
-    //   .insert({ 
-    //     user_id: user.id, 
-    //     favorited_user_id: property.landlord_id,
-    //     favorite_type: 'housing'
-    //   });
-    
-    return true; // Success indicator
-  }, []);
+    return false;
+  }, [user?.id]);
 
   // ✅ Initialize data loading
   useEffect(() => {

@@ -1,5 +1,5 @@
-// src/components/features/matching/sections/LifestylePreferencesSection.js - FIXED WITH STANDARDIZED FIELD NAMES
-import React from 'react';
+// src/components/features/matching/sections/LifestylePreferencesSection.js - FULLY ALIGNED WITH NEW SCHEMA
+import React, { useMemo, useCallback } from 'react';
 import PropTypes from 'prop-types';
 import {
   workScheduleOptions,
@@ -11,62 +11,105 @@ const LifestylePreferencesSection = ({
   formData,
   errors,
   loading,
-  profile,      // Added for interface consistency
+  profile,
   onInputChange,
-  onArrayChange, // Added for interface consistency
+  onArrayChange,
   onRangeChange,
-  styles = {}   // CSS module styles passed from parent
+  styles = {},
+  fieldMapping,   // Schema field mapping from parent
+  sectionId,      // Section identifier
+  isActive,       // Whether this section is currently active
+  validationMessage // Current validation message
 }) => {
-  // Helper function to get lifestyle level description
-  const getLifestyleLevelDescription = (type, value) => {
+  // Enhanced lifestyle level descriptions with recovery context
+  const getLifestyleLevelDescription = useCallback((type, value) => {
     const descriptions = {
       social_level: {
-        1: 'Very Private - Prefer minimal interaction',
-        2: 'Somewhat Quiet - Occasional friendly conversations',
-        3: 'Balanced - Regular interaction but respect boundaries',
-        4: 'Social - Enjoy frequent interaction and activities',
-        5: 'Very Social - Love being around people constantly'
+        1: 'Very Private - Minimal interaction, need quiet space for recovery focus',
+        2: 'Somewhat Quiet - Occasional friendly conversations, respect for personal time',
+        3: 'Balanced - Regular interaction with healthy boundaries',
+        4: 'Social - Enjoy frequent interaction and group activities',
+        5: 'Very Social - Thrive with constant interaction and community activities'
       },
       cleanliness_level: {
-        1: 'Relaxed - Basic cleanliness is fine',
-        2: 'Casual - Clean but not obsessive',
-        3: 'Moderate - Regular cleaning routine',
-        4: 'High Standards - Very clean and organized',
-        5: 'Pristine - Everything must be spotless'
+        1: 'Relaxed - Basic cleanliness, lived-in feel is comfortable',
+        2: 'Casual - Generally clean but not obsessive about organization',
+        3: 'Moderate - Regular cleaning routine, organized common spaces',
+        4: 'High Standards - Very clean and well-organized environment',
+        5: 'Pristine - Everything spotless and perfectly organized always'
       },
       noise_tolerance: {
-        1: 'Very Quiet - Need peaceful, quiet environment',
-        2: 'Low Noise - Some noise OK but prefer quiet',
+        1: 'Very Quiet - Need peaceful environment for recovery/healing',
+        2: 'Low Noise - Some sounds OK but prefer quiet, calm atmosphere',
         3: 'Moderate - Normal household noise is fine',
-        4: 'Tolerant - Can handle louder activities',
-        5: 'High Tolerance - Music, TV, friends over OK'
+        4: 'Tolerant - Can handle louder activities and varied noise levels',
+        5: 'High Tolerance - Music, TV, gatherings, varied noise levels all OK'
       }
     };
     return descriptions[type]?.[value] || `Level ${value}`;
-  };
+  }, []);
+
+  // Validate lifestyle compatibility balance
+  const validateLifestyleBalance = useCallback(() => {
+    const social = formData.social_level || 3;
+    const cleanliness = formData.cleanliness_level || 3;
+    const noise = formData.noise_tolerance || 3;
+    
+    const warnings = [];
+    
+    // Check for extreme combinations that might limit matches
+    if (social === 1 && noise === 5) {
+      warnings.push('Very private social preference with high noise tolerance seems contradictory');
+    }
+    if (social === 5 && noise === 1) {
+      warnings.push('Very social preference with very quiet noise needs may conflict');
+    }
+    if (cleanliness === 1 && social === 5) {
+      warnings.push('Relaxed cleanliness with high social activity may cause roommate conflicts');
+    }
+    
+    return warnings;
+  }, [formData.social_level, formData.cleanliness_level, formData.noise_tolerance]);
+
+  // Calculate lifestyle compatibility score
+  const calculateLifestyleScore = useCallback(() => {
+    let score = 0;
+    let factors = 0;
+    
+    if (formData.work_schedule) { score += 20; factors++; }
+    if (formData.social_level) { score += 20; factors++; }
+    if (formData.cleanliness_level) { score += 20; factors++; }
+    if (formData.noise_tolerance) { score += 20; factors++; }
+    if (formData.guests_policy) { score += 20; factors++; }
+    
+    return factors > 0 ? Math.round(score / factors) : 0;
+  }, [formData]);
+
+  const lifestyleWarnings = validateLifestyleBalance();
+  const lifestyleCompletionScore = calculateLifestyleScore();
 
   return (
     <>
       {/* Lifestyle Preferences Header */}
-      <h3 className="card-title mb-4">Lifestyle Preferences</h3>
-      
-      <div className="alert alert-info mb-4">
-        <h4 className="mb-2">
-          <span style={{ marginRight: '8px' }}>⚖️</span>
-          Lifestyle Compatibility Matching
-        </h4>
-        <p className="mb-0">
-          Your daily lifestyle preferences help us match you with roommates who have compatible schedules, 
-          cleanliness standards, and social needs. This creates a harmonious living environment for everyone.
-        </p>
+      <div className="section-intro">
+        <h3 className="card-title mb-4">Lifestyle Compatibility</h3>
+        <div className="alert alert-info mb-4">
+          <h4 className="mb-2">
+            <span style={{ marginRight: '8px' }}>⚖️</span>
+            Advanced Lifestyle Compatibility Matching
+          </h4>
+          <p className="mb-0">
+            Your daily lifestyle preferences are crucial for finding compatible roommates. Our enhanced matching 
+            algorithm uses these standardized lifestyle factors to create harmonious living environments that 
+            support everyone's recovery journey and personal well-being.
+          </p>
+        </div>
       </div>
 
-      {/* Work & Schedule Information - FIXED: Using standardized field names */}
+      {/* Work & Schedule Information - Schema Standardized Fields */}
       <div className="card-header">
-        <h4 className="card-title">Work & Schedule Information</h4>
-        <p className="card-subtitle">
-          Understanding your daily routine helps match you with compatible roommates
-        </p>
+        <h4 className="card-title">Work & Daily Schedule</h4>
+        <p className="card-subtitle">Understanding your routine helps match you with roommates who have compatible schedules</p>
       </div>
 
       <div className="grid-2 mb-4">
@@ -75,7 +118,7 @@ const LifestylePreferencesSection = ({
             Work Schedule <span className="text-red-500">*</span>
           </label>
           <select
-            className={`input ${errors.work_schedule ? 'border-red-500' : ''}`}
+            className={`input ${errors.work_schedule ? 'border-red-500 bg-red-50' : ''}`}
             value={formData.work_schedule || ''}
             onChange={(e) => onInputChange('work_schedule', e.target.value)}
             disabled={loading}
@@ -88,17 +131,17 @@ const LifestylePreferencesSection = ({
             ))}
           </select>
           {errors.work_schedule && (
-            <div className="text-red-500 mt-1 text-sm">{errors.work_schedule}</div>
+            <div className="text-red-500 mt-1 text-sm font-medium">{errors.work_schedule}</div>
           )}
           <div className="text-gray-500 mt-1 text-sm">
-            Your typical work schedule affects shared space usage
+            Your typical work schedule affects shared space usage and household routines
           </div>
         </div>
 
         <div className="form-group">
           <label className="label">Bedtime Preference</label>
           <select
-            className="input"
+            className={`input ${errors.bedtime_preference ? 'border-red-500 bg-red-50' : ''}`}
             value={formData.bedtime_preference || ''}
             onChange={(e) => onInputChange('bedtime_preference', e.target.value)}
             disabled={loading}
@@ -109,8 +152,11 @@ const LifestylePreferencesSection = ({
               </option>
             ))}
           </select>
+          {errors.bedtime_preference && (
+            <div className="text-red-500 mt-1 text-sm font-medium">{errors.bedtime_preference}</div>
+          )}
           <div className="text-gray-500 mt-1 text-sm">
-            When you typically go to bed and wake up
+            When you typically sleep and wake affects household noise considerations
           </div>
         </div>
       </div>
@@ -118,7 +164,7 @@ const LifestylePreferencesSection = ({
       <div className="form-group mb-4">
         <label className="label">Work-from-Home Frequency</label>
         <select
-          className="input"
+          className={`input ${errors.work_from_home_frequency ? 'border-red-500 bg-red-50' : ''}`}
           value={formData.work_from_home_frequency || ''}
           onChange={(e) => onInputChange('work_from_home_frequency', e.target.value)}
           disabled={loading}
@@ -130,26 +176,33 @@ const LifestylePreferencesSection = ({
           <option value="frequently">Frequently (3-4 days/week)</option>
           <option value="always">Always work from home</option>
           <option value="not-working">Not currently working</option>
+          <option value="disability">On disability/unable to work</option>
+          <option value="in-treatment">In treatment program</option>
         </select>
+        {errors.work_from_home_frequency && (
+          <div className="text-red-500 mt-1 text-sm font-medium">{errors.work_from_home_frequency}</div>
+        )}
         <div className="text-gray-500 mt-1 text-sm">
           How often you'll be home during typical work hours
         </div>
       </div>
 
-      {/* Living Style Compatibility Scales - FIXED: Using standardized field names */}
+      {/* Core Lifestyle Compatibility Scales - Schema Standardized Fields */}
       <div className="card-header">
-        <h4 className="card-title">Living Style Compatibility</h4>
+        <h4 className="card-title">Core Lifestyle Compatibility Factors</h4>
         <p className="card-subtitle">
-          Rate yourself on these important lifestyle factors (1-5 scale)
+          Rate yourself on these critical compatibility factors (1-5 scale). These are weighted heavily in our matching algorithm.
         </p>
       </div>
 
-      {/* Enhanced Range Sliders */}
       <div className="grid-3 mb-4">
-        {/* Social Level */}
+        {/* Social Level - Enhanced with Recovery Context */}
         <div className="form-group">
           <div className={styles.enhancedRangeContainer || 'enhanced-range-container'}>
-            <div className={styles.rangeDescription || 'range-description'}>Social Level</div>
+            <div className={styles.rangeLabel || 'range-label'}>
+              <span className="font-medium">Social Level</span>
+              <span className="text-red-500">*</span>
+            </div>
             <div className={styles.rangeSliderWrapper || 'range-slider-wrapper'}>
               <input
                 type="range"
@@ -157,28 +210,37 @@ const LifestylePreferencesSection = ({
                 max="5"
                 value={formData.social_level || 3}
                 onChange={(e) => onRangeChange('social_level', parseInt(e.target.value))}
-                className={styles.rangeSlider || 'range-slider'}
+                className={`${styles.rangeSlider || 'range-slider'} ${errors.social_level ? 'border-red-500' : ''}`}
                 disabled={loading}
+                required
               />
-              <div className={styles.enhancedRangeLabels || 'enhanced-range-labels'}>
-                <div className={styles.rangeEndpoint || 'range-endpoint'}>Private (1)</div>
-                <div className={styles.rangeArrow || 'range-arrow'}>←→</div>
-                <div className={styles.rangeEndpoint || 'range-endpoint'}>Very Social (5)</div>
+              <div className={styles.rangeLabels || 'range-labels'}>
+                <span className="text-xs">Private (1)</span>
+                <span className="text-xs">Balanced (3)</span>
+                <span className="text-xs">Very Social (5)</span>
               </div>
             </div>
             <div className={styles.currentValueDisplay || 'current-value-display'}>
-              <span className={styles.currentValueNumber || 'current-value-number'}>{formData.social_level || 3}</span>
-              <span className={styles.currentValueLabel || 'current-value-label'}>
+              <div className={`${styles.valueNumber || 'value-number'} text-lg font-bold`}>
+                {formData.social_level || 3}
+              </div>
+              <div className={styles.valueDescription || 'value-description'}>
                 {getLifestyleLevelDescription('social_level', formData.social_level || 3)}
-              </span>
+              </div>
             </div>
+            {errors.social_level && (
+              <div className="text-red-500 mt-1 text-sm font-medium">{errors.social_level}</div>
+            )}
           </div>
         </div>
         
-        {/* Cleanliness Level */}
+        {/* Cleanliness Level - Enhanced with Recovery Context */}
         <div className="form-group">
           <div className={styles.enhancedRangeContainer || 'enhanced-range-container'}>
-            <div className={styles.rangeDescription || 'range-description'}>Cleanliness Level</div>
+            <div className={styles.rangeLabel || 'range-label'}>
+              <span className="font-medium">Cleanliness Level</span>
+              <span className="text-red-500">*</span>
+            </div>
             <div className={styles.rangeSliderWrapper || 'range-slider-wrapper'}>
               <input
                 type="range"
@@ -186,28 +248,37 @@ const LifestylePreferencesSection = ({
                 max="5"
                 value={formData.cleanliness_level || 3}
                 onChange={(e) => onRangeChange('cleanliness_level', parseInt(e.target.value))}
-                className={styles.rangeSlider || 'range-slider'}
+                className={`${styles.rangeSlider || 'range-slider'} ${errors.cleanliness_level ? 'border-red-500' : ''}`}
                 disabled={loading}
+                required
               />
-              <div className={styles.enhancedRangeLabels || 'enhanced-range-labels'}>
-                <div className={styles.rangeEndpoint || 'range-endpoint'}>Relaxed (1)</div>
-                <div className={styles.rangeArrow || 'range-arrow'}>←→</div>
-                <div className={styles.rangeEndpoint || 'range-endpoint'}>Very Clean (5)</div>
+              <div className={styles.rangeLabels || 'range-labels'}>
+                <span className="text-xs">Relaxed (1)</span>
+                <span className="text-xs">Moderate (3)</span>
+                <span className="text-xs">Very Clean (5)</span>
               </div>
             </div>
             <div className={styles.currentValueDisplay || 'current-value-display'}>
-              <span className={styles.currentValueNumber || 'current-value-number'}>{formData.cleanliness_level || 3}</span>
-              <span className={styles.currentValueLabel || 'current-value-label'}>
+              <div className={`${styles.valueNumber || 'value-number'} text-lg font-bold`}>
+                {formData.cleanliness_level || 3}
+              </div>
+              <div className={styles.valueDescription || 'value-description'}>
                 {getLifestyleLevelDescription('cleanliness_level', formData.cleanliness_level || 3)}
-              </span>
+              </div>
             </div>
+            {errors.cleanliness_level && (
+              <div className="text-red-500 mt-1 text-sm font-medium">{errors.cleanliness_level}</div>
+            )}
           </div>
         </div>
         
-        {/* Noise Tolerance */}
+        {/* Noise Tolerance - Enhanced with Recovery Context */}
         <div className="form-group">
           <div className={styles.enhancedRangeContainer || 'enhanced-range-container'}>
-            <div className={styles.rangeDescription || 'range-description'}>Noise Tolerance</div>
+            <div className={styles.rangeLabel || 'range-label'}>
+              <span className="font-medium">Noise Tolerance</span>
+              <span className="text-red-500">*</span>
+            </div>
             <div className={styles.rangeSliderWrapper || 'range-slider-wrapper'}>
               <input
                 type="range"
@@ -215,38 +286,57 @@ const LifestylePreferencesSection = ({
                 max="5"
                 value={formData.noise_tolerance || 3}
                 onChange={(e) => onRangeChange('noise_tolerance', parseInt(e.target.value))}
-                className={styles.rangeSlider || 'range-slider'}
+                className={`${styles.rangeSlider || 'range-slider'} ${errors.noise_tolerance ? 'border-red-500' : ''}`}
                 disabled={loading}
+                required
               />
-              <div className={styles.enhancedRangeLabels || 'enhanced-range-labels'}>
-                <div className={styles.rangeEndpoint || 'range-endpoint'}>Very Quiet (1)</div>
-                <div className={styles.rangeArrow || 'range-arrow'}>←→</div>
-                <div className={styles.rangeEndpoint || 'range-endpoint'}>Loud OK (5)</div>
+              <div className={styles.rangeLabels || 'range-labels'}>
+                <span className="text-xs">Very Quiet (1)</span>
+                <span className="text-xs">Moderate (3)</span>
+                <span className="text-xs">Loud OK (5)</span>
               </div>
             </div>
             <div className={styles.currentValueDisplay || 'current-value-display'}>
-              <span className={styles.currentValueNumber || 'current-value-number'}>{formData.noise_tolerance || 3}</span>
-              <span className={styles.currentValueLabel || 'current-value-label'}>
+              <div className={`${styles.valueNumber || 'value-number'} text-lg font-bold`}>
+                {formData.noise_tolerance || 3}
+              </div>
+              <div className={styles.valueDescription || 'value-description'}>
                 {getLifestyleLevelDescription('noise_tolerance', formData.noise_tolerance || 3)}
-              </span>
+              </div>
             </div>
+            {errors.noise_tolerance && (
+              <div className="text-red-500 mt-1 text-sm font-medium">{errors.noise_tolerance}</div>
+            )}
           </div>
         </div>
       </div>
 
-      {/* Social & Guest Preferences - FIXED: Using standardized field names */}
+      {/* Lifestyle Compatibility Warnings */}
+      {lifestyleWarnings.length > 0 && (
+        <div className="alert alert-warning mb-4">
+          <h4 className="mb-2">Lifestyle Compatibility Notes:</h4>
+          <ul className="ml-4">
+            {lifestyleWarnings.map((warning, index) => (
+              <li key={index} className="text-sm">{warning}</li>
+            ))}
+          </ul>
+          <div className="text-sm mt-2">
+            Consider adjusting these settings if they don't accurately reflect your preferences.
+          </div>
+        </div>
+      )}
+
+      {/* Social & Guest Preferences - Schema Standardized Fields */}
       <div className="card-header">
-        <h4 className="card-title">Social & Guest Preferences</h4>
-        <p className="card-subtitle">
-          How you prefer to handle guests and social activities in your home
-        </p>
+        <h4 className="card-title">Social & Guest Management</h4>
+        <p className="card-subtitle">How you prefer to handle guests, visitors, and social activities in your home</p>
       </div>
 
       <div className="grid-2 mb-4">
         <div className="form-group">
           <label className="label">Guest Policy Preference</label>
           <select
-            className="input"
+            className={`input ${errors.guests_policy ? 'border-red-500 bg-red-50' : ''}`}
             value={formData.guests_policy || ''}
             onChange={(e) => onInputChange('guests_policy', e.target.value)}
             disabled={loading}
@@ -257,15 +347,18 @@ const LifestylePreferencesSection = ({
               </option>
             ))}
           </select>
+          {errors.guests_policy && (
+            <div className="text-red-500 mt-1 text-sm font-medium">{errors.guests_policy}</div>
+          )}
           <div className="text-gray-500 mt-1 text-sm">
-            Your comfort level with guests in the home
+            Your comfort level with guests and visitors in the home
           </div>
         </div>
 
         <div className="form-group">
           <label className="label">Social Activities at Home</label>
           <select
-            className="input"
+            className={`input ${errors.social_activities_at_home ? 'border-red-500 bg-red-50' : ''}`}
             value={formData.social_activities_at_home || ''}
             onChange={(e) => onInputChange('social_activities_at_home', e.target.value)}
             disabled={loading}
@@ -276,19 +369,21 @@ const LifestylePreferencesSection = ({
             <option value="occasional">Occasional small gatherings (monthly)</option>
             <option value="regular">Regular but reasonable (weekly)</option>
             <option value="frequent">Frequent social activities welcome</option>
+            <option value="recovery-focused">Recovery/support group meetings only</option>
           </select>
+          {errors.social_activities_at_home && (
+            <div className="text-red-500 mt-1 text-sm font-medium">{errors.social_activities_at_home}</div>
+          )}
           <div className="text-gray-500 mt-1 text-sm">
-            How often you're comfortable with social gatherings
+            How often you're comfortable with social gatherings or activities
           </div>
         </div>
       </div>
 
-      {/* Daily Living Preferences - FIXED: Using standardized field names */}
+      {/* Daily Living Habits & Preferences - Schema Standardized Fields */}
       <div className="card-header">
-        <h4 className="card-title">Daily Living Preferences</h4>
-        <p className="card-subtitle">
-          Your preferences for shared spaces and daily routines
-        </p>
+        <h4 className="card-title">Daily Living Habits & Activities</h4>
+        <p className="card-subtitle">Your typical daily activities and preferences for shared spaces</p>
       </div>
 
       <div className="form-group mb-4">
@@ -313,7 +408,7 @@ const LifestylePreferencesSection = ({
               disabled={loading}
             />
             <span className={styles.checkboxText || ''}>
-              I'm a night owl (up after 11 PM)
+              I'm a night owl (up after 11 PM regularly)
             </span>
           </label>
 
@@ -337,7 +432,7 @@ const LifestylePreferencesSection = ({
               disabled={loading}
             />
             <span className={styles.checkboxText || ''}>
-              I exercise/work out at home
+              I exercise or work out at home
             </span>
           </label>
 
@@ -361,18 +456,18 @@ const LifestylePreferencesSection = ({
               disabled={loading}
             />
             <span className={styles.checkboxText || ''}>
-              I watch TV/streaming regularly
+              I watch TV/streaming regularly in common areas
             </span>
           </label>
         </div>
       </div>
 
-      {/* Additional Daily Living Fields */}
+      {/* Additional Daily Living Details */}
       <div className="grid-2 mb-4">
         <div className="form-group">
           <label className="label">Cooking Frequency</label>
           <select
-            className="input"
+            className={`input ${errors.cooking_frequency ? 'border-red-500 bg-red-50' : ''}`}
             value={formData.cooking_frequency || ''}
             onChange={(e) => onInputChange('cooking_frequency', e.target.value)}
             disabled={loading}
@@ -384,58 +479,92 @@ const LifestylePreferencesSection = ({
             <option value="frequently">Frequently (5-6 times/week)</option>
             <option value="daily">Daily cooking</option>
           </select>
+          {errors.cooking_frequency && (
+            <div className="text-red-500 mt-1 text-sm font-medium">{errors.cooking_frequency}</div>
+          )}
           <div className="text-gray-500 mt-1 text-sm">
-            How often you use the kitchen for cooking
+            How often you use the kitchen for meal preparation
+          </div>
+        </div>
+
+        <div className="form-group">
+          <label className="label">Transportation Method</label>
+          <select
+            className={`input ${errors.transportation_method ? 'border-red-500 bg-red-50' : ''}`}
+            value={formData.transportation_method || ''}
+            onChange={(e) => onInputChange('transportation_method', e.target.value)}
+            disabled={loading}
+          >
+            <option value="">Select primary method</option>
+            <option value="personal-vehicle">Personal vehicle</option>
+            <option value="public-transit">Public transportation</option>
+            <option value="bike">Bicycle</option>
+            <option value="walk">Walking</option>
+            <option value="rideshare">Rideshare/Uber/Lyft</option>
+            <option value="family-friends">Family/friends transportation</option>
+            <option value="combination">Combination of methods</option>
+            <option value="limited-mobility">Limited mobility/transportation</option>
+          </select>
+          {errors.transportation_method && (
+            <div className="text-red-500 mt-1 text-sm font-medium">{errors.transportation_method}</div>
+          )}
+          <div className="text-gray-500 mt-1 text-sm">
+            How you typically get around day-to-day
           </div>
         </div>
       </div>
 
-      {/* Household Management Style - FIXED: Using standardized field names */}
+      {/* Household Management Style - Schema Standardized Fields */}
       <div className="card-header">
-        <h4 className="card-title">Household Management Style</h4>
-        <p className="card-subtitle">
-          How you prefer to handle shared responsibilities and house rules
-        </p>
+        <h4 className="card-title">Household Management & Communication</h4>
+        <p className="card-subtitle">How you prefer to handle shared responsibilities and communication with roommates</p>
       </div>
 
       <div className="grid-2 mb-4">
         <div className="form-group">
-          <label className="label">Chore Sharing Preference</label>
+          <label className="label">Chore Sharing Style</label>
           <select
-            className="input"
+            className={`input ${errors.chore_sharing_style ? 'border-red-500 bg-red-50' : ''}`}
             value={formData.chore_sharing_style || ''}
             onChange={(e) => onInputChange('chore_sharing_style', e.target.value)}
             disabled={loading}
           >
-            <option value="">Select style</option>
-            <option value="formal-schedule">Formal chore schedule/rotation</option>
-            <option value="informal-sharing">Informal sharing as needed</option>
-            <option value="individual-responsibility">Each person handles their own</option>
-            <option value="hire-help">Prefer to hire cleaning help</option>
-            <option value="flexible">Very flexible approach</option>
+            <option value="">Select approach</option>
+            <option value="formal-schedule">Formal chore schedule with rotating assignments</option>
+            <option value="informal-sharing">Informal sharing - pitch in as needed</option>
+            <option value="individual-responsibility">Each person handles their own areas</option>
+            <option value="hire-help">Prefer to hire cleaning help for common areas</option>
+            <option value="flexible-discussion">Flexible - discuss and adjust as needed</option>
           </select>
+          {errors.chore_sharing_style && (
+            <div className="text-red-500 mt-1 text-sm font-medium">{errors.chore_sharing_style}</div>
+          )}
           <div className="text-gray-500 mt-1 text-sm">
-            How you prefer to manage household chores
+            How you prefer to manage household cleaning and maintenance
           </div>
         </div>
 
         <div className="form-group">
           <label className="label">Communication Style</label>
           <select
-            className="input"
+            className={`input ${errors.communication_style ? 'border-red-500 bg-red-50' : ''}`}
             value={formData.communication_style || ''}
             onChange={(e) => onInputChange('communication_style', e.target.value)}
             disabled={loading}
           >
             <option value="">Select style</option>
-            <option value="direct-verbal">Direct verbal communication</option>
-            <option value="written-notes">Written notes/messages</option>
-            <option value="group-meetings">Regular house meetings</option>
-            <option value="casual-check-ins">Casual check-ins as needed</option>
-            <option value="minimal-communication">Minimal communication preferred</option>
+            <option value="direct-verbal">Direct, in-person conversations</option>
+            <option value="written-notes">Written notes or messages</option>
+            <option value="group-meetings">Regular house meetings for important topics</option>
+            <option value="casual-check-ins">Casual check-ins as things come up</option>
+            <option value="minimal-communication">Minimal communication - respect privacy</option>
+            <option value="app-based">App/text-based communication</option>
           </select>
+          {errors.communication_style && (
+            <div className="text-red-500 mt-1 text-sm font-medium">{errors.communication_style}</div>
+          )}
           <div className="text-gray-500 mt-1 text-sm">
-            How you prefer to communicate about house matters
+            How you prefer to communicate about household matters and issues
           </div>
         </div>
       </div>
@@ -443,62 +572,150 @@ const LifestylePreferencesSection = ({
       <div className="form-group mb-4">
         <label className="label">Conflict Resolution Style</label>
         <select
-          className="input"
+          className={`input ${errors.conflict_resolution_style ? 'border-red-500 bg-red-50' : ''}`}
           value={formData.conflict_resolution_style || ''}
           onChange={(e) => onInputChange('conflict_resolution_style', e.target.value)}
           disabled={loading}
         >
-          <option value="">Select style</option>
-          <option value="direct-communication">Direct, honest communication</option>
-          <option value="mediated-discussion">Prefer mediated discussions</option>
-          <option value="written-communication">Written communication first</option>
-          <option value="avoid-conflict">Prefer to avoid conflict</option>
-          <option value="collaborative-problem-solving">Collaborative problem-solving</option>
+          <option value="">Select approach</option>
+          <option value="direct-communication">Direct, honest communication - address issues promptly</option>
+          <option value="mediated-discussion">Prefer neutral third party to mediate discussions</option>
+          <option value="written-communication">Written communication first, then discuss</option>
+          <option value="cooling-off-period">Take time to cool off, then discuss when calm</option>
+          <option value="avoid-conflict">Prefer to avoid conflict when possible</option>
+          <option value="collaborative-problem-solving">Collaborative problem-solving approach</option>
         </select>
+        {errors.conflict_resolution_style && (
+          <div className="text-red-500 mt-1 text-sm font-medium">{errors.conflict_resolution_style}</div>
+        )}
         <div className="text-gray-500 mt-1 text-sm">
-          How you prefer to handle disagreements or conflicts
+          How you prefer to handle disagreements or conflicts with roommates
         </div>
       </div>
 
-      {/* Additional lifestyle preferences that were missing from original */}
+      {/* Recovery-Supportive Environment Preferences */}
       <div className="form-group mb-4">
         <label className="label">Preferred Support Structure</label>
         <select
-          className="input"
+          className={`input ${errors.preferred_support_structure ? 'border-red-500 bg-red-50' : ''}`}
           value={formData.preferred_support_structure || ''}
           onChange={(e) => onInputChange('preferred_support_structure', e.target.value)}
           disabled={loading}
         >
           <option value="">Select preference</option>
-          <option value="independent">Prefer independent living</option>
+          <option value="independent">Independent living with mutual respect</option>
           <option value="mutual-support">Mutual support and encouragement</option>
-          <option value="structured-support">Structured support system</option>
+          <option value="structured-support">Structured support system with check-ins</option>
           <option value="close-community">Close-knit community feel</option>
-          <option value="professional-guidance">Professional guidance included</option>
+          <option value="accountability-partners">Accountability partnership approach</option>
+          <option value="recovery-focused">Recovery-focused household environment</option>
         </select>
+        {errors.preferred_support_structure && (
+          <div className="text-red-500 mt-1 text-sm font-medium">{errors.preferred_support_structure}</div>
+        )}
         <div className="text-gray-500 mt-1 text-sm">
-          What kind of support structure works best for you
+          What kind of support structure works best for your recovery and daily life
         </div>
       </div>
 
-      {/* Lifestyle Compatibility Tips */}
-      <div className="alert alert-success">
+      {/* Section Validation Status */}
+      {sectionId && isActive && (
+        <div className="section-status mt-6">
+          <div className="card-header">
+            <h4 className="card-title">Lifestyle Compatibility Status</h4>
+          </div>
+          
+          <div className="grid-2 mb-4">
+            <div>
+              <strong>Core Compatibility Factors:</strong>
+              <ul className="mt-2 text-sm">
+                <li className={formData.work_schedule ? 'text-green-600' : 'text-red-600'}>
+                  {formData.work_schedule ? '✓' : '✗'} Work Schedule
+                </li>
+                <li className={formData.social_level ? 'text-green-600' : 'text-red-600'}>
+                  {formData.social_level ? '✓' : '✗'} Social Level ({formData.social_level || 'not set'})
+                </li>
+                <li className={formData.cleanliness_level ? 'text-green-600' : 'text-red-600'}>
+                  {formData.cleanliness_level ? '✓' : '✗'} Cleanliness Level ({formData.cleanliness_level || 'not set'})
+                </li>
+                <li className={formData.noise_tolerance ? 'text-green-600' : 'text-red-600'}>
+                  {formData.noise_tolerance ? '✓' : '✗'} Noise Tolerance ({formData.noise_tolerance || 'not set'})
+                </li>
+              </ul>
+            </div>
+            
+            <div>
+              <strong>Lifestyle Completion Score:</strong>
+              <div className="mt-2">
+                <div className="progress-bar">
+                  <div 
+                    className="progress-fill" 
+                    style={{ width: `${lifestyleCompletionScore}%` }}
+                  />
+                </div>
+                <span className="text-sm text-gray-600">
+                  {lifestyleCompletionScore}% complete
+                </span>
+              </div>
+            </div>
+          </div>
+
+          {validationMessage && (
+            <div className="alert alert-warning">
+              <strong>Validation Note:</strong> {validationMessage}
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Advanced Lifestyle Matching Information */}
+      <div className="alert alert-info mt-6">
+        <h4 className="mb-2">
+          <span style={{ marginRight: '8px' }}>🎯</span>
+          Advanced Lifestyle Compatibility Matching
+        </h4>
+        <p className="mb-2">
+          <strong>Our enhanced algorithm analyzes lifestyle compatibility through:</strong>
+        </p>
+        <ul style={{ marginLeft: '20px', marginBottom: '10px' }}>
+          <li><strong>Core Factors (High Weight):</strong> Social level, cleanliness, noise tolerance, work schedule</li>
+          <li><strong>Daily Routines:</strong> Sleep patterns, cooking habits, home activities</li>
+          <li><strong>Communication Style:</strong> How you prefer to interact and resolve conflicts</li>
+          <li><strong>Household Management:</strong> Chore sharing and responsibility preferences</li>
+          <li><strong>Recovery Support:</strong> Environmental factors that support your healing journey</li>
+          <li><strong>Balance Analysis:</strong> Identifies potential compatibility conflicts before matching</li>
+        </ul>
+        <div className="mt-3">
+          <a 
+            href="/help/lifestyle-compatibility-matching" 
+            target="_blank" 
+            className="text-blue-600 hover:text-blue-800 underline text-sm"
+          >
+            Learn more about our lifestyle compatibility system →
+          </a>
+        </div>
+      </div>
+
+      {/* Lifestyle Optimization Tips */}
+      <div className="alert alert-success mt-4">
         <h4 className="mb-2">
           <span style={{ marginRight: '8px' }}>💡</span>
           Lifestyle Compatibility Tips
         </h4>
         <p className="mb-2">
-          <strong>Creating a harmonious living environment:</strong>
+          <strong>Creating successful roommate relationships:</strong>
         </p>
         <ul style={{ marginLeft: '20px', marginBottom: '10px' }}>
-          <li><strong>Be honest:</strong> Accurate self-assessment leads to better matches</li>
-          <li><strong>Consider flexibility:</strong> Small differences can often be worked out</li>
-          <li><strong>Think recovery-first:</strong> Prioritize what supports your healing journey</li>
-          <li><strong>Communication matters:</strong> Most lifestyle conflicts can be resolved with good communication</li>
+          <li><strong>Be Honest:</strong> Accurate self-assessment leads to better long-term compatibility</li>
+          <li><strong>Recovery Priority:</strong> Consider what environment best supports your healing and growth</li>
+          <li><strong>Flexibility Balance:</strong> Small differences often work out, major conflicts usually don't</li>
+          <li><strong>Communication Matters:</strong> Compatible communication styles prevent most issues</li>
+          <li><strong>Daily Rhythms:</strong> Matching daily schedules and energy levels reduces friction</li>
+          <li><strong>Growth Mindset:</strong> Choose roommates who support personal development</li>
         </ul>
         <p className="text-sm">
-          Remember: The goal is finding someone whose lifestyle naturally complements yours, creating 
-          a supportive environment for both of your recovery journeys.
+          The most successful roommate relationships combine lifestyle compatibility with mutual respect, 
+          support for each other's recovery journey, and shared commitment to a harmonious living environment.
         </p>
       </div>
     </>
@@ -507,25 +724,35 @@ const LifestylePreferencesSection = ({
 
 LifestylePreferencesSection.propTypes = {
   formData: PropTypes.shape({
-    work_schedule: PropTypes.string,                     // FIXED: Standardized
-    work_from_home_frequency: PropTypes.string,          // FIXED: Standardized
-    bedtime_preference: PropTypes.string,                // FIXED: Standardized
-    social_level: PropTypes.number,                      // FIXED: Standardized
-    cleanliness_level: PropTypes.number,                 // FIXED: Standardized
-    noise_tolerance: PropTypes.number,                   // FIXED: Standardized
-    guests_policy: PropTypes.string,                     // FIXED: Standardized
-    social_activities_at_home: PropTypes.string,         // FIXED: Standardized
-    early_riser: PropTypes.bool,                         // FIXED: Standardized
-    night_owl: PropTypes.bool,                           // FIXED: Standardized
-    cooking_enthusiast: PropTypes.bool,                  // FIXED: Standardized
-    cooking_frequency: PropTypes.string,                 // FIXED: Standardized
-    exercise_at_home: PropTypes.bool,                    // FIXED: Standardized
-    plays_instruments: PropTypes.bool,                   // FIXED: Standardized
-    tv_streaming_regular: PropTypes.bool,                // FIXED: Standardized
-    chore_sharing_style: PropTypes.string,               // FIXED: Standardized
-    communication_style: PropTypes.string,               // FIXED: Standardized
-    conflict_resolution_style: PropTypes.string,         // FIXED: Standardized
-    preferred_support_structure: PropTypes.string        // FIXED: Standardized
+    // Work and schedule - schema standardized
+    work_schedule: PropTypes.string,                     // Required - standardized
+    work_from_home_frequency: PropTypes.string,          // Optional - standardized
+    bedtime_preference: PropTypes.string,                // Optional - standardized
+    transportation_method: PropTypes.string,             // Optional
+    
+    // Core lifestyle factors - schema standardized
+    social_level: PropTypes.number,                      // Required - standardized
+    cleanliness_level: PropTypes.number,                 // Required - standardized
+    noise_tolerance: PropTypes.number,                   // Required - standardized
+    
+    // Social and guest management - schema standardized
+    guests_policy: PropTypes.string,                     // Optional - standardized
+    social_activities_at_home: PropTypes.string,         // Optional - standardized
+    
+    // Daily living habits - schema standardized
+    early_riser: PropTypes.bool,                         // Optional - standardized
+    night_owl: PropTypes.bool,                           // Optional - standardized
+    cooking_enthusiast: PropTypes.bool,                  // Optional - standardized
+    cooking_frequency: PropTypes.string,                 // Optional - standardized
+    exercise_at_home: PropTypes.bool,                    // Optional - standardized
+    plays_instruments: PropTypes.bool,                   // Optional - standardized
+    tv_streaming_regular: PropTypes.bool,                // Optional - standardized
+    
+    // Household management - schema standardized
+    chore_sharing_style: PropTypes.string,               // Optional - standardized
+    communication_style: PropTypes.string,               // Optional - standardized
+    conflict_resolution_style: PropTypes.string,         // Optional - standardized
+    preferred_support_structure: PropTypes.string        // Optional - standardized
   }).isRequired,
   errors: PropTypes.object.isRequired,
   loading: PropTypes.bool.isRequired,
@@ -537,12 +764,20 @@ LifestylePreferencesSection.propTypes = {
   onInputChange: PropTypes.func.isRequired,
   onArrayChange: PropTypes.func.isRequired,
   onRangeChange: PropTypes.func.isRequired,
-  styles: PropTypes.object
+  styles: PropTypes.object,                           // CSS module styles
+  fieldMapping: PropTypes.object,                     // Schema field mapping
+  sectionId: PropTypes.string,                        // Section identifier
+  isActive: PropTypes.bool,                           // Whether section is active
+  validationMessage: PropTypes.string                 // Current validation message
 };
 
 LifestylePreferencesSection.defaultProps = {
   profile: null,
-  styles: {}
+  styles: {},
+  fieldMapping: {},
+  sectionId: 'lifestyle',
+  isActive: false,
+  validationMessage: null
 };
 
 export default LifestylePreferencesSection;

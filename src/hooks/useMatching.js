@@ -1,267 +1,106 @@
-// src/hooks/useMatching.js
+// src/hooks/useMatching.js - SCHEMA COMPLIANT VERSION
 
-import { useState, useCallback, useEffect } from 'react';
+import { useState, useCallback, useEffect, useRef } from 'react';
 import { useAuth } from './useAuth';
-import { useMatchingProfile, useMatchRequests } from './useSupabase';
-import { 
-  transformProfileForAlgorithm, 
-  transformProfilesForAlgorithm,
-  filterMatchableProfiles,
-  validateProfileForMatching,
-  calculateLocationCompatibility
-} from '../utils/matching/dataTransform';
+import { schemaCompliantMatchingService } from '../utils/matching/matchingService';
 import { calculateDetailedCompatibility } from '../utils/matching/algorithm';
 import { generateDetailedFlags, getCompatibilitySummary } from '../utils/matching/compatibility';
 
 /**
- * Enhanced matching hook that provides complete matching functionality
- * Handles data fetching, transformation, compatibility calculation, and match requests
+ * SCHEMA COMPLIANT: React hook for matching functionality
+ * 
+ * Integrates with schemaCompliantMatchingService for all data operations
+ * Provides React-specific state management and lifecycle integration
+ * Uses exact database table names from schema.sql
+ * 
+ * Architecture Flow:
+ * auth.users.id → registrant_profiles.user_id → registrant_profiles.id → applicant_matching_profiles.user_id
  */
 export const useMatching = () => {
-  const { user } = useAuth();
-  const { getMatchingProfile, getActiveProfiles } = useMatchingProfile();
-  const { createMatchRequest, getMatchRequests } = useMatchRequests();
-  
+  const { user, profile } = useAuth(); // profile = registrant_profiles record
   const [userProfile, setUserProfile] = useState(null);
-  const [candidates, setCandidates] = useState([]);
   const [matches, setMatches] = useState([]);
   const [matchRequests, setMatchRequests] = useState([]);
+  const [statistics, setStatistics] = useState(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
+  const [lastFilters, setLastFilters] = useState({});
+  
+  // Track initialization to prevent duplicate calls
+  const initializationRef = useRef({ isInitializing: false, isInitialized: false });
 
-  // Enhanced location compatibility that can use external services
-  const enhancedLocationCompatibility = useCallback((profile1, profile2) => {
-    // First try the basic location compatibility
-    let score = calculateLocationCompatibility(profile1, profile2);
-    
-    // If there's a global ZIP code compatibility function available, use it
-    if (typeof window !== 'undefined' && window.calculateZipCodeCompatibility) {
-      try {
-        const zipScore = window.calculateZipCodeCompatibility(profile1, profile2);
-        score = Math.max(score, zipScore); // Use the better score
-      } catch (err) {
-        console.warn('ZIP code compatibility calculation failed:', err);
-      }
-    }
-    
-    return score;
+  /**
+   * SCHEMA COMPLIANT: Clear error state
+   */
+  const clearError = useCallback(() => {
+    setError(null);
   }, []);
 
   /**
-   * Load current user's matching profile
+   * SCHEMA COMPLIANT: Load user's matching profile
+   * Uses registrant_profiles.id (not auth.users.id)
    */
   const loadUserProfile = useCallback(async () => {
-    if (!user?.id) {
-      setError('No authenticated user found');
+    if (!profile?.id) {
+      setError('No registrant profile found. Please complete account setup.');
       return null;
     }
 
     try {
       setError(null);
-      console.log('🔍 Loading user matching profile...');
+      console.log('🔍 Loading schema-compliant user matching profile...');
       
-      const result = await getMatchingProfile(user.id);
+      // SCHEMA COMPLIANT: Pass registrant_profiles.id to matching service
+      const userMatchingProfile = await schemaCompliantMatchingService.loadUserProfile(profile.id);
       
-      if (result.success && result.data) {
-        const transformedProfile = transformProfileForAlgorithm(result.data);
-        
-        // Validate the profile
-        const validation = validateProfileForMatching(transformedProfile);
-        
-        if (!validation.isValid) {
-          console.warn('❌ User profile validation failed:', validation);
-          setError(`Profile incomplete: ${validation.missing.join(', ')}`);
-          return null;
-        }
-
-        console.log('✅ User profile loaded and validated');
-        setUserProfile(transformedProfile);
-        return transformedProfile;
-        
-      } else {
-        const errorMsg = 'Please complete your matching profile first';
-        setError(errorMsg);
-        console.warn('❌ No matching profile found for user');
-        return null;
-      }
+      console.log('✅ User matching profile loaded:', {
+        user_id: userMatchingProfile?.user_id,
+        completion: userMatchingProfile?.completion_percentage,
+        location: userMatchingProfile?.primary_location
+      });
+      
+      setUserProfile(userMatchingProfile);
+      return userMatchingProfile;
+      
     } catch (err) {
       console.error('💥 Error loading user profile:', err);
-      setError('Failed to load your profile');
+      setError(err.message || 'Failed to load your matching profile');
       return null;
     }
-  }, [user, getMatchingProfile]);
+  }, [profile?.id]);
 
   /**
-   * Load all active candidate profiles
-   */
-  const loadCandidates = useCallback(async () => {
-    try {
-      setError(null);
-      console.log('🔍 Loading candidate profiles...');
-      
-      const result = await getActiveProfiles();
-      
-      if (!result.success) {
-        throw new Error(result.error || 'Failed to load profiles');
-      }
-
-      const rawCandidates = result.data || [];
-      console.log(`📊 Found ${rawCandidates.length} raw profiles`);
-
-      // Transform all profiles
-      const transformedCandidates = transformProfilesForAlgorithm(rawCandidates);
-      console.log(`🔄 Transformed ${transformedCandidates.length} profiles`);
-
-      // Filter for matchable profiles
-      const matchableCandidates = filterMatchableProfiles(transformedCandidates, {
-        requireCompleted: true,
-        requireActive: true,
-        minValidationScore: 60
-      });
-
-      console.log(`✅ Found ${matchableCandidates.length} matchable candidates`);
-      setCandidates(matchableCandidates);
-      return matchableCandidates;
-
-    } catch (err) {
-      console.error('💥 Error loading candidates:', err);
-      setError(err.message || 'Failed to load candidate profiles');
-      return [];
-    }
-  }, [getActiveProfiles]);
-
-  /**
-   * Calculate detailed compatibility between user and a candidate
-   */
-  const calculateCompatibility = useCallback((candidate) => {
-    if (!userProfile || !candidate) {
-      console.warn('⚠️ Missing profile data for compatibility calculation');
-      return null;
-    }
-
-    try {
-      // Create enhanced profiles with location compatibility
-      const enhancedUserProfile = {
-        ...userProfile,
-        calculateLocationCompatibility: enhancedLocationCompatibility
-      };
-
-      const enhancedCandidate = {
-        ...candidate,
-        calculateLocationCompatibility: enhancedLocationCompatibility
-      };
-
-      // Calculate detailed compatibility
-      const compatibility = calculateDetailedCompatibility(enhancedUserProfile, enhancedCandidate);
-      
-      // Generate flags
-      const flags = generateDetailedFlags(enhancedUserProfile, enhancedCandidate, compatibility.score_breakdown);
-      
-      // Get comprehensive summary
-      const summary = getCompatibilitySummary(enhancedUserProfile, enhancedCandidate);
-
-      return {
-        matchScore: compatibility.compatibility_score,
-        breakdown: compatibility.score_breakdown,
-        greenFlags: flags.green || [],
-        redFlags: flags.red || [],
-        summary,
-        compatibility,
-        calculated_at: new Date().toISOString()
-      };
-
-    } catch (err) {
-      console.error('💥 Error calculating compatibility:', err);
-      return null;
-    }
-  }, [userProfile, enhancedLocationCompatibility]);
-
-  /**
-   * Find and rank matches based on compatibility
+   * SCHEMA COMPLIANT: Find matches using the updated matching service
    */
   const findMatches = useCallback(async (filters = {}) => {
-    const {
-      minScore = 40,
-      maxResults = 20,
-      recoveryStage = null,
-      ageRange = null,
-      locationPreference = null
-    } = filters;
+    if (!profile?.id) {
+      setError('No registrant profile available for matching');
+      return [];
+    }
 
     setLoading(true);
     setError(null);
 
     try {
-      // Ensure we have user profile and candidates
-      let currentUserProfile = userProfile;
-      let currentCandidates = candidates;
-
-      if (!currentUserProfile) {
-        console.log('🔄 Loading user profile...');
-        currentUserProfile = await loadUserProfile();
-        if (!currentUserProfile) {
-          throw new Error('Unable to load user profile');
-        }
+      console.log('🎯 Finding schema-compliant matches with filters:', filters);
+      
+      // SCHEMA COMPLIANT: Use registrant_profiles.id for matching
+      const result = await schemaCompliantMatchingService.findMatches(profile.id, filters);
+      
+      const matches = result.matches || [];
+      const userProfile = result.userProfile;
+      
+      console.log(`✅ Found ${matches.length} schema-compliant matches`);
+      
+      // Update state
+      setMatches(matches);
+      if (userProfile && !userMatchingProfile) {
+        setUserProfile(userProfile);
       }
-
-      if (currentCandidates.length === 0) {
-        console.log('🔄 Loading candidates...');
-        currentCandidates = await loadCandidates();
-      }
-
-      console.log(`🎯 Finding matches from ${currentCandidates.length} candidates`);
-
-      // Apply filters
-      let filteredCandidates = currentCandidates;
-
-      if (recoveryStage) {
-        filteredCandidates = filteredCandidates.filter(c => 
-          c.recovery_stage === recoveryStage
-        );
-      }
-
-      if (ageRange) {
-        const [minAge, maxAge] = ageRange.split('-').map(Number);
-        filteredCandidates = filteredCandidates.filter(c => 
-          c.age && c.age >= minAge && (maxAge ? c.age <= maxAge : true)
-        );
-      }
-
-      if (locationPreference) {
-        filteredCandidates = filteredCandidates.filter(c => 
-          c.location && c.location.toLowerCase().includes(locationPreference.toLowerCase())
-        );
-      }
-
-      console.log(`🔍 ${filteredCandidates.length} candidates after filtering`);
-
-      // Calculate compatibility for each candidate
-      const matchesWithScores = filteredCandidates
-        .map(candidate => {
-          const compatibilityData = calculateCompatibility(candidate);
-          
-          if (!compatibilityData) {
-            console.warn(`⚠️ Failed to calculate compatibility for candidate ${candidate.user_id}`);
-            return null;
-          }
-
-          return {
-            ...candidate,
-            ...compatibilityData
-          };
-        })
-        .filter(match => match !== null);
-
-      // Filter by minimum score and sort
-      const qualifiedMatches = matchesWithScores
-        .filter(match => match.matchScore >= minScore)
-        .sort((a, b) => b.matchScore - a.matchScore)
-        .slice(0, maxResults);
-
-      console.log(`✅ Found ${qualifiedMatches.length} qualified matches`);
-      setMatches(qualifiedMatches);
-      return qualifiedMatches;
-
+      setLastFilters(filters);
+      
+      return matches;
+      
     } catch (err) {
       console.error('💥 Error finding matches:', err);
       setError(err.message || 'Failed to find matches');
@@ -269,233 +108,318 @@ export const useMatching = () => {
     } finally {
       setLoading(false);
     }
-  }, [userProfile, candidates, loadUserProfile, loadCandidates, calculateCompatibility]);
+  }, [profile?.id, userProfile]);
 
   /**
-   * Send a match request
+   * SCHEMA COMPLIANT: Send match request
    */
-  const sendMatchRequest = useCallback(async (targetProfile, message = '') => {
-    if (!user?.id || !targetProfile?.user_id) {
-      throw new Error('Invalid user or target profile');
+  const sendMatchRequest = useCallback(async (targetMatch, customMessage = '') => {
+    if (!profile?.id || !targetMatch?.user_id) {
+      throw new Error('Invalid profile or target match');
     }
 
     try {
       setError(null);
-      console.log(`📤 Sending match request to ${targetProfile.user_id}`);
-
-      // Calculate compatibility score for the request
-      const compatibilityData = calculateCompatibility(targetProfile);
-      const matchScore = compatibilityData?.matchScore || null;
-
-      const result = await createMatchRequest(
-        targetProfile.user_id,
-        message,
-        matchScore
-      );
-
+      console.log(`📤 Sending schema-compliant match request to:`, targetMatch.first_name);
+      
+      // SCHEMA COMPLIANT: Use registrant_profiles.id
+      const result = await schemaCompliantMatchingService.sendMatchRequest(profile.id, {
+        ...targetMatch,
+        customMessage
+      });
+      
       if (result.success) {
         console.log('✅ Match request sent successfully');
         
-        // Refresh match requests
-        await loadMatchRequests();
+        // Refresh matches to update UI state
+        await findMatches(lastFilters);
         
         return { success: true, data: result.data };
       } else {
         throw new Error(result.error || 'Failed to send match request');
       }
-
+      
     } catch (err) {
       console.error('💥 Error sending match request:', err);
       setError(err.message || 'Failed to send match request');
       return { success: false, error: err.message };
     }
-  }, [user, calculateCompatibility, createMatchRequest]);
+  }, [profile?.id, findMatches, lastFilters]);
 
   /**
-   * Load user's match requests (sent and received)
+   * SCHEMA COMPLIANT: Load user's match requests and connections
    */
   const loadMatchRequests = useCallback(async () => {
-    if (!user?.id) return [];
+    if (!profile?.id) return [];
 
     try {
       setError(null);
-      console.log('📋 Loading match requests...');
-
-      const result = await getMatchRequests(user.id);
-
-      if (result.success) {
-        const requests = result.data || [];
-        console.log(`📋 Loaded ${requests.length} match requests`);
-        setMatchRequests(requests);
-        return requests;
-      } else {
-        throw new Error(result.error || 'Failed to load match requests');
-      }
-
+      console.log('📋 Loading schema-compliant match requests...');
+      
+      // The matching service loads sent requests as part of exclusion logic
+      // For UI purposes, we can call findMatches to get current state
+      // Or implement a specific method in the service if needed
+      
+      // For now, this is handled by the matching service internally
+      // We could add a specific method if the UI needs direct access
+      
+      return [];
+      
     } catch (err) {
       console.error('💥 Error loading match requests:', err);
       setError(err.message || 'Failed to load match requests');
       return [];
     }
-  }, [user, getMatchRequests]);
+  }, [profile?.id]);
 
   /**
-   * Get compatibility between any two profiles
+   * SCHEMA COMPLIANT: Get matching statistics
    */
-  const getProfileCompatibility = useCallback((profile1, profile2) => {
+  const loadStatistics = useCallback(async () => {
+    if (!profile?.id) return null;
+
+    try {
+      setError(null);
+      console.log('📊 Loading matching statistics...');
+      
+      const stats = await schemaCompliantMatchingService.getMatchingStatistics(profile.id);
+      
+      console.log('✅ Statistics loaded:', stats);
+      setStatistics(stats);
+      return stats;
+      
+    } catch (err) {
+      console.error('💥 Error loading statistics:', err);
+      setError(err.message || 'Failed to load statistics');
+      return null;
+    }
+  }, [profile?.id]);
+
+  /**
+   * SCHEMA COMPLIANT: Calculate compatibility between any two profiles
+   * This is useful for UI components that need to show compatibility
+   */
+  const calculateCompatibility = useCallback((profile1, profile2) => {
     if (!profile1 || !profile2) {
+      console.warn('⚠️ Missing profile data for compatibility calculation');
       return null;
     }
 
-    // Transform profiles if they're raw database records
-    const transformedProfile1 = profile1.user_id ? profile1 : transformProfileForAlgorithm(profile1);
-    const transformedProfile2 = profile2.user_id ? profile2 : transformProfileForAlgorithm(profile2);
-
     try {
-      const compatibility = calculateDetailedCompatibility(transformedProfile1, transformedProfile2);
-      const flags = generateDetailedFlags(transformedProfile1, transformedProfile2, compatibility.score_breakdown);
-      
+      // Use the algorithm directly for custom calculations
+      const compatibility = calculateDetailedCompatibility(profile1, profile2);
+      const flags = generateDetailedFlags(profile1, profile2, compatibility.score_breakdown);
+      const summary = getCompatibilitySummary(profile1, profile2);
+
       return {
         score: compatibility.compatibility_score,
         breakdown: compatibility.score_breakdown,
+        priorityBreakdown: compatibility.priority_breakdown,
         greenFlags: flags.green || [],
         redFlags: flags.red || [],
+        yellowFlags: flags.yellow || [],
+        summary,
         compatibility
       };
+
     } catch (err) {
-      console.error('💥 Error calculating profile compatibility:', err);
+      console.error('💥 Error calculating compatibility:', err);
       return null;
     }
   }, []);
 
   /**
-   * Initialize the matching system
+   * SCHEMA COMPLIANT: Update user's matching profile
+   */
+  const updateUserProfile = useCallback(async (profileData) => {
+    if (!profile?.id) {
+      throw new Error('No registrant profile available');
+    }
+
+    try {
+      setError(null);
+      console.log('📝 Updating user matching profile...');
+      
+      const result = await schemaCompliantMatchingService.updateUserProfile(profile.id, profileData);
+      
+      if (result.success) {
+        console.log('✅ Profile updated successfully');
+        
+        // Reload the user profile to get updated data
+        await loadUserProfile();
+        
+        return { success: true, data: result.data };
+      } else {
+        throw new Error(result.error || 'Failed to update profile');
+      }
+      
+    } catch (err) {
+      console.error('💥 Error updating profile:', err);
+      setError(err.message || 'Failed to update profile');
+      return { success: false, error: err.message };
+    }
+  }, [profile?.id, loadUserProfile]);
+
+  /**
+   * SCHEMA COMPLIANT: Initialize the matching system
    */
   const initialize = useCallback(async () => {
-    if (!user?.id) {
-      console.log('⚠️ No user available for matching initialization');
+    // Prevent duplicate initialization
+    if (initializationRef.current.isInitializing || initializationRef.current.isInitialized) {
+      return initializationRef.current.isInitialized;
+    }
+
+    if (!profile?.id) {
+      console.log('⚠️ No registrant profile available for matching initialization');
       return false;
     }
 
+    initializationRef.current.isInitializing = true;
     setLoading(true);
     setError(null);
 
     try {
-      console.log('🚀 Initializing matching system...');
+      console.log('🚀 Initializing schema-compliant matching system...');
       
-      // Load user profile and candidates in parallel
-      const [userProfileResult, candidatesResult] = await Promise.all([
-        loadUserProfile(),
-        loadCandidates()
-      ]);
+      // Load user profile first
+      const userMatchingProfile = await loadUserProfile();
+      
+      if (userMatchingProfile) {
+        // Load statistics in background (don't block on this)
+        loadStatistics().catch(err => {
+          console.warn('Statistics loading failed:', err);
+        });
 
-      const success = userProfileResult !== null && candidatesResult.length >= 0;
-      
-      if (success) {
-        console.log('✅ Matching system initialized successfully');
-        // Load match requests
-        await loadMatchRequests();
+        console.log('✅ Schema-compliant matching system initialized');
+        initializationRef.current.isInitialized = true;
+        return true;
       } else {
-        console.log('❌ Matching system initialization failed');
+        console.log('❌ Matching system initialization failed - no profile');
+        return false;
       }
-
-      return success;
 
     } catch (err) {
       console.error('💥 Error initializing matching system:', err);
       setError(err.message || 'Failed to initialize matching system');
       return false;
     } finally {
+      initializationRef.current.isInitializing = false;
       setLoading(false);
     }
-  }, [user, loadUserProfile, loadCandidates, loadMatchRequests]);
-
-  // Auto-initialize when user changes
-  useEffect(() => {
-    if (user?.id) {
-      initialize();
-    } else {
-      // Clear data when user logs out
-      setUserProfile(null);
-      setCandidates([]);
-      setMatches([]);
-      setMatchRequests([]);
-      setError(null);
-    }
-  }, [user?.id]); // Only depend on user ID to avoid infinite loops
+  }, [profile?.id, loadUserProfile, loadStatistics]);
 
   /**
-   * Clear error state
+   * Reset initialization state when user changes
    */
-  const clearError = useCallback(() => {
-    setError(null);
-  }, []);
+  useEffect(() => {
+    initializationRef.current = { isInitializing: false, isInitialized: false };
+  }, [profile?.id]);
+
+  /**
+   * Auto-initialize when registrant profile is available
+   */
+  useEffect(() => {
+    if (profile?.id && !initializationRef.current.isInitialized && !initializationRef.current.isInitializing) {
+      initialize();
+    } else if (!profile?.id) {
+      // Clear data when no profile
+      setUserProfile(null);
+      setMatches([]);
+      setMatchRequests([]);
+      setStatistics(null);
+      setError(null);
+      initializationRef.current = { isInitializing: false, isInitialized: false };
+    }
+  }, [profile?.id, initialize]);
 
   /**
    * Refresh all data
    */
   const refresh = useCallback(async () => {
+    initializationRef.current.isInitialized = false;
     return await initialize();
   }, [initialize]);
 
+  /**
+   * Clear cache (useful for testing or forced refresh)
+   */
+  const clearCache = useCallback(() => {
+    schemaCompliantMatchingService.clearCache();
+    console.log('🗑️ Matching cache cleared');
+  }, []);
+
+  /**
+   * Get cache statistics
+   */
+  const getCacheStats = useCallback(() => {
+    return schemaCompliantMatchingService.getCacheStats();
+  }, []);
+
   return {
-    // State
-    userProfile,
-    candidates,
-    matches,
-    matchRequests,
-    loading,
-    error,
+    // SCHEMA COMPLIANT STATE
+    userProfile,           // From applicant_matching_profiles table
+    matches,               // Computed matches with compatibility scores  
+    matchRequests,         // Match requests (handled internally by service)
+    statistics,            // Matching statistics and insights
+    loading,               // Loading state for UI
+    error,                 // Error messages for UI
+    lastFilters,           // Last applied filters
 
-    // Core functions
-    findMatches,
-    sendMatchRequest,
-    calculateCompatibility,
-    getProfileCompatibility,
+    // CORE MATCHING FUNCTIONS
+    findMatches,           // Find and rank compatible matches
+    sendMatchRequest,      // Send connection request to another user
+    calculateCompatibility, // Calculate compatibility between profiles
+    
+    // PROFILE MANAGEMENT
+    loadUserProfile,       // Load current user's matching profile
+    updateUserProfile,     // Update current user's matching profile
+    
+    // DATA MANAGEMENT  
+    loadMatchRequests,     // Load user's connection requests
+    loadStatistics,        // Load matching statistics
+    
+    // SYSTEM CONTROL
+    initialize,            // Initialize matching system
+    refresh,               // Refresh all data
+    clearError,            // Clear error state
+    clearCache,            // Clear service cache
+    getCacheStats,         // Get cache performance stats
 
-    // Data loading
-    loadUserProfile,
-    loadCandidates,
-    loadMatchRequests,
-
-    // Utility
-    initialize,
-    refresh,
-    clearError,
-
-    // Computed values
-    isInitialized: userProfile !== null,
+    // COMPUTED PROPERTIES
+    isInitialized: initializationRef.current.isInitialized,
     hasMatches: matches.length > 0,
-    candidateCount: candidates.length,
-    pendingRequestCount: matchRequests.filter(r => r.status === 'pending').length
+    hasProfile: userProfile !== null,
+    profileCompletion: userProfile?.completion_percentage || 0,
+    matchCount: matches.length,
+    algorithmVersion: '2.0_schema_compliant'
   };
 };
 
 /**
- * Simplified hook for just getting compatibility between two profiles
+ * SCHEMA COMPLIANT: Simplified hook for just compatibility calculations
+ * Useful for components that only need to calculate compatibility scores
  */
 export const useCompatibilityCalculation = () => {
   const calculateProfileCompatibility = useCallback((profile1, profile2) => {
+    if (!profile1 || !profile2) {
+      return null;
+    }
+
     try {
-      // Transform if needed
-      const transformed1 = profile1.user_id ? profile1 : transformProfileForAlgorithm(profile1);
-      const transformed2 = profile2.user_id ? profile2 : transformProfileForAlgorithm(profile2);
-
-      if (!transformed1 || !transformed2) {
-        return null;
-      }
-
-      const compatibility = calculateDetailedCompatibility(transformed1, transformed2);
-      const flags = generateDetailedFlags(transformed1, transformed2, compatibility.score_breakdown);
-      const summary = getCompatibilitySummary(transformed1, transformed2);
+      const compatibility = calculateDetailedCompatibility(profile1, profile2);
+      const flags = generateDetailedFlags(profile1, profile2, compatibility.score_breakdown);
+      const summary = getCompatibilitySummary(profile1, profile2);
 
       return {
         score: compatibility.compatibility_score,
         breakdown: compatibility.score_breakdown,
+        priorityBreakdown: compatibility.priority_breakdown,
         greenFlags: flags.green || [],
         redFlags: flags.red || [],
+        yellowFlags: flags.yellow || [],
         summary,
-        raw: compatibility
+        raw: compatibility,
+        algorithmVersion: '2.0_schema_compliant'
       };
     } catch (err) {
       console.error('💥 Compatibility calculation error:', err);
@@ -503,7 +427,57 @@ export const useCompatibilityCalculation = () => {
     }
   }, []);
 
-  return { calculateProfileCompatibility };
+  return { 
+    calculateProfileCompatibility,
+    algorithmVersion: '2.0_schema_compliant'
+  };
+};
+
+/**
+ * SCHEMA COMPLIANT: Hook for matching statistics only
+ * Useful for dashboard components that only need stats
+ */
+export const useMatchingStatistics = () => {
+  const { profile } = useAuth();
+  const [statistics, setStatistics] = useState(null);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState(null);
+
+  const loadStatistics = useCallback(async () => {
+    if (!profile?.id) {
+      setError('No registrant profile available');
+      return null;
+    }
+
+    setLoading(true);
+    setError(null);
+
+    try {
+      const stats = await schemaCompliantMatchingService.getMatchingStatistics(profile.id);
+      setStatistics(stats);
+      return stats;
+    } catch (err) {
+      console.error('💥 Error loading statistics:', err);
+      setError(err.message || 'Failed to load statistics');
+      return null;
+    } finally {
+      setLoading(false);
+    }
+  }, [profile?.id]);
+
+  useEffect(() => {
+    if (profile?.id) {
+      loadStatistics();
+    }
+  }, [profile?.id, loadStatistics]);
+
+  return {
+    statistics,
+    loading,
+    error,
+    refresh: loadStatistics,
+    algorithmVersion: '2.0_schema_compliant'
+  };
 };
 
 export default useMatching;

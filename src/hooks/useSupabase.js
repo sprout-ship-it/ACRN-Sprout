@@ -1,6 +1,6 @@
-// src/hooks/useSupabase.js - FIXED VERSION
+// src/hooks/useSupabase.js - PHASE 3 CORRECTED VERSION
 import { useState, useCallback } from 'react';
-import { db } from '../utils/supabase';
+import { supabase, db } from '../utils/supabase';
 import { useAuth } from './useAuth';
 
 /**
@@ -25,7 +25,7 @@ export const useSupabase = () => {
     try {
       const result = await operation();
       
-      if (result.error) {
+      if (result && !result.success && result.error) {
         throw new Error(result.error.message || 'Database operation failed');
       }
       
@@ -33,7 +33,7 @@ export const useSupabase = () => {
         console.log(successMessage);
       }
       
-      return { success: true, data: result.data };
+      return { success: true, data: result.data || result };
     } catch (err) {
       const errorMessage = err.message || 'An unexpected error occurred';
       setError(errorMessage);
@@ -57,20 +57,8 @@ export const useSupabase = () => {
   };
 };
 
-// ✅ FIXED: Helper function to remove generated columns from data
-const removeGeneratedColumns = (data, generatedColumns = []) => {
-  if (!data || typeof data !== 'object') return data;
-  
-  const cleanData = { ...data };
-  generatedColumns.forEach(column => {
-    delete cleanData[column];
-  });
-  
-  return cleanData;
-};
-
 /**
- * Hook for profile operations
+ * Hook for registrant profile operations
  */
 export const useProfileOperations = () => {
   const { executeOperation } = useSupabase();
@@ -78,7 +66,7 @@ export const useProfileOperations = () => {
 
   const createProfile = useCallback(async (profileData) => {
     return executeOperation(
-      () => db.profiles.create({ ...profileData, id: user.id }),
+      () => db.profiles.create({ ...profileData, user_id: user.id }),
       { successMessage: 'Profile created successfully' }
     );
   }, [executeOperation, user]);
@@ -87,7 +75,7 @@ export const useProfileOperations = () => {
     if (!user) throw new Error('No authenticated user');
     
     return executeOperation(
-      () => db.profiles.update(user.id, updates),
+      () => db.profiles.updateByUserId(user.id, updates),
       { successMessage: 'Profile updated successfully' }
     );
   }, [executeOperation, user]);
@@ -96,76 +84,37 @@ export const useProfileOperations = () => {
     if (!userId) throw new Error('User ID required');
     
     return executeOperation(
-      () => db.profiles.getById(userId),
+      () => db.profiles.getByUserId(userId),
       { setLoadingState: false }
     );
   }, [executeOperation, user]);
+
+  const refreshProfile = useCallback(async () => {
+    if (!user) throw new Error('No authenticated user');
+    return getProfile(user.id);
+  }, [getProfile, user]);
 
   return {
     createProfile,
     updateProfile,
-    getProfile
-  };
-};
-
-/**
- * Hook for basic profile operations
- */
-export const useBasicProfile = () => {
-  const { executeOperation } = useSupabase();
-  const { user } = useAuth();
-
-  const createBasicProfile = useCallback(async (profileData) => {
-    return executeOperation(
-      () => db.applicantForms.create({ ...profileData, user_id: user.id }),
-      { successMessage: 'Basic profile created successfully' }
-    );
-  }, [executeOperation, user]);
-
-  const updateBasicProfile = useCallback(async (updates) => {
-    if (!user) throw new Error('No authenticated user');
-    
-    return executeOperation(
-      () => db.applicantForms.update(user.id, updates),
-      { successMessage: 'Basic profile updated successfully' }
-    );
-  }, [executeOperation, user]);
-
-  const getBasicProfile = useCallback(async (userId = user?.id) => {
-    if (!userId) throw new Error('User ID required');
-    
-    return executeOperation(
-      () => db.applicantForms.getByUserId(userId),
-      { setLoadingState: false }
-    );
-  }, [executeOperation, user]);
-
-  return {
-    createBasicProfile,
-    updateBasicProfile,
-    getBasicProfile
+    getProfile,
+    refreshProfile
   };
 };
 
 /**
  * Hook for matching profile operations
- * ✅ FIXED: Remove generated columns before database operations
+ * ✅ FIXED: Now uses db.matchingProfiles instead of applicantForms
  */
 export const useMatchingProfile = () => {
   const { executeOperation } = useSupabase();
   const { user } = useAuth();
 
-  // ✅ FIXED: Define generated columns that should be excluded
-  const GENERATED_COLUMNS = ['primary_location'];
-
   const createMatchingProfile = useCallback(async (profileData) => {
-    // ✅ FIXED: Remove generated columns from the data
-    const cleanData = removeGeneratedColumns(profileData, GENERATED_COLUMNS);
-    
-    console.log('Creating matching profile with clean data:', cleanData);
+    console.log('Creating matching profile with data:', profileData);
     
     return executeOperation(
-      () => db.matchingProfiles.create({ ...cleanData, user_id: user.id }),
+      () => db.matchingProfiles.create({ ...profileData, user_id: user.id }),
       { successMessage: 'Matching profile created successfully' }
     );
   }, [executeOperation, user]);
@@ -173,13 +122,10 @@ export const useMatchingProfile = () => {
   const updateMatchingProfile = useCallback(async (updates) => {
     if (!user) throw new Error('No authenticated user');
     
-    // ✅ FIXED: Remove generated columns from the updates
-    const cleanUpdates = removeGeneratedColumns(updates, GENERATED_COLUMNS);
-    
-    console.log('Updating matching profile with clean data:', cleanUpdates);
+    console.log('Updating matching profile with data:', updates);
     
     return executeOperation(
-      () => db.matchingProfiles.update(user.id, cleanUpdates),
+      () => db.matchingProfiles.update(user.id, updates),
       { successMessage: 'Matching profile updated successfully' }
     );
   }, [executeOperation, user]);
@@ -200,11 +146,19 @@ export const useMatchingProfile = () => {
     );
   }, [executeOperation, user]);
 
+  const upsertMatchingProfile = useCallback(async (profileData) => {
+    return executeOperation(
+      () => db.matchingProfiles.upsert({ ...profileData, user_id: user.id }),
+      { successMessage: 'Matching profile saved successfully' }
+    );
+  }, [executeOperation, user]);
+
   return {
     createMatchingProfile,
     updateMatchingProfile,
     getMatchingProfile,
-    getActiveProfiles
+    getActiveProfiles,
+    upsertMatchingProfile
   };
 };
 
@@ -215,17 +169,12 @@ export const useMatchRequests = () => {
   const { executeOperation } = useSupabase();
   const { user } = useAuth();
 
-  const createMatchRequest = useCallback(async (targetId, message = '', matchScore = null) => {
-    const requestData = {
-      requester_id: user.id,
-      target_id: targetId,
-      message,
-      match_score: matchScore,
-      status: 'pending'
-    };
-    
+  const createMatchRequest = useCallback(async (requestData) => {
     return executeOperation(
-      () => db.matchRequests.create(requestData),
+      () => db.matchRequests.create({
+        ...requestData,
+        requester_id: user.id
+      }),
       { successMessage: 'Match request sent successfully' }
     );
   }, [executeOperation, user]);
@@ -246,36 +195,54 @@ export const useMatchRequests = () => {
     );
   }, [executeOperation, user]);
 
+  const getSentRequests = useCallback(async (userId = user?.id) => {
+    if (!userId) throw new Error('User ID required');
+    
+    return executeOperation(
+      () => db.matchRequests.getSentRequests(userId),
+      { setLoadingState: false }
+    );
+  }, [executeOperation, user]);
+
+  const getReceivedRequests = useCallback(async (userId = user?.id) => {
+    if (!userId) throw new Error('User ID required');
+    
+    return executeOperation(
+      () => db.matchRequests.getReceivedRequests(userId),
+      { setLoadingState: false }
+    );
+  }, [executeOperation, user]);
+
   const approveMatchRequest = useCallback(async (requestId) => {
-    return updateMatchRequest(requestId, {
-      status: 'approved',
-      target_approved: true
-    });
-  }, [updateMatchRequest]);
+    return executeOperation(
+      () => db.matchRequests.approve(requestId, user.id),
+      { successMessage: 'Match request approved' }
+    );
+  }, [executeOperation, user]);
 
   const rejectMatchRequest = useCallback(async (requestId, reason = '') => {
-    return updateMatchRequest(requestId, {
-      status: 'rejected',
-      rejection_reason: reason
-    });
-  }, [updateMatchRequest]);
+    return executeOperation(
+      () => db.matchRequests.reject(requestId, user.id, reason),
+      { successMessage: 'Match request rejected' }
+    );
+  }, [executeOperation, user]);
 
-  const unmatchRequest = useCallback(async (requestId, reason = '') => {
-    return updateMatchRequest(requestId, {
-      status: 'unmatched',
-      unmatched_at: new Date().toISOString(),
-      unmatched_by: user.id,
-      unmatched_reason: reason
-    });
-  }, [updateMatchRequest, user]);
+  const cancelMatchRequest = useCallback(async (requestId) => {
+    return executeOperation(
+      () => db.matchRequests.cancel(requestId, user.id),
+      { successMessage: 'Match request cancelled' }
+    );
+  }, [executeOperation, user]);
 
   return {
     createMatchRequest,
     updateMatchRequest,
     getMatchRequests,
+    getSentRequests,
+    getReceivedRequests,
     approveMatchRequest,
     rejectMatchRequest,
-    unmatchRequest
+    cancelMatchRequest
   };
 };
 
@@ -323,12 +290,20 @@ export const useProperties = () => {
     );
   }, [executeOperation]);
 
+  const getPropertyById = useCallback(async (propertyId) => {
+    return executeOperation(
+      () => db.properties.getById(propertyId),
+      { setLoadingState: false }
+    );
+  }, [executeOperation]);
+
   return {
     createProperty,
     updateProperty,
     deleteProperty,
     getPropertiesByLandlord,
-    getAvailableProperties
+    getAvailableProperties,
+    getPropertyById
   };
 };
 
@@ -341,7 +316,7 @@ export const usePeerSupport = () => {
 
   const createPeerProfile = useCallback(async (profileData) => {
     return executeOperation(
-      () => db.peerSupport.create({ ...profileData, user_id: user.id }),
+      () => db.peerSupportProfiles.create({ ...profileData, user_id: user.id }),
       { successMessage: 'Peer support profile created successfully' }
     );
   }, [executeOperation, user]);
@@ -350,7 +325,7 @@ export const usePeerSupport = () => {
     if (!user) throw new Error('No authenticated user');
     
     return executeOperation(
-      () => db.peerSupport.update(user.id, updates),
+      () => db.peerSupportProfiles.update(user.id, updates),
       { successMessage: 'Peer support profile updated successfully' }
     );
   }, [executeOperation, user]);
@@ -359,14 +334,21 @@ export const usePeerSupport = () => {
     if (!userId) throw new Error('User ID required');
     
     return executeOperation(
-      () => db.peerSupport.getByUserId(userId),
+      () => db.peerSupportProfiles.getByUserId(userId),
       { setLoadingState: false }
     );
   }, [executeOperation, user]);
 
   const getAvailablePeerSupport = useCallback(async (filters = {}) => {
     return executeOperation(
-      () => db.peerSupport.getAvailable(filters),
+      () => db.peerSupportProfiles.getAvailable(filters),
+      { setLoadingState: false }
+    );
+  }, [executeOperation]);
+
+  const searchPeerSupport = useCallback(async (searchTerm, filters = {}) => {
+    return executeOperation(
+      () => db.peerSupportProfiles.search(searchTerm, filters),
       { setLoadingState: false }
     );
   }, [executeOperation]);
@@ -375,7 +357,179 @@ export const usePeerSupport = () => {
     createPeerProfile,
     updatePeerProfile,
     getPeerProfile,
-    getAvailablePeerSupport
+    getAvailablePeerSupport,
+    searchPeerSupport
+  };
+};
+
+/**
+ * Hook for employer operations
+ */
+export const useEmployer = () => {
+  const { executeOperation } = useSupabase();
+  const { user } = useAuth();
+
+  const createEmployerProfile = useCallback(async (profileData) => {
+    return executeOperation(
+      () => db.employerProfiles.create({ ...profileData, user_id: user.id }),
+      { successMessage: 'Employer profile created successfully' }
+    );
+  }, [executeOperation, user]);
+
+  const updateEmployerProfile = useCallback(async (updates) => {
+    if (!user) throw new Error('No authenticated user');
+    
+    return executeOperation(
+      () => db.employerProfiles.update(user.id, updates),
+      { successMessage: 'Employer profile updated successfully' }
+    );
+  }, [executeOperation, user]);
+
+  const getEmployerProfile = useCallback(async (userId = user?.id) => {
+    if (!userId) throw new Error('User ID required');
+    
+    return executeOperation(
+      () => db.employerProfiles.getByUserId(userId),
+      { setLoadingState: false }
+    );
+  }, [executeOperation, user]);
+
+  const getAvailableEmployers = useCallback(async (filters = {}) => {
+    return executeOperation(
+      () => db.employerProfiles.getAvailable(filters),
+      { setLoadingState: false }
+    );
+  }, [executeOperation]);
+
+  const searchEmployers = useCallback(async (searchTerm, filters = {}) => {
+    return executeOperation(
+      () => db.employerProfiles.search(searchTerm, filters),
+      { setLoadingState: false }
+    );
+  }, [executeOperation]);
+
+  return {
+    createEmployerProfile,
+    updateEmployerProfile,
+    getEmployerProfile,
+    getAvailableEmployers,
+    searchEmployers
+  };
+};
+
+/**
+ * Hook for employer favorites operations
+ */
+export const useEmployerFavorites = () => {
+  const { executeOperation } = useSupabase();
+  const { user } = useAuth();
+
+  const getFavorites = useCallback(async (userId = user?.id) => {
+    if (!userId) throw new Error('User ID required');
+    
+    return executeOperation(
+      () => db.employerFavorites.getByUserId(userId),
+      { setLoadingState: false }
+    );
+  }, [executeOperation, user]);
+
+  const addFavorite = useCallback(async (employerUserId) => {
+    return executeOperation(
+      () => db.employerFavorites.add(user.id, employerUserId),
+      { successMessage: 'Employer favorited successfully' }
+    );
+  }, [executeOperation, user]);
+
+  const removeFavorite = useCallback(async (employerUserId) => {
+    return executeOperation(
+      () => db.employerFavorites.remove(user.id, employerUserId),
+      { successMessage: 'Employer removed from favorites' }
+    );
+  }, [executeOperation, user]);
+
+  const toggleFavorite = useCallback(async (employerUserId) => {
+    return executeOperation(
+      () => db.employerFavorites.toggle(user.id, employerUserId),
+      { successMessage: 'Favorite status updated' }
+    );
+  }, [executeOperation, user]);
+
+  const isFavorited = useCallback(async (employerUserId) => {
+    return executeOperation(
+      () => db.employerFavorites.isFavorited(user.id, employerUserId),
+      { setLoadingState: false }
+    );
+  }, [executeOperation, user]);
+
+  return {
+    getFavorites,
+    addFavorite,
+    removeFavorite,
+    toggleFavorite,
+    isFavorited
+  };
+};
+
+/**
+ * Hook for match groups operations
+ */
+export const useMatchGroups = () => {
+  const { executeOperation } = useSupabase();
+  const { user } = useAuth();
+
+  const getMatchGroups = useCallback(async (userId = user?.id) => {
+    if (!userId) throw new Error('User ID required');
+    
+    return executeOperation(
+      () => db.matchGroups.getByUserId(userId),
+      { setLoadingState: false }
+    );
+  }, [executeOperation, user]);
+
+  const getMatchGroup = useCallback(async (groupId) => {
+    return executeOperation(
+      () => db.matchGroups.getById(groupId),
+      { setLoadingState: false }
+    );
+  }, [executeOperation]);
+
+  const createMatchGroup = useCallback(async (groupData) => {
+    return executeOperation(
+      () => db.matchGroups.create(groupData),
+      { successMessage: 'Match group created successfully' }
+    );
+  }, [executeOperation]);
+
+  const updateMatchGroup = useCallback(async (groupId, updates) => {
+    return executeOperation(
+      () => db.matchGroups.update(groupId, updates),
+      { successMessage: 'Match group updated successfully' }
+    );
+  }, [executeOperation]);
+
+  const endMatchGroup = useCallback(async (groupId, reason = null) => {
+    return executeOperation(
+      () => db.matchGroups.endGroup(groupId, user.id, reason),
+      { successMessage: 'Match group ended successfully' }
+    );
+  }, [executeOperation, user]);
+
+  const getConnectionSummary = useCallback(async (userId = user?.id) => {
+    if (!userId) throw new Error('User ID required');
+    
+    return executeOperation(
+      () => db.matchGroups.getConnectionSummary(userId),
+      { setLoadingState: false }
+    );
+  }, [executeOperation, user]);
+
+  return {
+    getMatchGroups,
+    getMatchGroup,
+    createMatchGroup,
+    updateMatchGroup,
+    endMatchGroup,
+    getConnectionSummary
   };
 };
 

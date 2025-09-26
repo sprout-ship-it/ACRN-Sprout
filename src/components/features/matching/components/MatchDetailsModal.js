@@ -1,4 +1,4 @@
-// src/components/features/matching/components/MatchDetailsModal.js - PORTAL-BASED SOLUTION
+// src/components/features/matching/components/MatchDetailsModal.js - SCHEMA ALIGNED
 import React, { useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import PropTypes from 'prop-types';
@@ -37,7 +37,7 @@ const MODAL_SECTIONS = [
   }
 ];
 
-// 🔧 DEBUG: Stacking context detection utility
+// Debug stacking context detection utility
 const debugStackingContext = (element, label) => {
   if (!element) return;
   
@@ -66,7 +66,7 @@ const debugStackingContext = (element, label) => {
   return createsContext;
 };
 
-// 🎯 Portal Container Management
+// Portal Container Management
 const getModalRoot = () => {
   let modalRoot = document.getElementById('modal-root');
   
@@ -101,7 +101,7 @@ const MatchDetailsModal = ({
   const [activeSection, setActiveSection] = useState('overview');
   const [modalContainer, setModalContainer] = useState(null);
 
-  // 🔧 Setup modal container and debugging
+  // Setup modal container and debugging
   useEffect(() => {
     console.log('🎭 MatchDetailsModal: Setting up modal...');
     
@@ -146,13 +146,13 @@ const MatchDetailsModal = ({
     };
   }, [usePortal, debugMode]);
 
-  // 🚀 Enhanced close handler
+  // Enhanced close handler
   const handleClose = () => {
     console.log('🚪 MatchDetailsModal: Closing...');
     onClose();
   };
 
-  // 📱 Enhanced section change with scroll reset
+  // Enhanced section change with scroll reset
   const handleSectionChange = (sectionId) => {
     console.log(`🔄 MatchDetailsModal: Switching to ${sectionId}`);
     setActiveSection(sectionId);
@@ -166,17 +166,21 @@ const MatchDetailsModal = ({
 
   if (!match) return null;
 
+  // ✅ SCHEMA ALIGNED: Extract data using correct field names
   const {
+    // Schema fields
     first_name,
-    age,
-    location,
+    date_of_birth,
+    primary_city,
+    primary_state,
+    primary_location, // Generated column
     recovery_stage,
     recovery_methods,
-    program_type,
+    program_types, // ✅ FIXED: Array field name
     primary_issues,
     work_schedule,
     cleanliness_level,
-    noise_level,
+    noise_tolerance, // ✅ FIXED: Was noise_level
     social_level,
     bedtime_preference,
     smoking_status,
@@ -185,16 +189,180 @@ const MatchDetailsModal = ({
     pets_comfortable,
     overnight_guests_ok,
     shared_groceries,
-    housing_type,
-    housing_subsidy,
+    housing_types_accepted, // ✅ FIXED: Was housing_type
+    housing_assistance, // ✅ FIXED: Was housing_subsidy
     interests,
     about_me,
     looking_for,
+    
+    // Algorithm-computed fields (not in schema)
     matchScore,
+    compatibility_score,
     greenFlags = [],
     redFlags = [],
-    breakdown = {}
+    breakdown = {},
+    match_factors,
+    
+    // Legacy field support
+    age, // Calculated from date_of_birth
+    location, // Constructed from primary_city/primary_state
+    program_type, // Legacy name for program_types
+    housing_type, // Legacy name for housing_types_accepted
+    housing_subsidy, // Legacy name for housing_assistance
+    noise_level // Legacy name for noise_tolerance
   } = match;
+
+  // ✅ SCHEMA ALIGNED: Helper functions for data transformation
+  const calculateAge = (dateOfBirth) => {
+    if (!dateOfBirth) return null;
+    
+    const today = new Date();
+    const birthDate = new Date(dateOfBirth);
+    let calculatedAge = today.getFullYear() - birthDate.getFullYear();
+    const monthDiff = today.getMonth() - birthDate.getMonth();
+    
+    if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birthDate.getDate())) {
+      calculatedAge--;
+    }
+    
+    return calculatedAge;
+  };
+
+  const getLocation = () => {
+    // Use generated primary_location if available, otherwise construct
+    if (primary_location) return primary_location;
+    if (location) return location; // Legacy support
+    if (primary_city && primary_state) return `${primary_city}, ${primary_state}`;
+    return primary_city || primary_state || null;
+  };
+
+  const getMatchScore = () => {
+    return matchScore || compatibility_score || 0;
+  };
+
+  // ✅ SCHEMA ALIGNED: Get compatibility flags from various sources
+  const getCompatibilityFlags = () => {
+    if (greenFlags && redFlags) {
+      return { greenFlags, redFlags };
+    }
+    
+    if (match_factors) {
+      return {
+        greenFlags: match_factors.green_flags || match_factors.positives || [],
+        redFlags: match_factors.red_flags || match_factors.concerns || []
+      };
+    }
+    
+    return { greenFlags: [], redFlags: [] };
+  };
+
+  // ✅ SCHEMA ALIGNED: Array field normalization
+  const getProgramTypes = () => {
+    return program_types || program_type || [];
+  };
+
+  const getHousingTypes = () => {
+    return housing_types_accepted || housing_type || [];
+  };
+
+  const getHousingAssistance = () => {
+    return housing_assistance || housing_subsidy || [];
+  };
+
+  const getNoiseLevel = () => {
+    return noise_tolerance || noise_level || null;
+  };
+
+  // Calculate derived values
+  const displayAge = calculateAge(date_of_birth) || age;
+  const displayLocation = getLocation();
+  const displayScore = getMatchScore();
+  const { greenFlags: compGreenFlags, redFlags: compRedFlags } = getCompatibilityFlags();
+  const displayProgramTypes = getProgramTypes();
+  const displayHousingTypes = getHousingTypes();
+  const displayHousingAssistance = getHousingAssistance();
+  const displayNoiseLevel = getNoiseLevel();
+
+  // ✅ SCHEMA ALIGNED: Format display values for database enums
+  const formatRecoveryStage = (stage) => {
+    if (!stage) return 'Not specified';
+    
+    const stageMap = {
+      'early': 'Early Recovery',
+      'stabilizing': 'Stabilizing Recovery',
+      'stable': 'Stable Recovery',
+      'long-term': 'Long-term Recovery',
+      'maintenance': 'Maintenance Phase'
+    };
+    
+    return stageMap[stage] || stage.charAt(0).toUpperCase() + stage.slice(1);
+  };
+
+  const formatWorkSchedule = (schedule) => {
+    if (!schedule) return 'Not specified';
+    
+    const scheduleMap = {
+      'traditional_9_5': 'Traditional 9-5',
+      'flexible': 'Flexible Hours',
+      'early_morning': 'Early Morning Shift',
+      'night_shift': 'Night Shift',
+      'student': 'Student Schedule',
+      'irregular': 'Irregular/Varies',
+      'unemployed': 'Currently Unemployed',
+      'part_time': 'Part-time',
+      'remote': 'Work from Home'
+    };
+    
+    return scheduleMap[schedule] || schedule.replace(/_/g, ' ');
+  };
+
+  const formatSmokingStatus = (status) => {
+    if (!status) return 'Not specified';
+    
+    const statusMap = {
+      'non_smoker': 'Non-smoker',
+      'outdoor_only': 'Outdoor Only',
+      'occasional': 'Occasional Smoker',
+      'regular': 'Regular Smoker',
+      'former_smoker': 'Former Smoker'
+    };
+    
+    return statusMap[status] || status.replace(/_/g, ' ');
+  };
+
+  const formatBedtimePreference = (preference) => {
+    if (!preference) return 'Not specified';
+    
+    const preferenceMap = {
+      'early': 'Early (before 10 PM)',
+      'moderate': 'Moderate (10 PM - 12 AM)',
+      'late': 'Late (after 12 AM)',
+      'varies': 'Varies/Flexible'
+    };
+    
+    return preferenceMap[preference] || preference;
+  };
+
+  const formatSpiritualAffiliation = (affiliation) => {
+    if (!affiliation) return 'Not specified';
+    
+    const affiliationMap = {
+      'christian-protestant': 'Christian (Protestant)',
+      'christian-catholic': 'Christian (Catholic)',
+      'christian-orthodox': 'Christian (Orthodox)',
+      'muslim': 'Muslim',
+      'jewish': 'Jewish',
+      'buddhist': 'Buddhist',
+      'hindu': 'Hindu',
+      'spiritual-not-religious': 'Spiritual but not religious',
+      'agnostic': 'Agnostic',
+      'atheist': 'Atheist',
+      'other': 'Other',
+      'prefer-not-to-say': 'Prefer not to say'
+    };
+    
+    return affiliationMap[affiliation] || affiliation;
+  };
 
   // Helper function to get match score color class
   const getScoreColorClass = (score) => {
@@ -241,22 +409,24 @@ const MatchDetailsModal = ({
     <div className={styles.section}>
       <div className={styles.profileHeader}>
         <div className={styles.profileInfo}>
-          <h2 className={styles.profileName}>{first_name}</h2>
+          <h2 className={styles.profileName}>{first_name || 'Unknown User'}</h2>
           <div className={styles.profileBasics}>
-            {age && <span className={styles.basicItem}>{age} years old</span>}
-            {location && <span className={styles.basicItem}>{location}</span>}
+            {displayAge && <span className={styles.basicItem}>{displayAge} years old</span>}
+            {displayLocation && <span className={styles.basicItem}>{displayLocation}</span>}
             {recovery_stage && (
               <span className={`${styles.basicItem} ${styles.recoveryHighlight}`}>
-                {recovery_stage.charAt(0).toUpperCase() + recovery_stage.slice(1)} Recovery
+                {formatRecoveryStage(recovery_stage)}
               </span>
             )}
           </div>
         </div>
         
-        <div className={`${styles.scoreLarge} ${getScoreColorClass(matchScore)}`}>
-          <div className={styles.scoreNumber}>{matchScore}%</div>
-          <div className={styles.scoreLabel}>Compatibility</div>
-        </div>
+        {displayScore > 0 && (
+          <div className={`${styles.scoreLarge} ${getScoreColorClass(displayScore)}`}>
+            <div className={styles.scoreNumber}>{displayScore}%</div>
+            <div className={styles.scoreLabel}>Compatibility</div>
+          </div>
+        )}
       </div>
 
       {(isAlreadyMatched || isRequestSent) && (
@@ -281,7 +451,7 @@ const MatchDetailsModal = ({
           <span className={styles.statIcon}>⏰</span>
           <div className={styles.statContent}>
             <span className={styles.statLabel}>Work Schedule</span>
-            <span className={styles.statValue}>{work_schedule || 'Not specified'}</span>
+            <span className={styles.statValue}>{formatWorkSchedule(work_schedule)}</span>
           </div>
         </div>
         
@@ -289,7 +459,7 @@ const MatchDetailsModal = ({
           <span className={styles.statIcon}>🚭</span>
           <div className={styles.statContent}>
             <span className={styles.statLabel}>Smoking</span>
-            <span className={styles.statValue}>{smoking_status || 'Not specified'}</span>
+            <span className={styles.statValue}>{formatSmokingStatus(smoking_status)}</span>
           </div>
         </div>
         
@@ -297,7 +467,7 @@ const MatchDetailsModal = ({
           <span className={styles.statIcon}>🙏</span>
           <div className={styles.statContent}>
             <span className={styles.statLabel}>Spiritual</span>
-            <span className={styles.statValue}>{spiritual_affiliation || 'Not specified'}</span>
+            <span className={styles.statValue}>{formatSpiritualAffiliation(spiritual_affiliation)}</span>
           </div>
         </div>
         
@@ -305,7 +475,7 @@ const MatchDetailsModal = ({
           <span className={styles.statIcon}>🛏️</span>
           <div className={styles.statContent}>
             <span className={styles.statLabel}>Bedtime</span>
-            <span className={styles.statValue}>{bedtime_preference || 'Not specified'}</span>
+            <span className={styles.statValue}>{formatBedtimePreference(bedtime_preference)}</span>
           </div>
         </div>
       </div>
@@ -318,7 +488,7 @@ const MatchDetailsModal = ({
         <div className={`${styles.infoCard} ${styles.fullWidth}`}>
           <h4 className={styles.infoTitle}>Recovery Stage</h4>
           <p className={`${styles.infoContent} ${styles.recoveryStage}`}>
-            {recovery_stage ? recovery_stage.charAt(0).toUpperCase() + recovery_stage.slice(1) : 'Not specified'}
+            {formatRecoveryStage(recovery_stage)}
           </p>
         </div>
 
@@ -327,17 +497,19 @@ const MatchDetailsModal = ({
             <h4 className={styles.infoTitle}>Recovery Methods</h4>
             <div className={styles.tagsContainer}>
               {recovery_methods.map((method, i) => (
-                <span key={i} className={`${styles.tag} ${styles.recoveryMethodTag}`}>{method}</span>
+                <span key={i} className={`${styles.tag} ${styles.recoveryMethodTag}`}>
+                  {method.replace(/-/g, ' ').replace(/\b\w/g, l => l.toUpperCase())}
+                </span>
               ))}
             </div>
           </div>
         )}
 
-        {program_type && program_type.length > 0 && (
+        {displayProgramTypes.length > 0 && (
           <div className={`${styles.infoCard} ${styles.fullWidth}`}>
             <h4 className={styles.infoTitle}>Recovery Programs</h4>
             <div className={styles.tagsContainer}>
-              {program_type.map((program, i) => (
+              {displayProgramTypes.map((program, i) => (
                 <span key={i} className={`${styles.tag} ${styles.programTag}`}>{program}</span>
               ))}
             </div>
@@ -366,7 +538,7 @@ const MatchDetailsModal = ({
         <h4 className={styles.subsectionTitle}>Living Preferences</h4>
         <div className={styles.lifestyleScales}>
           {renderLifestyleScale(cleanliness_level, 'Cleanliness Level')}
-          {renderLifestyleScale(noise_level, 'Noise Tolerance')}
+          {renderLifestyleScale(displayNoiseLevel, 'Noise Tolerance')}
           {renderLifestyleScale(social_level, 'Social Level')}
         </div>
       </div>
@@ -386,23 +558,27 @@ const MatchDetailsModal = ({
   const renderHousingSection = () => (
     <div className={styles.section}>
       <div className={styles.sectionGrid}>
-        {housing_type && housing_type.length > 0 && (
+        {displayHousingTypes.length > 0 && (
           <div className={styles.infoCard}>
             <h4 className={styles.infoTitle}>Preferred Housing Types</h4>
             <div className={styles.tagsContainer}>
-              {housing_type.map((type, i) => (
-                <span key={i} className={`${styles.tag} ${styles.housingTag}`}>{type}</span>
+              {displayHousingTypes.map((type, i) => (
+                <span key={i} className={`${styles.tag} ${styles.housingTag}`}>
+                  {type.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase())}
+                </span>
               ))}
             </div>
           </div>
         )}
 
-        {housing_subsidy && housing_subsidy.length > 0 && (
+        {displayHousingAssistance.length > 0 && (
           <div className={styles.infoCard}>
             <h4 className={styles.infoTitle}>Housing Assistance</h4>
             <div className={styles.tagsContainer}>
-              {housing_subsidy.map((subsidy, i) => (
-                <span key={i} className={`${styles.tag} ${styles.subsidyTag}`}>{subsidy}</span>
+              {displayHousingAssistance.map((assistance, i) => (
+                <span key={i} className={`${styles.tag} ${styles.subsidyTag}`}>
+                  {typeof assistance === 'object' ? assistance.label || assistance.value : assistance}
+                </span>
               ))}
             </div>
           </div>
@@ -413,14 +589,14 @@ const MatchDetailsModal = ({
 
   const renderCompatibilitySection = () => (
     <div className={styles.section}>
-      {greenFlags.length > 0 && (
+      {compGreenFlags.length > 0 && (
         <div className={`${styles.compatibilityCard} ${styles.green}`}>
           <div className={styles.compatibilityHeader}>
             <span className={styles.compatibilityIcon}>✅</span>
             <h4 className={styles.compatibilityTitle}>Compatibility Strengths</h4>
           </div>
           <div className={styles.flagsList}>
-            {greenFlags.map((flag, i) => (
+            {compGreenFlags.map((flag, i) => (
               <div key={i} className={styles.flagItem}>
                 <span className={styles.flagBullet}>•</span>
                 <span className={styles.flagText}>{flag}</span>
@@ -430,14 +606,14 @@ const MatchDetailsModal = ({
         </div>
       )}
 
-      {redFlags.length > 0 && (
+      {compRedFlags.length > 0 && (
         <div className={`${styles.compatibilityCard} ${styles.red}`}>
           <div className={styles.compatibilityHeader}>
             <span className={styles.compatibilityIcon}>⚠️</span>
             <h4 className={styles.compatibilityTitle}>Areas to Consider</h4>
           </div>
           <div className={styles.flagsList}>
-            {redFlags.map((flag, i) => (
+            {compRedFlags.map((flag, i) => (
               <div key={i} className={styles.flagItem}>
                 <span className={styles.flagBullet}>•</span>
                 <span className={styles.flagText}>{flag}</span>
@@ -496,7 +672,7 @@ const MatchDetailsModal = ({
         </div>
       )}
 
-      {interests && interests.length > 0 && (
+      {interests && Array.isArray(interests) && interests.length > 0 && (
         <div className={styles.interestsCard}>
           <h4 className={styles.interestsTitle}>Interests & Hobbies</h4>
           <div className={styles.interestsGrid}>
@@ -521,7 +697,7 @@ const MatchDetailsModal = ({
     }
   };
 
-  // 🎭 Modal JSX
+  // Modal JSX
   const modalJSX = (
     <div 
       className={`${styles.overlay} ${debugMode ? styles.debugStackingContext : ''} ${!usePortal ? styles.emergencyOverride : ''}`}
@@ -538,9 +714,11 @@ const MatchDetailsModal = ({
         <div className={styles.header}>
           <div className={styles.titleSection}>
             <h2 className={styles.title}>{first_name}'s Profile</h2>
-            <div className={`${styles.score} ${getScoreColorClass(matchScore)}`}>
-              {matchScore}% Match
-            </div>
+            {displayScore > 0 && (
+              <div className={`${styles.score} ${getScoreColorClass(displayScore)}`}>
+                {displayScore}% Match
+              </div>
+            )}
           </div>
           <button className={styles.closeButton} onClick={handleClose}>×</button>
         </div>
@@ -589,7 +767,7 @@ const MatchDetailsModal = ({
     </div>
   );
 
-  // 🚀 Render with or without portal
+  // Render with or without portal
   if (usePortal && modalContainer) {
     console.log('🎯 Rendering modal via React Portal');
     return createPortal(modalJSX, modalContainer);
@@ -599,14 +777,65 @@ const MatchDetailsModal = ({
   }
 };
 
+// ✅ SCHEMA ALIGNED: Updated PropTypes to reflect schema fields
 MatchDetailsModal.propTypes = {
-  match: PropTypes.object,
+  match: PropTypes.shape({
+    // Schema fields
+    first_name: PropTypes.string.isRequired,
+    date_of_birth: PropTypes.string,
+    primary_city: PropTypes.string,
+    primary_state: PropTypes.string,
+    primary_location: PropTypes.string,
+    recovery_stage: PropTypes.string,
+    recovery_methods: PropTypes.arrayOf(PropTypes.string),
+    program_types: PropTypes.arrayOf(PropTypes.string),
+    primary_issues: PropTypes.arrayOf(PropTypes.string),
+    work_schedule: PropTypes.string,
+    cleanliness_level: PropTypes.number,
+    noise_tolerance: PropTypes.number,
+    social_level: PropTypes.number,
+    bedtime_preference: PropTypes.string,
+    smoking_status: PropTypes.string,
+    spiritual_affiliation: PropTypes.string,
+    pets_owned: PropTypes.bool,
+    pets_comfortable: PropTypes.bool,
+    overnight_guests_ok: PropTypes.bool,
+    shared_groceries: PropTypes.bool,
+    housing_types_accepted: PropTypes.arrayOf(PropTypes.string),
+    housing_assistance: PropTypes.array,
+    interests: PropTypes.arrayOf(PropTypes.string),
+    about_me: PropTypes.string,
+    looking_for: PropTypes.string,
+    
+    // Algorithm fields
+    matchScore: PropTypes.number,
+    compatibility_score: PropTypes.number,
+    greenFlags: PropTypes.arrayOf(PropTypes.string),
+    redFlags: PropTypes.arrayOf(PropTypes.string),
+    breakdown: PropTypes.object,
+    match_factors: PropTypes.object,
+    
+    // Legacy support
+    age: PropTypes.number,
+    location: PropTypes.string,
+    program_type: PropTypes.array,
+    housing_type: PropTypes.array,
+    housing_subsidy: PropTypes.array,
+    noise_level: PropTypes.number
+  }),
   onClose: PropTypes.func.isRequired,
   onRequestMatch: PropTypes.func.isRequired,
   isRequestSent: PropTypes.bool,
   isAlreadyMatched: PropTypes.bool,
   usePortal: PropTypes.bool,
   debugMode: PropTypes.bool
+};
+
+MatchDetailsModal.defaultProps = {
+  isRequestSent: false,
+  isAlreadyMatched: false,
+  usePortal: true,
+  debugMode: false
 };
 
 export default MatchDetailsModal;

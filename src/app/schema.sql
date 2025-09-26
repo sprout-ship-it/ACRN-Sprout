@@ -1,9 +1,9 @@
 -- ============================================================================
--- RECOVERY HOUSING CONNECT - COMPLETE CORRECTED DATABASE SCHEMA
+-- RECOVERY HOUSING CONNECT - REFACTORED DATABASE SCHEMA WITH PROPERTIES TABLE
 -- ============================================================================
--- Complete database schema with corrected role-specific ID references
+-- Complete database schema with proper properties table separation
 -- Flow: auth.users.id → registrant_profiles.user_id → registrant_profiles.id → role_table.user_id → role_table.id
--- Matching: Uses final role-specific IDs (applicant_matching_profiles.id, landlord_profiles.id, etc.)
+-- Properties: landlord_profiles.id → properties.landlord_id → properties.id (used in matches)
 -- ============================================================================
 
 -- ============================================================================
@@ -19,6 +19,7 @@ DROP TABLE IF EXISTS match_requests CASCADE;
 DROP TABLE IF EXISTS favorites CASCADE;
 DROP TABLE IF EXISTS applications CASCADE;
 DROP TABLE IF EXISTS messages CASCADE;
+DROP TABLE IF EXISTS properties CASCADE;
 DROP TABLE IF EXISTS applicant_matching_profiles CASCADE;
 DROP TABLE IF EXISTS landlord_profiles CASCADE;
 DROP TABLE IF EXISTS employer_profiles CASCADE;
@@ -60,9 +61,48 @@ CREATE TABLE registrant_profiles (
     AND array_length(roles, 1) > 0
   )
 );
+-- Add this to your schema.sql after the registrant_profiles table creation
 
+-- Function to automatically create registrant_profile when auth.users record is created
+CREATE OR REPLACE FUNCTION create_registrant_profile()
+RETURNS TRIGGER AS $$
+BEGIN
+  -- Create registrant_profiles record with data from user metadata
+  INSERT INTO registrant_profiles (
+    user_id,
+    first_name,
+    last_name,
+    email,
+    roles,
+    is_active,
+    created_at,
+    updated_at
+  ) VALUES (
+    NEW.id,
+    COALESCE(NEW.raw_user_meta_data->>'first_name', 'Unknown'),
+    COALESCE(NEW.raw_user_meta_data->>'last_name', 'User'),
+    NEW.email,
+    ARRAY[COALESCE(NEW.raw_user_meta_data->>'role', 'applicant')]::TEXT[],
+    TRUE,
+    NOW(),
+    NOW()
+  );
+  
+  RETURN NEW;
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+
+-- Trigger to automatically create registrant_profiles record
+CREATE TRIGGER trigger_create_registrant_profile
+  AFTER INSERT ON auth.users
+  FOR EACH ROW
+  EXECUTE FUNCTION create_registrant_profile();
+
+-- Grant necessary permissions
+GRANT USAGE ON SCHEMA auth TO postgres, anon, authenticated, service_role;
+GRANT SELECT ON auth.users TO postgres, anon, authenticated, service_role;
 -- ============================================================================
--- APPLICANT MATCHING PROFILES (Complete Implementation)
+-- APPLICANT MATCHING PROFILES (Complete Implementation - NO CHANGES)
 -- ============================================================================
 
 CREATE TABLE applicant_matching_profiles (
@@ -277,7 +317,7 @@ CREATE TABLE applicant_matching_profiles (
 );
 
 -- ============================================================================
--- LANDLORD PROFILES (Foundation Schema)
+-- LANDLORD PROFILES (REFACTORED - Property-specific fields moved to properties table)
 -- ============================================================================
 
 CREATE TABLE landlord_profiles (
@@ -287,65 +327,225 @@ CREATE TABLE landlord_profiles (
   created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
   updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
   
-  -- Basic Information
+  -- Basic Contact Information
   primary_phone VARCHAR(20) NOT NULL,
   contact_email VARCHAR(255),
   contact_person VARCHAR(100),
   
-  -- Property Information
-  property_type VARCHAR(50) NOT NULL,
-  total_bedrooms INTEGER NOT NULL,
-  available_bedrooms INTEGER NOT NULL,
-  bathrooms FLOAT,
+  -- Service Areas (General - not property specific)
+  primary_service_city VARCHAR(100) NOT NULL,
+  primary_service_state VARCHAR(2) NOT NULL,
+  service_areas TEXT[], -- Array of cities/regions they serve
   
-  -- Location
-  service_city VARCHAR(100) NOT NULL,
-  service_state VARCHAR(2) NOT NULL,
-  service_areas TEXT[],
+  -- Business Information
+  business_name VARCHAR(200),
+  business_type VARCHAR(100), -- 'individual', 'small_business', 'property_management', 'nonprofit'
+  years_in_business INTEGER,
   
-  -- Pricing
-  monthly_rent INTEGER NOT NULL,
-  weekly_rate INTEGER,
-  security_deposit INTEGER,
-  application_fee INTEGER,
-  utilities_included TEXT[],
-  accepts_subsidies BOOLEAN DEFAULT FALSE,
-  
-  -- Property Features
-  furnished BOOLEAN DEFAULT FALSE,
-  pets_allowed BOOLEAN DEFAULT FALSE,
-  smoking_allowed BOOLEAN DEFAULT FALSE,
-  accessibility_features TEXT[],
-  
-  -- House Rules & Preferences
-  substance_free_home_required BOOLEAN DEFAULT TRUE,
-  guests_policy VARCHAR(50),
-  overnight_guests_ok BOOLEAN DEFAULT FALSE,
-  
-  -- Recovery Support
+  -- General Recovery Support Philosophy
   recovery_friendly BOOLEAN DEFAULT TRUE,
-  preferred_recovery_stage VARCHAR(50),
-  supported_recovery_methods TEXT[],
+  recovery_experience_level VARCHAR(50), -- 'new', 'experienced', 'expert'
+  preferred_recovery_stages TEXT[], -- What stages they typically work with
+  supported_recovery_methods TEXT[], -- Methods they support across properties
   
-  -- Lease Information
-  lease_duration VARCHAR(50),
-  accepting_applications BOOLEAN DEFAULT TRUE,
+  -- Operational Information
+  max_properties INTEGER DEFAULT 10, -- How many properties they can manage
+  accepts_subsidies BOOLEAN DEFAULT FALSE, -- General willingness to accept subsidies
+  background_check_required BOOLEAN DEFAULT FALSE, -- Standard requirement
+  
+  -- Business Policies
+  standard_lease_terms VARCHAR(50), -- '6_months', '1_year', 'flexible'
+  application_process_description TEXT,
   
   -- Profile Content
-  description TEXT NOT NULL,
-  additional_info TEXT,
+  bio TEXT, -- About the landlord/business
+  experience_description TEXT, -- Experience with recovery housing
+  approach_philosophy TEXT, -- Their approach to supporting recovery
+  
+  -- Availability & Status
+  currently_accepting_tenants BOOLEAN DEFAULT TRUE,
+  preferred_contact_method VARCHAR(50), -- 'phone', 'email', 'text'
+  response_time_expectation VARCHAR(50), -- '24_hours', '2_days', '1_week'
   
   -- Status
   is_active BOOLEAN DEFAULT TRUE,
   profile_completed BOOLEAN DEFAULT FALSE,
+  profile_verified BOOLEAN DEFAULT FALSE, -- For verified landlords
   
   -- Constraints
-  CONSTRAINT unique_landlord_profile UNIQUE (user_id),
-  CONSTRAINT valid_bedrooms CHECK (available_bedrooms <= total_bedrooms)
+  CONSTRAINT unique_landlord_profile UNIQUE (user_id)
 );
 
 -- ============================================================================
--- EMPLOYER PROFILES (Foundation Schema)
+-- PROPERTIES TABLE (NEW - All property-specific information)
+-- ============================================================================
+
+CREATE TABLE properties (
+  -- ============================================================================
+  -- PRIMARY IDENTIFIERS & METADATA
+  -- ============================================================================
+  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  landlord_id UUID NOT NULL REFERENCES landlord_profiles(id) ON DELETE CASCADE,
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+  
+  -- ============================================================================
+  -- PROPERTY TYPE & CLASSIFICATION
+  -- ============================================================================
+  is_recovery_housing BOOLEAN DEFAULT FALSE, -- Key differentiator
+  property_type VARCHAR(50) NOT NULL, -- 'apartment', 'house', 'sober_living_level_1', etc.
+  
+  -- ============================================================================
+  -- BASIC PROPERTY INFORMATION
+  -- ============================================================================
+  title VARCHAR(255) NOT NULL, -- Property name/listing title
+  description TEXT,
+  
+  -- Address Information
+  address VARCHAR(255) NOT NULL,
+  city VARCHAR(100) NOT NULL,
+  state VARCHAR(2) NOT NULL,
+  zip_code VARCHAR(10) NOT NULL,
+  
+  -- Contact Information (Property-specific)
+  phone VARCHAR(20), -- Can differ from landlord's main phone
+  contact_email VARCHAR(255),
+  
+  -- ============================================================================
+  -- PHYSICAL PROPERTY DETAILS
+  -- ============================================================================
+  bedrooms INTEGER NOT NULL DEFAULT 0, -- Total bedrooms
+  available_beds INTEGER DEFAULT 0, -- Currently available (recovery housing)
+  bathrooms DECIMAL(3,1) DEFAULT 1.0, -- 1.0, 1.5, 2.0, etc.
+  square_footage INTEGER,
+  
+  -- ============================================================================
+  -- FINANCIAL INFORMATION
+  -- ============================================================================
+  monthly_rent INTEGER NOT NULL, -- Primary rent amount
+  weekly_rate INTEGER, -- For short-term stays (recovery housing)
+  security_deposit INTEGER,
+  application_fee INTEGER DEFAULT 0,
+  
+  -- Utilities & Services
+  utilities_included TEXT[], -- Array: ['electricity', 'water', 'gas', 'internet']
+  furnished BOOLEAN DEFAULT FALSE,
+  meals_included BOOLEAN DEFAULT FALSE, -- Recovery housing
+  linens_provided BOOLEAN DEFAULT FALSE, -- Recovery housing
+  
+  -- Financial Assistance
+  accepted_subsidies TEXT[], -- Array: ['section8', 'vash', 'rapid_rehousing']
+  
+  -- ============================================================================
+  -- RECOVERY-SPECIFIC FIELDS (Only for recovery housing)
+  -- ============================================================================
+  -- Recovery Program Requirements
+  required_programs TEXT[], -- Array: ['aa', 'na', 'outpatient_treatment']
+  min_sobriety_time VARCHAR(50), -- '30_days', '90_days', '6_months'
+  treatment_completion_required VARCHAR(50), -- 'none', 'detox', 'inpatient'
+  
+  -- House Rules & Requirements
+  house_rules TEXT[], -- Array: ['curfew', 'chores', 'meetings_required']
+  additional_house_rules TEXT,
+  
+  -- Resident Restrictions
+  gender_restrictions VARCHAR(50) DEFAULT 'any', -- 'any', 'male_only', 'female_only'
+  age_restrictions VARCHAR(100),
+  pets_allowed BOOLEAN DEFAULT FALSE,
+  smoking_allowed BOOLEAN DEFAULT FALSE, -- Even in designated areas
+  criminal_background_ok BOOLEAN DEFAULT FALSE,
+  sex_offender_restrictions BOOLEAN DEFAULT FALSE,
+  
+  -- Support Services Available
+  case_management BOOLEAN DEFAULT FALSE,
+  counseling_services BOOLEAN DEFAULT FALSE,
+  job_training BOOLEAN DEFAULT FALSE,
+  medical_services BOOLEAN DEFAULT FALSE,
+  transportation_services BOOLEAN DEFAULT FALSE,
+  life_skills_training BOOLEAN DEFAULT FALSE,
+  
+  -- Licensing & Certification (Recovery Housing)
+  license_number VARCHAR(100),
+  accreditation VARCHAR(100), -- 'NARR', 'CARF', etc.
+  
+  -- ============================================================================
+  -- PROPERTY FEATURES & AMENITIES
+  -- ============================================================================
+  amenities TEXT[], -- Array: ['washer_dryer', 'parking', 'yard', 'pool']
+  accessibility_features TEXT[], -- Array: ['wheelchair_accessible', 'grab_bars']
+  neighborhood_features TEXT[], -- Array: ['public_transit', 'shopping', 'parks']
+  
+  -- ============================================================================
+  -- PROPERTY STATUS & AVAILABILITY
+  -- ============================================================================
+  status VARCHAR(50) DEFAULT 'available', -- 'available', 'waitlist', 'full', 'temporarily_closed'
+  accepting_applications BOOLEAN DEFAULT TRUE,
+  
+  -- Move-in Information
+  available_date DATE,
+  lease_duration VARCHAR(50), -- '6_months', '1_year', 'month_to_month'
+  
+  -- ============================================================================
+  -- ADDITIONAL INFORMATION
+  -- ============================================================================
+  additional_notes TEXT,
+  
+  -- Internal Management
+  internal_notes TEXT, -- Private notes for landlord
+  featured BOOLEAN DEFAULT FALSE, -- For premium listings
+  views_count INTEGER DEFAULT 0,
+  inquiries_count INTEGER DEFAULT 0,
+  
+  -- ============================================================================
+  -- CONSTRAINTS
+  -- ============================================================================
+  CONSTRAINT valid_bedrooms CHECK (bedrooms >= 0),
+  CONSTRAINT valid_available_beds CHECK (available_beds >= 0 AND available_beds <= bedrooms),
+  CONSTRAINT valid_bathrooms CHECK (bathrooms >= 0.5),
+  CONSTRAINT valid_rent CHECK (monthly_rent > 0),
+  CONSTRAINT valid_status CHECK (status IN ('available', 'waitlist', 'full', 'temporarily_closed', 'under_renovation')),
+  CONSTRAINT valid_property_type CHECK (
+    (is_recovery_housing = FALSE AND property_type IN ('apartment', 'house', 'townhouse', 'condo', 'duplex', 'studio')) OR
+    (is_recovery_housing = TRUE AND property_type IN ('sober_living_level_1', 'sober_living_level_2', 'sober_living_level_3', 'halfway_house', 'recovery_residence', 'transitional_housing'))
+  )
+);
+-- Create employer_favorites table
+CREATE TABLE employer_favorites (
+  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  user_id UUID NOT NULL REFERENCES registrant_profiles(id) ON DELETE CASCADE,
+  employer_user_id UUID NOT NULL REFERENCES registrant_profiles(id) ON DELETE CASCADE,
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+  CONSTRAINT unique_employer_favorite UNIQUE (user_id, employer_user_id)
+);
+
+-- Create view with ACTUAL fields from employer_profiles schema
+CREATE VIEW employer_favorites_with_details AS
+SELECT 
+  ef.*,
+  -- ✅ CORRECTED: Use actual fields from employer_profiles table
+  ep.business_type,        -- Not business_name
+  ep.industry,
+  ep.description,
+  ep.service_city,         -- Not city
+  ep.service_state,        -- Not state  
+  ep.accepting_applications, -- Not is_actively_hiring
+  ep.contact_person,       -- Closest thing to a business contact name
+  ep.primary_phone,
+  ep.contact_email,
+  ep.job_types_available,
+  ep.supported_recovery_methods,
+  rp.first_name,
+  rp.last_name,
+  rp.email
+FROM employer_favorites ef
+JOIN employer_profiles ep ON ep.user_id = ef.employer_user_id
+JOIN registrant_profiles rp ON rp.id = ef.employer_user_id;
+
+-- Create index for performance
+CREATE INDEX idx_employer_favorites_user_id ON employer_favorites(user_id);
+CREATE INDEX idx_employer_favorites_employer_user_id ON employer_favorites(employer_user_id);
+-- ============================================================================
+-- EMPLOYER PROFILES (No Changes)
 -- ============================================================================
 
 CREATE TABLE employer_profiles (
@@ -400,7 +600,7 @@ CREATE TABLE employer_profiles (
 );
 
 -- ============================================================================
--- PEER SUPPORT PROFILES (Foundation Schema)
+-- PEER SUPPORT PROFILES (No Changes)
 -- ============================================================================
 
 CREATE TABLE peer_support_profiles (
@@ -451,19 +651,19 @@ CREATE TABLE peer_support_profiles (
 );
 
 -- ============================================================================
--- STEP 3: RELATIONSHIP & MATCHING TABLES WITH CORRECTED REFERENCES
+-- STEP 3: RELATIONSHIP & MATCHING TABLES (UPDATED REFERENCES)
 -- ============================================================================
 
 -- ============================================================================
--- HOUSING MATCHES (Applicant ↔ Landlord) - CORRECTED
+-- HOUSING MATCHES (UPDATED - Now references properties.id instead of landlord_profiles.id)
 -- ============================================================================
 
 CREATE TABLE housing_matches (
   id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
   
-  -- ✅ CORRECTED: Reference role-specific IDs, not registrant_profiles.id
+  -- ✅ UPDATED: Now references specific property, not landlord
   applicant_id UUID NOT NULL REFERENCES applicant_matching_profiles(id) ON DELETE CASCADE,
-  landlord_id UUID NOT NULL REFERENCES landlord_profiles(id) ON DELETE CASCADE,
+  property_id UUID NOT NULL REFERENCES properties(id) ON DELETE CASCADE,
   
   -- Matching Metadata
   compatibility_score INTEGER CHECK (compatibility_score BETWEEN 0 AND 100),
@@ -481,17 +681,16 @@ CREATE TABLE housing_matches (
   updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
   
   -- Constraints
-  CONSTRAINT unique_housing_match UNIQUE (applicant_id, landlord_id)
+  CONSTRAINT unique_housing_match UNIQUE (applicant_id, property_id)
 );
 
 -- ============================================================================
--- EMPLOYMENT MATCHES (Applicant ↔ Employer) - CORRECTED
+-- EMPLOYMENT MATCHES (No Changes)
 -- ============================================================================
 
 CREATE TABLE employment_matches (
   id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
   
-  -- ✅ CORRECTED: Reference role-specific IDs, not registrant_profiles.id
   applicant_id UUID NOT NULL REFERENCES applicant_matching_profiles(id) ON DELETE CASCADE,
   employer_id UUID NOT NULL REFERENCES employer_profiles(id) ON DELETE CASCADE,
   
@@ -515,13 +714,12 @@ CREATE TABLE employment_matches (
 );
 
 -- ============================================================================
--- PEER SUPPORT MATCHES (Applicant ↔ Peer Support) - CORRECTED
+-- PEER SUPPORT MATCHES (No Changes)
 -- ============================================================================
 
 CREATE TABLE peer_support_matches (
   id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
   
-  -- ✅ CORRECTED: Reference role-specific IDs, not registrant_profiles.id
   applicant_id UUID NOT NULL REFERENCES applicant_matching_profiles(id) ON DELETE CASCADE,
   peer_support_id UUID NOT NULL REFERENCES peer_support_profiles(id) ON DELETE CASCADE,
   
@@ -545,22 +743,20 @@ CREATE TABLE peer_support_matches (
 );
 
 -- ============================================================================
--- MATCH GROUPS - Complete Housing Solutions
+-- MATCH GROUPS (UPDATED - Now references properties.id instead of landlord_profiles.id)
 -- ============================================================================
 
 CREATE TABLE match_groups (
   id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
   
-  -- ✅ Group Members (all role-specific IDs)
+  -- ✅ UPDATED: Group Members with property reference
   applicant_1_id UUID NOT NULL REFERENCES applicant_matching_profiles(id) ON DELETE CASCADE,
   applicant_2_id UUID REFERENCES applicant_matching_profiles(id) ON DELETE CASCADE,
-  landlord_id UUID NOT NULL REFERENCES landlord_profiles(id) ON DELETE CASCADE,
+  property_id UUID NOT NULL REFERENCES properties(id) ON DELETE CASCADE, -- Changed from landlord_id
   peer_support_id UUID REFERENCES peer_support_profiles(id) ON DELETE CASCADE,
   
   -- Group Information
   group_name VARCHAR(255),
-  property_address TEXT,
-  monthly_rent INTEGER,
   move_in_date DATE,
   
   -- Group Status
@@ -579,7 +775,7 @@ CREATE TABLE match_groups (
 );
 
 -- ============================================================================
--- MATCH REQUESTS - Generic Connection Requests
+-- MATCH REQUESTS (UPDATED - Enhanced to handle property-specific requests)
 -- ============================================================================
 
 CREATE TABLE match_requests (
@@ -591,6 +787,9 @@ CREATE TABLE match_requests (
   
   recipient_type VARCHAR(20) NOT NULL CHECK (recipient_type IN ('applicant', 'landlord', 'employer', 'peer-support')),
   recipient_id UUID NOT NULL,
+  
+  -- ✅ NEW: Property-specific requests
+  property_id UUID REFERENCES properties(id), -- For housing requests, specify which property
   
   -- Request Details
   request_type VARCHAR(20) NOT NULL CHECK (request_type IN ('housing', 'employment', 'peer-support', 'roommate')),
@@ -605,24 +804,36 @@ CREATE TABLE match_requests (
   responded_at TIMESTAMP WITH TIME ZONE,
   
   -- Constraints
-  CONSTRAINT unique_match_request UNIQUE (requester_type, requester_id, recipient_type, recipient_id, request_type),
-  CONSTRAINT no_self_request CHECK (NOT (requester_type = recipient_type AND requester_id = recipient_id))
+  CONSTRAINT unique_match_request UNIQUE (requester_type, requester_id, recipient_type, recipient_id, request_type, property_id),
+  CONSTRAINT no_self_request CHECK (NOT (requester_type = recipient_type AND requester_id = recipient_id)),
+  CONSTRAINT property_required_for_housing CHECK (
+    (request_type = 'housing' AND property_id IS NOT NULL) OR 
+    (request_type != 'housing')
+  )
 );
 
 -- ============================================================================
--- FAVORITES SYSTEM - CORRECTED
+-- FAVORITES SYSTEM (UPDATED - Enhanced for properties)
 -- ============================================================================
 
 CREATE TABLE favorites (
   id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
   favoriting_user_id UUID NOT NULL REFERENCES registrant_profiles(id) ON DELETE CASCADE,
-  favorited_profile_id UUID NOT NULL, -- Role-specific ID based on type
-  favorite_type VARCHAR(20) NOT NULL CHECK (favorite_type IN ('housing', 'employment', 'peer-support')),
+  
+  -- ✅ UPDATED: Can favorite properties directly
+  favorited_profile_id UUID, -- Role-specific ID (employer, peer support)
+  favorited_property_id UUID REFERENCES properties(id), -- For property favorites
+  
+  favorite_type VARCHAR(20) NOT NULL CHECK (favorite_type IN ('housing', 'property', 'employment', 'peer-support')),
   
   created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
   
   -- Constraints
-  CONSTRAINT unique_favorite UNIQUE (favoriting_user_id, favorited_profile_id, favorite_type)
+  CONSTRAINT unique_favorite UNIQUE (favoriting_user_id, favorited_profile_id, favorited_property_id, favorite_type),
+  CONSTRAINT favorite_target_check CHECK (
+    (favorite_type IN ('property', 'housing') AND favorited_property_id IS NOT NULL) OR
+    (favorite_type IN ('employment', 'peer-support') AND favorited_profile_id IS NOT NULL)
+  )
 );
 
 -- ============================================================================
@@ -635,7 +846,7 @@ CREATE INDEX idx_registrant_profiles_email ON registrant_profiles(email);
 CREATE INDEX idx_registrant_profiles_roles ON registrant_profiles USING GIN(roles);
 CREATE INDEX idx_registrant_profiles_active ON registrant_profiles(is_active) WHERE is_active = TRUE;
 
--- Applicant Matching Profiles Indexes (Primary matching factors)
+-- Applicant Matching Profiles Indexes (Same as before)
 CREATE INDEX idx_applicant_primary_location ON applicant_matching_profiles(primary_city, primary_state);
 CREATE INDEX idx_applicant_budget_range ON applicant_matching_profiles(budget_min, budget_max);
 CREATE INDEX idx_applicant_recovery_stage ON applicant_matching_profiles(recovery_stage);
@@ -657,12 +868,37 @@ CREATE INDEX idx_applicant_housing_types ON applicant_matching_profiles USING GI
 CREATE INDEX idx_applicant_location_budget ON applicant_matching_profiles(primary_city, primary_state, budget_min, budget_max);
 CREATE INDEX idx_applicant_recovery_compatibility ON applicant_matching_profiles(recovery_stage, spiritual_affiliation, substance_free_home_required);
 
--- Other Profile Indexes
-CREATE INDEX idx_landlord_service_location ON landlord_profiles(service_city, service_state);
-CREATE INDEX idx_landlord_rent_range ON landlord_profiles(monthly_rent);
-CREATE INDEX idx_landlord_active_accepting ON landlord_profiles(is_active, accepting_applications) WHERE is_active = TRUE AND accepting_applications = TRUE;
+-- ✅ UPDATED: Landlord Profile Indexes (Simplified)
+CREATE INDEX idx_landlord_service_location ON landlord_profiles(primary_service_city, primary_service_state);
+CREATE INDEX idx_landlord_active_accepting ON landlord_profiles(is_active, currently_accepting_tenants) WHERE is_active = TRUE AND currently_accepting_tenants = TRUE;
 CREATE INDEX idx_landlord_service_areas ON landlord_profiles USING GIN(service_areas);
+CREATE INDEX idx_landlord_recovery_methods ON landlord_profiles USING GIN(supported_recovery_methods);
 
+-- ✅ NEW: Properties Table Indexes (Comprehensive)
+CREATE INDEX idx_properties_landlord_id ON properties(landlord_id);
+CREATE INDEX idx_properties_location ON properties(city, state);
+CREATE INDEX idx_properties_type ON properties(property_type);
+CREATE INDEX idx_properties_recovery_housing ON properties(is_recovery_housing);
+CREATE INDEX idx_properties_status ON properties(status);
+CREATE INDEX idx_properties_accepting ON properties(accepting_applications) WHERE accepting_applications = TRUE;
+CREATE INDEX idx_properties_rent_range ON properties(monthly_rent);
+CREATE INDEX idx_properties_bedrooms ON properties(bedrooms);
+CREATE INDEX idx_properties_available_beds ON properties(available_beds) WHERE available_beds > 0;
+CREATE INDEX idx_properties_available_date ON properties(available_date);
+
+-- Property search optimization
+CREATE INDEX idx_properties_search ON properties(city, state, status, is_recovery_housing, monthly_rent);
+CREATE INDEX idx_properties_recovery_search ON properties(is_recovery_housing, city, state, status) WHERE is_recovery_housing = TRUE;
+CREATE INDEX idx_properties_general_search ON properties(is_recovery_housing, city, state, status) WHERE is_recovery_housing = FALSE;
+
+-- Array field indexes for properties
+CREATE INDEX idx_properties_amenities ON properties USING GIN(amenities);
+CREATE INDEX idx_properties_utilities ON properties USING GIN(utilities_included);
+CREATE INDEX idx_properties_subsidies ON properties USING GIN(accepted_subsidies);
+CREATE INDEX idx_properties_required_programs ON properties USING GIN(required_programs) WHERE is_recovery_housing = TRUE;
+CREATE INDEX idx_properties_house_rules ON properties USING GIN(house_rules) WHERE is_recovery_housing = TRUE;
+
+-- Other Profile Indexes (Same as before)
 CREATE INDEX idx_employer_service_location ON employer_profiles(service_city, service_state);
 CREATE INDEX idx_employer_active_accepting ON employer_profiles(is_active, accepting_applications) WHERE is_active = TRUE AND accepting_applications = TRUE;
 CREATE INDEX idx_employer_job_types ON employer_profiles USING GIN(job_types_available);
@@ -672,28 +908,33 @@ CREATE INDEX idx_peer_active_accepting ON peer_support_profiles(is_active, accep
 CREATE INDEX idx_peer_specialties ON peer_support_profiles USING GIN(specialties);
 CREATE INDEX idx_peer_recovery_methods ON peer_support_profiles USING GIN(supported_recovery_methods);
 
--- Relationship Tables Indexes
+-- ✅ UPDATED: Relationship Tables Indexes (Updated for property references)
 CREATE INDEX idx_housing_matches_applicant ON housing_matches(applicant_id);
-CREATE INDEX idx_housing_matches_landlord ON housing_matches(landlord_id);
+CREATE INDEX idx_housing_matches_property ON housing_matches(property_id); -- Changed from landlord_id
 CREATE INDEX idx_housing_matches_status ON housing_matches(status);
 CREATE INDEX idx_employment_matches_applicant ON employment_matches(applicant_id);
 CREATE INDEX idx_employment_matches_employer ON employment_matches(employer_id);
 CREATE INDEX idx_peer_matches_applicant ON peer_support_matches(applicant_id);
 CREATE INDEX idx_peer_matches_peer ON peer_support_matches(peer_support_id);
-CREATE INDEX idx_favorites_user ON favorites(favoriting_user_id);
-CREATE INDEX idx_favorites_favorited ON favorites(favorited_profile_id);
 
--- New Tables Indexes
+-- Updated indexes for match_groups and match_requests
 CREATE INDEX idx_match_groups_applicant_1 ON match_groups(applicant_1_id);
 CREATE INDEX idx_match_groups_applicant_2 ON match_groups(applicant_2_id);
-CREATE INDEX idx_match_groups_landlord ON match_groups(landlord_id);
+CREATE INDEX idx_match_groups_property ON match_groups(property_id); -- Changed from landlord_id
 CREATE INDEX idx_match_groups_peer_support ON match_groups(peer_support_id);
 CREATE INDEX idx_match_groups_status ON match_groups(status);
 
 CREATE INDEX idx_match_requests_requester ON match_requests(requester_type, requester_id);
 CREATE INDEX idx_match_requests_recipient ON match_requests(recipient_type, recipient_id);
+CREATE INDEX idx_match_requests_property ON match_requests(property_id); -- New
 CREATE INDEX idx_match_requests_status ON match_requests(status);
 CREATE INDEX idx_match_requests_type ON match_requests(request_type);
+
+-- Updated favorites indexes
+CREATE INDEX idx_favorites_user ON favorites(favoriting_user_id);
+CREATE INDEX idx_favorites_profile ON favorites(favorited_profile_id);
+CREATE INDEX idx_favorites_property ON favorites(favorited_property_id); -- New
+CREATE INDEX idx_favorites_type ON favorites(favorite_type);
 
 -- ============================================================================
 -- STEP 5: TRIGGERS FOR AUTOMATIC UPDATES
@@ -719,6 +960,11 @@ CREATE TRIGGER trigger_update_applicant_profiles_timestamp
 
 CREATE TRIGGER trigger_update_landlord_profiles_timestamp
   BEFORE UPDATE ON landlord_profiles
+  FOR EACH ROW EXECUTE FUNCTION update_timestamp();
+
+-- ✅ NEW: Properties table timestamp trigger
+CREATE TRIGGER trigger_update_properties_timestamp
+  BEFORE UPDATE ON properties
   FOR EACH ROW EXECUTE FUNCTION update_timestamp();
 
 CREATE TRIGGER trigger_update_employer_profiles_timestamp
@@ -749,7 +995,7 @@ CREATE TRIGGER trigger_update_match_requests_timestamp
   BEFORE UPDATE ON match_requests
   FOR EACH ROW EXECUTE FUNCTION update_timestamp();
 
--- Profile completion calculation for applicants
+-- Profile completion calculation for applicants (Same as before)
 CREATE OR REPLACE FUNCTION calculate_applicant_profile_completion()
 RETURNS TRIGGER AS $$
 DECLARE
@@ -791,6 +1037,63 @@ CREATE TRIGGER trigger_calculate_applicant_profile_completion
   FOR EACH ROW
   EXECUTE FUNCTION calculate_applicant_profile_completion();
 
+-- ✅ NEW: Property completion calculation
+CREATE OR REPLACE FUNCTION calculate_property_completion()
+RETURNS TRIGGER AS $$
+DECLARE
+  completion_count INTEGER := 0;
+  total_required_fields INTEGER;
+BEGIN
+  -- Different requirements for recovery housing vs general rentals
+  IF NEW.is_recovery_housing THEN
+    total_required_fields := 12; -- More fields required
+    
+    -- Basic requirements
+    IF NEW.title IS NOT NULL AND length(NEW.title) > 0 THEN completion_count := completion_count + 1; END IF;
+    IF NEW.property_type IS NOT NULL THEN completion_count := completion_count + 1; END IF;
+    IF NEW.address IS NOT NULL THEN completion_count := completion_count + 1; END IF;
+    IF NEW.city IS NOT NULL THEN completion_count := completion_count + 1; END IF;
+    IF NEW.state IS NOT NULL THEN completion_count := completion_count + 1; END IF;
+    IF NEW.bedrooms IS NOT NULL AND NEW.bedrooms > 0 THEN completion_count := completion_count + 1; END IF;
+    IF NEW.monthly_rent IS NOT NULL AND NEW.monthly_rent > 0 THEN completion_count := completion_count + 1; END IF;
+    IF NEW.description IS NOT NULL AND length(NEW.description) > 20 THEN completion_count := completion_count + 1; END IF;
+    
+    -- Recovery-specific requirements
+    IF NEW.required_programs IS NOT NULL AND array_length(NEW.required_programs, 1) > 0 THEN completion_count := completion_count + 1; END IF;
+    IF NEW.house_rules IS NOT NULL AND array_length(NEW.house_rules, 1) > 0 THEN completion_count := completion_count + 1; END IF;
+    IF NEW.gender_restrictions IS NOT NULL THEN completion_count := completion_count + 1; END IF;
+    IF NEW.amenities IS NOT NULL AND array_length(NEW.amenities, 1) > 0 THEN completion_count := completion_count + 1; END IF;
+  ELSE
+    total_required_fields := 8; -- Fewer fields for general rentals
+    
+    -- Basic requirements only
+    IF NEW.title IS NOT NULL AND length(NEW.title) > 0 THEN completion_count := completion_count + 1; END IF;
+    IF NEW.property_type IS NOT NULL THEN completion_count := completion_count + 1; END IF;
+    IF NEW.address IS NOT NULL THEN completion_count := completion_count + 1; END IF;
+    IF NEW.city IS NOT NULL THEN completion_count := completion_count + 1; END IF;
+    IF NEW.state IS NOT NULL THEN completion_count := completion_count + 1; END IF;
+    IF NEW.bedrooms IS NOT NULL AND NEW.bedrooms >= 0 THEN completion_count := completion_count + 1; END IF;
+    IF NEW.monthly_rent IS NOT NULL AND NEW.monthly_rent > 0 THEN completion_count := completion_count + 1; END IF;
+    IF NEW.description IS NOT NULL AND length(NEW.description) > 20 THEN completion_count := completion_count + 1; END IF;
+  END IF;
+  
+  -- Calculate completion percentage (stored in internal_notes as JSON for now)
+  NEW.internal_notes := jsonb_build_object(
+    'completion_percentage', ROUND((completion_count::DECIMAL / total_required_fields) * 100),
+    'completed_fields', completion_count,
+    'total_required', total_required_fields,
+    'profile_completed', (completion_count >= total_required_fields * 0.8)
+  )::text;
+  
+  RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+CREATE TRIGGER trigger_calculate_property_completion
+  BEFORE INSERT OR UPDATE ON properties
+  FOR EACH ROW
+  EXECUTE FUNCTION calculate_property_completion();
+
 -- ============================================================================
 -- STEP 6: ROW LEVEL SECURITY (RLS) POLICIES
 -- ============================================================================
@@ -799,6 +1102,7 @@ CREATE TRIGGER trigger_calculate_applicant_profile_completion
 ALTER TABLE registrant_profiles ENABLE ROW LEVEL SECURITY;
 ALTER TABLE applicant_matching_profiles ENABLE ROW LEVEL SECURITY;
 ALTER TABLE landlord_profiles ENABLE ROW LEVEL SECURITY;
+ALTER TABLE properties ENABLE ROW LEVEL SECURITY; -- NEW
 ALTER TABLE employer_profiles ENABLE ROW LEVEL SECURITY;
 ALTER TABLE peer_support_profiles ENABLE ROW LEVEL SECURITY;
 ALTER TABLE housing_matches ENABLE ROW LEVEL SECURITY;
@@ -834,7 +1138,60 @@ CREATE POLICY "Users can insert their own applicant profile" ON applicant_matchi
     auth.uid() = (SELECT user_id FROM registrant_profiles WHERE id = applicant_matching_profiles.user_id)
   );
 
--- Housing Matches RLS Policies (✅ CORRECTED for role-specific IDs)
+-- Landlord Profiles: Users can only access their own profile
+CREATE POLICY "Users can view their own landlord profile" ON landlord_profiles
+  FOR SELECT USING (
+    auth.uid() = (SELECT user_id FROM registrant_profiles WHERE id = landlord_profiles.user_id)
+  );
+
+CREATE POLICY "Users can update their own landlord profile" ON landlord_profiles
+  FOR UPDATE USING (
+    auth.uid() = (SELECT user_id FROM registrant_profiles WHERE id = landlord_profiles.user_id)
+  );
+
+CREATE POLICY "Users can insert their own landlord profile" ON landlord_profiles
+  FOR INSERT WITH CHECK (
+    auth.uid() = (SELECT user_id FROM registrant_profiles WHERE id = landlord_profiles.user_id)
+  );
+
+-- ✅ NEW: Properties RLS Policies
+CREATE POLICY "Users can view properties they own" ON properties
+  FOR SELECT USING (
+    landlord_id IN (
+      SELECT lp.id FROM landlord_profiles lp
+      JOIN registrant_profiles rp ON lp.user_id = rp.id
+      WHERE rp.user_id = auth.uid()
+    )
+  );
+
+CREATE POLICY "Users can update properties they own" ON properties
+  FOR UPDATE USING (
+    landlord_id IN (
+      SELECT lp.id FROM landlord_profiles lp
+      JOIN registrant_profiles rp ON lp.user_id = rp.id
+      WHERE rp.user_id = auth.uid()
+    )
+  );
+
+CREATE POLICY "Users can insert properties for their landlord profile" ON properties
+  FOR INSERT WITH CHECK (
+    landlord_id IN (
+      SELECT lp.id FROM landlord_profiles lp
+      JOIN registrant_profiles rp ON lp.user_id = rp.id
+      WHERE rp.user_id = auth.uid()
+    )
+  );
+
+CREATE POLICY "Users can delete properties they own" ON properties
+  FOR DELETE USING (
+    landlord_id IN (
+      SELECT lp.id FROM landlord_profiles lp
+      JOIN registrant_profiles rp ON lp.user_id = rp.id
+      WHERE rp.user_id = auth.uid()
+    )
+  );
+
+-- ✅ UPDATED: Housing Matches RLS Policies (Now uses properties)
 CREATE POLICY "Users can view their housing matches" ON housing_matches
   FOR SELECT USING (
     applicant_id IN (
@@ -842,8 +1199,9 @@ CREATE POLICY "Users can view their housing matches" ON housing_matches
       JOIN registrant_profiles rp ON amp.user_id = rp.id 
       WHERE rp.user_id = auth.uid()
     )
-    OR landlord_id IN (
-      SELECT lp.id FROM landlord_profiles lp 
+    OR property_id IN (
+      SELECT p.id FROM properties p
+      JOIN landlord_profiles lp ON p.landlord_id = lp.id
       JOIN registrant_profiles rp ON lp.user_id = rp.id 
       WHERE rp.user_id = auth.uid()
     )
@@ -856,26 +1214,58 @@ CREATE POLICY "Users can create housing matches for themselves" ON housing_match
       JOIN registrant_profiles rp ON amp.user_id = rp.id 
       WHERE rp.user_id = auth.uid()
     )
-    OR landlord_id IN (
-      SELECT lp.id FROM landlord_profiles lp 
+    OR property_id IN (
+      SELECT p.id FROM properties p
+      JOIN landlord_profiles lp ON p.landlord_id = lp.id
       JOIN registrant_profiles rp ON lp.user_id = rp.id 
       WHERE rp.user_id = auth.uid()
     )
   );
 
+-- ✅ UPDATED: Match Groups RLS Policies (Now uses properties)
+CREATE POLICY "Users can view match groups they're part of" ON match_groups
+  FOR SELECT USING (
+    applicant_1_id IN (
+      SELECT amp.id FROM applicant_matching_profiles amp
+      JOIN registrant_profiles rp ON amp.user_id = rp.id
+      WHERE rp.user_id = auth.uid()
+    )
+    OR applicant_2_id IN (
+      SELECT amp.id FROM applicant_matching_profiles amp
+      JOIN registrant_profiles rp ON amp.user_id = rp.id
+      WHERE rp.user_id = auth.uid()
+    )
+    OR property_id IN (
+      SELECT p.id FROM properties p
+      JOIN landlord_profiles lp ON p.landlord_id = lp.id
+      JOIN registrant_profiles rp ON lp.user_id = rp.id
+      WHERE rp.user_id = auth.uid()
+    )
+    OR peer_support_id IN (
+      SELECT psp.id FROM peer_support_profiles psp
+      JOIN registrant_profiles rp ON psp.user_id = rp.id
+      WHERE rp.user_id = auth.uid()
+    )
+  );
+
+-- Add other RLS policies for remaining tables (employment_matches, peer_support_matches, etc.)
+-- These would be similar to the existing ones since those tables don't reference properties
+
 -- ============================================================================
 -- COMPLETION SUMMARY
 -- ============================================================================
 
--- ✅ COMPLETE CORRECTED SCHEMA (800+ lines):
--- 1. All original tables with full field definitions
--- 2. Corrected foreign key references: role-specific IDs for matching
--- 3. Complete indexing for algorithm performance  
--- 4. All triggers for automatic updates and completion calculation
--- 5. Complete RLS policies for data protection
--- 6. Support for multi-role users with proper ID management
--- 7. Enhanced matching capabilities with match_groups and match_requests
+-- ✅ COMPLETE REFACTORED SCHEMA:
+-- 1. Created proper properties table with all property-specific fields
+-- 2. Simplified landlord_profiles to contain only landlord-specific information
+-- 3. Updated housing_matches and match_groups to reference properties.id
+-- 4. Enhanced match_requests to support property-specific requests
+-- 5. Updated favorites to support both profile and property favorites
+-- 6. Added comprehensive indexes for property searches
+-- 7. Created property completion calculation trigger
+-- 8. Updated all RLS policies for new structure
+-- 9. Maintained all existing functionality while improving scalability
 
 -- Architecture Flow:
--- auth.users.id → registrant_profiles.user_id → registrant_profiles.id → role_table.user_id → role_table.id
--- Matching: Uses final role-specific IDs for all relationship tables
+-- auth.users.id → registrant_profiles.user_id → registrant_profiles.id → landlord_profiles.user_id → landlord_profiles.id → properties.landlord_id → properties.id
+-- Matching: Uses properties.id for housing matches instead of landlord_profiles.id

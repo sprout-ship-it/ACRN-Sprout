@@ -1,4 +1,4 @@
-// src/hooks/useUserProgress.js
+// src/hooks/useUserProgress.js - PHASE 3 CORRECTED VERSION
 import { useContext } from 'react';
 import { UserProgressContext } from '../context/UserProgressContext';
 
@@ -17,35 +17,43 @@ export const useUserProgress = () => {
 };
 
 /**
- * Hook for profile setup flow management (UPDATED for simplified flow)
- * NOTE: Renamed from "onboarding" to "profile setup" to reflect new simplified flow
+ * Hook for profile setup flow management
+ * ✅ UPDATED: Aligned with actual UserProgressContext structure
  */
 export const useProfileSetup = () => {
   const {
     progress,
     currentStep,
-    isOnboardingComplete: isSetupComplete, // Legacy compatibility
-    markMatchingProfileComplete,
-    progressPercentage
+    isOnboardingComplete,
+    progressPercentage,
+    nextStepGuidance,
+    roleRequirements,
+    markBasicProfileComplete,
+    markMatchingProfileComplete
   } = useUserProgress();
   
   const getStepInfo = (step) => {
-    // UPDATED: Simplified to match new flow (no basic profile step)
     const steps = {
       1: {
-        title: 'Role-Specific Profile',
-        description: 'Complete your comprehensive profile',
-        completed: progress.matchingProfile,
+        title: 'Basic Profile',
+        description: 'Complete your basic account information',
+        completed: progress.basicProfile,
         required: true
       },
       2: {
-        title: 'Find Matches',
-        description: 'Start connecting with potential roommates',
+        title: 'Matching Profile', 
+        description: 'Set up your detailed housing preferences',
+        completed: progress.matchingProfile,
+        required: roleRequirements?.matchingProfile || false
+      },
+      3: {
+        title: 'Start Matching',
+        description: 'Begin connecting with potential roommates',
         completed: progress.activeMatching,
         required: false
       },
-      3: {
-        title: 'Housing Search',
+      4: {
+        title: 'Find Housing',
         description: 'Search for housing with your matches',
         completed: progress.hasMatches,
         required: false
@@ -56,16 +64,19 @@ export const useProfileSetup = () => {
   };
   
   const getNextStep = () => {
-    // UPDATED: Simplified flow without basic profile
-    if (!progress.matchingProfile) return 1;
-    if (!progress.activeMatching) return 2;
-    if (!progress.hasMatches) return 3;
+    if (!progress.basicProfile) return 1;
+    if (roleRequirements?.matchingProfile && !progress.matchingProfile) return 2;
+    if (!progress.activeMatching) return 3;
+    if (!progress.hasMatches) return 4;
     return null; // All steps complete
   };
   
   const getStepsRemaining = () => {
-    // UPDATED: Only matching profile is required now
-    const requiredSteps = [1]; // Only step 1 (role-specific profile) is required
+    const requiredSteps = [1]; // Basic profile always required
+    if (roleRequirements?.matchingProfile) {
+      requiredSteps.push(2); // Matching profile required for applicants
+    }
+    
     const completedRequired = requiredSteps.filter(step => {
       const stepInfo = getStepInfo(step);
       return stepInfo?.completed;
@@ -74,14 +85,47 @@ export const useProfileSetup = () => {
     return requiredSteps.length - completedRequired.length;
   };
   
+  // ✅ NEW: Get completion status by user roles
+  const getRoleCompletionStatus = () => {
+    return {
+      basicProfile: {
+        required: true,
+        completed: progress.basicProfile,
+        title: 'Basic Profile'
+      },
+      matchingProfile: {
+        required: roleRequirements?.matchingProfile || false,
+        completed: progress.matchingProfile,
+        title: 'Housing Profile'
+      },
+      employerProfile: {
+        required: roleRequirements?.employerProfile || false,
+        completed: false, // TODO: Add when implemented
+        title: 'Employer Profile'
+      },
+      landlordProfile: {
+        required: roleRequirements?.landlordProfile || false,
+        completed: false, // TODO: Add when implemented  
+        title: 'Landlord Profile'
+      },
+      peerSupportProfile: {
+        required: roleRequirements?.peerSupportProfile || false,
+        completed: false, // TODO: Add when implemented
+        title: 'Peer Support Profile'
+      }
+    };
+  };
+  
   return {
     currentStep,
     nextStep: getNextStep(),
-    isComplete: isSetupComplete,
+    isComplete: isOnboardingComplete,
     progressPercentage,
     stepsRemaining: getStepsRemaining(),
+    nextStepGuidance,
+    roleCompletionStatus: getRoleCompletionStatus(),
     getStepInfo,
-    // UPDATED: Removed markBasicComplete since we eliminated basic profile step
+    markBasicComplete: markBasicProfileComplete,
     markMatchingComplete: markMatchingProfileComplete,
     progress
   };
@@ -89,25 +133,30 @@ export const useProfileSetup = () => {
 
 /**
  * Hook for matching progress tracking
+ * ✅ UPDATED: Aligned with corrected progress logic
  */
 export const useMatchingProgress = () => {
   const {
     progress,
     markActiveMatching,
     markHasMatches,
-    refreshProgress
+    refreshProgress,
+    roleRequirements
   } = useUserProgress();
   
+  // Only relevant for applicants
+  const isApplicant = roleRequirements?.matchingProfile || false;
+  
   const matchingStatus = {
-    // UPDATED: Simplified status without basic profile dependency
-    notStarted: !progress.matchingProfile && !progress.activeMatching && !progress.hasMatches,
-    profileIncomplete: !progress.matchingProfile,
-    readyToMatch: progress.matchingProfile && !progress.activeMatching,
-    activelyMatching: progress.activeMatching && !progress.hasMatches,
-    hasMatches: progress.hasMatches
+    notApplicant: !isApplicant,
+    profileIncomplete: isApplicant && (!progress.basicProfile || !progress.matchingProfile),
+    readyToMatch: isApplicant && progress.basicProfile && progress.matchingProfile && !progress.activeMatching,
+    activelyMatching: isApplicant && progress.activeMatching && !progress.hasMatches,
+    hasMatches: isApplicant && progress.hasMatches
   };
   
   const getMatchingStage = () => {
+    if (matchingStatus.notApplicant) return 'not-applicable';
     if (matchingStatus.hasMatches) return 'matched';
     if (matchingStatus.activelyMatching) return 'searching';
     if (matchingStatus.readyToMatch) return 'ready';
@@ -118,15 +167,21 @@ export const useMatchingProgress = () => {
   const getMatchingStageInfo = () => {
     const stage = getMatchingStage();
     const stageInfo = {
+      'not-applicable': {
+        title: 'Not Applicable',
+        description: 'Matching is for housing seekers only',
+        action: null,
+        color: 'gray'
+      },
       'not-started': {
         title: 'Get Started',
-        description: 'Complete your profile to begin matching',
-        action: 'Complete Profile',
+        description: 'Complete your profiles to begin matching',
+        action: 'Complete Profiles',
         color: 'gray'
       },
       'setup': {
-        title: 'Complete Profile',
-        description: 'Finish your profile to start finding roommates',
+        title: 'Complete Setup',
+        description: 'Finish your profiles to start finding roommates',
         action: 'Complete Profile',
         color: 'orange'
       },
@@ -145,7 +200,7 @@ export const useMatchingProgress = () => {
       'matched': {
         title: 'Matched!',
         description: 'You have active matches - start housing search',
-        action: 'Search Housing',
+        action: 'Search Housing', 
         color: 'green'
       }
     };
@@ -154,6 +209,7 @@ export const useMatchingProgress = () => {
   };
   
   return {
+    isApplicant,
     status: matchingStatus,
     stage: getMatchingStage(),
     stageInfo: getMatchingStageInfo(),
@@ -166,81 +222,91 @@ export const useMatchingProgress = () => {
 };
 
 /**
- * Hook for progress notifications and guidance (UPDATED for simplified flow)
+ * Hook for progress notifications and guidance
+ * ✅ UPDATED: Uses actual nextStepGuidance from context
  */
 export const useProgressGuidance = () => {
-  const { progress, currentStep, isOnboardingComplete: isSetupComplete } = useUserProgress();
+  const { 
+    progress, 
+    currentStep, 
+    isOnboardingComplete,
+    nextStepGuidance,
+    completionByRole,
+    roleRequirements
+  } = useUserProgress();
   
   const getNextAction = () => {
-    // UPDATED: Simplified guidance without basic profile step
-    if (!progress.matchingProfile) {
+    // Use the guidance from context if available
+    if (nextStepGuidance) {
       return {
-        title: 'Complete Your Profile',
-        description: 'Set up your comprehensive profile to get started',
-        action: 'complete-profile',
+        title: nextStepGuidance.title,
+        description: nextStepGuidance.description,
+        action: nextStepGuidance.step,
+        path: nextStepGuidance.path,
         priority: 'high'
       };
     }
     
-    if (!progress.activeMatching) {
+    // Fallback logic
+    if (!progress.basicProfile) {
       return {
-        title: 'Start Finding Matches',
-        description: 'Browse and connect with potential roommates',
-        action: 'find-matches',
-        priority: 'medium'
+        title: 'Complete Your Basic Profile',
+        description: 'Add your basic information to get started',
+        action: 'complete-basic-profile',
+        priority: 'high'
       };
     }
     
-    if (!progress.hasMatches) {
+    if (roleRequirements?.matchingProfile && !progress.matchingProfile) {
       return {
-        title: 'Review Match Requests',
-        description: 'Check your pending match requests',
-        action: 'match-requests',
-        priority: 'medium'
+        title: 'Complete Your Housing Profile',
+        description: 'Set up your housing preferences and needs',
+        action: 'complete-matching-profile',
+        priority: 'high'
       };
     }
     
     return {
-      title: 'Search for Housing',
-      description: 'Find housing with your matched roommate',
-      action: 'match-dashboard',
+      title: 'Explore the App',
+      description: 'Your required profiles are complete!',
+      action: 'explore',
       priority: 'low'
     };
   };
   
   const getProgressMessage = () => {
-    // UPDATED: Simplified progress calculation (3 main steps instead of 4)
-    const steps = [progress.matchingProfile, progress.activeMatching, progress.hasMatches];
-    const completionPercentage = Math.round(
-      steps.filter(Boolean).length / steps.length * 100
-    );
+    const completion = completionByRole || { percentage: 0, completed: 0, total: 1 };
     
-    if (completionPercentage === 0) {
-      return 'Welcome! Let\'s get your profile set up.';
+    if (completion.percentage === 0) {
+      return 'Welcome! Let\'s get you set up.';
     }
     
-    if (completionPercentage < 50) {
-      return `You're ${completionPercentage}% complete. Keep going!`;
+    if (completion.percentage < 50) {
+      return `You're ${completion.percentage}% complete. Keep going!`;
     }
     
-    if (completionPercentage < 100) {
-      return `Almost there! You're ${completionPercentage}% complete.`;
+    if (completion.percentage < 100) {
+      return `Almost there! You're ${completion.percentage}% complete.`;
     }
     
-    return 'Your profile is complete! Start connecting with roommates.';
+    return 'Your profile setup is complete!';
   };
   
   const getTips = () => {
     const tips = [];
     
-    if (!progress.matchingProfile) {
-      tips.push('A complete profile helps you find better matches');
+    if (!progress.basicProfile) {
+      tips.push('Complete your basic profile to access all features');
+    }
+    
+    if (roleRequirements?.matchingProfile && !progress.matchingProfile) {
+      tips.push('A detailed housing profile helps you find better matches');
       tips.push('Be specific about your preferences for better compatibility');
     }
     
     if (progress.matchingProfile && !progress.activeMatching) {
-      tips.push('Send match requests to people who seem compatible');
-      tips.push('Review profiles carefully before sending requests');
+      tips.push('Send match requests to compatible roommates');
+      tips.push('Review profiles carefully before connecting');
     }
     
     if (progress.activeMatching && !progress.hasMatches) {
@@ -255,24 +321,36 @@ export const useProgressGuidance = () => {
     nextAction: getNextAction(),
     progressMessage: getProgressMessage(),
     tips: getTips(),
-    isSetupComplete, // Renamed from isOnboardingComplete
+    isSetupComplete: isOnboardingComplete,
     currentStep,
-    shouldShowGuidance: !isSetupComplete
+    shouldShowGuidance: !isOnboardingComplete,
+    completionByRole
   };
 };
 
 /**
- * Hook for progress analytics and insights (UPDATED for simplified flow)
+ * Hook for progress analytics and insights
+ * ✅ UPDATED: Uses actual completion data from context
  */
 export const useProgressInsights = () => {
-  const { progress } = useUserProgress();
+  const { progress, completionByRole } = useUserProgress();
   
   const getCompletionStats = () => {
-    // UPDATED: 3 main progress items instead of 4 (removed basic profile)
+    // Use the role-based completion if available
+    if (completionByRole) {
+      return {
+        completed: completionByRole.completed,
+        total: completionByRole.total,
+        percentage: completionByRole.percentage,
+        remaining: completionByRole.total - completionByRole.completed,
+        missing: completionByRole.missing || []
+      };
+    }
+    
+    // Fallback to basic calculation
     const progressItems = [
-      progress.matchingProfile,
-      progress.activeMatching, 
-      progress.hasMatches
+      progress.basicProfile,
+      progress.matchingProfile
     ];
     const total = progressItems.length;
     const completed = progressItems.filter(Boolean).length;
@@ -281,13 +359,14 @@ export const useProgressInsights = () => {
       completed,
       total,
       percentage: Math.round((completed / total) * 100),
-      remaining: total - completed
+      remaining: total - completed,
+      missing: []
     };
   };
   
   const getEstimatedTimeToComplete = () => {
     const stats = getCompletionStats();
-    const averageTimePerStep = 15; // minutes (increased since steps are more comprehensive)
+    const averageTimePerStep = 10; // minutes
     
     return stats.remaining * averageTimePerStep;
   };
@@ -296,22 +375,110 @@ export const useProgressInsights = () => {
     const stats = getCompletionStats();
     
     if (stats.percentage === 100) return 'excellent';
-    if (stats.percentage >= 67) return 'good';  // 2 of 3 steps
-    if (stats.percentage >= 33) return 'fair';  // 1 of 3 steps
-    return 'needs-attention'; // 0 of 3 steps
+    if (stats.percentage >= 75) return 'good';
+    if (stats.percentage >= 50) return 'fair';
+    return 'needs-attention';
+  };
+  
+  const getProgressTrend = () => {
+    // Simple trend based on completion percentage
+    const stats = getCompletionStats();
+    if (stats.percentage === 100) return 'complete';
+    if (stats.percentage > 0) return 'improving';
+    return 'just-started';
   };
   
   return {
     stats: getCompletionStats(),
     estimatedTime: getEstimatedTimeToComplete(),
     health: getProgressHealth(),
+    trend: getProgressTrend(),
     lastUpdated: progress.lastUpdated
   };
 };
 
 /**
+ * ✅ NEW: Hook for role-specific progress management
+ */
+export const useRoleProgress = () => {
+  const { 
+    roleRequirements,
+    progress,
+    completionByRole
+  } = useUserProgress();
+  
+  const getRequiredProfiles = () => {
+    const required = [];
+    
+    if (roleRequirements?.basicProfile) {
+      required.push({
+        type: 'basicProfile',
+        title: 'Basic Profile',
+        completed: progress.basicProfile,
+        path: '/profile/basic'
+      });
+    }
+    
+    if (roleRequirements?.matchingProfile) {
+      required.push({
+        type: 'matchingProfile', 
+        title: 'Housing Profile',
+        completed: progress.matchingProfile,
+        path: '/matching/profile'
+      });
+    }
+    
+    if (roleRequirements?.employerProfile) {
+      required.push({
+        type: 'employerProfile',
+        title: 'Employer Profile',
+        completed: false, // TODO: Implement when ready
+        path: '/employer/profile'
+      });
+    }
+    
+    if (roleRequirements?.landlordProfile) {
+      required.push({
+        type: 'landlordProfile',
+        title: 'Landlord Profile', 
+        completed: false, // TODO: Implement when ready
+        path: '/landlord/profile'
+      });
+    }
+    
+    if (roleRequirements?.peerSupportProfile) {
+      required.push({
+        type: 'peerSupportProfile',
+        title: 'Peer Support Profile',
+        completed: false, // TODO: Implement when ready
+        path: '/peer-support/profile'
+      });
+    }
+    
+    return required;
+  };
+  
+  const getIncompleteProfiles = () => {
+    return getRequiredProfiles().filter(profile => !profile.completed);
+  };
+  
+  const getNextRequiredProfile = () => {
+    const incomplete = getIncompleteProfiles();
+    return incomplete.length > 0 ? incomplete[0] : null;
+  };
+  
+  return {
+    requiredProfiles: getRequiredProfiles(),
+    incompleteProfiles: getIncompleteProfiles(),
+    nextRequiredProfile: getNextRequiredProfile(),
+    allRequiredComplete: getIncompleteProfiles().length === 0,
+    roleRequirements,
+    completionByRole
+  };
+};
+
+/**
  * LEGACY COMPATIBILITY: Keep old onboarding hook name as alias
- * This ensures any existing code using useOnboarding still works
  */
 export const useOnboarding = useProfileSetup;
 

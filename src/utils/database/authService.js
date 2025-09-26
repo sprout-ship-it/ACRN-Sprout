@@ -2,6 +2,7 @@
 /**
  * Authentication service for Recovery Housing Connect
  * Handles all authentication operations with proper error handling and logging
+ * UPDATED: Aligned with new schema.sql trigger system for automatic profile creation
  */
 
 /**
@@ -16,84 +17,107 @@ const createAuthService = (supabaseClient) => {
 
   const service = {
     /**
-     * Sign up new user
+     * Sign up new user with automatic registrant_profiles creation
      * @param {string} email - User email
      * @param {string} password - User password
-     * @param {Object} userData - Additional user metadata
-     * @returns {Promise<Object>} Authentication result
+     * @param {Object} userData - User metadata for profile creation
+     * @param {string} userData.first_name - User's first name
+     * @param {string} userData.last_name - User's last name
+     * @param {string} userData.role - User's initial role ('applicant', 'landlord', 'employer', 'peer-support')
+     * @returns {Promise<Object>} Authentication result with profile creation status
      */
-// TEMPORARY DEBUG VERSION - Replace your authService.js signUp method with this
-// This strips down the signup call to the absolute minimum to isolate the issue
+    signUp: async (email, password, userData = {}) => {
+      console.log('🔑 Auth: signUp initiated for:', email);
+      console.log('🔑 Auth: userData received:', userData);
+      
+      try {
+        // Validate inputs
+        if (!email || !password) {
+          throw new Error('Email and password are required');
+        }
 
-// Replace your authService.js signUp method with this restored version
+        if (password.length < 6) {
+          throw new Error('Password must be at least 6 characters long');
+        }
 
-      signUp: async (email, password, userData = {}) => {
-        console.log('🔑 Auth: signUp initiated for:', email);
-        
-        try {
-          // Validate inputs
-          if (!email || !password) {
-            throw new Error('Email and password are required');
+        // ✅ SCHEMA ALIGNMENT: Ensure required fields for trigger
+        const {
+          first_name = 'Unknown',
+          last_name = 'User', 
+          role = 'applicant',
+          phone, // Remove phone from metadata to avoid conflicts
+          ...otherData
+        } = userData;
+
+        // Validate role against schema constraints
+        const validRoles = ['applicant', 'landlord', 'employer', 'peer-support'];
+        if (!validRoles.includes(role)) {
+          throw new Error(`Invalid role. Must be one of: ${validRoles.join(', ')}`);
+        }
+
+        // ✅ SCHEMA ALIGNMENT: Structure metadata for automatic trigger
+        const signupMetadata = {
+          first_name: first_name.trim(),
+          last_name: last_name.trim(),
+          role,
+          registration_source: 'web_app',
+          created_at: new Date().toISOString(),
+          ...otherData // Include any additional metadata
+        };
+
+        console.log('🔑 Auth: Structured metadata for trigger:', signupMetadata);
+
+        const signupOptions = {
+          email: email.toLowerCase().trim(),
+          password,
+          options: {
+            data: signupMetadata
           }
+        };
 
-          if (password.length < 6) {
-            throw new Error('Password must be at least 6 characters long');
-          }
+        const { data, error } = await supabaseClient.auth.signUp(signupOptions);
 
-          // ✅ RESTORED: Filter out phone data to avoid unique constraint issues
-          const { phone, ...filteredUserData } = userData;
-          
-          console.log('🔑 Auth: Filtered userData (no phone):', filteredUserData);
-
-          // ✅ RESTORED: Prepare signup data with metadata for profile creation
-          const signupOptions = {
-            email: email.toLowerCase().trim(),
-            password,
-            options: {
-              data: {
-                ...filteredUserData,
-                created_at: new Date().toISOString()
-              }
-            }
-          };
-
-          console.log('🔑 Auth: Signup options with metadata:', signupOptions);
-
-          const { data, error } = await supabaseClient.auth.signUp(signupOptions);
-
-          if (error) {
-            console.error('❌ Auth: signUp failed:', error.message, error);
-            return { 
-              success: false, 
-              data: null, 
-              error: service._formatAuthError(error) 
-            };
-          }
-
-          console.log('✅ Auth: signUp successful', {
-            hasUser: !!data?.user,
-            hasSession: !!data?.session,
-            needsConfirmation: !data?.session,
-            userId: data?.user?.id,
-            userMetadata: data?.user?.user_metadata
-          });
-
-          return { 
-            success: true, 
-            data, 
-            error: null,
-            needsEmailConfirmation: !data?.session
-          };
-
-        } catch (err) {
-          console.error('💥 Auth: signUp exception:', err);
+        if (error) {
+          console.error('❌ Auth: signUp failed:', error.message, error);
           return { 
             success: false, 
             data: null, 
-            error: { message: err.message, code: 'signup_exception' }
+            error: service._formatAuthError(error),
+            profileCreated: false
           };
         }
-      },
+
+        // ✅ SCHEMA ALIGNMENT: The trigger should have automatically created registrant_profiles
+        console.log('✅ Auth: signUp successful', {
+          hasUser: !!data?.user,
+          hasSession: !!data?.session,
+          needsConfirmation: !data?.session,
+          userId: data?.user?.id,
+          userMetadata: data?.user?.user_metadata,
+          profileShouldBeCreated: 'automatically by trigger'
+        });
+
+        return { 
+          success: true, 
+          data, 
+          error: null,
+          needsEmailConfirmation: !data?.session,
+          profileCreated: true, // Trigger should have created it
+          registrantProfileId: null, // Will be populated after trigger runs
+          userRole: role
+        };
+
+      } catch (err) {
+        console.error('💥 Auth: signUp exception:', err);
+        return { 
+          success: false, 
+          data: null, 
+          error: { message: err.message, code: 'signup_exception' },
+          profileCreated: false
+        };
+      }
+    },
+
     /**
      * Sign in existing user
      * @param {string} email - User email
@@ -284,7 +308,8 @@ const createAuthService = (supabaseClient) => {
           (event, session) => {
             console.log('🔑 Auth: State changed -', event, {
               hasSession: !!session,
-              hasUser: !!session?.user
+              hasUser: !!session?.user,
+              userMetadata: session?.user?.user_metadata
             });
             
             callback(event, session);
@@ -411,7 +436,8 @@ const createAuthService = (supabaseClient) => {
           user: session?.user || null,
           sessionExpired: session ? service._isSessionExpired(session) : false,
           expiresAt: session?.expires_at || null,
-          lastCheck: new Date().toISOString()
+          lastCheck: new Date().toISOString(),
+          userRole: session?.user?.user_metadata?.role || null
         };
         
       } catch (err) {
@@ -422,6 +448,55 @@ const createAuthService = (supabaseClient) => {
           sessionExpired: true,
           error: err.message,
           lastCheck: new Date().toISOString()
+        };
+      }
+    },
+
+    /**
+     * ✅ NEW: Verify registrant profile was created after signup
+     * This helps debug the automatic trigger system
+     * @param {string} userId - Auth user ID to check
+     * @returns {Promise<Object>} Profile verification result
+     */
+    verifyRegistrantProfile: async (userId) => {
+      console.log('🔍 Auth: Verifying registrant profile for user:', userId);
+      
+      try {
+        if (!userId) {
+          throw new Error('User ID is required');
+        }
+
+        // Query registrant_profiles table to verify trigger worked
+        const { data, error } = await supabaseClient
+          .from('registrant_profiles')
+          .select('id, user_id, first_name, last_name, email, roles, created_at')
+          .eq('user_id', userId)
+          .single();
+
+        if (error) {
+          console.error('❌ Auth: Profile verification failed:', error);
+          return {
+            success: false,
+            profileExists: false,
+            error: error.message,
+            suggestion: 'Check if trigger is enabled and RLS policies allow access'
+          };
+        }
+
+        console.log('✅ Auth: Registrant profile verified:', data);
+        return {
+          success: true,
+          profileExists: true,
+          profile: data,
+          registrantProfileId: data.id
+        };
+
+      } catch (err) {
+        console.error('💥 Auth: Profile verification exception:', err);
+        return {
+          success: false,
+          profileExists: false,
+          error: err.message
         };
       }
     },
@@ -438,7 +513,16 @@ const createAuthService = (supabaseClient) => {
         'Email not confirmed': { message: 'Please check your email and click the confirmation link', code: 'email_unconfirmed' },
         'Password should be at least 6 characters': { message: 'Password must be at least 6 characters long', code: 'weak_password' },
         'User already registered': { message: 'An account with this email already exists', code: 'user_exists' },
-        'Invalid email': { message: 'Please enter a valid email address', code: 'invalid_email' }
+        'Invalid email': { message: 'Please enter a valid email address', code: 'invalid_email' },
+        // ✅ NEW: Schema-specific errors
+        'duplicate key value violates unique constraint "registrant_profiles_email_key"': { 
+          message: 'An account with this email already exists', 
+          code: 'email_exists' 
+        },
+        'insert or update on table "registrant_profiles" violates foreign key constraint': {
+          message: 'Profile creation failed - please try again',
+          code: 'profile_creation_failed'
+        }
       };
 
       const mapped = errorMap[error.message];

@@ -1,8 +1,12 @@
-// src/pages/MainApp.js - UPDATED: Fixed profile completion checks for new schema
+// src/pages/MainApp.js - SCHEMA COMPLIANT VERSION
 import React, { useEffect, useState } from 'react'
 import { Routes, Route, Navigate, useNavigate, useLocation } from 'react-router-dom'
 import { useAuth } from '../hooks/useAuth';
-import { db } from '../utils/supabase'
+
+// ✅ UPDATED: Import individual schema-compliant services instead of db object
+import { getMatchingProfile } from '../utils/database/matchingProfilesService';
+import { getPeerSupportProfileByUserId } from '../utils/database/peerSupportService';
+import { getEmployerProfilesByUserId } from '../utils/database/employerService';
 
 // Layout
 import Header from '../components/layout/Header'
@@ -44,7 +48,7 @@ const CandidateManagement = () => (
 )
 
 const MainApp = () => {
-  console.log('🏠 MainApp rendering with employer support, current URL:', window.location.pathname);
+  console.log('MainApp rendering with schema-compliant services, current URL:', window.location.pathname);
   const { user, profile, isAuthenticated, hasRole } = useAuth()
   const navigate = useNavigate()
   const location = useLocation();
@@ -57,30 +61,32 @@ const MainApp = () => {
     loading: true
   })
 
-  // ✅ UPDATED: Check if user has completed their role-specific comprehensive profile
+  // ✅ SCHEMA COMPLIANT: Check profile completion using correct ID relationships
   useEffect(() => {
     const checkProfileCompletion = async () => {
-      if (!user || !profile?.roles?.length) {
+      // ✅ UPDATED: Check for profile (registrant_profiles record) not just user
+      if (!user || !profile?.id || !profile?.roles?.length) {
+        console.log('Missing user, profile, or roles:', { user: !!user, profile: !!profile, roles: profile?.roles })
         setProfileSetup({ hasComprehensiveProfile: false, loading: false })
         return
       }
 
       try {
-        console.log('🔍 Checking profile completion for roles:', profile.roles)
+        console.log('Checking profile completion for profile.id:', profile.id, 'roles:', profile.roles)
         
         let hasCompleteProfile = false
 
         // Check based on user's primary role
         if (hasRole('applicant')) {
-          console.log('👤 Checking applicant comprehensive profile...')
+          console.log('Checking applicant comprehensive profile...')
           
-          // ✅ UPDATED: Use matchingProfiles service with proper error handling
-          const result = await db.matchingProfiles.getByUserId(user.id)
+          // ✅ SCHEMA COMPLIANT: Use profile.id (registrant_profiles.id) instead of user.id
+          const result = await getMatchingProfile(profile.id)
           
           if (result.success && result.data) {
             const applicantProfile = result.data;
             
-            // ✅ UPDATED: Check for comprehensive profile completion using correct schema fields
+            // ✅ SCHEMA COMPLIANT: Check using exact schema field names
             hasCompleteProfile = !!(
               applicantProfile?.primary_city && 
               applicantProfile?.primary_state && 
@@ -92,7 +98,7 @@ const MainApp = () => {
               applicantProfile?.profile_completed
             )
             
-            console.log('👤 Applicant profile check:', { 
+            console.log('Applicant profile check:', { 
               hasProfile: !!applicantProfile,
               hasLocation: !!(applicantProfile?.primary_city && applicantProfile?.primary_state),
               hasBudget: !!(applicantProfile?.budget_min && applicantProfile?.budget_max),
@@ -103,88 +109,85 @@ const MainApp = () => {
               overallComplete: hasCompleteProfile
             })
           } else {
-            console.log('👤 No applicant profile found or error:', result.error);
+            console.log('No applicant profile found or error:', result.error);
             hasCompleteProfile = false;
           }
         }
         
         else if (hasRole('peer')) {
-          console.log('🤝 Checking peer support comprehensive profile...')
-          const result = await db.peerSupportProfiles.getByUserId(user.id)
+          console.log('Checking peer support comprehensive profile...')
           
-          // ✅ UPDATED: Handle service response format consistently
-          const peerProfile = result?.success ? result.data : result?.data || result;
+          // ✅ SCHEMA COMPLIANT: Use profile.id instead of user.id
+          const result = await getPeerSupportProfileByUserId(profile.id)
           
-          hasCompleteProfile = !!(
-            peerProfile?.phone && 
-            peerProfile?.bio && 
-            peerProfile?.specialties &&
-            peerProfile?.specialties?.length > 0
-          )
-          
-          console.log('🤝 Peer profile check:', { 
-            hasProfile: !!peerProfile,
-            hasPhone: !!peerProfile?.phone,
-            hasBio: !!peerProfile?.bio,
-            hasSpecialties: !!(peerProfile?.specialties && peerProfile?.specialties?.length > 0),
-            overallComplete: hasCompleteProfile
-          })
+          if (result.success && result.data) {
+            const peerProfile = result.data;
+            
+            // ✅ SCHEMA COMPLIANT: Use exact schema field names
+            hasCompleteProfile = !!(
+              peerProfile?.primary_phone && 
+              peerProfile?.bio && 
+              peerProfile?.specialties &&
+              peerProfile?.specialties?.length > 0 &&
+              peerProfile?.profile_completed
+            )
+            
+            console.log('Peer profile check:', { 
+              hasProfile: !!peerProfile,
+              hasPhone: !!peerProfile?.primary_phone,
+              hasBio: !!peerProfile?.bio,
+              hasSpecialties: !!(peerProfile?.specialties && peerProfile?.specialties?.length > 0),
+              isCompleted: !!peerProfile?.profile_completed,
+              overallComplete: hasCompleteProfile
+            })
+          } else {
+            console.log('No peer support profile found or error:', result.error);
+            hasCompleteProfile = false;
+          }
         }
         
         else if (hasRole('landlord')) {
-          console.log('🏢 Checking landlord profile...')
+          console.log('Checking landlord profile...')
           
-          // ✅ UPDATED: For landlords, check if they have basic contact info
-          // They might also have a matching profile for personal info
-          let landlordComplete = !!profile?.phone;
+          // ✅ SCHEMA COMPLIANT: For landlords, basic contact info from registrant_profiles is sufficient
+          // They can optionally have a matching profile for personal preferences
+          hasCompleteProfile = !!(profile?.first_name && profile?.last_name && profile?.email);
           
-          if (!landlordComplete) {
-            // Check if they have personal info in matching profile
-            const result = await db.matchingProfiles.getByUserId(user.id);
-            if (result.success && result.data) {
-              landlordComplete = !!result.data.primary_phone;
-            }
-          }
-          
-          hasCompleteProfile = landlordComplete;
-          
-          console.log('🏢 Landlord profile check:', { 
-            hasProfilePhone: !!profile?.phone,
-            hasMatchingPhone: !!(await db.matchingProfiles.getByUserId(user.id)).data?.primary_phone,
+          console.log('Landlord profile check:', { 
+            hasBasicInfo: !!(profile?.first_name && profile?.last_name && profile?.email),
             overallComplete: hasCompleteProfile
           })
         }
 
         else if (hasRole('employer')) {
-          console.log('💼 Checking employer comprehensive profile...')
-          const result = await db.employerProfiles.getByUserId(user.id)
+          console.log('Checking employer comprehensive profile...')
           
-          // ✅ UPDATED: Handle employer profiles response format
-          const employerProfiles = result?.success ? result.data : 
-                                  Array.isArray(result?.data) ? result.data :
-                                  result?.data ? [result.data] : 
-                                  Array.isArray(result) ? result : [];
+          // ✅ SCHEMA COMPLIANT: Use profile.id instead of user.id
+          const result = await getEmployerProfilesByUserId(profile.id)
           
-          if (employerProfiles && employerProfiles.length > 0) {
-            const employerProfile = employerProfiles[0]
+          if (result.success && result.data && result.data.length > 0) {
+            const employerProfile = result.data[0]; // Get first employer profile
+            
+            // ✅ SCHEMA COMPLIANT: Use exact schema field names from employer_profiles table
             hasCompleteProfile = !!(
-              employerProfile?.company_name && 
+              employerProfile?.business_type && 
               employerProfile?.industry && 
               employerProfile?.description && 
-              employerProfile?.recovery_friendly_features?.length > 0 &&
+              employerProfile?.job_types_available?.length > 0 &&
               employerProfile?.profile_completed
             )
             
-            console.log('💼 Employer profile check:', { 
+            console.log('Employer profile check:', { 
               hasProfile: !!employerProfile,
-              hasBasicInfo: !!(employerProfile?.company_name && employerProfile?.industry),
+              hasBusinessType: !!employerProfile?.business_type,
+              hasIndustry: !!employerProfile?.industry,
               hasDescription: !!employerProfile?.description,
-              hasRecoveryFeatures: !!(employerProfile?.recovery_friendly_features?.length > 0),
+              hasJobTypes: !!(employerProfile?.job_types_available?.length > 0),
               isCompleted: !!employerProfile?.profile_completed,
               overallComplete: hasCompleteProfile
             })
           } else {
-            console.log('💼 No employer profile found')
+            console.log('No employer profile found or error:', result.error)
             hasCompleteProfile = false
           }
         }
@@ -194,33 +197,35 @@ const MainApp = () => {
           loading: false
         })
 
-        console.log('✅ Profile completion check complete:', {
+        console.log('Profile completion check complete:', {
+          profileId: profile.id,
           userRoles: profile.roles,
           hasComprehensiveProfile: hasCompleteProfile
         })
 
       } catch (error) {
-        console.error('❌ Error checking profile completion:', error)
+        console.error('Error checking profile completion:', error)
         setProfileSetup({ hasComprehensiveProfile: false, loading: false })
       }
     }
 
-    if (isAuthenticated && profile?.roles?.length) {
+    if (isAuthenticated && profile?.id && profile?.roles?.length) {
       checkProfileCompletion()
     } else {
+      console.log('Not ready for profile check:', { isAuthenticated, profileId: profile?.id, rolesLength: profile?.roles?.length })
       setProfileSetup({ hasComprehensiveProfile: false, loading: false })
     }
   }, [user, profile, hasRole, isAuthenticated])
 
   // Redirect unauthenticated users
   if (!isAuthenticated) {
-    console.log('🚫 User not authenticated, redirecting to landing')
+    console.log('User not authenticated, redirecting to landing')
     return <Navigate to="/" replace />
   }
 
   // Loading state while checking profile
   if (profileSetup.loading) {
-    console.log('⏳ Profile setup loading...')
+    console.log('Profile setup loading...')
     return (
       <div className="app-background" style={{ minHeight: '100vh', padding: '20px 0' }}>
         <div className="container">
@@ -237,11 +242,11 @@ const MainApp = () => {
 
   // Direct users to appropriate comprehensive form if not completed
   if (!profileSetup.hasComprehensiveProfile && !profileJustCompleted) {
-    console.log('📝 User needs to complete comprehensive profile');
+    console.log('User needs to complete comprehensive profile');
     
-    // For APPLICANTS - show comprehensive matching profile form with demographics
+    // For APPLICANTS - show comprehensive matching profile form
     if (hasRole('applicant')) {
-      console.log('👤 Redirecting applicant to comprehensive matching profile form');
+      console.log('Redirecting applicant to comprehensive matching profile form');
       return (
         <div className="app-background" style={{ minHeight: '100vh', padding: '20px 0' }}>
           <div className="container">
@@ -262,9 +267,9 @@ const MainApp = () => {
       )
     }
     
-    // For PEER SPECIALISTS - show comprehensive peer support form with demographics
+    // For PEER SPECIALISTS - show comprehensive peer support form
     else if (hasRole('peer')) {
-      console.log('🤝 Redirecting peer specialist to comprehensive peer support form')
+      console.log('Redirecting peer specialist to comprehensive peer support form')
       return (
         <div className="app-background" style={{ minHeight: '100vh', padding: '20px 0' }}>
           <div className="container">
@@ -285,9 +290,9 @@ const MainApp = () => {
       )
     }
     
-    // For EMPLOYERS - redirect to employer management to create profile
+    // For EMPLOYERS - redirect to employer management
     else if (hasRole('employer')) {
-      console.log('💼 Redirecting employer to create employer profile')
+      console.log('Redirecting employer to create employer profile')
       return (
         <div className="app-background" style={{ minHeight: '100vh', padding: '20px 0' }}>
           <div className="container">
@@ -306,22 +311,22 @@ const MainApp = () => {
       )
     }
     
-    // For LANDLORDS - they should already have phone from registration, so go to dashboard
+    // For LANDLORDS - they have basic info from registrant_profiles, proceed to dashboard
     else if (hasRole('landlord')) {
-      console.log('🏢 Landlord missing contact info, updating profile setup')
+      console.log('Landlord has sufficient basic info, proceeding to dashboard')
       setProfileSetup(prev => ({ ...prev, hasComprehensiveProfile: true }))
       return null // Will re-render with updated state
     }
     
     // Fallback for unknown roles
     else {
-      console.log('❓ Unknown role, redirecting to dashboard')
+      console.log('Unknown role, proceeding to dashboard')
       setProfileSetup(prev => ({ ...prev, hasComprehensiveProfile: true }))
       return null // Will re-render with updated state
     }
   }
 
-  console.log('✅ User has comprehensive profile, rendering main app routes')
+  console.log('User has comprehensive profile, rendering main app routes')
   
   // Main app routes
   return (
@@ -400,7 +405,7 @@ const MainApp = () => {
             {/* Redirect old routes */}
             <Route path="/messages" element={<Navigate to="/app/communications" replace />} />
             
-            {/* ✅ UPDATED: Basic profile route with new schema field names */}
+            {/* ✅ SCHEMA COMPLIANT: Basic profile route using registrant_profiles fields */}
             <Route path="/profile/basic" element={
               <div style={{ maxWidth: '800px', margin: '0 auto' }}>
                 <div className="card">
@@ -437,7 +442,7 @@ const MainApp = () => {
                       value={profile?.roles?.map(role => {
                         switch(role) {
                           case 'applicant': return 'Housing Seeker'
-                          case 'peer': return 'Peer Specialist'
+                          case 'peer-support': return 'Peer Specialist'
                           case 'landlord': return 'Property Owner'
                           case 'employer': return 'Recovery-Friendly Employer'
                           default: return role.charAt(0).toUpperCase() + role.slice(1)
@@ -448,16 +453,13 @@ const MainApp = () => {
                   </div>
                   
                   <div className="form-group">
-                    <label className="label">Phone</label>
+                    <label className="label">Account Status</label>
                     <input
                       className="input"
-                      type="tel"
-                      value={profile?.phone || 'Not provided'}
+                      type="text"
+                      value={profile?.is_active ? 'Active' : 'Inactive'}
                       disabled
                     />
-                    <div className="text-gray-500 mt-1">
-                      To update your phone number and other details, use your role-specific profile sections.
-                    </div>
                   </div>
                   
                   <div className="text-center mt-4">

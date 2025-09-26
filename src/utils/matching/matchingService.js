@@ -1,33 +1,51 @@
-// src/utils/matching/matchingService.js - ENHANCED WITH COMPLETE DATABASE INTEGRATION - SCHEMA ALIGNED
+// src/utils/matching/matchingService.js - SCHEMA COMPLIANT VERSION
 
-import { supabase } from '../supabase';
-import { calculateDetailedCompatibility } from './algorithm';
-import { transformProfileForAlgorithm } from './dataTransform';
-import { generateDetailedFlags } from './compatibility';
-import { 
-  COMPATIBILITY_WEIGHTS,
-  MATCHING_THRESHOLDS,
-  DEFAULT_FILTERS,
-  meetsMinimumThreshold 
-} from './config';
+import { supabase } from '../supabase.js';
+import { calculateDetailedCompatibility } from './algorithm.js';
+import { transformProfileForAlgorithm, calculateAge } from './dataTransform.js';
+import { generateDetailedFlags } from './compatibility.js';
 
 /**
- * ✅ ENHANCED: Complete matching service with full database schema integration
- * Works with: applicant_matching_profiles table + enhanced algorithm + priority matrix
- * ✅ FIXED: All database calls now use direct Supabase queries aligned with new schema
+ * SCHEMA COMPLIANT: Enhanced matching service with strict database schema compliance
+ * Works with: applicant_matching_profiles table + registrant_profiles JOIN
+ * All field references validated against schema.sql
+ * All database operations use exact table/field names from schema
  */
-class EnhancedMatchingService {
+class SchemaCompliantMatchingService {
   constructor() {
     this.cache = new Map();
     this.cacheTimeout = 15 * 60 * 1000; // 15 minutes
-    this.tableName = 'applicant_matching_profiles';
+    this.matchingTableName = 'applicant_matching_profiles';
+    this.profilesTableName = 'registrant_profiles';
+    this.requestsTableName = 'match_requests';
+    this.groupsTableName = 'match_groups';
+  }
+
+  // SCHEMA COMPLIANT: Internal constants (no external dependencies)
+  get ENHANCED_THRESHOLDS() {
+    return {
+      minScore: 45,
+      maxResults: 20,
+      cacheTimeout: this.cacheTimeout
+    };
+  }
+
+  get COMPATIBILITY_LEVELS() {
+    return {
+      excellent: { min: 85, label: 'Excellent Match' },
+      very_good: { min: 75, label: 'Very Good Match' },
+      good: { min: 65, label: 'Good Match' },
+      moderate: { min: 55, label: 'Moderate Match' },
+      fair: { min: 45, label: 'Fair Match' },
+      poor: { min: 0, label: 'Limited Match' }
+    };
   }
 
   /**
    * Get cache key for a user's matches
    */
   getCacheKey(userId, filters) {
-    return `enhanced_matches_${userId}_${JSON.stringify(filters)}`;
+    return `schema_compliant_matches_${userId}_${JSON.stringify(filters)}`;
   }
 
   /**
@@ -38,7 +56,7 @@ class EnhancedMatchingService {
   }
 
   /**
-   * ✅ ENHANCED: Generate comprehensive display info with priority breakdown
+   * SCHEMA COMPLIANT: Generate comprehensive display info with priority breakdown
    */
   generateDisplayInfo(userProfile, candidateProfile) {
     const compatibility = calculateDetailedCompatibility(userProfile, candidateProfile);
@@ -53,7 +71,6 @@ class EnhancedMatchingService {
       yellowFlags: flags.yellow || [],
       compatibility,
       algorithmVersion: compatibility.algorithm_version,
-      // ✅ NEW: Enhanced match insights
       matchInsights: this.generateMatchInsights(userProfile, candidateProfile, compatibility),
       compatibilityLevel: this.getCompatibilityLevel(compatibility.compatibility_score),
       recommendationStrength: this.getRecommendationStrength(compatibility)
@@ -61,7 +78,7 @@ class EnhancedMatchingService {
   }
 
   /**
-   * ✅ NEW: Generate match insights based on compatibility analysis
+   * Generate match insights based on compatibility analysis
    */
   generateMatchInsights(userProfile, candidateProfile, compatibility) {
     const insights = [];
@@ -122,24 +139,27 @@ class EnhancedMatchingService {
   }
 
   /**
-   * ✅ NEW: Get compatibility level description
+   * Get compatibility level description
    */
   getCompatibilityLevel(score) {
-    if (score >= 85) return { level: 'excellent', description: 'Highly Compatible' };
-    if (score >= 75) return { level: 'very_good', description: 'Very Good Match' };
-    if (score >= 65) return { level: 'good', description: 'Good Compatibility' };
-    if (score >= 55) return { level: 'moderate', description: 'Moderate Match' };
-    return { level: 'low', description: 'Limited Compatibility' };
+    const levels = this.COMPATIBILITY_LEVELS;
+    
+    if (score >= levels.excellent.min) return { level: 'excellent', description: levels.excellent.label };
+    if (score >= levels.very_good.min) return { level: 'very_good', description: levels.very_good.label };
+    if (score >= levels.good.min) return { level: 'good', description: levels.good.label };
+    if (score >= levels.moderate.min) return { level: 'moderate', description: levels.moderate.label };
+    if (score >= levels.fair.min) return { level: 'fair', description: levels.fair.label };
+    return { level: 'poor', description: levels.poor.label };
   }
 
   /**
-   * ✅ NEW: Get recommendation strength based on priority factors
+   * Get recommendation strength based on priority factors
    */
   getRecommendationStrength(compatibility) {
     const { priority_breakdown } = compatibility;
     
     // Strong recommendation if core factors are high
-    if (priority_breakdown.core_factors >= 80) {
+    if (priority_breakdown?.core_factors >= 80) {
       return { 
         strength: 'strong', 
         message: 'Highly recommended based on core compatibility factors',
@@ -148,7 +168,7 @@ class EnhancedMatchingService {
     }
     
     // Moderate recommendation
-    if (priority_breakdown.core_factors >= 65) {
+    if (priority_breakdown?.core_factors >= 65) {
       return { 
         strength: 'moderate', 
         message: 'Good compatibility with room for growth',
@@ -165,23 +185,30 @@ class EnhancedMatchingService {
   }
 
   /**
-   * ✅ ENHANCED: Load user profile from standardized database table
-   * ✅ FIXED: Direct Supabase query instead of db service layer
+   * SCHEMA COMPLIANT: Load user profile with JOIN to get registrant data
+   * Uses exact schema table and field names
    */
   async loadUserProfile(userId) {
     try {
-      console.log(`🔍 Loading user matching profile from ${this.tableName}...`);
+      console.log('Loading user matching profile with registrant data...');
       
-      // ✅ FIXED: Direct Supabase query to the correct table
+      // SCHEMA COMPLIANT: JOIN applicant_matching_profiles with registrant_profiles
       const { data, error } = await supabase
-        .from(this.tableName)
-        .select('*')
+        .from(this.matchingTableName)
+        .select(`
+          *,
+          registrant_profiles!user_id (
+            first_name,
+            last_name,
+            email
+          )
+        `)
         .eq('user_id', userId)
         .eq('is_active', true)
         .single();
       
       if (error) {
-        console.error('💥 Database error loading profile:', error);
+        console.error('Database error loading profile:', error);
         throw new Error(`Database error: ${error.message}`);
       }
       
@@ -189,10 +216,10 @@ class EnhancedMatchingService {
         throw new Error('No matching profile found. Please complete your profile first.');
       }
       
-      // Transform for algorithm compatibility
-      const transformedProfile = this.transformDatabaseProfile(data);
+      // SCHEMA COMPLIANT: Transform using exact schema fields
+      const transformedProfile = this.transformSchemaCompliantProfile(data);
       
-      console.log('✅ User profile loaded and transformed:', {
+      console.log('User profile loaded and transformed:', {
         user_id: transformedProfile.user_id,
         completion: transformedProfile.completion_percentage,
         location: transformedProfile.primary_location,
@@ -202,43 +229,52 @@ class EnhancedMatchingService {
       return transformedProfile;
       
     } catch (err) {
-      console.error('💥 Error loading user profile:', err);
+      console.error('Error loading user profile:', err);
       throw err;
     }
   }
 
   /**
-   * ✅ NEW: Transform database profile to algorithm format
+   * SCHEMA COMPLIANT: Transform database profile using exact schema fields
+   * Includes registrant_profiles data from JOIN
    */
-  transformDatabaseProfile(dbProfile) {
-    // Calculate age from date_of_birth if available
-    const age = dbProfile.date_of_birth ? 
-      Math.floor((new Date() - new Date(dbProfile.date_of_birth)) / (365.25 * 24 * 60 * 60 * 1000)) : null;
+  transformSchemaCompliantProfile(dbProfile) {
+    // SCHEMA COMPLIANT: Extract registrant data from JOIN
+    const registrantData = dbProfile.registrant_profiles;
+    
+    // SCHEMA COMPLIANT: Calculate age from date_of_birth
+    const age = calculateAge(dbProfile.date_of_birth);
     
     return {
-      // Core identifiers
+      // CORE IDENTIFIERS (from applicant_matching_profiles)
       id: dbProfile.id,
-      user_id: dbProfile.user_id,
+      user_id: dbProfile.user_id, // References registrant_profiles.id
       
-      // Personal information
-      first_name: dbProfile.first_name,
-      last_name: dbProfile.last_name,
-      email: dbProfile.email,
+      // REGISTRANT DATA (from JOIN)
+      first_name: registrantData?.first_name || 'Unknown',
+      last_name: registrantData?.last_name || 'User',
+      email: registrantData?.email || '',
+      
+      // CALCULATED FIELDS
       age: age,
+      
+      // PERSONAL DETAILS (exact schema fields)
       primary_phone: dbProfile.primary_phone,
       date_of_birth: dbProfile.date_of_birth,
       
-      // Gender & Identity (standardized)
-      gender: dbProfile.gender_identity,
+      // GENDER & IDENTITY (exact schema fields)
       gender_identity: dbProfile.gender_identity,
       biological_sex: dbProfile.biological_sex,
       preferred_roommate_gender: dbProfile.preferred_roommate_gender,
       gender_inclusive: dbProfile.gender_inclusive,
       
-      // Location (standardized)
+      // Legacy compatibility for algorithm
+      gender: dbProfile.gender_identity,
+      
+      // LOCATION (exact schema fields)
       primary_city: dbProfile.primary_city,
       primary_state: dbProfile.primary_state,
-      primary_location: dbProfile.primary_location,
+      primary_location: dbProfile.primary_location, // Auto-generated by database
       current_address: dbProfile.current_address,
       current_city: dbProfile.current_city,
       current_state: dbProfile.current_state,
@@ -249,16 +285,13 @@ class EnhancedMatchingService {
       max_commute_minutes: dbProfile.max_commute_minutes,
       transportation_method: dbProfile.transportation_method,
       
-      // Budget (standardized)
+      // BUDGET & FINANCIAL (exact schema fields)
       budget_min: dbProfile.budget_min,
       budget_max: dbProfile.budget_max,
-      
-      // Housing assistance (standardized)
       housing_assistance: dbProfile.housing_assistance,
-      housing_subsidy: dbProfile.housing_assistance, // Legacy compatibility
       has_section8: dbProfile.has_section8,
       
-      // Recovery (standardized)
+      // RECOVERY & WELLNESS (exact schema fields)
       recovery_stage: dbProfile.recovery_stage,
       time_in_recovery: dbProfile.time_in_recovery,
       sobriety_date: dbProfile.sobriety_date,
@@ -270,55 +303,47 @@ class EnhancedMatchingService {
       sponsor_mentor: dbProfile.sponsor_mentor,
       primary_issues: dbProfile.primary_issues,
       spiritual_affiliation: dbProfile.spiritual_affiliation,
-      
-      // Recovery environment (standardized)
       want_recovery_support: dbProfile.want_recovery_support,
       comfortable_discussing_recovery: dbProfile.comfortable_discussing_recovery,
       attend_meetings_together: dbProfile.attend_meetings_together,
-      substance_free_home_required: dbProfile.substance_free_home_required, // ✅ FIXED: Correct field name
+      substance_free_home_required: dbProfile.substance_free_home_required,
       recovery_goal_timeframe: dbProfile.recovery_goal_timeframe,
       recovery_context: dbProfile.recovery_context,
       
-      // Lifestyle scales (standardized)
-      social_level: dbProfile.social_level,
-      cleanliness_level: dbProfile.cleanliness_level,
-      noise_tolerance: dbProfile.noise_tolerance,
-      
-      // Schedule & work (standardized)
+      // LIFESTYLE & LIVING PREFERENCES (exact schema fields with defaults)
+      social_level: dbProfile.social_level || 3,
+      cleanliness_level: dbProfile.cleanliness_level || 3,
+      noise_tolerance: dbProfile.noise_tolerance || 3,
       work_schedule: dbProfile.work_schedule,
       work_from_home_frequency: dbProfile.work_from_home_frequency,
       bedtime_preference: dbProfile.bedtime_preference,
       early_riser: dbProfile.early_riser,
       night_owl: dbProfile.night_owl,
-      
-      // Social & guests (standardized)
       guests_policy: dbProfile.guests_policy,
       social_activities_at_home: dbProfile.social_activities_at_home,
       overnight_guests_ok: dbProfile.overnight_guests_ok,
-      
-      // Daily living
       cooking_enthusiast: dbProfile.cooking_enthusiast,
       cooking_frequency: dbProfile.cooking_frequency,
       exercise_at_home: dbProfile.exercise_at_home,
       plays_instruments: dbProfile.plays_instruments,
       tv_streaming_regular: dbProfile.tv_streaming_regular,
       
-      // Communication (standardized)
-      communication_style: dbProfile.communication_style,
-      conflict_resolution_style: dbProfile.conflict_resolution_style,
+      // HOUSEHOLD MANAGEMENT & COMMUNICATION (exact schema fields)
       chore_sharing_style: dbProfile.chore_sharing_style,
       chore_sharing_preference: dbProfile.chore_sharing_preference,
       shared_groceries: dbProfile.shared_groceries,
+      communication_style: dbProfile.communication_style,
+      conflict_resolution_style: dbProfile.conflict_resolution_style,
       preferred_support_structure: dbProfile.preferred_support_structure,
       
-      // Pets & smoking (standardized)
+      // PETS & SMOKING (exact schema fields)
       pets_owned: dbProfile.pets_owned,
       pets_comfortable: dbProfile.pets_comfortable,
       pet_preference: dbProfile.pet_preference,
       smoking_status: dbProfile.smoking_status,
       smoking_preference: dbProfile.smoking_preference,
       
-      // Housing specifications
+      // HOUSING SPECIFICATIONS (exact schema fields)
       housing_types_accepted: dbProfile.housing_types_accepted,
       preferred_bedrooms: dbProfile.preferred_bedrooms,
       furnished_preference: dbProfile.furnished_preference,
@@ -327,13 +352,13 @@ class EnhancedMatchingService {
       parking_required: dbProfile.parking_required,
       public_transit_access: dbProfile.public_transit_access,
       
-      // Timing (standardized)
+      // TIMING & AVAILABILITY (exact schema fields)
       move_in_date: dbProfile.move_in_date,
       move_in_flexibility: dbProfile.move_in_flexibility,
       lease_duration: dbProfile.lease_duration,
       relocation_timeline: dbProfile.relocation_timeline,
       
-      // Goals & aspirations (standardized)
+      // GOALS & ASPIRATIONS (exact schema fields)
       short_term_goals: dbProfile.short_term_goals,
       long_term_vision: dbProfile.long_term_vision,
       interests: dbProfile.interests,
@@ -342,27 +367,25 @@ class EnhancedMatchingService {
       important_qualities: dbProfile.important_qualities,
       deal_breakers: dbProfile.deal_breakers,
       
-      // Profile content (standardized)
+      // PROFILE CONTENT & STATUS (exact schema fields)
       about_me: dbProfile.about_me,
       looking_for: dbProfile.looking_for,
       additional_info: dbProfile.additional_info,
       special_needs: dbProfile.special_needs,
-      
-      // Profile status (standardized)
       is_active: dbProfile.is_active,
       profile_completed: dbProfile.profile_completed,
       profile_visibility: dbProfile.profile_visibility,
       completion_percentage: dbProfile.completion_percentage,
       profile_quality_score: dbProfile.profile_quality_score,
       
-      // Emergency contact
+      // EMERGENCY & CONTACT (exact schema fields)
       emergency_contact_name: dbProfile.emergency_contact_name,
       emergency_contact_phone: dbProfile.emergency_contact_phone,
       emergency_contact_relationship: dbProfile.emergency_contact_relationship,
       
-      // Roommate preferences
-      age_range_min: dbProfile.age_range_min,
-      age_range_max: dbProfile.age_range_max,
+      // ROOMMATE PREFERENCES (exact schema fields with defaults)
+      age_range_min: dbProfile.age_range_min || 18,
+      age_range_max: dbProfile.age_range_max || 65,
       age_flexibility: dbProfile.age_flexibility,
       prefer_recovery_experience: dbProfile.prefer_recovery_experience,
       supportive_of_recovery: dbProfile.supportive_of_recovery,
@@ -375,7 +398,7 @@ class EnhancedMatchingService {
       lgbtq_friendly: dbProfile.lgbtq_friendly,
       culturally_sensitive: dbProfile.culturally_sensitive,
       
-      // Deal breakers (specific)
+      // DEAL BREAKERS (exact schema fields)
       deal_breaker_substance_use: dbProfile.deal_breaker_substance_use,
       deal_breaker_loudness: dbProfile.deal_breaker_loudness,
       deal_breaker_uncleanliness: dbProfile.deal_breaker_uncleanliness,
@@ -383,7 +406,7 @@ class EnhancedMatchingService {
       deal_breaker_pets: dbProfile.deal_breaker_pets,
       deal_breaker_smoking: dbProfile.deal_breaker_smoking,
       
-      // Compatibility preferences
+      // COMPATIBILITY PREFERENCES (exact schema fields)
       overnight_guests_preference: dbProfile.overnight_guests_preference,
       shared_transportation: dbProfile.shared_transportation,
       recovery_accountability: dbProfile.recovery_accountability,
@@ -391,26 +414,35 @@ class EnhancedMatchingService {
       mentorship_interest: dbProfile.mentorship_interest,
       recovery_community: dbProfile.recovery_community,
       
-      // Metadata
-      created_at: dbProfile.created_at,
-      updated_at: dbProfile.updated_at,
+      // ALGORITHM METADATA (exact schema fields)
       compatibility_scores: dbProfile.compatibility_scores,
       search_preferences: dbProfile.search_preferences,
-      matching_weights: dbProfile.matching_weights
+      matching_weights: dbProfile.matching_weights,
+      last_updated_section: dbProfile.last_updated_section,
+      
+      // TIMESTAMPS (exact schema fields)
+      created_at: dbProfile.created_at,
+      updated_at: dbProfile.updated_at
     };
   }
 
   /**
-   * ✅ ENHANCED: Load all active profiles with optimized query
-   * ✅ FIXED: Direct Supabase query instead of db service layer
+   * SCHEMA COMPLIANT: Load all active profiles with registrant data JOIN
    */
   async loadActiveProfiles(excludeUserId = null) {
     try {
-      console.log(`🔍 Loading active profiles from ${this.tableName}...`);
+      console.log('Loading active profiles with registrant data...');
       
       let query = supabase
-        .from(this.tableName)
-        .select('*')
+        .from(this.matchingTableName)
+        .select(`
+          *,
+          registrant_profiles!user_id (
+            first_name,
+            last_name,
+            email
+          )
+        `)
         .eq('is_active', true)
         .eq('profile_completed', true)
         .order('updated_at', { ascending: false });
@@ -422,28 +454,27 @@ class EnhancedMatchingService {
       const { data, error } = await query;
       
       if (error) {
-        console.error('💥 Database error loading profiles:', error);
+        console.error('Database error loading profiles:', error);
         throw new Error(`Database error: ${error.message}`);
       }
       
-      const transformedProfiles = data.map(profile => this.transformDatabaseProfile(profile));
+      const transformedProfiles = data.map(profile => this.transformSchemaCompliantProfile(profile));
       
-      console.log(`✅ Loaded ${transformedProfiles.length} active profiles`);
+      console.log(`Loaded ${transformedProfiles.length} active profiles`);
       return transformedProfiles;
       
     } catch (err) {
-      console.error('💥 Error loading active profiles:', err);
+      console.error('Error loading active profiles:', err);
       throw err;
     }
   }
 
   /**
-   * ✅ ENHANCED: Load excluded users with better query optimization
-   * ✅ FIXED: Direct Supabase queries instead of db service layer
+   * SCHEMA COMPLIANT: Load excluded users using exact table names
    */
   async loadExcludedUsers(userId) {
     try {
-      console.log('🚫 Loading excluded users...');
+      console.log('Loading excluded users...');
       
       const [requestsResult, groupsResult] = await Promise.all([
         this.loadMatchRequests(userId),
@@ -455,12 +486,14 @@ class EnhancedMatchingService {
       // Exclude from match requests
       if (requestsResult && requestsResult.length > 0) {
         requestsResult.forEach(request => {
-          if (request.request_type === 'roommate' || !request.request_type) {
-            const otherUserId = request.requester_id === userId ? request.target_id : request.requester_id;
+          if (request.request_type === 'roommate' || request.request_type === 'housing') {
+            // SCHEMA COMPLIANT: Use correct field names from match_requests table
+            const otherUserId = request.requester_type === 'applicant' && request.requester_id === userId ? 
+                              request.recipient_id : request.requester_id;
             
-            if (['matched', 'approved'].includes(request.status)) {
+            if (['accepted', 'matched'].includes(request.status)) {
               excludedUserIds.add(otherUserId);
-              console.log(`🚫 Excluding user ${otherUserId} - active connection (${request.status})`);
+              console.log(`Excluding user ${otherUserId} - active connection (${request.status})`);
             }
           }
         });
@@ -469,74 +502,75 @@ class EnhancedMatchingService {
       // Exclude from active match groups
       if (groupsResult && groupsResult.length > 0) {
         groupsResult.forEach(group => {
-          if (['active', 'forming'].includes(group.status)) {
-            [group.applicant_1_id, group.applicant_2_id, group.peer_support_id, group.landlord_id]
+          if (['active', 'forming', 'confirmed'].includes(group.status)) {
+            // SCHEMA COMPLIANT: Use correct field names from match_groups table
+            [group.applicant_1_id, group.applicant_2_id, group.peer_support_id]
               .filter(id => id && id !== userId)
               .forEach(id => {
                 excludedUserIds.add(id);
-                console.log(`🚫 Excluding user ${id} - active match group member`);
+                console.log(`Excluding user ${id} - active match group member`);
               });
           }
         });
       }
 
-      console.log(`🚫 Total excluded users: ${excludedUserIds.size}`);
+      console.log(`Total excluded users: ${excludedUserIds.size}`);
       return excludedUserIds;
 
     } catch (err) {
-      console.error('💥 Error loading excluded users:', err);
+      console.error('Error loading excluded users:', err);
       return new Set();
     }
   }
 
   /**
-   * ✅ FIXED: Load match requests with error handling - Direct Supabase query
+   * SCHEMA COMPLIANT: Load match requests using exact table and field names
    */
   async loadMatchRequests(userId) {
     try {
+      // SCHEMA COMPLIANT: Query match_requests table with correct field names
       const { data, error } = await supabase
-        .from('match_requests')
+        .from(this.requestsTableName)
         .select('*')
-        .or(`requester_id.eq.${userId},target_id.eq.${userId}`);
+        .or(`and(requester_type.eq.applicant,requester_id.eq.${userId}),and(recipient_type.eq.applicant,recipient_id.eq.${userId})`);
       
       if (error) {
-        console.warn('⚠️ Error loading match requests:', error);
+        console.warn('Error loading match requests:', error);
         return [];
       }
       
       return data || [];
     } catch (err) {
-      console.warn('⚠️ Error loading match requests:', err);
+      console.warn('Error loading match requests:', err);
       return [];
     }
   }
 
   /**
-   * ✅ FIXED: Load match groups with error handling - Direct Supabase query
+   * SCHEMA COMPLIANT: Load match groups using exact table and field names
    */
   async loadMatchGroups(userId) {
     try {
-      // ✅ FIXED: Direct Supabase query to match_groups table
+      // SCHEMA COMPLIANT: Query match_groups table with correct field names
       const { data, error } = await supabase
-        .from('match_groups')
+        .from(this.groupsTableName)
         .select('*')
-        .or(`applicant_1_id.eq.${userId},applicant_2_id.eq.${userId},peer_support_id.eq.${userId},landlord_id.eq.${userId}`);
+        .or(`applicant_1_id.eq.${userId},applicant_2_id.eq.${userId},peer_support_id.eq.${userId}`);
       
       if (error) {
-        console.warn('⚠️ Error loading match groups:', error);
+        console.warn('Error loading match groups:', error);
         return [];
       }
       
       return data || [];
     } catch (err) {
-      console.warn('⚠️ Error loading match groups:', err);
+      console.warn('Error loading match groups:', err);
       return [];
     }
   }
 
   /**
-   * ✅ ENHANCED: Load sent requests for UI feedback
-   * ✅ FIXED: Uses direct Supabase calls
+   * SCHEMA COMPLIANT: Load sent requests for UI feedback
    */
   async loadSentRequests(userId) {
     try {
@@ -545,30 +579,31 @@ class EnhancedMatchingService {
       const sentRequestIds = new Set(
         requests
           .filter(req => 
+            req.requester_type === 'applicant' &&
             req.requester_id === userId && 
-            (req.request_type === 'roommate' || !req.request_type) &&
+            (req.request_type === 'housing' || req.request_type === 'roommate') &&
             req.status === 'pending'
           )
-          .map(req => req.target_id)
+          .map(req => req.recipient_id)
       );
       
-      console.log(`📤 Found ${sentRequestIds.size} pending roommate requests sent`);
+      console.log(`Found ${sentRequestIds.size} pending requests sent`);
       return sentRequestIds;
       
     } catch (err) {
-      console.error('💥 Error loading sent requests:', err);
+      console.error('Error loading sent requests:', err);
       return new Set();
     }
   }
 
   /**
-   * ✅ ENHANCED: Find compatible matches with comprehensive filtering
+   * SCHEMA COMPLIANT: Find compatible matches with comprehensive filtering
    */
   async findMatches(userId, filters = {}) {
     try {
       const finalFilters = { 
-        minScore: 60,
-        maxResults: 20,
+        minScore: this.ENHANCED_THRESHOLDS.minScore,
+        maxResults: this.ENHANCED_THRESHOLDS.maxResults,
         hideAlreadyMatched: true,
         hideRequestsSent: true,
         ...filters 
@@ -579,11 +614,11 @@ class EnhancedMatchingService {
       // Check cache first
       const cached = this.cache.get(cacheKey);
       if (this.isCacheValid(cached)) {
-        console.log('📦 Returning cached enhanced matches');
+        console.log('Returning cached schema-compliant matches');
         return cached.data;
       }
 
-      console.log('🔍 Finding enhanced matches with priority-based algorithm...');
+      console.log('Finding schema-compliant matches...');
 
       // Load user profile and exclusions in parallel
       const [userProfile, excludedUsers, sentRequests] = await Promise.all([
@@ -595,7 +630,7 @@ class EnhancedMatchingService {
       // Get active profiles
       let candidates = await this.loadActiveProfiles(userId);
       
-      console.log(`📊 Found ${candidates.length} active candidate profiles`);
+      console.log(`Found ${candidates.length} active candidate profiles`);
 
       if (candidates.length === 0) {
         return {
@@ -603,7 +638,7 @@ class EnhancedMatchingService {
           userProfile,
           excludedCount: excludedUsers.size,
           sentRequestsCount: sentRequests.size,
-          algorithmVersion: '2.0_enhanced'
+          algorithmVersion: '2.0_schema_compliant'
         };
       }
 
@@ -613,11 +648,11 @@ class EnhancedMatchingService {
         candidates = candidates.filter(candidate => {
           const isExcluded = excludedUsers.has(candidate.user_id);
           if (isExcluded) {
-            console.log(`🚫 Hiding ${candidate.first_name} - already matched/connected`);
+            console.log(`Hiding ${candidate.first_name} - already matched/connected`);
           }
           return !isExcluded;
         });
-        console.log(`🚫 Excluded already matched: ${beforeExclusion} -> ${candidates.length}`);
+        console.log(`Excluded already matched: ${beforeExclusion} -> ${candidates.length}`);
       }
 
       if (finalFilters.hideRequestsSent) {
@@ -625,20 +660,18 @@ class EnhancedMatchingService {
         candidates = candidates.filter(candidate => {
           const isRequestSent = sentRequests.has(candidate.user_id);
           if (isRequestSent) {
-            console.log(`📤 Hiding ${candidate.first_name} - request already sent`);
+            console.log(`Hiding ${candidate.first_name} - request already sent`);
           }
           return !isRequestSent;
         });
-        console.log(`📤 Excluded sent requests: ${beforeExclusion} -> ${candidates.length}`);
+        console.log(`Excluded sent requests: ${beforeExclusion} -> ${candidates.length}`);
       }
 
-      // Apply additional filters
-      candidates = this.applyEnhancedFilters(candidates, finalFilters);
+      // Apply filters and deal breakers
+      candidates = this.applySchemaCompliantFilters(candidates, finalFilters);
+      candidates = this.applySchemaCompliantDealBreakerFilters(userProfile, candidates);
 
-      // Apply deal breaker filters (hard exclusions)
-      candidates = this.applyDealBreakerFilters(userProfile, candidates);
-
-      // Calculate enhanced compatibility scores
+      // Calculate compatibility scores
       const matchesWithScores = candidates.map(candidate => {
         const displayInfo = this.generateDisplayInfo(userProfile, candidate);
         
@@ -650,7 +683,7 @@ class EnhancedMatchingService {
         };
       });
 
-      // Filter by minimum score and sort by enhanced score
+      // Filter by minimum score and sort
       const qualifiedMatches = matchesWithScores
         .filter(match => match.matchScore >= finalFilters.minScore)
         .sort((a, b) => {
@@ -659,18 +692,18 @@ class EnhancedMatchingService {
             return b.matchScore - a.matchScore;
           }
           // Secondary sort by core factors if scores are tied
-          return b.priorityBreakdown.core_factors - a.priorityBreakdown.core_factors;
+          return (b.priorityBreakdown?.core_factors || 0) - (a.priorityBreakdown?.core_factors || 0);
         })
         .slice(0, finalFilters.maxResults);
 
-      console.log(`✅ Found ${qualifiedMatches.length} qualified enhanced matches`);
+      console.log(`Found ${qualifiedMatches.length} qualified schema-compliant matches`);
 
       const result_data = {
         matches: qualifiedMatches,
         userProfile,
         excludedCount: excludedUsers.size,
         sentRequestsCount: sentRequests.size,
-        algorithmVersion: '2.0_enhanced',
+        algorithmVersion: '2.0_schema_compliant',
         filterCriteria: finalFilters,
         totalCandidatesEvaluated: candidates.length
       };
@@ -684,23 +717,23 @@ class EnhancedMatchingService {
       return result_data;
 
     } catch (err) {
-      console.error('💥 Error finding enhanced matches:', err);
+      console.error('Error finding schema-compliant matches:', err);
       throw err;
     }
   }
 
   /**
-   * ✅ ENHANCED: Apply comprehensive filters using standardized fields
+   * SCHEMA COMPLIANT: Apply filters using exact schema field names
    */
-  applyEnhancedFilters(candidates, filters) {
+  applySchemaCompliantFilters(candidates, filters) {
     let filtered = candidates;
 
-    // Recovery stage filter
+    // Recovery stage filter (exact schema field)
     if (filters.recoveryStage) {
       filtered = filtered.filter(c => c.recovery_stage === filters.recoveryStage);
     }
 
-    // Age range filter
+    // Age range filter (calculated age)
     if (filters.ageRange) {
       const [minAge, maxAge] = filters.ageRange.split('-').map(Number);
       filtered = filtered.filter(c => 
@@ -708,7 +741,7 @@ class EnhancedMatchingService {
       );
     }
 
-    // Location filter (standardized)
+    // Location filter (schema fields: primary_location, primary_city, primary_state)
     if (filters.location && filters.location.trim()) {
       const searchLocation = filters.location.trim().toLowerCase();
       filtered = filtered.filter(c => {
@@ -721,11 +754,11 @@ class EnhancedMatchingService {
       });
     }
 
-    // Budget range filter (standardized)
+    // Budget range filter (schema fields: budget_min, budget_max)
     if (filters.budgetMin || filters.budgetMax) {
       filtered = filtered.filter(c => {
         const candidateBudget = c.budget_max;
-        if (!candidateBudget) return true; // Include if no budget specified
+        if (!candidateBudget) return true;
         
         if (filters.budgetMin && candidateBudget < filters.budgetMin) return false;
         if (filters.budgetMax && candidateBudget > filters.budgetMax) return false;
@@ -734,7 +767,7 @@ class EnhancedMatchingService {
       });
     }
 
-    // Recovery methods filter
+    // Recovery methods filter (schema field: recovery_methods array)
     if (filters.recoveryMethods && filters.recoveryMethods.length > 0) {
       filtered = filtered.filter(c => 
         c.recovery_methods && 
@@ -742,63 +775,83 @@ class EnhancedMatchingService {
       );
     }
 
-    // Spiritual affiliation filter
+    // Spiritual affiliation filter (schema field: spiritual_affiliation)
     if (filters.spiritualAffiliation) {
       filtered = filtered.filter(c => c.spiritual_affiliation === filters.spiritualAffiliation);
     }
 
-    // Gender preference filter
+    // Gender preference filter (schema field: preferred_roommate_gender)
     if (filters.genderPreference) {
       filtered = filtered.filter(c => c.preferred_roommate_gender === filters.genderPreference);
     }
 
-    // Substance-free home filter ✅ FIXED: Using correct field name
+    // Substance-free home filter (schema field: substance_free_home_required)
     if (filters.substanceFreeHome !== undefined) {
       filtered = filtered.filter(c => c.substance_free_home_required === filters.substanceFreeHome);
     }
 
-    console.log(`🔍 Applied filters: ${candidates.length} -> ${filtered.length} candidates`);
+    console.log(`Applied schema-compliant filters: ${candidates.length} -> ${filtered.length} candidates`);
     return filtered;
   }
 
   /**
-   * ✅ NEW: Apply deal breaker filters (hard exclusions) ✅ FIXED: Using correct field name
+   * SCHEMA COMPLIANT: Apply deal breaker filters using exact schema field names
    */
-  applyDealBreakerFilters(userProfile, candidates) {
+  applySchemaCompliantDealBreakerFilters(userProfile, candidates) {
     return candidates.filter(candidate => {
-      // Check user's deal breakers against candidate
+      // User's deal breakers against candidate (schema field names)
       if (userProfile.deal_breaker_substance_use && candidate.substance_free_home_required === false) {
-        console.log(`🚫 Excluding ${candidate.first_name} - substance use deal breaker`);
+        console.log(`Excluding ${candidate.first_name} - substance use deal breaker`);
         return false;
       }
       
       if (userProfile.deal_breaker_pets && candidate.pets_owned) {
-        console.log(`🚫 Excluding ${candidate.first_name} - pets deal breaker`);
+        console.log(`Excluding ${candidate.first_name} - pets deal breaker`);
         return false;
       }
       
       if (userProfile.deal_breaker_smoking && 
           candidate.smoking_status && 
           candidate.smoking_status !== 'non_smoker') {
-        console.log(`🚫 Excluding ${candidate.first_name} - smoking deal breaker`);
+        console.log(`Excluding ${candidate.first_name} - smoking deal breaker`);
         return false;
       }
       
-      // Check candidate's deal breakers against user ✅ FIXED: Using correct field name
+      if (userProfile.deal_breaker_uncleanliness && 
+          candidate.cleanliness_level && 
+          candidate.cleanliness_level <= 2) {
+        console.log(`Excluding ${candidate.first_name} - cleanliness deal breaker`);
+        return false;
+      }
+      
+      if (userProfile.deal_breaker_loudness && 
+          candidate.noise_tolerance && 
+          candidate.noise_tolerance >= 4) {
+        console.log(`Excluding ${candidate.first_name} - loudness deal breaker`);
+        return false;
+      }
+      
+      if (userProfile.deal_breaker_financial_issues && 
+          candidate.financially_stable === false) {
+        console.log(`Excluding ${candidate.first_name} - financial stability deal breaker`);
+        return false;
+      }
+      
+      // Candidate's deal breakers against user
       if (candidate.deal_breaker_substance_use && userProfile.substance_free_home_required === false) {
-        console.log(`🚫 Excluding ${candidate.first_name} - their substance use deal breaker`);
+        console.log(`Excluding ${candidate.first_name} - their substance use deal breaker`);
         return false;
       }
       
       if (candidate.deal_breaker_pets && userProfile.pets_owned) {
-        console.log(`🚫 Excluding ${candidate.first_name} - their pets deal breaker`);
+        console.log(`Excluding ${candidate.first_name} - their pets deal breaker`);
         return false;
       }
       
       if (candidate.deal_breaker_smoking && 
           userProfile.smoking_status && 
           userProfile.smoking_status !== 'non_smoker') {
-        console.log(`🚫 Excluding ${candidate.first_name} - their smoking deal breaker`);
+        console.log(`Excluding ${candidate.first_name} - their smoking deal breaker`);
         return false;
       }
       
@@ -807,29 +860,27 @@ class EnhancedMatchingService {
   }
 
   /**
-   * ✅ ENHANCED: Send match request with enhanced data
-   * ✅ FIXED: Direct Supabase query instead of db service layer
+   * SCHEMA COMPLIANT: Send match request using exact table and field names
    */
   async sendMatchRequest(currentUserId, targetMatch) {
     try {
-      console.log('🤝 Sending enhanced roommate match request to:', targetMatch.first_name);
+      console.log('Sending schema-compliant match request to:', targetMatch.first_name);
       
+      // SCHEMA COMPLIANT: Use exact match_requests table fields
       const requestData = {
+        requester_type: 'applicant',
         requester_id: currentUserId,
-        target_id: targetMatch.user_id,
-        request_type: 'roommate',
-        match_score: targetMatch.matchScore,
-        compatibility_breakdown: targetMatch.priorityBreakdown,
-        algorithm_version: targetMatch.algorithmVersion || '2.0_enhanced',
+        recipient_type: 'applicant', 
+        recipient_id: targetMatch.user_id,
+        request_type: 'housing',
         message: this.generateRequestMessage(targetMatch),
         status: 'pending',
-        match_insights: targetMatch.matchInsights,
-        recommendation_strength: targetMatch.recommendationStrength?.strength || 'moderate'
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString()
       };
       
-      // ✅ FIXED: Direct Supabase query
       const { data, error } = await supabase
-        .from('match_requests')
+        .from(this.requestsTableName)
         .insert(requestData)
         .select()
         .single();
@@ -838,7 +889,7 @@ class EnhancedMatchingService {
         throw new Error(error.message || 'Failed to send match request');
       }
       
-      console.log('✅ Enhanced roommate match request sent successfully:', data);
+      console.log('Schema-compliant match request sent successfully:', data);
       
       // Invalidate cache since sent requests have changed
       this.invalidateUserCache(currentUserId);
@@ -846,13 +897,13 @@ class EnhancedMatchingService {
       return { success: true, data };
       
     } catch (err) {
-      console.error('💥 Error sending enhanced match request:', err);
+      console.error('Error sending schema-compliant match request:', err);
       return { success: false, error: err.message };
     }
   }
 
   /**
-   * ✅ NEW: Generate personalized request message
+   * Generate personalized request message
    */
   generateRequestMessage(targetMatch) {
     const compatibility = targetMatch.compatibilityLevel;
@@ -886,21 +937,19 @@ class EnhancedMatchingService {
   }
 
   /**
-   * ✅ ENHANCED: Update user profile with new data
-   * ✅ FIXED: Direct Supabase query instead of db service layer
+   * SCHEMA COMPLIANT: Update user profile using exact table and field names
    */
   async updateUserProfile(userId, profileData) {
     try {
-      console.log(`🔄 Updating user profile in ${this.tableName}...`);
+      console.log('Updating user profile in matching table...');
       
       const updateData = {
         ...profileData,
         updated_at: new Date().toISOString()
       };
       
-      // ✅ FIXED: Direct Supabase query
       const { data, error } = await supabase
-        .from(this.tableName)
+        .from(this.matchingTableName)
         .update(updateData)
         .eq('user_id', userId)
         .select()
@@ -910,7 +959,7 @@ class EnhancedMatchingService {
         throw new Error(`Update failed: ${error.message}`);
       }
       
-      console.log('✅ User profile updated successfully');
+      console.log('User profile updated successfully');
       
       // Invalidate cache for this user
       this.invalidateUserCache(userId);
@@ -918,13 +967,13 @@ class EnhancedMatchingService {
       return { success: true, data };
       
     } catch (err) {
-      console.error('💥 Error updating user profile:', err);
+      console.error('Error updating user profile:', err);
       return { success: false, error: err.message };
     }
   }
 
   /**
-   * ✅ ENHANCED: Get match statistics and insights
+   * SCHEMA COMPLIANT: Get matching statistics and insights
    */
   async getMatchingStatistics(userId) {
     try {
@@ -945,7 +994,7 @@ class EnhancedMatchingService {
         topCompatibilityFactors: {},
         locationMatches: 0,
         recoveryStageMatches: 0,
-        algorithmVersion: '2.0_enhanced'
+        algorithmVersion: '2.0_schema_compliant'
       };
       
       // Calculate compatibility with all profiles
@@ -959,7 +1008,7 @@ class EnhancedMatchingService {
         else if (score >= 55) stats.compatibilityDistribution.moderate++;
         else stats.compatibilityDistribution.low++;
         
-        // Count specific matches
+        // Count specific matches using schema fields
         if (candidate.primary_location === userProfile.primary_location) {
           stats.locationMatches++;
         }
@@ -972,7 +1021,7 @@ class EnhancedMatchingService {
       return stats;
       
     } catch (err) {
-      console.error('💥 Error calculating matching statistics:', err);
+      console.error('Error calculating matching statistics:', err);
       throw err;
     }
   }
@@ -983,12 +1032,12 @@ class EnhancedMatchingService {
   invalidateUserCache(userId) {
     const keysToDelete = [];
     for (const key of this.cache.keys()) {
-      if (key.includes(`enhanced_matches_${userId}_`)) {
+      if (key.includes(`schema_compliant_matches_${userId}_`)) {
         keysToDelete.push(key);
       }
     }
     keysToDelete.forEach(key => this.cache.delete(key));
-    console.log(`🗑️ Invalidated ${keysToDelete.length} enhanced cache entries for user ${userId}`);
+    console.log(`Invalidated ${keysToDelete.length} cache entries for user ${userId}`);
   }
 
   /**
@@ -996,11 +1045,11 @@ class EnhancedMatchingService {
    */
   clearCache() {
     this.cache.clear();
-    console.log('🗑️ Cleared all enhanced matching cache');
+    console.log('Cleared all schema-compliant matching cache');
   }
 
   /**
-   * Get enhanced cache statistics
+   * Get cache statistics
    */
   getCacheStats() {
     const now = Date.now();
@@ -1020,13 +1069,13 @@ class EnhancedMatchingService {
       validEntries,
       expiredEntries,
       cacheTimeoutMinutes: this.cacheTimeout / (60 * 1000),
-      algorithmVersion: '2.0_enhanced'
+      algorithmVersion: '2.0_schema_compliant'
     };
   }
 }
 
-// Export enhanced singleton instance
-export const enhancedMatchingService = new EnhancedMatchingService();
+// Export schema-compliant singleton instance
+export const schemaCompliantMatchingService = new SchemaCompliantMatchingService();
 
 // Export individual methods for easier testing
 export const {
@@ -1039,7 +1088,7 @@ export const {
   getMatchingStatistics,
   clearCache,
   getCacheStats
-} = enhancedMatchingService;
+} = schemaCompliantMatchingService;
 
 // Default export
-export default enhancedMatchingService;
+export default schemaCompliantMatchingService;

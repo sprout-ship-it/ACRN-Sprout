@@ -1,4 +1,4 @@
-// src/hooks/useAuth.js
+// src/hooks/useAuth.js - PHASE 3 CORRECTED VERSION
 import { useContext } from 'react';
 import { AuthContext } from '../context/AuthContext';
 
@@ -7,7 +7,7 @@ import { AuthContext } from '../context/AuthContext';
  * This provides a clean interface to the AuthContext
  */
 export const useAuth = () => {
-const context = useContext(AuthContext);
+  const context = useContext(AuthContext);
   
   if (!context) {
     throw new Error('useAuth must be used within an AuthProvider');
@@ -25,18 +25,25 @@ export const useAuthState = () => {
     profile, 
     loading, 
     isAuthenticated,
-    isApplicant,
-    isLandlord,
-    isPeerSupport 
+    isNewUser,
+    hasRole
   } = useAuth();
+  
+  // Derive role states from hasRole helper
+  const isApplicant = hasRole('applicant');
+  const isLandlord = hasRole('landlord');
+  const isEmployer = hasRole('employer');
+  const isPeerSupport = hasRole('peer-support'); // Correct role name from schema
   
   return {
     user,
     profile,
     loading,
     isAuthenticated,
+    isNewUser,
     isApplicant,
     isLandlord,
+    isEmployer,
     isPeerSupport,
     isLoading: loading
   };
@@ -50,7 +57,7 @@ export const useAuthActions = () => {
     signIn,
     signUp,
     signOut,
-    updateProfile,
+    refreshProfile,
     clearError
   } = useAuth();
   
@@ -58,7 +65,7 @@ export const useAuthActions = () => {
     signIn,
     signUp,
     signOut,
-    updateProfile,
+    refreshProfile, // Use refreshProfile instead of updateProfile
     clearError
   };
 };
@@ -70,11 +77,15 @@ export const useRoles = () => {
   const {
     hasRole,
     hasAnyRole,
-    getPrimaryRole,
     profile
   } = useAuth();
   
   const userRoles = profile?.roles || [];
+  
+  // Helper to get primary role (first role in array)
+  const getPrimaryRole = () => {
+    return userRoles.length > 0 ? userRoles[0] : null;
+  };
   
   return {
     roles: userRoles,
@@ -83,8 +94,10 @@ export const useRoles = () => {
     getPrimaryRole,
     isApplicant: hasRole('applicant'),
     isLandlord: hasRole('landlord'),
-    isPeerSupport: hasRole('peer'),
-    isMultiRole: userRoles.length > 1
+    isEmployer: hasRole('employer'),
+    isPeerSupport: hasRole('peer-support'), // Correct role name
+    isMultiRole: userRoles.length > 1,
+    primaryRole: getPrimaryRole()
   };
 };
 
@@ -117,13 +130,15 @@ export const useAuthError = () => {
  * Hook for protected route logic
  */
 export const useProtectedRoute = () => {
-  const { isAuthenticated, loading } = useAuth();
+  const { isAuthenticated, loading, isNewUser } = useAuth();
   
   return {
     isAuthenticated,
+    isNewUser,
     isLoading: loading,
     canAccess: isAuthenticated && !loading,
-    shouldRedirect: !isAuthenticated && !loading
+    shouldRedirect: !isAuthenticated && !loading,
+    needsProfileSetup: isNewUser && !loading
   };
 };
 
@@ -133,34 +148,129 @@ export const useProtectedRoute = () => {
 export const useProfile = () => {
   const {
     profile,
-    updateProfile,
-    loadUserProfile,
-    user
+    refreshProfile,
+    user,
+    loading
   } = useAuth();
   
-  const updateUserProfile = async (updates) => {
-    try {
-      const result = await updateProfile(updates);
-      if (result.success) {
-        // Optionally reload profile to ensure consistency
-        await loadUserProfile(user.id);
-      }
-      return result;
-    } catch (error) {
-      console.error('Profile update failed:', error);
-      return { success: false, error: error.message };
-    }
+  // Helper to get display name
+  const getDisplayName = () => {
+    if (!profile) return '';
+    const firstName = profile.first_name || '';
+    const lastName = profile.last_name || '';
+    return `${firstName} ${lastName}`.trim() || profile.email || 'User';
+  };
+  
+  // Helper to get initials
+  const getInitials = () => {
+    if (!profile) return '';
+    const firstName = profile.first_name || '';
+    const lastName = profile.last_name || '';
+    const firstInitial = firstName.charAt(0).toUpperCase();
+    const lastInitial = lastName.charAt(0).toUpperCase();
+    return `${firstInitial}${lastInitial}` || profile.email?.charAt(0).toUpperCase() || 'U';
   };
   
   return {
     profile,
-    updateProfile: updateUserProfile,
-    refreshProfile: () => loadUserProfile(user?.id),
+    refreshProfile,
     isProfileLoaded: !!profile,
-    profileName: profile ? `${profile.first_name} ${profile.last_name}` : '',
-    profileInitials: profile ? 
-      `${profile.first_name?.[0] || ''}${profile.last_name?.[0] || ''}`.toUpperCase() : ''
+    isProfileLoading: loading,
+    displayName: getDisplayName(),
+    initials: getInitials(),
+    email: profile?.email || user?.email || '',
+    roles: profile?.roles || [],
+    isActive: profile?.is_active || false
   };
 };
 
+/**
+ * Hook for role-specific navigation and access
+ */
+export const useRoleNavigation = () => {
+  const { hasRole, profile } = useAuth();
+  const roles = profile?.roles || [];
+  
+  // Get available navigation items based on roles
+  const getAvailableRoles = () => {
+    return roles.map(role => ({
+      role,
+      label: getRoleLabel(role),
+      path: getRolePath(role)
+    }));
+  };
+  
+  const getRoleLabel = (role) => {
+    const labels = {
+      'applicant': 'Housing Seeker',
+      'landlord': 'Property Owner',
+      'employer': 'Employer',
+      'peer-support': 'Peer Support'
+    };
+    return labels[role] || role;
+  };
+  
+  const getRolePath = (role) => {
+    const paths = {
+      'applicant': '/matching',
+      'landlord': '/properties',
+      'employer': '/employer',
+      'peer-support': '/peer-support'
+    };
+    return paths[role] || '/dashboard';
+  };
+  
+  return {
+    availableRoles: getAvailableRoles(),
+    hasRole,
+    canAccessRole: (role) => hasRole(role),
+    getRoleLabel,
+    getRolePath,
+    isMultiRole: roles.length > 1
+  };
+};
+
+/**
+ * Hook for authentication status with detailed states
+ */
+export const useAuthStatus = () => {
+  const { 
+    user, 
+    profile, 
+    loading, 
+    isAuthenticated, 
+    isNewUser, 
+    error 
+  } = useAuth();
+  
+  // Determine the current auth status
+  const getAuthStatus = () => {
+    if (loading) return 'loading';
+    if (error) return 'error';
+    if (!user) return 'unauthenticated';
+    if (user && !profile) return 'profile-missing';
+    if (user && profile) return 'authenticated';
+    return 'unknown';
+  };
+  
+  const status = getAuthStatus();
+  
+  return {
+    status,
+    isLoading: loading,
+    isAuthenticated,
+    isNewUser,
+    hasError: !!error,
+    error,
+    user,
+    profile,
+    // Helper booleans for common status checks
+    isReady: status === 'authenticated',
+    needsAuth: status === 'unauthenticated',
+    needsProfile: status === 'profile-missing',
+    hasIssue: status === 'error'
+  };
+};
+
+// Default export
 export default useAuth;

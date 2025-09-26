@@ -1,6 +1,7 @@
-// src/utils/database/propertiesService.js - Properties service module
+// src/utils/database/propertiesService.js - Updated for refactored schema
 /**
  * Properties service for properties table operations
+ * Updated to work with new properties table schema
  */
 
 const createPropertiesService = (supabaseClient) => {
@@ -16,13 +17,14 @@ const createPropertiesService = (supabaseClient) => {
      */
     create: async (propertyData) => {
       try {
-        console.log('🏠 Properties: Creating property for landlord:', propertyData.landlord_id);
+        console.log('Creating property for landlord:', propertyData.landlord_id);
 
         const { data, error } = await supabaseClient
           .from(tableName)
           .insert({
             ...propertyData,
             status: propertyData.status || 'available',
+            accepting_applications: propertyData.accepting_applications !== false,
             created_at: new Date().toISOString(),
             updated_at: new Date().toISOString()
           })
@@ -30,59 +32,86 @@ const createPropertiesService = (supabaseClient) => {
           .single();
 
         if (error) {
-          console.error('❌ Properties: Create failed:', error.message);
+          console.error('Properties: Create failed:', error.message);
           return { success: false, data: null, error };
         }
 
-        console.log('✅ Properties: Property created successfully');
+        console.log('Properties: Property created successfully');
         return { success: true, data, error: null };
 
       } catch (err) {
-        console.error('💥 Properties: Create exception:', err);
+        console.error('Properties: Create exception:', err);
         return { success: false, data: null, error: { message: err.message } };
       }
     },
 
     /**
-     * Get properties by landlord ID
+     * Get properties by landlord ID with enhanced data
      */
     getByLandlordId: async (landlordId) => {
       try {
-        console.log('🏠 Properties: Fetching properties for landlord:', landlordId);
+        console.log('Fetching properties for landlord:', landlordId);
 
         const { data, error } = await supabaseClient
           .from(tableName)
-          .select('*')
+          .select(`
+            *,
+            landlord_profile:landlord_profiles!inner(
+              id,
+              primary_phone,
+              contact_email,
+              registrant:registrant_profiles!inner(
+                id,
+                first_name,
+                last_name,
+                email
+              )
+            )
+          `)
           .eq('landlord_id', landlordId)
           .order('created_at', { ascending: false });
 
         if (error) {
-          console.error('❌ Properties: GetByLandlordId failed:', error.message);
+          console.error('Properties: GetByLandlordId failed:', error.message);
           return { success: false, data: [], error };
         }
 
-        console.log(`✅ Properties: Found ${data?.length || 0} properties for landlord`);
+        console.log(`Properties: Found ${data?.length || 0} properties for landlord`);
         return { success: true, data: data || [], error: null };
 
       } catch (err) {
-        console.error('💥 Properties: GetByLandlordId exception:', err);
+        console.error('Properties: GetByLandlordId exception:', err);
         return { success: false, data: [], error: { message: err.message } };
       }
     },
 
     /**
-     * Get available properties with filters
+     * Get available properties with comprehensive filters
      */
     getAvailable: async (filters = {}) => {
       try {
-        console.log('🏠 Properties: Fetching available properties with filters:', filters);
+        console.log('Fetching available properties with filters:', filters);
 
         let query = supabaseClient
           .from(tableName)
-          .select('*')
-          .eq('status', 'available');
+          .select(`
+            *,
+            landlord_profile:landlord_profiles!inner(
+              id,
+              primary_phone,
+              contact_email,
+              primary_service_city,
+              primary_service_state,
+              registrant:registrant_profiles!inner(
+                first_name,
+                last_name
+              )
+            )
+          `)
+          .eq('status', 'available')
+          .eq('accepting_applications', true);
 
-        // Apply filters
+        // Basic filters
         if (filters.maxPrice) {
           query = query.lte('monthly_rent', filters.maxPrice);
         }
@@ -111,10 +140,16 @@ const createPropertiesService = (supabaseClient) => {
           query = query.eq('zip_code', filters.zipCode);
         }
 
-        if (filters.recoveryFriendly) {
-          query = query.eq('is_recovery_friendly', true);
+        // Property type filters
+        if (filters.propertyType) {
+          query = query.eq('property_type', filters.propertyType);
         }
 
+        if (filters.isRecoveryHousing !== undefined) {
+          query = query.eq('is_recovery_housing', filters.isRecoveryHousing);
+        }
+
+        // Feature filters
         if (filters.furnished !== undefined) {
           query = query.eq('furnished', filters.furnished);
         }
@@ -127,6 +162,15 @@ const createPropertiesService = (supabaseClient) => {
           query = query.eq('smoking_allowed', filters.smokingAllowed);
         }
 
+        // Recovery housing specific filters
+        if (filters.genderRestrictions) {
+          query = query.eq('gender_restrictions', filters.genderRestrictions);
+        }
+
+        if (filters.minSobrietyTime) {
+          query = query.eq('min_sobriety_time', filters.minSobrietyTime);
+        }
+
         // Array filters
         if (filters.utilities && filters.utilities.length > 0) {
           query = query.overlaps('utilities_included', filters.utilities);
@@ -136,37 +180,171 @@ const createPropertiesService = (supabaseClient) => {
           query = query.overlaps('amenities', filters.amenities);
         }
 
+        if (filters.acceptedSubsidies && filters.acceptedSubsidies.length > 0) {
+          query = query.overlaps('accepted_subsidies', filters.acceptedSubsidies);
+        }
+
+        if (filters.requiredPrograms && filters.requiredPrograms.length > 0) {
+          query = query.overlaps('required_programs', filters.requiredPrograms);
+        }
+
         const { data, error } = await query
-          .order('is_recovery_friendly', { ascending: false })
+          .order('is_recovery_housing', { ascending: false })
           .order('updated_at', { ascending: false })
           .limit(filters.limit || 50);
 
         if (error) {
-          console.error('❌ Properties: GetAvailable failed:', error.message);
+          console.error('Properties: GetAvailable failed:', error.message);
           return { success: false, data: [], error };
         }
 
-        console.log(`✅ Properties: Found ${data?.length || 0} available properties`);
+        console.log(`Properties: Found ${data?.length || 0} available properties`);
         return { success: true, data: data || [], error: null };
 
       } catch (err) {
-        console.error('💥 Properties: GetAvailable exception:', err);
+        console.error('Properties: GetAvailable exception:', err);
         return { success: false, data: [], error: { message: err.message } };
       }
     },
 
     /**
-     * Get property by ID
+     * Get recovery housing properties with specialized filters
+     */
+    getRecoveryHousing: async (filters = {}) => {
+      try {
+        console.log('Fetching recovery housing with filters:', filters);
+
+        let query = supabaseClient
+          .from(tableName)
+          .select(`
+            *,
+            landlord_profile:landlord_profiles!inner(
+              id,
+              primary_phone,
+              contact_email,
+              recovery_experience_level,
+              supported_recovery_methods,
+              registrant:registrant_profiles!inner(
+                first_name,
+                last_name
+              )
+            )
+          `)
+          .eq('is_recovery_housing', true)
+          .eq('status', 'available')
+          .eq('accepting_applications', true);
+
+        // Apply recovery-specific filters
+        if (filters.recoveryStage) {
+          // This would need to be matched against supported stages in landlord profile
+          // For now, we'll use the property's minimum sobriety requirement
+          const stageToTimeMap = {
+            'early_recovery': ['0_days', '30_days'],
+            'sustained_recovery': ['90_days', '6_months'],
+            'long_term_recovery': ['1_year', '2_years']
+          };
+          
+          if (stageToTimeMap[filters.recoveryStage]) {
+            query = query.in('min_sobriety_time', stageToTimeMap[filters.recoveryStage]);
+          }
+        }
+
+        if (filters.requiredPrograms && filters.requiredPrograms.length > 0) {
+          query = query.overlaps('required_programs', filters.requiredPrograms);
+        }
+
+        if (filters.supportServices && filters.supportServices.length > 0) {
+          // Build dynamic filter for support services
+          let serviceQuery = query;
+          filters.supportServices.forEach(service => {
+            serviceQuery = serviceQuery.eq(service, true);
+          });
+          query = serviceQuery;
+        }
+
+        // Standard filters
+        if (filters.city) {
+          query = query.ilike('city', `%${filters.city}%`);
+        }
+
+        if (filters.state) {
+          query = query.eq('state', filters.state);
+        }
+
+        if (filters.maxRent) {
+          query = query.lte('monthly_rent', filters.maxRent);
+        }
+
+        if (filters.genderRestrictions && filters.genderRestrictions !== 'any') {
+          query = query.eq('gender_restrictions', filters.genderRestrictions);
+        }
+
+        const { data, error } = await query
+          .order('updated_at', { ascending: false });
+
+        if (error) {
+          console.error('Properties: GetRecoveryHousing failed:', error.message);
+          return { success: false, data: [], error };
+        }
+
+        console.log(`Properties: Found ${data?.length || 0} recovery housing properties`);
+        return { success: true, data: data || [], error: null };
+
+      } catch (err) {
+        console.error('Properties: GetRecoveryHousing exception:', err);
+        return { success: false, data: [], error: { message: err.message } };
+      }
+    },
+
+    /**
+     * Get general rental properties
+     */
+    getGeneralRentals: async (filters = {}) => {
+      try {
+        console.log('Fetching general rentals with filters:', filters);
+
+        const enhancedFilters = {
+          ...filters,
+          isRecoveryHousing: false
+        };
+
+        return await service.getAvailable(enhancedFilters);
+
+      } catch (err) {
+        console.error('Properties: GetGeneralRentals exception:', err);
+        return { success: false, data: [], error: { message: err.message } };
+      }
+    },
+
+    /**
+     * Get property by ID with full details
      */
     getById: async (id) => {
       try {
-        console.log('🏠 Properties: Fetching property by ID:', id);
+        console.log('Fetching property by ID:', id);
 
         const { data, error } = await supabaseClient
           .from(tableName)
           .select(`
             *,
-            landlord:registrant_profiles!landlord_id(id, first_name, last_name, email)
+            landlord_profile:landlord_profiles!inner(
+              id,
+              primary_phone,
+              contact_email,
+              contact_person,
+              business_name,
+              recovery_friendly,
+              recovery_experience_level,
+              supported_recovery_methods,
+              preferred_contact_method,
+              response_time_expectation,
+              registrant:registrant_profiles!inner(
+                id,
+                first_name,
+                last_name,
+                email
+              )
+            )
           `)
           .eq('id', id)
           .single();
@@ -175,15 +353,15 @@ const createPropertiesService = (supabaseClient) => {
           if (error.code === 'PGRST116') {
             return { success: false, data: null, error: { code: 'NOT_FOUND', message: 'Property not found' } };
           }
-          console.error('❌ Properties: GetById failed:', error.message);
+          console.error('Properties: GetById failed:', error.message);
           return { success: false, data: null, error };
         }
 
-        console.log('✅ Properties: Property retrieved successfully');
+        console.log('Properties: Property retrieved successfully');
         return { success: true, data, error: null };
 
       } catch (err) {
-        console.error('💥 Properties: GetById exception:', err);
+        console.error('Properties: GetById exception:', err);
         return { success: false, data: null, error: { message: err.message } };
       }
     },
@@ -193,7 +371,7 @@ const createPropertiesService = (supabaseClient) => {
      */
     update: async (id, updates) => {
       try {
-        console.log('🏠 Properties: Updating property:', id);
+        console.log('Updating property:', id);
 
         const { data, error } = await supabaseClient
           .from(tableName)
@@ -206,15 +384,15 @@ const createPropertiesService = (supabaseClient) => {
           .single();
 
         if (error) {
-          console.error('❌ Properties: Update failed:', error.message);
+          console.error('Properties: Update failed:', error.message);
           return { success: false, data: null, error };
         }
 
-        console.log('✅ Properties: Property updated successfully');
+        console.log('Properties: Property updated successfully');
         return { success: true, data, error: null };
 
       } catch (err) {
-        console.error('💥 Properties: Update exception:', err);
+        console.error('Properties: Update exception:', err);
         return { success: false, data: null, error: { message: err.message } };
       }
     },
@@ -224,7 +402,7 @@ const createPropertiesService = (supabaseClient) => {
      */
     delete: async (id) => {
       try {
-        console.log('🏠 Properties: Deleting property:', id);
+        console.log('Deleting property:', id);
 
         const { data, error } = await supabaseClient
           .from(tableName)
@@ -233,15 +411,15 @@ const createPropertiesService = (supabaseClient) => {
           .select();
 
         if (error) {
-          console.error('❌ Properties: Delete failed:', error.message);
+          console.error('Properties: Delete failed:', error.message);
           return { success: false, data: null, error };
         }
 
-        console.log('✅ Properties: Property deleted successfully');
+        console.log('Properties: Property deleted successfully');
         return { success: true, data, error: null };
 
       } catch (err) {
-        console.error('💥 Properties: Delete exception:', err);
+        console.error('Properties: Delete exception:', err);
         return { success: false, data: null, error: { message: err.message } };
       }
     },
@@ -251,9 +429,9 @@ const createPropertiesService = (supabaseClient) => {
      */
     updateStatus: async (id, status) => {
       try {
-        console.log('🏠 Properties: Updating status for property:', id, 'to:', status);
+        console.log('Updating status for property:', id, 'to:', status);
 
-        const validStatuses = ['available', 'occupied', 'maintenance', 'withdrawn'];
+        const validStatuses = ['available', 'waitlist', 'full', 'temporarily_closed', 'under_renovation'];
         if (!validStatuses.includes(status)) {
           return { 
             success: false, 
@@ -265,7 +443,49 @@ const createPropertiesService = (supabaseClient) => {
         return await service.update(id, { status });
 
       } catch (err) {
-        console.error('💥 Properties: UpdateStatus exception:', err);
+        console.error('Properties: UpdateStatus exception:', err);
+        return { success: false, data: null, error: { message: err.message } };
+      }
+    },
+
+    /**
+     * Update available beds (recovery housing only)
+     */
+    updateAvailableBeds: async (id, availableBeds) => {
+      try {
+        console.log('Updating available beds for property:', id, 'to:', availableBeds);
+
+        // First check if this is recovery housing
+        const { data: property, error: fetchError } = await supabaseClient
+          .from(tableName)
+          .select('is_recovery_housing, bedrooms')
+          .eq('id', id)
+          .single();
+
+        if (fetchError) {
+          return { success: false, data: null, error: fetchError };
+        }
+
+        if (!property.is_recovery_housing) {
+          return {
+            success: false,
+            data: null,
+            error: { message: 'Available beds can only be updated for recovery housing properties' }
+          };
+        }
+
+        if (availableBeds > property.bedrooms) {
+          return {
+            success: false,
+            data: null,
+            error: { message: 'Available beds cannot exceed total bedrooms' }
+          };
+        }
+
+        return await service.update(id, { available_beds: availableBeds });
+
+      } catch (err) {
+        console.error('Properties: UpdateAvailableBeds exception:', err);
         return { success: false, data: null, error: { message: err.message } };
       }
     },
@@ -275,35 +495,86 @@ const createPropertiesService = (supabaseClient) => {
      */
     searchByLocation: async (city, state, radius = null) => {
       try {
-        console.log('🏠 Properties: Searching by location:', { city, state, radius });
+        console.log('Searching by location:', { city, state, radius });
+
+        const filters = {
+          city: city,
+          state: state
+        };
+
+        return await service.getAvailable(filters);
+
+      } catch (err) {
+        console.error('Properties: SearchByLocation exception:', err);
+        return { success: false, data: [], error: { message: err.message } };
+      }
+    },
+
+    /**
+     * Get properties with matching criteria for applicant
+     */
+    getMatchingProperties: async (applicantProfile) => {
+      try {
+        console.log('Finding matching properties for applicant');
 
         let query = supabaseClient
           .from(tableName)
-          .select('*')
-          .eq('status', 'available');
+          .select(`
+            *,
+            landlord_profile:landlord_profiles!inner(
+              id,
+              primary_phone,
+              supported_recovery_methods,
+              recovery_friendly,
+              registrant:registrant_profiles!inner(
+                first_name,
+                last_name
+              )
+            )
+          `)
+          .eq('status', 'available')
+          .eq('accepting_applications', true);
 
-        if (city) {
-          query = query.ilike('city', `%${city}%`);
+        // Location matching
+        if (applicantProfile.primary_city) {
+          query = query.eq('city', applicantProfile.primary_city);
         }
 
-        if (state) {
-          query = query.eq('state', state);
+        if (applicantProfile.primary_state) {
+          query = query.eq('state', applicantProfile.primary_state);
+        }
+
+        // Budget matching
+        if (applicantProfile.budget_min && applicantProfile.budget_max) {
+          query = query
+            .gte('monthly_rent', applicantProfile.budget_min)
+            .lte('monthly_rent', applicantProfile.budget_max);
+        }
+
+        // Recovery housing preference
+        if (applicantProfile.substance_free_home_required) {
+          query = query.eq('is_recovery_housing', true);
+        }
+
+        // Gender preferences
+        if (applicantProfile.preferred_roommate_gender && applicantProfile.preferred_roommate_gender !== 'any') {
+          query = query.in('gender_restrictions', ['any', applicantProfile.preferred_roommate_gender]);
         }
 
         const { data, error } = await query
-          .order('is_recovery_friendly', { ascending: false })
+          .order('is_recovery_housing', { ascending: false })
           .order('monthly_rent', { ascending: true });
 
         if (error) {
-          console.error('❌ Properties: SearchByLocation failed:', error.message);
+          console.error('Properties: GetMatchingProperties failed:', error.message);
           return { success: false, data: [], error };
         }
 
-        console.log(`✅ Properties: Found ${data?.length || 0} properties in location`);
+        console.log(`Properties: Found ${data?.length || 0} matching properties`);
         return { success: true, data: data || [], error: null };
 
       } catch (err) {
-        console.error('💥 Properties: SearchByLocation exception:', err);
+        console.error('Properties: GetMatchingProperties exception:', err);
         return { success: false, data: [], error: { message: err.message } };
       }
     },
@@ -313,11 +584,11 @@ const createPropertiesService = (supabaseClient) => {
      */
     getStatistics: async (landlordId = null) => {
       try {
-        console.log('🏠 Properties: Fetching statistics', landlordId ? `for landlord: ${landlordId}` : 'system-wide');
+        console.log('Fetching statistics', landlordId ? `for landlord: ${landlordId}` : 'system-wide');
 
         let query = supabaseClient
           .from(tableName)
-          .select('status, monthly_rent, bedrooms, is_recovery_friendly, created_at');
+          .select('status, monthly_rent, bedrooms, is_recovery_housing, property_type, created_at');
 
         if (landlordId) {
           query = query.eq('landlord_id', landlordId);
@@ -326,19 +597,22 @@ const createPropertiesService = (supabaseClient) => {
         const { data, error } = await query;
 
         if (error) {
-          console.error('❌ Properties: Statistics failed:', error.message);
+          console.error('Properties: Statistics failed:', error.message);
           return { success: false, data: null, error };
         }
 
         const stats = {
           total: data.length,
+          recoveryHousing: data.filter(p => p.is_recovery_housing).length,
+          generalRentals: data.filter(p => !p.is_recovery_housing).length,
           byStatus: {
             available: data.filter(p => p.status === 'available').length,
-            occupied: data.filter(p => p.status === 'occupied').length,
-            maintenance: data.filter(p => p.status === 'maintenance').length,
-            withdrawn: data.filter(p => p.status === 'withdrawn').length
+            waitlist: data.filter(p => p.status === 'waitlist').length,
+            full: data.filter(p => p.status === 'full').length,
+            temporarily_closed: data.filter(p => p.status === 'temporarily_closed').length,
+            under_renovation: data.filter(p => p.status === 'under_renovation').length
           },
-          recoveryFriendly: data.filter(p => p.is_recovery_friendly).length,
+          byPropertyType: {},
           averageRent: data.length > 0 ? Math.round(
             data.reduce((sum, p) => sum + (p.monthly_rent || 0), 0) / data.length
           ) : 0,
@@ -351,17 +625,23 @@ const createPropertiesService = (supabaseClient) => {
           }).length
         };
 
+        // Group by property type
+        data.forEach(property => {
+          const type = property.property_type || 'unknown';
+          stats.byPropertyType[type] = (stats.byPropertyType[type] || 0) + 1;
+        });
+
         // Group by bedrooms
         data.forEach(property => {
           const bedrooms = property.bedrooms || 0;
           stats.byBedrooms[bedrooms] = (stats.byBedrooms[bedrooms] || 0) + 1;
         });
 
-        console.log('✅ Properties: Statistics calculated');
+        console.log('Properties: Statistics calculated');
         return { success: true, data: stats, error: null };
 
       } catch (err) {
-        console.error('💥 Properties: Statistics exception:', err);
+        console.error('Properties: Statistics exception:', err);
         return { success: false, data: null, error: { message: err.message } };
       }
     },
@@ -371,7 +651,7 @@ const createPropertiesService = (supabaseClient) => {
      */
     bulkUpdate: async (updates) => {
       try {
-        console.log('🏠 Properties: Bulk updating', updates.length, 'properties');
+        console.log('Bulk updating', updates.length, 'properties');
 
         const operations = updates.map(({ id, data }) =>
           service.update(id, data)
@@ -382,7 +662,7 @@ const createPropertiesService = (supabaseClient) => {
         const successful = results.filter(r => r.status === 'fulfilled' && r.value.success);
         const failed = results.filter(r => r.status === 'rejected' || !r.value?.success);
 
-        console.log(`✅ Properties: Bulk update complete - ${successful.length} success, ${failed.length} failed`);
+        console.log(`Properties: Bulk update complete - ${successful.length} success, ${failed.length} failed`);
         
         return {
           success: true,
@@ -396,7 +676,7 @@ const createPropertiesService = (supabaseClient) => {
         };
 
       } catch (err) {
-        console.error('💥 Properties: Bulk update exception:', err);
+        console.error('Properties: Bulk update exception:', err);
         return { success: false, data: null, error: { message: err.message } };
       }
     },
@@ -406,35 +686,46 @@ const createPropertiesService = (supabaseClient) => {
      */
     getByPriceRange: async (minPrice, maxPrice) => {
       try {
-        console.log('🏠 Properties: Fetching properties by price range:', { minPrice, maxPrice });
+        console.log('Fetching properties by price range:', { minPrice, maxPrice });
 
-        let query = supabaseClient
-          .from(tableName)
-          .select('*')
-          .eq('status', 'available');
+        const filters = {
+          minPrice: minPrice,
+          maxPrice: maxPrice
+        };
 
-        if (minPrice) {
-          query = query.gte('monthly_rent', minPrice);
-        }
-
-        if (maxPrice) {
-          query = query.lte('monthly_rent', maxPrice);
-        }
-
-        const { data, error } = await query
-          .order('monthly_rent', { ascending: true });
-
-        if (error) {
-          console.error('❌ Properties: GetByPriceRange failed:', error.message);
-          return { success: false, data: [], error };
-        }
-
-        console.log(`✅ Properties: Found ${data?.length || 0} properties in price range`);
-        return { success: true, data: data || [], error: null };
+        return await service.getAvailable(filters);
 
       } catch (err) {
-        console.error('💥 Properties: GetByPriceRange exception:', err);
+        console.error('Properties: GetByPriceRange exception:', err);
         return { success: false, data: [], error: { message: err.message } };
+      }
+    },
+
+    /**
+     * Toggle accepting applications status
+     */
+    toggleAcceptingApplications: async (id) => {
+      try {
+        console.log('Toggling accepting applications for property:', id);
+
+        // First get current status
+        const { data: currentProperty, error: fetchError } = await supabaseClient
+          .from(tableName)
+          .select('accepting_applications')
+          .eq('id', id)
+          .single();
+
+        if (fetchError) {
+          return { success: false, data: null, error: fetchError };
+        }
+
+        const newStatus = !currentProperty.accepting_applications;
+
+        return await service.update(id, { accepting_applications: newStatus });
+
+      } catch (err) {
+        console.error('Properties: ToggleAcceptingApplications exception:', err);
+        return { success: false, data: null, error: { message: err.message } };
       }
     }
   };

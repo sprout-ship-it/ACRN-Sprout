@@ -1,11 +1,8 @@
-// src/components/features/peer-support/PeerSupportHub.js - UPDATED WITH CSS MODULE
+// src/components/features/peer-support/PeerSupportHub.js - UPDATED FOR PHASE 6
 import React, { useState, useEffect } from 'react';
-import { useAuth } from '../../../context/AuthContext';
+import { useAuth } from '../../../hooks/useAuth';
 import { db } from '../../../utils/supabase';
 import LoadingSpinner from '../../ui/LoadingSpinner';
-
-// ✅ UPDATED: Import our new CSS foundation and component module
-import '../../../styles/main.css';
 import styles from './PeerSupportHub.module.css';
 
 const PeerSupportHub = ({ onBack }) => {
@@ -21,48 +18,92 @@ const PeerSupportHub = ({ onBack }) => {
 
   // Load clients and available connections on mount and when clients change
   useEffect(() => {
-    if (user?.id) {
+    if (profile?.id) {
       loadClients();
     }
-  }, [user?.id]);
+  }, [profile?.id]);
 
   // Load available connections when clients data changes
   useEffect(() => {
-    if (user?.id) {
+    if (profile?.id) {
       loadAvailableConnections();
     }
-  }, [user?.id, clients.length]); // Re-run when client count changes
+  }, [profile?.id, clients.length]); // Re-run when client count changes
 
   /**
    * Load existing PSS clients for this peer specialist
    */
   const loadClients = async () => {
+    if (!profile?.id) return;
+    
     setLoading(true);
     setError(null);
 
     try {
       console.log('🔄 Loading PSS clients...');
       
-      // Get PSS client relationships using the user ID directly
-      const result = await db.pssClients.getByPeerSpecialistId(user.id);
+      // Try to get PSS client relationships
+      let clientData = [];
       
-      if (result.error) {
-        throw new Error(result.error.message || 'Failed to load clients');
+      try {
+        // Check if PSS clients service exists
+        if (db.pssClients && typeof db.pssClients.getByPeerSpecialistId === 'function') {
+          const result = await db.pssClients.getByPeerSpecialistId(profile.id);
+          if (result.data && !result.error) {
+            clientData = result.data;
+          }
+        } else {
+          // Fallback: Get peer support connections from match_groups
+          console.log('🔄 Using fallback method via match_groups...');
+          const matchResult = await db.matchGroups.getByUserId(profile.id);
+          
+          if (matchResult.data && !matchResult.error) {
+            // Filter for peer support connections where current user is the peer specialist
+            const peerSupportConnections = matchResult.data.filter(match => 
+              match.peer_support_id === profile.id && 
+              match.status === 'active'
+            );
+            
+            // Convert match_groups to client format
+            clientData = peerSupportConnections.map(match => ({
+              id: `fallback_${match.id}`,
+              peer_specialist_id: profile.id,
+              client_id: match.applicant_1_id || match.applicant_2_id,
+              match_group_id: match.id,
+              status: 'active',
+              recovery_goals: [],
+              total_sessions: 0,
+              created_at: match.created_at,
+              updated_at: match.updated_at,
+              next_followup_date: null,
+              followup_frequency: 'weekly',
+              last_contact_date: null
+            }));
+          }
+        }
+      } catch (serviceError) {
+        console.warn('PSS clients service not available, using match_groups fallback:', serviceError);
+        // Continue with empty array - this is expected in Phase 6
       }
 
-      const clientData = result.data || [];
       console.log(`📊 Found ${clientData.length} PSS clients`);
 
-      // Enrich client data with applicant profile information
+      // Enrich client data with profile information
       const enrichedClients = await Promise.all(
         clientData.map(async (client) => {
           try {
-            // Client profile comes from the query
-            const clientProfile = client.client;
+            // Get client's registrant profile
+            const clientProfileResult = await db.profiles.getById(client.client_id);
+            const clientProfile = clientProfileResult.data;
 
-            // Get applicant form data for recovery details (primary substances, recovery stage, etc.)
-            const applicantResult = await db.applicantForms.getByUserId(client.client_id);
-            const applicantProfile = applicantResult.data;
+            // Get applicant matching profile for recovery details
+            let applicantProfile = null;
+            try {
+              const applicantResult = await db.matchingProfiles.getByUserId(client.client_id);
+              applicantProfile = applicantResult.data;
+            } catch (err) {
+              console.warn(`Could not load matching profile for client ${client.client_id}:`, err);
+            }
 
             return {
               ...client,
@@ -71,7 +112,7 @@ const PeerSupportHub = ({ onBack }) => {
               displayName: clientProfile?.first_name 
                 ? `${clientProfile.first_name} ${clientProfile.last_name?.charAt(0) || ''}.`
                 : 'Anonymous Client',
-              phone: applicantProfile?.phone || 'Not provided',
+              phone: applicantProfile?.primary_phone || 'Not provided',
               email: clientProfile?.email,
               primarySubstances: applicantProfile?.primary_substance ? [applicantProfile.primary_substance] : [],
               recoveryStage: applicantProfile?.recovery_stage || 'Not specified',
@@ -108,28 +149,25 @@ const PeerSupportHub = ({ onBack }) => {
    * Load available peer support connections that haven't been added as clients yet
    */
   const loadAvailableConnections = async () => {
+    if (!profile?.id) return;
+
     try {
       console.log('🔄 Loading available peer support connections...');
       
-      // Get forming peer support match groups where user is the peer specialist
-      const result = await db.matchGroups.getByUserId(user.id);
+      // Get match_groups where user is the peer specialist
+      const result = await db.matchGroups.getByUserId(profile.id);
       
       if (result.data && !result.error) {
         const peerSupportConnections = result.data.filter(match => 
-          match.peer_support_id === user.id && 
-          match.status === 'forming' &&
-          match.connection_type === 'peer_support'
+          match.peer_support_id === profile.id && 
+          (match.status === 'confirmed' || match.status === 'forming') // Ready to become clients
         );
 
-        console.log(`📊 Found ${peerSupportConnections.length} forming peer support connections`);
+        console.log(`📊 Found ${peerSupportConnections.length} potential peer support connections`);
 
-        // Get existing PSS client relationships directly from database
-        const existingClientsResult = await db.pssClients.getByPeerSpecialistId(user.id);
-        const existingClientIds = existingClientsResult.data 
-          ? existingClientsResult.data.map(client => client.client_id)
-          : [];
-
-        console.log(`📊 Found ${existingClientIds.length} existing PSS clients to filter out`);
+        // Get existing client IDs to filter out
+        const existingClientIds = clients.map(client => client.client_id);
+        console.log(`📊 Found ${existingClientIds.length} existing clients to filter out`);
 
         // Filter connections that aren't already clients
         const availableConnections = peerSupportConnections.filter(connection => {
@@ -137,24 +175,41 @@ const PeerSupportHub = ({ onBack }) => {
           return clientId && !existingClientIds.includes(clientId);
         });
 
-        console.log(`📊 Found ${availableConnections.length} available connections after filtering existing clients`);
+        console.log(`📊 Found ${availableConnections.length} available connections after filtering`);
 
         // Enrich with profile data
         const enrichedConnections = await Promise.all(
           availableConnections.map(async (connection) => {
             const clientId = connection.applicant_1_id || connection.applicant_2_id;
-            const profileResult = await db.profiles.getById(clientId);
-            const applicantResult = await db.applicantForms.getByUserId(clientId);
             
-            return {
-              ...connection,
-              client_id: clientId, // Use user ID directly
-              profile: profileResult.data,
-              applicantProfile: applicantResult.data,
-              displayName: profileResult.data?.first_name 
-                ? `${profileResult.data.first_name} ${profileResult.data.last_name?.charAt(0) || ''}.`
-                : 'Anonymous'
-            };
+            try {
+              const profileResult = await db.profiles.getById(clientId);
+              let applicantProfile = null;
+              
+              try {
+                const applicantResult = await db.matchingProfiles.getByUserId(clientId);
+                applicantProfile = applicantResult.data;
+              } catch (err) {
+                console.warn(`Could not load matching profile for potential client ${clientId}`);
+              }
+              
+              return {
+                ...connection,
+                client_id: clientId,
+                profile: profileResult.data,
+                applicantProfile: applicantProfile,
+                displayName: profileResult.data?.first_name 
+                  ? `${profileResult.data.first_name} ${profileResult.data.last_name?.charAt(0) || ''}.`
+                  : 'Anonymous'
+              };
+            } catch (err) {
+              console.warn(`Error enriching connection ${clientId}:`, err);
+              return {
+                ...connection,
+                client_id: clientId,
+                displayName: 'Unknown Connection'
+              };
+            }
           })
         );
 
@@ -171,35 +226,55 @@ const PeerSupportHub = ({ onBack }) => {
    * Add a connection as a new PSS client
    */
   const handleAddClient = async (connection) => {
+    if (!profile?.id) return;
+
     try {
       console.log('➕ Adding new PSS client:', connection.displayName);
 
-      const clientData = {
-        peer_specialist_id: user.id, // Use user ID directly
-        client_id: connection.client_id, // Use user ID directly
-        match_group_id: connection.id,
-        status: 'active',
-        next_followup_date: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString().split('T')[0], // 1 week from now
-        followup_frequency: 'weekly',
-        recovery_goals: [],
-        total_sessions: 0,
-        created_by: user.id
-      };
+      // Try to use PSS clients service if available
+      if (db.pssClients && typeof db.pssClients.create === 'function') {
+        const clientData = {
+          peer_specialist_id: profile.id,
+          client_id: connection.client_id,
+          match_group_id: connection.id,
+          status: 'active',
+          next_followup_date: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString().split('T')[0], // 1 week from now
+          followup_frequency: 'weekly',
+          recovery_goals: [],
+          total_sessions: 0,
+          created_by: profile.id
+        };
 
-      const result = await db.pssClients.create(clientData);
+        const result = await db.pssClients.create(clientData);
 
-      if (result.error) {
-        throw new Error(result.error.message || 'Failed to add client');
+        if (result.error) {
+          throw new Error(result.error.message || 'Failed to add client');
+        }
+
+        alert(`${connection.displayName} has been added as your client!`);
+      } else {
+        // Fallback: Update match_group status to indicate client relationship
+        console.log('🔄 Using fallback method to mark as client...');
+        
+        const result = await db.matchGroups.update(connection.id, {
+          status: 'active',
+          notes: 'Active PSS client relationship',
+          updated_at: new Date().toISOString()
+        });
+
+        if (result.error) {
+          throw new Error(result.error.message || 'Failed to update connection status');
+        }
+
+        alert(`${connection.displayName} has been marked as your client! Full client management features will be available when the PSS system is fully implemented.`);
       }
-
-      alert(`${connection.displayName} has been added as your client!`);
       
-      // Immediately remove from available connections
+      // Remove from available connections
       setAvailableConnections(prev => 
         prev.filter(conn => conn.id !== connection.id)
       );
       
-      // Refresh the client list to include the new client
+      // Refresh the client list
       loadClients();
 
     } catch (err) {
@@ -212,26 +287,35 @@ const PeerSupportHub = ({ onBack }) => {
    * Update client information
    */
   const handleUpdateClient = async (clientId, updates) => {
+    if (!profile?.id) return false;
+
     try {
       console.log('📝 Updating client:', clientId, updates);
 
-      const result = await db.pssClients.update(clientId, {
-        ...updates,
-        updated_at: new Date().toISOString()
-      });
+      // Try to use PSS clients service if available
+      if (db.pssClients && typeof db.pssClients.update === 'function') {
+        const result = await db.pssClients.update(clientId, {
+          ...updates,
+          updated_at: new Date().toISOString()
+        });
 
-      if (result.error) {
-        throw new Error(result.error.message || 'Failed to update client');
+        if (result.error) {
+          throw new Error(result.error.message || 'Failed to update client');
+        }
+
+        // Update local state
+        setClients(prev => prev.map(client => 
+          client.id === clientId 
+            ? { ...client, ...updates }
+            : client
+        ));
+
+        return true;
+      } else {
+        // Fallback: Show message that feature isn't fully available yet
+        alert('Client update features will be available when the PSS system is fully implemented.');
+        return false;
       }
-
-      // Update local state
-      setClients(prev => prev.map(client => 
-        client.id === clientId 
-          ? { ...client, ...updates }
-          : client
-      ));
-
-      return true;
     } catch (err) {
       console.error('💥 Error updating client:', err);
       alert(`Failed to update client: ${err.message}`);
@@ -322,7 +406,7 @@ const PeerSupportHub = ({ onBack }) => {
   };
 
   /**
-   * ✅ NEW: Get follow-up alert styling based on status
+   * Get follow-up alert styling based on status
    */
   const getFollowupAlertClass = (daysUntilFollowup) => {
     if (daysUntilFollowup === null) return styles.followupOnTrack;
@@ -341,7 +425,7 @@ const PeerSupportHub = ({ onBack }) => {
         </p>
       </div>
 
-      {/* ✅ UPDATED: Error State using CSS module */}
+      {/* Error State */}
       {error && (
         <div className={styles.errorContainer}>
           <div className="alert alert-error">
@@ -360,15 +444,32 @@ const PeerSupportHub = ({ onBack }) => {
         </div>
       )}
 
-      {/* ✅ UPDATED: Loading State using CSS module */}
+      {/* Loading State */}
       {loading && (
         <div className={styles.loadingContainer}>
-          <LoadingSpinner />
-          <div className={styles.loadingMessage}>Loading your clients...</div>
+          <LoadingSpinner size="large" text="Loading your clients..." />
         </div>
       )}
 
-      {/* ✅ UPDATED: Available Connections to Add using CSS module */}
+      {/* PSS System Status */}
+      {!loading && !error && (
+        <div className="card mb-4">
+          <div className={styles.systemStatus}>
+            <h3 className="card-title">System Status</h3>
+            {db.pssClients ? (
+              <div className="alert alert-success">
+                ✅ Full PSS client management system is active
+              </div>
+            ) : (
+              <div className="alert alert-info">
+                ℹ️ PSS client management is in development. Basic functionality available through match groups.
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* Available Connections to Add */}
       {!loading && availableConnections.length > 0 && (
         <div className={styles.availableConnectionsCard}>
           <h3 className="card-title">Available Connections</h3>
@@ -399,7 +500,7 @@ const PeerSupportHub = ({ onBack }) => {
         </div>
       )}
 
-      {/* ✅ UPDATED: Current Clients using CSS module */}
+      {/* Current Clients */}
       {!loading && clients.length > 0 && (
         <>
           <div className={styles.clientsHeader}>
@@ -423,7 +524,7 @@ const PeerSupportHub = ({ onBack }) => {
               
               return (
                 <div key={client.id} className={styles.clientCard}>
-                  {/* ✅ UPDATED: Client Header using CSS module */}
+                  {/* Client Header */}
                   <div className={styles.clientCardHeader}>
                     <div>
                       <div className={styles.clientName}>{client.displayName}</div>
@@ -443,7 +544,7 @@ const PeerSupportHub = ({ onBack }) => {
                     </div>
                   </div>
 
-                  {/* ✅ UPDATED: Client Info using CSS module */}
+                  {/* Client Info */}
                   <div className={styles.clientInfo}>
                     <div className={styles.clientInfoGrid}>
                       <div>
@@ -467,7 +568,7 @@ const PeerSupportHub = ({ onBack }) => {
                       </div>
                     </div>
 
-                    {/* ✅ UPDATED: Primary Substances using CSS module */}
+                    {/* Primary Substances */}
                     {client.primarySubstances?.length > 0 && (
                       <div className="mb-3">
                         <span className={styles.infoLabel}>Primary Substances:</span>
@@ -481,7 +582,7 @@ const PeerSupportHub = ({ onBack }) => {
                       </div>
                     )}
 
-                    {/* ✅ UPDATED: Follow-up Status using CSS module */}
+                    {/* Follow-up Status */}
                     {client.nextFollowup && (
                       <div className={`${styles.followupAlert} ${followupAlertClass}`}>
                         <strong>Next Follow-up:</strong> {new Date(client.nextFollowup).toLocaleDateString()}
@@ -494,7 +595,7 @@ const PeerSupportHub = ({ onBack }) => {
                       </div>
                     )}
 
-                    {/* ✅ UPDATED: Recovery Goals Preview using CSS module */}
+                    {/* Recovery Goals Preview */}
                     <div className={styles.goalsSection}>
                       <div className={styles.goalsHeader}>
                         🎯 Recovery Goals ({client.recoveryGoals?.length || 0}/5)
@@ -519,7 +620,7 @@ const PeerSupportHub = ({ onBack }) => {
                     </div>
                   </div>
 
-                  {/* ✅ UPDATED: Action Buttons using CSS module */}
+                  {/* Action Buttons */}
                   <div className={styles.clientActions}>
                     <button
                       className={`${styles.actionButton} ${styles.actionPrimary}`}
@@ -527,6 +628,7 @@ const PeerSupportHub = ({ onBack }) => {
                         setSelectedClient(client);
                         setActiveModal('goals');
                       }}
+                      disabled={!db.pssClients}
                     >
                       🎯 Manage Goals
                     </button>
@@ -537,6 +639,7 @@ const PeerSupportHub = ({ onBack }) => {
                         setEditingClient(client);
                         setActiveModal('edit');
                       }}
+                      disabled={!db.pssClients}
                     >
                       📝 Update Info
                     </button>
@@ -545,13 +648,13 @@ const PeerSupportHub = ({ onBack }) => {
                       className={`${styles.actionButton} ${styles.actionOutline}`}
                       onClick={() => {
                         const phoneUrl = client.phone ? `tel:${client.phone}` : '#';
-                        if (client.phone) {
+                        if (client.phone && client.phone !== 'Not provided') {
                           window.location.href = phoneUrl;
                         } else {
                           alert('No phone number available for this client');
                         }
                       }}
-                      disabled={!client.phone}
+                      disabled={!client.phone || client.phone === 'Not provided'}
                     >
                       📞 Call
                     </button>
@@ -578,7 +681,7 @@ const PeerSupportHub = ({ onBack }) => {
         </>
       )}
 
-      {/* ✅ UPDATED: No Clients State using CSS module */}
+      {/* No Clients State */}
       {!loading && clients.length === 0 && availableConnections.length === 0 && (
         <div className={styles.emptyState}>
           <div className={styles.emptyStateIcon}>👥</div>
@@ -608,7 +711,7 @@ const PeerSupportHub = ({ onBack }) => {
         </div>
       )}
 
-      {/* ✅ UPDATED: Goals Management Modal using CSS module */}
+      {/* Goals Management Modal */}
       {activeModal === 'goals' && selectedClient && (
         <div className="modal-overlay" onClick={() => setActiveModal(null)}>
           <div className={styles.modalContent} onClick={(e) => e.stopPropagation()}>
@@ -618,7 +721,7 @@ const PeerSupportHub = ({ onBack }) => {
             </div>
 
             <div className={styles.modalBody}>
-              {/* ✅ UPDATED: Current Goals using CSS module */}
+              {/* Current Goals */}
               <div className={styles.currentGoalsSection}>
                 <h4 className={styles.currentGoalsTitle}>Current Goals ({selectedClient.recoveryGoals?.length || 0}/5)</h4>
                 
@@ -660,7 +763,7 @@ const PeerSupportHub = ({ onBack }) => {
                 )}
               </div>
 
-              {/* ✅ UPDATED: Add New Goal using CSS module */}
+              {/* Add New Goal */}
               {(selectedClient.recoveryGoals?.length || 0) < 5 && (
                 <div className={styles.addGoalSection}>
                   <h4 className={styles.addGoalTitle}>Add New Goal</h4>
@@ -693,7 +796,7 @@ const PeerSupportHub = ({ onBack }) => {
         </div>
       )}
 
-      {/* ✅ UPDATED: Edit Client Modal using CSS module */}
+      {/* Edit Client Modal */}
       {activeModal === 'edit' && editingClient && (
         <div className="modal-overlay" onClick={() => setActiveModal(null)}>
           <div className={styles.modalContent} onClick={(e) => e.stopPropagation()}>

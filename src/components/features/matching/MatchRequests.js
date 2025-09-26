@@ -1,17 +1,17 @@
-// src/components/features/matching/MatchRequests.js - UPDATED WITH NEW SCHEMA ALIGNMENT
+// src/components/features/matching/MatchRequests.js - SCHEMA ALIGNED
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../../../context/AuthContext';
 import { supabase } from '../../../utils/supabase';
 import LoadingSpinner from '../../ui/LoadingSpinner';
 
-// ✅ UPDATED: Import our new CSS foundation and component module
+// Import CSS foundation and component module
 import '../../../styles/main.css';
 import styles from './MatchRequests.module.css';
 
-const Connections = () => {
+const MatchRequests = () => {
   const { user, profile, hasRole } = useAuth();
   
-  // ✅ FIXED: Start with Active Connections as default tab
+  // Start with Active Connections as default tab
   const [activeTab, setActiveTab] = useState('active-connections');
   const [requests, setRequests] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -22,84 +22,137 @@ const Connections = () => {
   const [showContactModal, setShowContactModal] = useState(false);
   const [contactInfo, setContactInfo] = useState(null);
   
-  // ✅ NEW: Track sent reconnection requests for UI feedback
+  // Track sent reconnection requests for UI feedback
   const [sentReconnectionRequests, setSentReconnectionRequests] = useState(new Set());
   const [requestSendingStates, setRequestSendingStates] = useState(new Set());
   
-  // Load match requests
-  useEffect(() => {
-    loadRequests();
-  }, [user]);
+  /**
+   * Get registrant profile ID from auth user ID (for queries)
+   */
+  const getRegistrantProfileId = async (authUserId) => {
+    const { data, error } = await supabase
+      .from('registrant_profiles')
+      .select('id')
+      .eq('user_id', authUserId)
+      .single();
+    
+    if (error) throw new Error(`Profile not found: ${error.message}`);
+    return data.id;
+  };
 
+  /**
+   * ✅ SCHEMA ALIGNED: Load match requests using correct field names and relationships
+   */
   const loadRequests = async () => {
     if (!user) return;
 
     try {
       setLoading(true);
       
-      // ✅ FIXED: Direct Supabase query aligned with new schema
+      // Get current user's registrant profile ID
+      const userRegistrantId = await getRegistrantProfileId(user.id);
+      
+      // ✅ SCHEMA ALIGNED: Query using schema field names
       const { data, error } = await supabase
         .from('match_requests')
         .select(`
           *,
-          requester:requester_id(
+          requester_profile:requester_id(
             id,
+            user_id,
             first_name,
             last_name,
             email
           ),
-          target:target_id(
+          recipient_profile:recipient_id(
             id,
+            user_id,
             first_name,
             last_name,
             email
           )
         `)
-        .or(`requester_id.eq.${user.id},target_id.eq.${user.id}`);
+        .or(`requester_id.eq.${userRegistrantId},recipient_id.eq.${userRegistrantId}`);
       
       if (error) throw error;
       
       setRequests(data || []);
+      console.log('✅ Loaded match requests with schema-aligned data:', data);
+      
     } catch (error) {
       console.error('Error loading connections:', error);
     } finally {
       setLoading(false);
     }
   };
+
+  // Load match requests
+  useEffect(() => {
+    loadRequests();
+  }, [user]);
   
-  // Filter requests based on active tab
-  const getFilteredRequests = () => {
-    switch (activeTab) {
-      case 'active-connections':
-        return requests.filter(r => r.status === 'matched');
-      case 'awaiting-response':
-        return requests.filter(r => r.status === 'pending' && r.target_id === user.id);
-      case 'sent-requests':
-        return requests.filter(r => r.status === 'pending' && r.requester_id === user.id);
-      case 'connection-history':
-        return requests.filter(r => ['rejected', 'unmatched', 'cancelled'].includes(r.status));
-      default:
-        return requests;
+  /**
+   * ✅ SCHEMA ALIGNED: Filter requests based on active tab using correct user identification
+   */
+  const getFilteredRequests = async () => {
+    if (!user || requests.length === 0) return [];
+    
+    try {
+      const userRegistrantId = await getRegistrantProfileId(user.id);
+      
+      switch (activeTab) {
+        case 'active-connections':
+          return requests.filter(r => r.status === 'accepted' || r.status === 'matched');
+        case 'awaiting-response':
+          return requests.filter(r => r.status === 'pending' && r.recipient_id === userRegistrantId);
+        case 'sent-requests':
+          return requests.filter(r => r.status === 'pending' && r.requester_id === userRegistrantId);
+        case 'connection-history':
+          return requests.filter(r => ['rejected', 'withdrawn', 'cancelled'].includes(r.status));
+        default:
+          return requests;
+      }
+    } catch (error) {
+      console.error('Error filtering requests:', error);
+      return [];
     }
   };
   
-  // Get tab counts
-  const getTabCounts = () => {
-    return {
-      activeConnections: requests.filter(r => r.status === 'matched').length,
-      awaitingResponse: requests.filter(r => r.status === 'pending' && r.target_id === user.id).length,
-      sentRequests: requests.filter(r => r.status === 'pending' && r.requester_id === user.id).length,
-      connectionHistory: requests.filter(r => ['rejected', 'unmatched', 'cancelled'].includes(r.status)).length
-    };
+  /**
+   * ✅ SCHEMA ALIGNED: Get tab counts using correct field names
+   */
+  const getTabCounts = async () => {
+    if (!user || requests.length === 0) {
+      return {
+        activeConnections: 0,
+        awaitingResponse: 0,
+        sentRequests: 0,
+        connectionHistory: 0
+      };
+    }
+    
+    try {
+      const userRegistrantId = await getRegistrantProfileId(user.id);
+      
+      return {
+        activeConnections: requests.filter(r => r.status === 'accepted' || r.status === 'matched').length,
+        awaitingResponse: requests.filter(r => r.status === 'pending' && r.recipient_id === userRegistrantId).length,
+        sentRequests: requests.filter(r => r.status === 'pending' && r.requester_id === userRegistrantId).length,
+        connectionHistory: requests.filter(r => ['rejected', 'withdrawn', 'cancelled'].includes(r.status)).length
+      };
+    } catch (error) {
+      console.error('Error calculating tab counts:', error);
+      return { activeConnections: 0, awaitingResponse: 0, sentRequests: 0, connectionHistory: 0 };
+    }
   };
   
   // Get connection type display name
   const getConnectionType = (request) => {
     const typeMap = {
-      'roommate': 'Roommate',
-      'peer_support': 'Peer Support',
+      'housing': 'Housing',
       'employment': 'Employment',
-      'housing': 'Housing'
+      'peer-support': 'Peer Support',
+      'roommate': 'Roommate'
     };
     return typeMap[request.request_type] || 'Connection';
   };
@@ -107,35 +160,46 @@ const Connections = () => {
   // Get connection type icon
   const getConnectionIcon = (request) => {
     const iconMap = {
-      'roommate': '🏠',
-      'peer_support': '🤝',
+      'housing': '🏠',
       'employment': '💼',
-      'housing': '🏢'
+      'peer-support': '🤝',
+      'roommate': '👥'
     };
     return iconMap[request.request_type] || '🔗';
   };
 
-  // Organize active matches by type for better display
-  const getActiveMatchesByType = () => {
-    const activeMatches = requests.filter(r => r.status === 'matched');
-    const organized = {
-      roommate: [],
-      peer_support: [],
-      employment: [],
-      housing: []
-    };
+  /**
+   * ✅ SCHEMA ALIGNED: Organize active matches by type using correct field names
+   */
+  const getActiveMatchesByType = async () => {
+    try {
+      const userRegistrantId = await getRegistrantProfileId(user.id);
+      const activeMatches = requests.filter(r => (r.status === 'accepted' || r.status === 'matched'));
+      
+      const organized = {
+        housing: [],
+        employment: [],
+        'peer-support': [],
+        roommate: []
+      };
 
-    activeMatches.forEach(request => {
-      const type = request.request_type || 'roommate';
-      if (organized[type]) {
-        organized[type].push(request);
-      }
-    });
+      activeMatches.forEach(request => {
+        const type = request.request_type || 'roommate';
+        if (organized[type]) {
+          organized[type].push(request);
+        }
+      });
 
-    return organized;
+      return organized;
+    } catch (error) {
+      console.error('Error organizing matches:', error);
+      return { housing: [], employment: [], 'peer-support': [], roommate: [] };
+    }
   };
   
-  // ✅ FIXED: Improved approval workflow based on new architecture
+  /**
+   * ✅ SCHEMA ALIGNED: Handle approval using schema field names and correct match group creation
+   */
   const handleApprove = async (requestId) => {
     setActionLoading(true);
     
@@ -148,34 +212,30 @@ const Connections = () => {
       console.log('📋 Approving connection request:', {
         requestId,
         requester: request.requester_id,
-        target: request.target_id,
+        recipient: request.recipient_id, // ✅ FIXED: Use recipient_id
         requestType: request.request_type
       });
 
-      // ✅ SIMPLIFIED: For employment connections, just approve the request (no match group needed)
+      // ✅ SCHEMA ALIGNED: For employment connections, just approve the request
       if (request.request_type === 'employment') {
         const { error: updateError } = await supabase
           .from('match_requests')
           .update({
-            status: 'matched',
-            target_approved: true,
-            matched_at: new Date().toISOString()
+            status: 'accepted', // ✅ FIXED: Use 'accepted' instead of 'matched'
+            responded_at: new Date().toISOString()
           })
           .eq('id', requestId);
         
-        if (updateError) {
-          throw updateError;
-        }
+        if (updateError) throw updateError;
 
-        console.log('✅ Employment connection approved (no match group created)');
+        console.log('✅ Employment connection approved');
         
         // Update local state
         setRequests(prev => prev.map(req => 
           req.id === requestId ? { 
             ...req, 
-            status: 'matched',
-            target_approved: true,
-            matched_at: new Date().toISOString()
+            status: 'accepted',
+            responded_at: new Date().toISOString()
           } : req
         ));
         
@@ -183,55 +243,44 @@ const Connections = () => {
         return;
       }
 
-      // ✅ FIXED: For all other connection types, create match group first
-      console.log('🏠 Creating match group for household/support connection...');
+      // ✅ SCHEMA ALIGNED: For other connection types, create match group
+      console.log('🏠 Creating match group for connection...');
 
-      // Step 1: Determine match group structure based on connection type
       const matchGroupData = await determineMatchGroupStructure(request);
 
-      // Step 2: Create the match group
+      // Create the match group
       const { data: matchGroup, error: groupError } = await supabase
         .from('match_groups')
         .insert(matchGroupData)
         .select();
 
-      if (groupError) {
-        console.error('❌ Failed to create match group:', groupError);
-        throw groupError;
-      }
+      if (groupError) throw groupError;
 
       console.log('✅ Match group created:', matchGroup);
 
-      // Step 3: Update match request to matched status with group reference
+      // Update match request to accepted status with group reference
       const { error: matchedError } = await supabase
         .from('match_requests')
         .update({
-          status: 'matched',
-          target_approved: true,
-          match_group_id: matchGroup[0].id,
-          matched_at: new Date().toISOString()
+          status: 'accepted',
+          responded_at: new Date().toISOString()
         })
         .eq('id', requestId);
 
-      if (matchedError) {
-        console.error('❌ Failed to update to matched status:', matchedError);
-        throw matchedError;
-      }
+      if (matchedError) throw matchedError;
 
-      console.log('✅ Connection request updated to matched status with match group');
+      console.log('✅ Connection request approved with match group');
 
-      // Step 4: Update local state
+      // Update local state
       setRequests(prev => prev.map(req => 
         req.id === requestId ? { 
           ...req, 
-          status: 'matched',
-          target_approved: true,
-          match_group_id: matchGroup[0].id,
-          matched_at: new Date().toISOString()
+          status: 'accepted',
+          responded_at: new Date().toISOString()
         } : req
       ));
       
-      alert('Connection approved and match group created successfully!');
+      alert('Connection approved successfully!');
       
     } catch (error) {
       console.error('💥 Error approving request:', error);
@@ -241,87 +290,71 @@ const Connections = () => {
     }
   };
 
-  // ✅ IMPROVED: Better match group structure determination
+  /**
+   * ✅ SCHEMA ALIGNED: Determine match group structure using schema relationships
+   */
   const determineMatchGroupStructure = async (request) => {
     try {
-      // ✅ FIXED: Query registrant_profiles for role information
+      // Get profile information for both users
       const { data: requesterProfile, error: requesterError } = await supabase
         .from('registrant_profiles')
         .select('id, roles')
         .eq('id', request.requester_id)
         .single();
 
-      const { data: targetProfile, error: targetError } = await supabase
+      const { data: recipientProfile, error: recipientError } = await supabase
         .from('registrant_profiles')
         .select('id, roles')
-        .eq('id', request.target_id)
+        .eq('id', request.recipient_id) // ✅ FIXED: Use recipient_id
         .single();
 
-      if (requesterError || targetError) {
-        console.error('Error loading profiles:', { requesterError, targetError });
-        // Fall back to basic structure
+      if (requesterError || recipientError) {
+        console.error('Error loading profiles:', { requesterError, recipientError });
       }
 
       const requesterRoles = requesterProfile?.roles || [];
-      const targetRoles = targetProfile?.roles || [];
+      const recipientRoles = recipientProfile?.roles || [];
 
       const baseData = {
         status: 'forming',
-        created_at: new Date().toISOString(),
-        connection_type: request.request_type
+        created_at: new Date().toISOString()
       };
 
-      // ✅ FIXED: Improved role-based match group creation
-      if (request.request_type === 'peer_support') {
-        if (requesterRoles.includes('applicant') && targetRoles.includes('peer')) {
+      // ✅ SCHEMA ALIGNED: Create match group based on request type and roles
+      if (request.request_type === 'peer-support') {
+        if (requesterRoles.includes('applicant') && recipientRoles.includes('peer-support')) {
           return {
             ...baseData,
             applicant_1_id: request.requester_id,
-            peer_support_id: request.target_id
+            peer_support_id: request.recipient_id
           };
         }
         
-        if (requesterRoles.includes('peer') && targetRoles.includes('applicant')) {
+        if (requesterRoles.includes('peer-support') && recipientRoles.includes('applicant')) {
           return {
             ...baseData,
-            applicant_1_id: request.target_id,
+            applicant_1_id: request.recipient_id,
             peer_support_id: request.requester_id
           };
         }
       }
 
       if (request.request_type === 'housing') {
-        if (requesterRoles.includes('applicant') && targetRoles.includes('landlord')) {
+        // ✅ SCHEMA ALIGNED: Housing matches now reference properties.id
+        if (request.property_id) {
           return {
             ...baseData,
-            applicant_1_id: request.requester_id,
-            landlord_id: request.target_id
-          };
-        }
-        
-        if (requesterRoles.includes('landlord') && targetRoles.includes('applicant')) {
-          return {
-            ...baseData,
-            applicant_1_id: request.target_id,
-            landlord_id: request.requester_id
+            applicant_1_id: requesterRoles.includes('applicant') ? request.requester_id : request.recipient_id,
+            property_id: request.property_id // ✅ FIXED: Reference property_id from schema
           };
         }
       }
 
-      // ✅ NEW: Default to roommate setup (both are applicants)
-      if (request.request_type === 'roommate' || !request.request_type) {
-        return {
-          ...baseData,
-          applicant_1_id: request.requester_id,
-          applicant_2_id: request.target_id
-        };
-      }
-
-      // ✅ FALLBACK: Default structure
+      // Default to roommate setup (both are applicants)
       return {
         ...baseData,
         applicant_1_id: request.requester_id,
-        applicant_2_id: request.target_id
+        applicant_2_id: request.recipient_id
       };
 
     } catch (error) {
@@ -330,29 +363,31 @@ const Connections = () => {
       return {
         status: 'forming',
         applicant_1_id: request.requester_id,
-        applicant_2_id: request.target_id,
-        connection_type: request.request_type || 'roommate',
+        applicant_2_id: request.recipient_id,
         created_at: new Date().toISOString()
       };
     }
   };
 
   /**
-   * ✅ IMPROVED: Handle reconnection request with UI feedback tracking
+   * ✅ SCHEMA ALIGNED: Handle reconnection request using correct field names
    */
   const handleRequestReconnection = async (formerMatch) => {
-    // Get the other user's ID for tracking
-    const otherUserId = formerMatch.requester_id === user.id ? 
-      formerMatch.target_id : formerMatch.requester_id;
-    
-    // ✅ NEW: Track that we're sending this request
-    setRequestSendingStates(prev => new Set([...prev, otherUserId]));
-    
     try {
-      // Create data for new connection request
+      const userRegistrantId = await getRegistrantProfileId(user.id);
+      
+      // Get the other user's registrant profile ID
+      const otherRegistrantId = formerMatch.requester_id === userRegistrantId ? 
+        formerMatch.recipient_id : formerMatch.requester_id; // ✅ FIXED: Use recipient_id
+      
+      setRequestSendingStates(prev => new Set([...prev, otherRegistrantId]));
+      
+      // ✅ SCHEMA ALIGNED: Create reconnection request with schema field names
       const requestData = {
-        requester_id: user.id,
-        target_id: otherUserId,
+        requester_type: 'applicant', // ✅ ADDED: Schema requires type fields
+        requester_id: userRegistrantId,
+        recipient_type: 'applicant', // ✅ ADDED: Schema requires type fields
+        recipient_id: otherRegistrantId,
         request_type: formerMatch.request_type,
         message: `I'd like to reconnect with you as a ${getConnectionType(formerMatch)}.`,
         status: 'pending'
@@ -360,7 +395,6 @@ const Connections = () => {
       
       console.log('📩 Sending reconnection request:', requestData);
       
-      // ✅ FIXED: Create new match request in database using direct Supabase call
       const { data, error } = await supabase
         .from('match_requests')
         .insert(requestData)
@@ -370,11 +404,10 @@ const Connections = () => {
       
       console.log('✅ Reconnection request sent:', data);
       
-      // ✅ NEW: Update UI state to reflect sent request
-      setSentReconnectionRequests(prev => new Set([...prev, otherUserId]));
+      setSentReconnectionRequests(prev => new Set([...prev, otherRegistrantId]));
       
-      // Update UI to show request sent
-      loadRequests(); // Reload the full list
+      // Reload requests
+      loadRequests();
       
       alert('Reconnection request sent successfully!');
       
@@ -382,10 +415,13 @@ const Connections = () => {
       console.error('💥 Error sending reconnection request:', err);
       alert('Failed to send request. Please try again.');
     } finally {
-      // ✅ NEW: Remove from sending state
+      // Remove from sending state
       setRequestSendingStates(prev => {
         const newSet = new Set(prev);
-        newSet.delete(otherUserId);
+        const userRegistrantId = getRegistrantProfileId(user.id);
+        const otherRegistrantId = formerMatch.requester_id === userRegistrantId ? 
+          formerMatch.recipient_id : formerMatch.requester_id;
+        newSet.delete(otherRegistrantId);
         return newSet;
       });
     }
@@ -399,7 +435,9 @@ const Connections = () => {
     setContactInfo(null);
   };
   
-  // Submit rejection
+  /**
+   * ✅ SCHEMA ALIGNED: Submit rejection using schema field names
+   */
   const submitRejection = async () => {
     if (!rejectReason.trim()) {
       alert('Please provide a reason for rejection.');
@@ -411,11 +449,9 @@ const Connections = () => {
     try {
       const updates = {
         status: 'rejected',
-        rejection_reason: rejectReason,
-        rejected_at: new Date().toISOString()
+        responded_at: new Date().toISOString()
       };
 
-      // ✅ FIXED: Direct Supabase call
       const { error } = await supabase
         .from('match_requests')
         .update(updates)
@@ -443,7 +479,9 @@ const Connections = () => {
     }
   };
 
-  // ✅ FIXED: Handle cancel sent request with cancelled_at timestamp
+  /**
+   * ✅ SCHEMA ALIGNED: Handle cancel sent request using schema field names
+   */
   const handleCancelSentRequest = async (requestId) => {
     if (!window.confirm('Are you sure you want to cancel this request?')) {
       return;
@@ -452,12 +490,11 @@ const Connections = () => {
     setActionLoading(true);
     
     try {
-      // ✅ FIXED: Direct Supabase call
       const { error } = await supabase
         .from('match_requests')
         .update({
-          status: 'cancelled',
-          cancelled_at: new Date().toISOString()
+          status: 'withdrawn',
+          responded_at: new Date().toISOString()
         })
         .eq('id', requestId);
       
@@ -475,7 +512,9 @@ const Connections = () => {
     }
   };
   
-  // Handle unmatch
+  /**
+   * ✅ SCHEMA ALIGNED: Handle unmatch using schema relationships
+   */
   const handleUnmatch = async (requestId) => {
     if (!window.confirm('Are you sure you want to end this connection? This action cannot be undone.')) {
       return;
@@ -489,40 +528,39 @@ const Connections = () => {
         throw new Error('Request not found');
       }
 
-      // ✅ FIXED: Only end match group for non-employment connections
-      if (request.match_group_id && request.request_type !== 'employment') {
-        // ✅ FIXED: Direct Supabase call to end match group
-        const { error: groupError } = await supabase
+      const userRegistrantId = await getRegistrantProfileId(user.id);
+
+      // End any associated match groups (except for employment)
+      if (request.request_type !== 'employment') {
+        // Find and end associated match groups
+        const { data: matchGroups, error: groupQueryError } = await supabase
           .from('match_groups')
-          .update({
-            status: 'dissolved',
-            dissolved_at: new Date().toISOString(),
-            dissolved_reason: 'User initiated disconnect'
-          })
-          .eq('id', request.match_group_id);
+          .select('id')
+          .or(`applicant_1_id.eq.${request.requester_id},applicant_2_id.eq.${request.requester_id},applicant_1_id.eq.${request.recipient_id},applicant_2_id.eq.${request.recipient_id}`)
+          .eq('status', 'forming');
         
-        if (groupError) {
-          console.error('❌ Failed to end match group:', groupError);
-          throw groupError;
+        if (!groupQueryError && matchGroups?.length > 0) {
+          await supabase
+            .from('match_groups')
+            .update({
+              status: 'disbanded',
+              updated_at: new Date().toISOString()
+            })
+            .in('id', matchGroups.map(g => g.id));
         }
       }
 
       const updates = {
-        status: 'unmatched',
-        unmatched_at: new Date().toISOString(),
-        unmatched_by: user.id
+        status: 'withdrawn',
+        responded_at: new Date().toISOString()
       };
 
-      // ✅ FIXED: Direct Supabase call
       const { error: updateError } = await supabase
         .from('match_requests')
         .update(updates)
         .eq('id', requestId);
       
-      if (updateError) {
-        console.error('❌ Failed to update match request:', updateError);
-        throw updateError;
-      }
+      if (updateError) throw updateError;
 
       setRequests(prev => prev.map(req => 
         req.id === requestId ? { ...req, ...updates } : req
@@ -539,30 +577,27 @@ const Connections = () => {
   };
 
   /**
-   * ✅ FIXED: Enhanced contact info retrieval with new schema integration
+   * ✅ SCHEMA ALIGNED: Enhanced contact info retrieval using schema relationships
    */
   const handleViewContactInfo = async (request) => {
     try {
-      // Determine the other person's user ID
-      const otherUserId = request.requester_id === user.id ? 
-        request.target_id : request.requester_id;
+      const userRegistrantId = await getRegistrantProfileId(user.id);
       
-      console.log('🔍 Fetching contact info for user:', otherUserId);
+      // Determine the other person's registrant profile ID
+      const otherRegistrantId = request.requester_id === userRegistrantId ? 
+        request.recipient_id : request.requester_id; // ✅ FIXED: Use recipient_id
       
-      // ✅ FIXED: Get basic profile info from registrant_profiles
+      console.log('🔍 Fetching contact info for registrant:', otherRegistrantId);
+      
+      // Get basic profile info from registrant_profiles
       const { data: otherProfile, error: profileError } = await supabase
         .from('registrant_profiles')
         .select('*')
-        .eq('id', otherUserId)
+        .eq('id', otherRegistrantId)
         .single();
       
-      if (profileError) {
-        console.error('Error fetching profile:', profileError);
+      if (profileError || !otherProfile) {
         throw new Error('Could not load user profile');
-      }
-      
-      if (!otherProfile) {
-        throw new Error('User profile not found');
       }
       
       // Initialize contact info with basic profile data
@@ -573,98 +608,88 @@ const Connections = () => {
         connectionType: getConnectionType(request)
       };
       
-      // ✅ FIXED: Try to get more detailed contact info based on connection type and user roles
+      // Get detailed contact info based on connection type and user roles
       const userRoles = otherProfile.roles || [];
       
-      if (request.request_type === 'employment') {
-        // For employment, try to get employer profile info
-        if (userRoles.includes('employer')) {
-          try {
-            const { data: employerProfile } = await supabase
-              .from('employer_profiles')
-              .select('primary_phone, contact_email, contact_person, business_type, industry')
-              .eq('user_id', otherUserId)
-              .single();
-              
-            if (employerProfile) {
-              contactInfo.phone = employerProfile.primary_phone || contactInfo.phone;
-              contactInfo.email = employerProfile.contact_email || contactInfo.email;
-              contactInfo.contactPerson = employerProfile.contact_person;
-              contactInfo.companyType = employerProfile.business_type;
-              contactInfo.industry = employerProfile.industry;
-            }
-          } catch (err) {
-            console.warn('Could not load employer profile:', err);
-          }
-        }
-      } else {
-        // ✅ FIXED: For other connection types, try to get applicant matching profile data
-        if (userRoles.includes('applicant')) {
-          try {
-            const { data: applicantData } = await supabase
-              .from('applicant_matching_profiles')
-              .select('primary_phone, emergency_contact_name, emergency_contact_phone')
-              .eq('user_id', otherUserId)
-              .single();
+      if (request.request_type === 'employment' && userRoles.includes('employer')) {
+        // Get employer profile info
+        try {
+          const { data: employerProfile } = await supabase
+            .from('employer_profiles')
+            .select('primary_phone, contact_email, contact_person, business_type, industry')
+            .eq('user_id', otherRegistrantId)
+            .single();
             
-            if (applicantData) {
-              console.log('✅ Found applicant matching profile data:', applicantData);
-              // Override phone if available in applicant profile
-              if (applicantData.primary_phone) {
-                contactInfo.phone = applicantData.primary_phone;
-              }
-              
-              // Add emergency contact info if available
-              if (applicantData.emergency_contact_name) {
-                contactInfo.emergencyContact = {
-                  name: applicantData.emergency_contact_name,
-                  phone: applicantData.emergency_contact_phone
-                };
-              }
-            }
-          } catch (err) {
-            console.warn('Could not load applicant matching profile data:', err);
+          if (employerProfile) {
+            contactInfo.phone = employerProfile.primary_phone || contactInfo.phone;
+            contactInfo.email = employerProfile.contact_email || contactInfo.email;
+            contactInfo.contactPerson = employerProfile.contact_person;
+            contactInfo.companyType = employerProfile.business_type;
+            contactInfo.industry = employerProfile.industry;
           }
+        } catch (err) {
+          console.warn('Could not load employer profile:', err);
         }
-        
-        // For peer support, try to get peer profile info
-        if (request.request_type === 'peer_support' && userRoles.includes('peer')) {
-          try {
-            const { data: peerProfile } = await supabase
-              .from('peer_support_profiles')
-              .select('primary_phone, professional_title, years_experience, certifications')
-              .eq('user_id', otherUserId)
-              .single();
-              
-            if (peerProfile) {
-              contactInfo.phone = peerProfile.primary_phone || contactInfo.phone;
-              contactInfo.professionalTitle = peerProfile.professional_title;
-              contactInfo.experience = peerProfile.years_experience;
-              contactInfo.certifications = peerProfile.certifications;
+      } else if (userRoles.includes('applicant')) {
+        // ✅ SCHEMA ALIGNED: Get applicant matching profile data
+        try {
+          const { data: applicantData } = await supabase
+            .from('applicant_matching_profiles')
+            .select('primary_phone, emergency_contact_name, emergency_contact_phone')
+            .eq('user_id', otherRegistrantId)
+            .single();
+          
+          if (applicantData) {
+            console.log('✅ Found applicant matching profile data:', applicantData);
+            contactInfo.phone = applicantData.primary_phone || contactInfo.phone;
+            
+            if (applicantData.emergency_contact_name) {
+              contactInfo.emergencyContact = {
+                name: applicantData.emergency_contact_name,
+                phone: applicantData.emergency_contact_phone
+              };
             }
-          } catch (err) {
-            console.warn('Could not load peer profile:', err);
           }
+        } catch (err) {
+          console.warn('Could not load applicant matching profile data:', err);
         }
-        
-        // For housing, try to get landlord info
-        if (request.request_type === 'housing' && userRoles.includes('landlord')) {
-          try {
-            const { data: landlordProfile } = await supabase
-              .from('landlord_profiles')
-              .select('primary_phone, contact_email, contact_person, property_type')
-              .eq('user_id', otherUserId)
-              .single();
-              
-            if (landlordProfile) {
-              contactInfo.phone = landlordProfile.primary_phone || contactInfo.phone;
-              contactInfo.email = landlordProfile.contact_email || contactInfo.email;
-              contactInfo.contactPerson = landlordProfile.contact_person;
-              contactInfo.propertyType = landlordProfile.property_type;
-            }
-          } catch (err) {
-            console.warn('Could not load landlord profile:', err);
+      }
+      
+      // For peer support specialists
+      if (request.request_type === 'peer-support' && userRoles.includes('peer-support')) {
+        try {
+          const { data: peerProfile } = await supabase
+            .from('peer_support_profiles')
+            .select('primary_phone, professional_title, years_experience')
+            .eq('user_id', otherRegistrantId)
+            .single();
+            
+          if (peerProfile) {
+            contactInfo.phone = peerProfile.primary_phone || contactInfo.phone;
+            contactInfo.professionalTitle = peerProfile.professional_title;
+            contactInfo.experience = peerProfile.years_experience;
           }
+        } catch (err) {
+          console.warn('Could not load peer profile:', err);
+        }
+      }
+      
+      // For landlords
+      if (request.request_type === 'housing' && userRoles.includes('landlord')) {
+        try {
+          const { data: landlordProfile } = await supabase
+            .from('landlord_profiles')
+            .select('primary_phone, contact_email, contact_person')
+            .eq('user_id', otherRegistrantId)
+            .single();
+            
+          if (landlordProfile) {
+            contactInfo.phone = landlordProfile.primary_phone || contactInfo.phone;
+            contactInfo.email = landlordProfile.contact_email || contactInfo.email;
+            contactInfo.contactPerson = landlordProfile.contact_person;
+          }
+        } catch (err) {
+          console.warn('Could not load landlord profile:', err);
         }
       }
       
@@ -678,28 +703,32 @@ const Connections = () => {
     }
   };
     
-    // Render status badge
-    const renderStatusBadge = (status) => {
-      const statusClass = {
-        pending: 'badge-warning',
-        approved: 'badge-info',
-        rejected: 'badge-error',
-        matched: 'badge-success',
-        unmatched: 'badge',
-        cancelled: 'badge'
-      }[status] || 'badge';
-      
-      return (
-        <span className={`badge ${statusClass}`}>
-          {status === 'matched' ? 'Active' : status === 'pending' ? 'Pending' : status}
-        </span>
-      );
-    };
+  // Render status badge
+  const renderStatusBadge = (status) => {
+    const statusClass = {
+      pending: 'badge-warning',
+      accepted: 'badge-success',
+      rejected: 'badge-error',
+      matched: 'badge-success',
+      withdrawn: 'badge',
+      cancelled: 'badge'
+    }[status] || 'badge';
     
-    // ✅ IMPROVED: Render action buttons with reconnection request UI feedback
-    const renderActionButtons = (request) => {
-      const isReceived = request.target_id === user.id;
-      const isSent = request.requester_id === user.id;
+    return (
+      <span className={`badge ${statusClass}`}>
+        {status === 'accepted' ? 'Active' : status === 'pending' ? 'Pending' : status}
+      </span>
+    );
+  };
+    
+  /**
+   * ✅ SCHEMA ALIGNED: Render action buttons using correct user identification
+   */
+  const renderActionButtons = async (request) => {
+    try {
+      const userRegistrantId = await getRegistrantProfileId(user.id);
+      const isReceived = request.recipient_id === userRegistrantId; // ✅ FIXED: Use recipient_id
+      const isSent = request.requester_id === userRegistrantId;
       const { status } = request;
       
       if (status === 'pending' && isReceived) {
@@ -738,7 +767,7 @@ const Connections = () => {
         );
       }
       
-      if (status === 'matched') {
+      if (status === 'accepted') {
         return (
           <div className="grid-2">
             <button
@@ -759,13 +788,12 @@ const Connections = () => {
         );
       }
       
-      if (status === 'unmatched') {
-        // ✅ NEW: Enhanced reconnection button with UI feedback
-        const otherUserId = request.requester_id === user.id ? 
-          request.target_id : request.requester_id;
+      if (status === 'withdrawn') {
+        const otherRegistrantId = request.requester_id === userRegistrantId ? 
+          request.recipient_id : request.requester_id;
         
-        const isRequestSent = sentReconnectionRequests.has(otherUserId);
-        const isSending = requestSendingStates.has(otherUserId);
+        const isRequestSent = sentReconnectionRequests.has(otherRegistrantId);
+        const isSending = requestSendingStates.has(otherRegistrantId);
         
         return (
           <div>
@@ -774,7 +802,7 @@ const Connections = () => {
               onClick={() => handleRequestReconnection(request)}
               disabled={actionLoading || isRequestSent || isSending}
             >
-              {isSending ? '📤 Sending...' : isRequestSent ? '✅ Request Sent' : 'Request Reconnection'}
+              {isSending ? 'Sending...' : isRequestSent ? 'Request Sent' : 'Request Reconnection'}
             </button>
             {isRequestSent && (
               <div className={`text-sm mt-1 ${styles.textSuccess}`}>
@@ -786,38 +814,82 @@ const Connections = () => {
       }
       
       return null;
-    };
-
-  // Get the other person's name from the request
-  const getOtherPersonName = (request) => {
-    if (request.requester_id === user.id) {
-      return request.target?.first_name || 'Unknown User';
-    } else {
-      return request.requester?.first_name || 'Unknown User';
+    } catch (error) {
+      console.error('Error rendering action buttons:', error);
+      return null;
     }
   };
 
-  // Get request direction
-  const getRequestDirection = (request) => {
-    return request.requester_id === user.id ? 'sent' : 'received';
+  /**
+   * ✅ SCHEMA ALIGNED: Get other person's name using schema relationships
+   */
+  const getOtherPersonName = async (request) => {
+    try {
+      const userRegistrantId = await getRegistrantProfileId(user.id);
+      
+      if (request.requester_id === userRegistrantId) {
+        return request.recipient_profile?.first_name || 'Unknown User';
+      } else {
+        return request.requester_profile?.first_name || 'Unknown User';
+      }
+    } catch (error) {
+      console.error('Error getting other person name:', error);
+      return 'Unknown User';
+    }
   };
 
-  // ✅ UPDATED: Check if this is a request with sent reconnection status using CSS module
+  /**
+   * ✅ SCHEMA ALIGNED: Get request direction using correct field names
+   */
+  const getRequestDirection = async (request) => {
+    try {
+      const userRegistrantId = await getRegistrantProfileId(user.id);
+      return request.requester_id === userRegistrantId ? 'sent' : 'received';
+    } catch (error) {
+      console.error('Error getting request direction:', error);
+      return 'unknown';
+    }
+  };
+
+  // Get card className with status styling
   const getCardClassName = (request) => {
-    if (request.status !== 'unmatched') return 'card mb-4';
+    if (request.status !== 'withdrawn') return 'card mb-4';
     
-    const otherUserId = request.requester_id === user.id ? 
-      request.target_id : request.requester_id;
-    
-    const isRequestSent = sentReconnectionRequests.has(otherUserId);
+    // Check if reconnection request was sent
+    const isRequestSent = sentReconnectionRequests.has(
+      request.requester_profile?.id || request.recipient_profile?.id
+    );
     
     return `card mb-4 ${isRequestSent ? styles.cardRequestSent : ''}`;
   };
 
-  // Render pending requests (both incoming and outgoing)
-  const renderPendingRequests = (isSentRequests = false) => {
-    const filteredRequests = getFilteredRequests();
+  /**
+   * Component state management
+   */
+  const [filteredRequests, setFilteredRequests] = useState([]);
+  const [tabCounts, setTabCounts] = useState({
+    activeConnections: 0,
+    awaitingResponse: 0,
+    sentRequests: 0,
+    connectionHistory: 0
+  });
 
+  // Update filtered requests and tab counts when requests or active tab changes
+  useEffect(() => {
+    const updateData = async () => {
+      const filtered = await getFilteredRequests();
+      const counts = await getTabCounts();
+      setFilteredRequests(filtered);
+      setTabCounts(counts);
+    };
+    
+    updateData();
+  }, [requests, activeTab]);
+
+  /**
+   * Render pending requests (both incoming and outgoing)
+   */
+  const renderPendingRequests = (isSentRequests = false) => {
     if (filteredRequests.length === 0) {
       const emptyMessage = isSentRequests 
         ? "You haven't sent any pending requests."
@@ -842,10 +914,10 @@ const Connections = () => {
             <div className="card-header">
               <div>
                 <div className="card-title">
-                  {getConnectionIcon(request)} {getOtherPersonName(request)}
+                  {getConnectionIcon(request)} {request.requester_profile?.first_name || request.recipient_profile?.first_name || 'Unknown User'}
                 </div>
                 <div className="card-subtitle">
-                  {getConnectionType(request)} • {isSentRequests ? 'Sent to' : 'Request from'} {getOtherPersonName(request)} on{' '}
+                  {getConnectionType(request)} • {isSentRequests ? 'Sent' : 'Request from'} on{' '}
                   {new Date(request.created_at).toLocaleDateString()}
                 </div>
               </div>
@@ -860,15 +932,6 @@ const Connections = () => {
                     {getConnectionType(request)}
                   </span>
                 </div>
-                
-                {request.match_score && (
-                  <div>
-                    <span className="label">Compatibility</span>
-                    <span className="text-gray-800">
-                      {request.match_score}%
-                    </span>
-                  </div>
-                )}
                 
                 <div>
                   <span className="label">Status</span>
@@ -895,12 +958,11 @@ const Connections = () => {
     );
   };
 
-  // ✅ UPDATED: Render Active Matches organized by type using CSS module
+  /**
+   * Render Active Matches organized by type
+   */
   const renderActiveMatches = () => {
-    const matchesByType = getActiveMatchesByType();
-    const hasAnyMatches = Object.values(matchesByType).some(matches => matches.length > 0);
-
-    if (!hasAnyMatches) {
+    if (filteredRequests.length === 0) {
       return (
         <div className="empty-state">
           <div className="empty-state-icon">🤝</div>
@@ -912,74 +974,50 @@ const Connections = () => {
 
     return (
       <div className={styles.connectionsByType}>
-        {Object.entries(matchesByType).map(([type, connections]) => {
-          if (connections.length === 0) return null;
-
-          return (
-            <div key={type} className={`${styles.connectionTypeSection} mb-5`}>
-              <h4 className={styles.connectionTypeTitle}>
-                {getConnectionIcon({ request_type: type })} {getConnectionType({ request_type: type }) + (connections.length > 1 ? 's' : '')}
-                <span className={styles.connectionCount}>({connections.length})</span>
-              </h4>
-              
-              <div className={styles.connectionsGrid}>
-                {connections.map(request => (
-                  <div key={request.id} className={getCardClassName(request)}>
-                    <div className="card-header">
-                      <div>
-                        <div className="card-title">
-                          {getOtherPersonName(request)}
-                        </div>
-                        <div className="card-subtitle">
-                          Connected on {new Date(request.matched_at || request.created_at).toLocaleDateString()}
-                        </div>
-                      </div>
-                      {renderStatusBadge(request.status)}
-                    </div>
-                    
-                    <div>
-                      <div className="grid-auto mb-4">
-                        <div>
-                          <span className="label">Connection Type</span>
-                          <span className="text-gray-800">
-                            {getConnectionType(request)}
-                          </span>
-                        </div>
-                        
-                        {request.match_score && (
-                          <div>
-                            <span className="label">Compatibility</span>
-                            <span className="text-gray-800">
-                              {request.match_score}%
-                            </span>
-                          </div>
-                        )}
-                        
-                        <div>
-                          <span className="label">Status</span>
-                          <span className="text-gray-800">
-                            Active Connection
-                          </span>
-                        </div>
-                      </div>
-                      
-                      {request.message && (
-                        <div className="mb-4">
-                          <div className="label mb-2">Original Message</div>
-                          <div className="alert alert-info">
-                            {request.message}
-                          </div>
-                        </div>
-                      )}
-                      
-                      {renderActionButtons(request)}
-                    </div>
-                  </div>
-                ))}
+        {filteredRequests.map(request => (
+          <div key={request.id} className={getCardClassName(request)}>
+            <div className="card-header">
+              <div>
+                <div className="card-title">
+                  {getConnectionIcon(request)} {request.requester_profile?.first_name || request.recipient_profile?.first_name || 'Unknown User'}
+                </div>
+                <div className="card-subtitle">
+                  Connected on {new Date(request.responded_at || request.created_at).toLocaleDateString()}
+                </div>
               </div>
+              {renderStatusBadge(request.status)}
             </div>
-          );
-        })}
+            
+            <div>
+              <div className="grid-auto mb-4">
+                <div>
+                  <span className="label">Connection Type</span>
+                  <span className="text-gray-800">
+                    {getConnectionType(request)}
+                  </span>
+                </div>
+                
+                <div>
+                  <span className="label">Status</span>
+                  <span className="text-gray-800">
+                    Active Connection
+                  </span>
+                </div>
+              </div>
+              
+              {request.message && (
+                <div className="mb-4">
+                  <div className="label mb-2">Original Message</div>
+                  <div className="alert alert-info">
+                    {request.message}
+                  </div>
+                </div>
+              )}
+              
+              {renderActionButtons(request)}
+            </div>
+          </div>
+        ))}
       </div>
     );
   };
@@ -994,7 +1032,7 @@ const Connections = () => {
     );
   }
 
-  if (!hasRole('applicant') && !hasRole('peer') && !hasRole('landlord') && !hasRole('employer')) {
+  if (!hasRole('applicant') && !hasRole('peer-support') && !hasRole('landlord') && !hasRole('employer')) {
     return (
       <div className="content">
         <div className="alert alert-info">
@@ -1003,8 +1041,6 @@ const Connections = () => {
       </div>
     );
   }
-
-  const tabCounts = getTabCounts();
   
   return (
     <div className="content">
@@ -1016,7 +1052,7 @@ const Connections = () => {
         </p>
       </div>
       
-      {/* ✅ FIXED: Reordered tabs with Active Connections first and renamed Pending Requests */}
+      {/* Navigation Tabs */}
       <div className="navigation mb-5">
         <ul className="nav-list">
           <li className="nav-item">
@@ -1066,22 +1102,22 @@ const Connections = () => {
       {activeTab === 'awaiting-response' && renderPendingRequests(false)}
       {activeTab === 'sent-requests' && renderPendingRequests(true)}
       {activeTab === 'connection-history' && (
-        getFilteredRequests().length === 0 ? (
+        filteredRequests.length === 0 ? (
           <div className="empty-state">
             <div className="empty-state-icon">📋</div>
             <h3 className="empty-state-title">No Connection History</h3>
             <p>Your past connections and rejected requests will appear here.</p>
           </div>
         ) : (
-          getFilteredRequests().map(request => (
+          filteredRequests.map(request => (
             <div key={request.id} className={getCardClassName(request)}>
               <div className="card-header">
                 <div>
                   <div className="card-title">
-                    {getOtherPersonName(request)}
+                    {request.requester_profile?.first_name || request.recipient_profile?.first_name || 'Unknown User'}
                   </div>
                   <div className="card-subtitle">
-                    {getConnectionType(request)} • {getRequestDirection(request) === 'received' ? 'Received' : 'Sent'} on{' '}
+                    {getConnectionType(request)} on{' '}
                     {new Date(request.created_at).toLocaleDateString()}
                   </div>
                 </div>
@@ -1097,15 +1133,6 @@ const Connections = () => {
                     </span>
                   </div>
                   
-                  {request.match_score && (
-                    <div>
-                      <span className="label">Compatibility</span>
-                      <span className="text-gray-800">
-                        {request.match_score}%
-                      </span>
-                    </div>
-                  )}
-                  
                   <div>
                     <span className="label">Status</span>
                     <span className="text-gray-800">
@@ -1119,15 +1146,6 @@ const Connections = () => {
                     <div className="label mb-2">Message</div>
                     <div className="alert alert-info">
                       {request.message}
-                    </div>
-                  </div>
-                )}
-                
-                {request.status === 'rejected' && request.rejection_reason && (
-                  <div className="mb-4">
-                    <div className="label mb-2">Reason</div>
-                    <div className="alert alert-warning">
-                      {request.rejection_reason}
                     </div>
                   </div>
                 )}
@@ -1190,7 +1208,7 @@ const Connections = () => {
         </div>
       )}
 
-      {/* ✅ UPDATED: Contact Info Modal with CSS module styling */}
+      {/* Contact Info Modal */}
       {showContactModal && contactInfo && (
         <div className="modal-overlay" onClick={() => setShowContactModal(false)}>
           <div 
@@ -1210,7 +1228,7 @@ const Connections = () => {
             
             <div className="text-center mb-4">
               <div style={{ fontSize: '3rem', marginBottom: '1rem' }}>
-                {contactInfo.connectionType === 'employment opportunity' ? '💼' : '👤'}
+                {contactInfo.connectionType === 'Employment' ? '💼' : '👤'}
               </div>
               <h4 style={{ color: 'var(--primary-purple)', marginBottom: '0.5rem' }}>
                 {contactInfo.name}
@@ -1258,7 +1276,6 @@ const Connections = () => {
                 </div>
               </div>
 
-              {/* Professional info (if available) */}
               {contactInfo.professionalTitle && (
                 <div className={styles.contactItem}>
                   <div className={styles.contactIcon}>🎓</div>
@@ -1271,7 +1288,6 @@ const Connections = () => {
                 </div>
               )}
 
-              {/* Contact person (if available) */}
               {contactInfo.contactPerson && (
                 <div className="alert alert-info mt-3">
                   <strong>Contact Person:</strong> {contactInfo.contactPerson}
@@ -1300,4 +1316,4 @@ const Connections = () => {
   );
 };
 
-export default Connections;
+export default MatchRequests;

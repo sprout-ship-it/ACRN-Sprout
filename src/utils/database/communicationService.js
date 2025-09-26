@@ -1,6 +1,13 @@
-// src/utils/database/communicationService.js - Communication service module
+// src/utils/database/communicationService.js - Schema-Aligned Communication Service
 /**
- * Communication service for communication_templates and communication_logs table operations
+ * Communication service for match-based messaging using existing schema tables
+ * 
+ * SCHEMA TABLES USED:
+ * - match_requests (message field)
+ * - housing_matches (applicant_message, landlord_message fields) 
+ * - employment_matches (applicant_message, employer_message fields)
+ * - peer_support_matches (applicant_message, peer_message fields)
+ * - match_groups (for group communication context)
  */
 
 const createCommunicationService = (supabaseClient) => {
@@ -8,306 +15,368 @@ const createCommunicationService = (supabaseClient) => {
     throw new Error('Supabase client is required for communication service');
   }
 
-  // Templates service
-  const templates = {
-    tableName: 'communication_templates',
-
+  const service = {
     /**
-     * Create communication template
+     * Send a match request with message
+     * @param {Object} requestData - Match request data including message
+     * @returns {Promise<Object>} Request result
      */
-    create: async (templateData) => {
+    sendMatchRequest: async (requestData) => {
       try {
-        console.log('💬 Communication Templates: Creating template');
+        console.log('💬 Communication: Sending match request with message');
 
         const { data, error } = await supabaseClient
-          .from(templates.tableName)
+          .from('match_requests')
           .insert({
-            ...templateData,
-            is_active: templateData.is_active !== false, // Default to true
-            is_system: templateData.is_system || false,
-            created_at: new Date().toISOString(),
-            updated_at: new Date().toISOString()
-          })
-          .select()
-          .single();
-
-        if (error) {
-          console.error('❌ Communication Templates: Create failed:', error.message);
-          return { success: false, data: null, error };
-        }
-
-        console.log('✅ Communication Templates: Template created successfully');
-        return { success: true, data, error: null };
-
-      } catch (err) {
-        console.error('💥 Communication Templates: Create exception:', err);
-        return { success: false, data: null, error: { message: err.message } };
-      }
-    },
-
-    /**
-     * Get templates by category
-     */
-    getByCategory: async (category, userId = null) => {
-      try {
-        console.log('💬 Communication Templates: Fetching by category:', category, 'for user:', userId);
-
-        let query = supabaseClient
-          .from(templates.tableName)
-          .select('*')
-          .eq('category', category)
-          .eq('is_active', true);
-
-        // Get both system templates and user's custom templates
-        if (userId) {
-          query = query.or(`user_id.is.null,user_id.eq.${userId}`);
-        } else {
-          query = query.is('user_id', null); // Only system templates
-        }
-
-        const { data, error } = await query
-          .order('is_system', { ascending: false })
-          .order('created_at', { ascending: false });
-
-        if (error) {
-          console.error('❌ Communication Templates: GetByCategory failed:', error.message);
-          return { success: false, data: [], error };
-        }
-
-        console.log(`✅ Communication Templates: Found ${data?.length || 0} templates for category: ${category}`);
-        return { success: true, data: data || [], error: null };
-
-      } catch (err) {
-        console.error('💥 Communication Templates: GetByCategory exception:', err);
-        return { success: false, data: [], error: { message: err.message } };
-      }
-    },
-
-    /**
-     * Get templates by user ID
-     */
-    getByUserId: async (userId) => {
-      try {
-        console.log('💬 Communication Templates: Fetching templates for user:', userId);
-
-        const { data, error } = await supabaseClient
-          .from(templates.tableName)
-          .select('*')
-          .eq('user_id', userId)
-          .eq('is_active', true)
-          .order('created_at', { ascending: false });
-
-        if (error) {
-          console.error('❌ Communication Templates: GetByUserId failed:', error.message);
-          return { success: false, data: [], error };
-        }
-
-        console.log(`✅ Communication Templates: Found ${data?.length || 0} templates for user`);
-        return { success: true, data: data || [], error: null };
-
-      } catch (err) {
-        console.error('💥 Communication Templates: GetByUserId exception:', err);
-        return { success: false, data: [], error: { message: err.message } };
-      }
-    },
-
-    /**
-     * Update template
-     */
-    update: async (id, updates) => {
-      try {
-        console.log('💬 Communication Templates: Updating template:', id);
-
-        const { data, error } = await supabaseClient
-          .from(templates.tableName)
-          .update({
-            ...updates,
-            updated_at: new Date().toISOString()
-          })
-          .eq('id', id)
-          .select()
-          .single();
-
-        if (error) {
-          console.error('❌ Communication Templates: Update failed:', error.message);
-          return { success: false, data: null, error };
-        }
-
-        console.log('✅ Communication Templates: Template updated successfully');
-        return { success: true, data, error: null };
-
-      } catch (err) {
-        console.error('💥 Communication Templates: Update exception:', err);
-        return { success: false, data: null, error: { message: err.message } };
-      }
-    },
-
-    /**
-     * Delete template (soft delete)
-     */
-    delete: async (id) => {
-      try {
-        console.log('💬 Communication Templates: Soft deleting template:', id);
-
-        // Soft delete - mark as inactive
-        const { data, error } = await supabaseClient
-          .from(templates.tableName)
-          .update({ 
-            is_active: false,
-            updated_at: new Date().toISOString()
-          })
-          .eq('id', id)
-          .select()
-          .single();
-
-        if (error) {
-          console.error('❌ Communication Templates: Delete failed:', error.message);
-          return { success: false, data: null, error };
-        }
-
-        console.log('✅ Communication Templates: Template deleted successfully');
-        return { success: true, data, error: null };
-
-      } catch (err) {
-        console.error('💥 Communication Templates: Delete exception:', err);
-        return { success: false, data: null, error: { message: err.message } };
-      }
-    },
-
-    /**
-     * Get template by ID
-     */
-    getById: async (id) => {
-      try {
-        console.log('💬 Communication Templates: Fetching template by ID:', id);
-
-        const { data, error } = await supabaseClient
-          .from(templates.tableName)
-          .select('*')
-          .eq('id', id)
-          .single();
-
-        if (error) {
-          if (error.code === 'PGRST116') {
-            return { success: false, data: null, error: { code: 'NOT_FOUND', message: 'Template not found' } };
-          }
-          console.error('❌ Communication Templates: GetById failed:', error.message);
-          return { success: false, data: null, error };
-        }
-
-        console.log('✅ Communication Templates: Template retrieved successfully');
-        return { success: true, data, error: null };
-
-      } catch (err) {
-        console.error('💥 Communication Templates: GetById exception:', err);
-        return { success: false, data: null, error: { message: err.message } };
-      }
-    }
-  };
-
-  // Logs service
-  const logs = {
-    tableName: 'communication_logs',
-
-    /**
-     * Create communication log entry
-     */
-    create: async (logData) => {
-      try {
-        console.log('📝 Communication Logs: Creating log entry');
-
-        const { data, error } = await supabaseClient
-          .from(logs.tableName)
-          .insert({
-            ...logData,
+            requester_type: requestData.requester_type,
+            requester_id: requestData.requester_id,
+            recipient_type: requestData.recipient_type,
+            recipient_id: requestData.recipient_id,
+            property_id: requestData.property_id || null,
+            request_type: requestData.request_type,
+            message: requestData.message,
+            status: 'pending',
             created_at: new Date().toISOString()
           })
-          .select()
+          .select(`
+            *,
+            requester_profile:registrant_profiles!requester_id(id, first_name, last_name),
+            recipient_profile:registrant_profiles!recipient_id(id, first_name, last_name)
+          `)
           .single();
 
         if (error) {
-          console.error('❌ Communication Logs: Create failed:', error.message);
+          console.error('❌ Communication: Match request failed:', error.message);
           return { success: false, data: null, error };
         }
 
-        console.log('✅ Communication Logs: Log entry created successfully');
+        console.log('✅ Communication: Match request sent successfully');
         return { success: true, data, error: null };
 
       } catch (err) {
-        console.error('💥 Communication Logs: Create exception:', err);
+        console.error('💥 Communication: Send match request exception:', err);
         return { success: false, data: null, error: { message: err.message } };
       }
     },
 
     /**
-     * Get logs by match group
+     * Update match with message (housing, employment, or peer support)
+     * @param {string} matchType - 'housing', 'employment', or 'peer-support'
+     * @param {string} matchId - Match ID
+     * @param {string} messageType - 'applicant' or role-specific type
+     * @param {string} message - Message content
+     * @returns {Promise<Object>} Update result
      */
-    getByMatchGroup: async (matchGroupId) => {
+    updateMatchMessage: async (matchType, matchId, messageType, message) => {
       try {
-        console.log('📝 Communication Logs: Fetching logs for match group:', matchGroupId);
+        console.log(`💬 Communication: Updating ${matchType} match message`);
+
+        const tableMap = {
+          'housing': 'housing_matches',
+          'employment': 'employment_matches',
+          'peer-support': 'peer_support_matches'
+        };
+
+        const messageFieldMap = {
+          'housing': {
+            'applicant': 'applicant_message',
+            'landlord': 'landlord_message'
+          },
+          'employment': {
+            'applicant': 'applicant_message', 
+            'employer': 'employer_message'
+          },
+          'peer-support': {
+            'applicant': 'applicant_message',
+            'peer': 'peer_message'
+          }
+        };
+
+        const tableName = tableMap[matchType];
+        const messageField = messageFieldMap[matchType]?.[messageType];
+
+        if (!tableName || !messageField) {
+          throw new Error(`Invalid match type (${matchType}) or message type (${messageType})`);
+        }
+
+        const updateData = {
+          [messageField]: message,
+          updated_at: new Date().toISOString()
+        };
 
         const { data, error } = await supabaseClient
-          .from(logs.tableName)
-          .select(`
-            *,
-            sender:registrant_profiles!sender_id(id, first_name, last_name),
-            recipient:registrant_profiles!recipient_id(id, first_name, last_name)
-          `)
-          .eq('match_group_id', matchGroupId)
-          .order('created_at', { ascending: false });
+          .from(tableName)
+          .update(updateData)
+          .eq('id', matchId)
+          .select()
+          .single();
 
         if (error) {
-          console.error('❌ Communication Logs: GetByMatchGroup failed:', error.message);
+          console.error(`❌ Communication: ${matchType} match message update failed:`, error.message);
+          return { success: false, data: null, error };
+        }
+
+        console.log(`✅ Communication: ${matchType} match message updated successfully`);
+        return { success: true, data, error: null };
+
+      } catch (err) {
+        console.error('💥 Communication: Update match message exception:', err);
+        return { success: false, data: null, error: { message: err.message } };
+      }
+    },
+
+    /**
+     * Get conversation history from match requests between two users
+     * @param {string} userId1 - First user's registrant profile ID
+     * @param {string} userId2 - Second user's registrant profile ID
+     * @returns {Promise<Object>} Conversation history
+     */
+    getConversationHistory: async (userId1, userId2) => {
+      try {
+        console.log('💬 Communication: Fetching conversation history');
+
+        const { data, error } = await supabaseClient
+          .from('match_requests')
+          .select(`
+            *,
+            requester_profile:registrant_profiles!requester_id(id, first_name, last_name),
+            recipient_profile:registrant_profiles!recipient_id(id, first_name, last_name)
+          `)
+          .or(`and(requester_id.eq.${userId1},recipient_id.eq.${userId2}),and(requester_id.eq.${userId2},recipient_id.eq.${userId1})`)
+          .not('message', 'is', null)
+          .order('created_at', { ascending: true });
+
+        if (error) {
+          console.error('❌ Communication: Get conversation history failed:', error.message);
           return { success: false, data: [], error };
         }
 
-        console.log(`✅ Communication Logs: Found ${data?.length || 0} logs for match group`);
+        console.log(`✅ Communication: Found ${data?.length || 0} messages in conversation`);
         return { success: true, data: data || [], error: null };
 
       } catch (err) {
-        console.error('💥 Communication Logs: GetByMatchGroup exception:', err);
+        console.error('💥 Communication: Get conversation history exception:', err);
         return { success: false, data: [], error: { message: err.message } };
       }
     },
 
     /**
-     * Get logs by user ID
+     * Get all messages for a user (sent and received)
+     * @param {string} userId - User's registrant profile ID
+     * @param {number} limit - Number of recent messages to retrieve
+     * @returns {Promise<Object>} User's messages
      */
-    getByUserId: async (userId, limit = 50) => {
+    getUserMessages: async (userId, limit = 50) => {
       try {
-        console.log('📝 Communication Logs: Fetching logs for user:', userId);
+        console.log('💬 Communication: Fetching user messages');
 
         const { data, error } = await supabaseClient
-          .from(logs.tableName)
+          .from('match_requests')
           .select(`
             *,
-            sender:registrant_profiles!sender_id(id, first_name, last_name),
-            recipient:registrant_profiles!recipient_id(id, first_name, last_name),
-            match_group:match_groups(id, match_type, status)
+            requester_profile:registrant_profiles!requester_id(id, first_name, last_name, email),
+            recipient_profile:registrant_profiles!recipient_id(id, first_name, last_name, email)
           `)
-          .or(`sender_id.eq.${userId},recipient_id.eq.${userId}`)
+          .or(`requester_id.eq.${userId},recipient_id.eq.${userId}`)
+          .not('message', 'is', null)
           .order('created_at', { ascending: false })
           .limit(limit);
 
         if (error) {
-          console.error('❌ Communication Logs: GetByUserId failed:', error.message);
+          console.error('❌ Communication: Get user messages failed:', error.message);
           return { success: false, data: [], error };
         }
 
-        console.log(`✅ Communication Logs: Found ${data?.length || 0} logs for user`);
+        console.log(`✅ Communication: Found ${data?.length || 0} messages for user`);
         return { success: true, data: data || [], error: null };
 
       } catch (err) {
-        console.error('💥 Communication Logs: GetByUserId exception:', err);
+        console.error('💥 Communication: Get user messages exception:', err);
         return { success: false, data: [], error: { message: err.message } };
+      }
+    },
+
+    /**
+     * Get group communication context for match groups
+     * @param {string} matchGroupId - Match group ID
+     * @returns {Promise<Object>} Group communication context
+     */
+    getGroupContext: async (matchGroupId) => {
+      try {
+        console.log('💬 Communication: Fetching group context');
+
+        const { data, error } = await supabaseClient
+          .from('match_groups')
+          .select(`
+            *,
+            applicant_1:applicant_matching_profiles!applicant_1_id(
+              id, 
+              user_id,
+              registrant:registrant_profiles!user_id(id, first_name, last_name)
+            ),
+            applicant_2:applicant_matching_profiles!applicant_2_id(
+              id,
+              user_id, 
+              registrant:registrant_profiles!user_id(id, first_name, last_name)
+            ),
+            property:properties(
+              id,
+              title,
+              landlord:landlord_profiles(
+                id,
+                user_id,
+                registrant:registrant_profiles!user_id(id, first_name, last_name)
+              )
+            ),
+            peer_support:peer_support_profiles!peer_support_id(
+              id,
+              user_id,
+              registrant:registrant_profiles!user_id(id, first_name, last_name)
+            )
+          `)
+          .eq('id', matchGroupId)
+          .single();
+
+        if (error) {
+          if (error.code === 'PGRST116') {
+            return { success: false, data: null, error: { code: 'NOT_FOUND', message: 'Match group not found' } };
+          }
+          console.error('❌ Communication: Get group context failed:', error.message);
+          return { success: false, data: null, error };
+        }
+
+        console.log('✅ Communication: Group context retrieved successfully');
+        return { success: true, data, error: null };
+
+      } catch (err) {
+        console.error('💥 Communication: Get group context exception:', err);
+        return { success: false, data: null, error: { message: err.message } };
+      }
+    },
+
+    /**
+     * Get messages from housing matches for a user
+     * @param {string} userId - User's registrant profile ID (for applicant or landlord)
+     * @param {string} userType - 'applicant' or 'landlord'
+     * @returns {Promise<Object>} Housing match messages
+     */
+    getHousingMatchMessages: async (userId, userType) => {
+      try {
+        console.log('💬 Communication: Fetching housing match messages');
+
+        let query = supabaseClient
+          .from('housing_matches')
+          .select(`
+            *,
+            applicant:applicant_matching_profiles!applicant_id(
+              id,
+              user_id,
+              registrant:registrant_profiles!user_id(id, first_name, last_name)
+            ),
+            property:properties!property_id(
+              id,
+              title,
+              landlord:landlord_profiles(
+                id,
+                user_id,
+                registrant:registrant_profiles!user_id(id, first_name, last_name)
+              )
+            )
+          `);
+
+        if (userType === 'applicant') {
+          // Find applicant's profile ID first
+          const { data: profile } = await supabaseClient
+            .from('applicant_matching_profiles')
+            .select('id')
+            .eq('user_id', userId)
+            .single();
+          
+          if (profile) {
+            query = query.eq('applicant_id', profile.id);
+          } else {
+            return { success: true, data: [], error: null };
+          }
+        } else if (userType === 'landlord') {
+          // Find landlord's properties
+          const { data: landlordProfile } = await supabaseClient
+            .from('landlord_profiles')
+            .select('id')
+            .eq('user_id', userId)
+            .single();
+
+          if (landlordProfile) {
+            const { data: properties } = await supabaseClient
+              .from('properties')
+              .select('id')
+              .eq('landlord_id', landlordProfile.id);
+
+            if (properties && properties.length > 0) {
+              const propertyIds = properties.map(p => p.id);
+              query = query.in('property_id', propertyIds);
+            } else {
+              return { success: true, data: [], error: null };
+            }
+          } else {
+            return { success: true, data: [], error: null };
+          }
+        }
+
+        const { data, error } = await query
+          .or('applicant_message.not.is.null,landlord_message.not.is.null')
+          .order('updated_at', { ascending: false });
+
+        if (error) {
+          console.error('❌ Communication: Get housing match messages failed:', error.message);
+          return { success: false, data: [], error };
+        }
+
+        console.log(`✅ Communication: Found ${data?.length || 0} housing messages`);
+        return { success: true, data: data || [], error: null };
+
+      } catch (err) {
+        console.error('💥 Communication: Get housing match messages exception:', err);
+        return { success: false, data: [], error: { message: err.message } };
+      }
+    },
+
+    /**
+     * Mark match request as read/responded
+     * @param {string} requestId - Match request ID
+     * @param {string} status - New status ('accepted', 'rejected', etc.)
+     * @returns {Promise<Object>} Update result
+     */
+    updateRequestStatus: async (requestId, status) => {
+      try {
+        console.log('💬 Communication: Updating request status');
+
+        const { data, error } = await supabaseClient
+          .from('match_requests')
+          .update({
+            status,
+            responded_at: new Date().toISOString(),
+            updated_at: new Date().toISOString()
+          })
+          .eq('id', requestId)
+          .select()
+          .single();
+
+        if (error) {
+          console.error('❌ Communication: Update request status failed:', error.message);
+          return { success: false, data: null, error };
+        }
+
+        console.log('✅ Communication: Request status updated successfully');
+        return { success: true, data, error: null };
+
+      } catch (err) {
+        console.error('💥 Communication: Update request status exception:', err);
+        return { success: false, data: null, error: { message: err.message } };
       }
     }
   };
 
-  return {
-    templates,
-    logs
-  };
+  return service;
 };
 
 export default createCommunicationService;

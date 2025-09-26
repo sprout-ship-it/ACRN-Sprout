@@ -1,4 +1,4 @@
-// src/components/features/matching/constants/matchingFormConstants.js - FIXED WITH STANDARDIZED FIELD NAMES
+// src/components/features/matching/constants/matchingFormConstants.js - SCHEMA ALIGNED
 
 // Gender options
 export const genderOptions = [
@@ -30,13 +30,14 @@ export const states = [
   'SD', 'TN', 'TX', 'UT', 'VT', 'VA', 'WA', 'WV', 'WI', 'WY'
 ];
 
-// Housing type options
+// Housing type options (updated for schema)
 export const housingTypeOptions = [
-  'Apartment', 'House', 'Condo', 'Townhouse', 'Room in house', 'Studio', 
-  'Duplex', 'Sober living facility', 'Transitional housing'
+  'apartment', 'house', 'condo', 'townhouse', 'duplex', 'studio', 
+  'sober_living_level_1', 'sober_living_level_2', 'sober_living_level_3',
+  'halfway_house', 'recovery_residence', 'transitional_housing'
 ];
 
-// Gender preference options
+// Gender preference options (schema aligned)
 export const genderPreferenceOptions = [
   { value: '', label: 'No preference' },
   { value: 'no_preference', label: 'No preference' },
@@ -57,7 +58,7 @@ export const smokingStatusOptions = [
   { value: 'former_smoker', label: 'Former smoker' }
 ];
 
-// Recovery stage options
+// Recovery stage options (schema aligned)
 export const recoveryStageOptions = [
   { value: '', label: 'Select recovery stage' },
   { value: 'early', label: 'Early Recovery (0-6 months)' },
@@ -65,6 +66,43 @@ export const recoveryStageOptions = [
   { value: 'stable', label: 'Stable Recovery (1.5-3 years)' },
   { value: 'long-term', label: 'Long-term Recovery (3+ years)' },
   { value: 'maintenance', label: 'Maintenance Phase' }
+];
+
+// Location flexibility options (schema field)
+export const locationFlexibilityOptions = [
+  { value: '', label: 'Select flexibility' },
+  { value: 'very_flexible', label: 'Very flexible' },
+  { value: 'somewhat_flexible', label: 'Somewhat flexible' },
+  { value: 'preferred_only', label: 'Preferred location only' },
+  { value: 'must_stay_local', label: 'Must stay in local area' }
+];
+
+// Age flexibility options (schema field)
+export const ageFlexibilityOptions = [
+  { value: '', label: 'Select age flexibility' },
+  { value: 'very_flexible', label: 'Very flexible' },
+  { value: 'somewhat_flexible', label: 'Somewhat flexible' },
+  { value: 'preferred_range', label: 'Prefer stated range' },
+  { value: 'strict_range', label: 'Strict age range only' }
+];
+
+// Move-in flexibility options (schema field)
+export const moveInFlexibilityOptions = [
+  { value: '', label: 'Select move-in flexibility' },
+  { value: 'exact_date', label: 'Exact date needed' },
+  { value: 'week_window', label: 'Within a week' },
+  { value: 'month_window', label: 'Within a month' },
+  { value: 'flexible', label: 'Very flexible' }
+];
+
+// Relocation timeline options (NEW - schema field)
+export const relocationTimelineOptions = [
+  { value: '', label: 'Select relocation timeline' },
+  { value: 'immediate', label: 'Immediate (within 1 week)' },
+  { value: 'short_term', label: 'Short-term (1-4 weeks)' },
+  { value: 'medium_term', label: 'Medium-term (1-3 months)' },
+  { value: 'long_term', label: 'Long-term (3+ months)' },
+  { value: 'flexible', label: 'Flexible timeline' }
 ];
 
 // Guest policy options
@@ -100,7 +138,68 @@ export const workScheduleOptions = [
   { value: 'remote', label: 'Work from home' }
 ];
 
-// Primary issues options
+// Work from home frequency options (schema field)
+export const workFromHomeFrequencyOptions = [
+  { value: '', label: 'Select WFH frequency' },
+  { value: 'never', label: 'Never work from home' },
+  { value: 'rarely', label: 'Rarely (1-2 days/month)' },
+  { value: 'sometimes', label: 'Sometimes (1-2 days/week)' },
+  { value: 'frequently', label: 'Frequently (3-4 days/week)' },
+  { value: 'always', label: 'Always work from home' }
+];
+
+// Communication style options (schema field)
+export const communicationStyleOptions = [
+  { value: '', label: 'Select communication style' },
+  { value: 'direct', label: 'Direct and straightforward' },
+  { value: 'diplomatic', label: 'Diplomatic and gentle' },
+  { value: 'casual', label: 'Casual and informal' },
+  { value: 'formal', label: 'Formal and structured' },
+  { value: 'varies', label: 'Varies by situation' }
+];
+
+// Conflict resolution style options (schema field)
+export const conflictResolutionStyleOptions = [
+  { value: '', label: 'Select conflict resolution style' },
+  { value: 'direct_discussion', label: 'Direct discussion' },
+  { value: 'mediated_discussion', label: 'Mediated discussion' },
+  { value: 'written_communication', label: 'Written communication' },
+  { value: 'avoid_when_possible', label: 'Avoid when possible' },
+  { value: 'seek_compromise', label: 'Always seek compromise' }
+];
+
+// Chore sharing preference options (FIXED: schema field name)
+export const choreSharingPreferenceOptions = [
+  { value: '', label: 'Select chore sharing preference' },
+  { value: 'equal_split', label: 'Equal split of all chores' },
+  { value: 'assigned_chores', label: 'Assigned specific chores' },
+  { value: 'flexible_sharing', label: 'Flexible sharing' },
+  { value: 'minimal_sharing', label: 'Minimal sharing' },
+  { value: 'hire_cleaning', label: 'Prefer to hire cleaning service' }
+];
+
+// Preferred support structure options (schema field)
+export const preferredSupportStructureOptions = [
+  { value: '', label: 'Select preferred support structure' },
+  { value: 'independent', label: 'Independent living' },
+  { value: 'peer_support', label: 'Peer support network' },
+  { value: 'structured_program', label: 'Structured program' },
+  { value: 'family_support', label: 'Family support' },
+  { value: 'professional_support', label: 'Professional support' }
+];
+
+// Transportation method options (schema field)
+export const transportationMethodOptions = [
+  { value: '', label: 'Select transportation method' },
+  { value: 'personal_car', label: 'Personal car' },
+  { value: 'public_transit', label: 'Public transit' },
+  { value: 'bicycle', label: 'Bicycle' },
+  { value: 'walking', label: 'Walking' },
+  { value: 'rideshare', label: 'Rideshare/Taxi' },
+  { value: 'combination', label: 'Combination of methods' }
+];
+
+// Primary issues options (schema array field)
 export const primaryIssuesOptions = [
   'alcohol-addiction', 'cocaine-addiction', 'heroin-addiction', 'fentanyl-addiction', 
   'methamphetamine-addiction', 'prescription-opioids', 'prescription-stimulants', 
@@ -108,14 +207,14 @@ export const primaryIssuesOptions = [
   'depression', 'ptsd', 'bipolar-disorder', 'other-addiction'
 ];
 
-// Recovery methods options
+// Recovery methods options (schema array field)
 export const recoveryMethodsOptions = [
   'twelve-step', 'therapy', 'medication', 'support-groups', 'spiritual-practices',
   'diet-exercise', 'clinical-therapy', 'church-religion', 'recovery-community',
   'meditation', 'yoga', 'art-therapy', 'music-therapy', 'journaling'
 ];
 
-// Program type options
+// Program type options (schema array field)
 export const programTypeOptions = [
   'AA (Alcoholics Anonymous)', 'NA (Narcotics Anonymous)', 'SMART Recovery', 
   'Celebrate Recovery', 'LifeRing', 'Secular recovery', 'Faith-based program',
@@ -124,7 +223,7 @@ export const programTypeOptions = [
   'Dialectical Behavior Therapy', 'EMDR', 'Other'
 ];
 
-// Interest options
+// Interest options (schema array field)
 export const interestOptions = [
   'Fitness/Exercise', 'Cooking', 'Reading', 'Movies/TV', 'Music', 'Art/Crafts',
   'Outdoor activities', 'Sports', 'Gaming', 'Volunteering', 'Meditation/Spirituality',
@@ -132,7 +231,7 @@ export const interestOptions = [
   'Writing', 'Dancing', 'Theater', 'Community service', 'Gardening'
 ];
 
-// Housing subsidy options
+// Housing subsidy options (schema array field)
 export const housingSubsidyOptions = [
   { value: 'section_8', label: 'Section 8' },
   { value: 'nonprofit_community_org', label: 'Nonprofit Community Org' },
@@ -141,6 +240,8 @@ export const housingSubsidyOptions = [
   { value: 'lihtc', label: 'LIHTC (Low Income Housing Tax Credit)' },
   { value: 'state_housing_assistance', label: 'State Housing Assistance' },
   { value: 'local_housing_assistance', label: 'Local Housing Assistance' },
+  { value: 'rapid_rehousing', label: 'Rapid Rehousing' },
+  { value: 'vash', label: 'VASH (HUD-Veterans Affairs)' },
   { value: 'other', label: 'Other' }
 ];
 
@@ -161,53 +262,84 @@ export const spiritualAffiliationOptions = [
   { value: 'prefer-not-to-say', label: 'Prefer not to say' }
 ];
 
-// Validation constants
+// Lease duration options (schema field)
+export const leaseDurationOptions = [
+  { value: '', label: 'Select lease duration' },
+  { value: 'month_to_month', label: 'Month-to-month' },
+  { value: '3_months', label: '3 months' },
+  { value: '6_months', label: '6 months' },
+  { value: '1_year', label: '1 year' },
+  { value: '2_years', label: '2 years' },
+  { value: 'flexible', label: 'Flexible' }
+];
+
+// Profile visibility options (schema field)
+export const profileVisibilityOptions = [
+  { value: 'verified-members', label: 'Verified members only' },
+  { value: 'all-members', label: 'All platform members' },
+  { value: 'private', label: 'Private (matching only)' }
+];
+
+// Validation constants (updated for schema constraints)
 export const VALIDATION_RULES = {
   PHONE_REGEX: /^[\d\s\-\(\)\+]{10,}$/,
   ZIP_CODE_REGEX: /^\d{5}(-\d{4})?$/,
-  MIN_AGE: 18,
-  MIN_BUDGET: 200,
-  MAX_BUDGET: 5000,
+  MIN_AGE: 18, // Schema constraint: age_range_min >= 18
+  MAX_AGE: 100, // Schema constraint: age_range_max <= 100
+  MIN_BUDGET: 1, // Schema constraint: valid_rent CHECK (monthly_rent > 0)
+  MAX_BUDGET: 50000, // Reasonable maximum
+  MIN_SOCIAL_LEVEL: 1, // Schema constraint: social_level BETWEEN 1 AND 5
+  MAX_SOCIAL_LEVEL: 5,
+  MIN_CLEANLINESS_LEVEL: 1, // Schema constraint: cleanliness_level BETWEEN 1 AND 5
+  MAX_CLEANLINESS_LEVEL: 5,
+  MIN_NOISE_TOLERANCE: 1, // Schema constraint: noise_tolerance BETWEEN 1 AND 5
+  MAX_NOISE_TOLERANCE: 5,
   MAX_ABOUT_ME_LENGTH: 1000,
   MAX_LOOKING_FOR_LENGTH: 1000,
   MAX_ADDITIONAL_INFO_LENGTH: 500
 };
 
-// FIXED: Required fields for validation - using standardized field names
+// SCHEMA ALIGNED: Required fields based on schema NOT NULL constraints
 export const REQUIRED_FIELDS = [
-  // Personal Demographics - standardized names
-  'date_of_birth', 
+  // Schema NOT NULL constraints - core required fields
   'primary_phone',
-  
-  // Location & Housing - standardized names
-  'primary_city', 
-  'primary_state', 
-  
-  // Core matching fields - standardized names
-  'max_commute_minutes', 
-  'move_in_date', 
-  'recovery_stage', 
-  'work_schedule', 
-  'about_me', 
-  'looking_for', 
-  'budget_max', 
+  'date_of_birth', 
   'preferred_roommate_gender',
-  'smoking_status', 
-  'spiritual_affiliation'
+  'primary_city', 
+  'primary_state',
+  'budget_min',
+  'budget_max',
+  'max_commute_minutes',
+  'recovery_stage',
+  'spiritual_affiliation',
+  'social_level',
+  'cleanliness_level', 
+  'noise_tolerance',
+  'work_schedule',
+  'move_in_date',
+  'about_me',
+  'looking_for'
 ];
 
-// Required array fields for validation - using standardized field names
+// SCHEMA ALIGNED: Required array fields based on schema NOT NULL constraints
 export const REQUIRED_ARRAY_FIELDS = [
-  'housing_types_accepted', 
-  'program_types', 
-  'interests', 
-  'primary_issues', 
-  'recovery_methods'
+  'recovery_methods',  // Schema: NOT NULL
+  'program_types',     // Schema: NOT NULL  
+  'primary_issues'     // Schema: NOT NULL
 ];
 
-// FIXED: Default form values - using standardized field names from useMatchingProfileForm.js
+// SCHEMA ALIGNED: Optional array fields (can be empty but should be arrays)
+export const OPTIONAL_ARRAY_FIELDS = [
+  'housing_types_accepted',
+  'housing_assistance',
+  'interests',
+  'important_qualities',
+  'deal_breakers'
+];
+
+// SCHEMA PERFECTLY ALIGNED: Default form values using exact database field names
 export const defaultFormData = {
-  // Personal Demographics (using exact database field names)
+  // Personal Demographics (exact schema field names)
   date_of_birth: '',
   primary_phone: '',
   gender_identity: '',
@@ -220,7 +352,7 @@ export const defaultFormData = {
   emergency_contact_phone: '',
   emergency_contact_relationship: '',
   
-  // Location & Housing (standardized names)
+  // Location & Housing (EXCLUDING primary_location - generated column)
   primary_city: '',
   primary_state: '',
   target_zip_codes: '',
@@ -229,7 +361,7 @@ export const defaultFormData = {
   max_commute_minutes: 30,
   transportation_method: '',
   
-  // Budget & Financial (standardized names)
+  // Budget & Financial
   budget_min: 500,
   budget_max: 2000,
   housing_assistance: [],
@@ -241,13 +373,14 @@ export const defaultFormData = {
   move_in_date: '',
   move_in_flexibility: '',
   lease_duration: '',
+  relocation_timeline: '', // ✅ ADDED: Schema field
   furnished_preference: false,
   utilities_included_preference: false,
   accessibility_needed: false,
   parking_required: false,
   public_transit_access: false,
   
-  // Recovery & Wellness (standardized names)
+  // Recovery & Wellness
   recovery_stage: '',
   time_in_recovery: '',
   sobriety_date: '',
@@ -262,11 +395,11 @@ export const defaultFormData = {
   want_recovery_support: false,
   comfortable_discussing_recovery: false,
   attend_meetings_together: false,
-  substance_free_home_required: true, // ✅ FIXED: Using correct database field name
+  substance_free_home_required: true, // ✅ CONFIRMED: Correct schema field name
   recovery_goal_timeframe: '',
   recovery_context: '',
   
-  // Roommate Preferences (standardized names)
+  // Roommate Preferences
   preferred_roommate_gender: '',
   gender_inclusive: false,
   age_range_min: 18,
@@ -274,7 +407,6 @@ export const defaultFormData = {
   age_flexibility: '',
   prefer_recovery_experience: false,
   supportive_of_recovery: true,
-  substance_free_required: true, // ✅ FIXED: This should be substance_free_home_required for consistency
   respect_privacy: true,
   social_interaction_level: '',
   similar_schedules: false,
@@ -284,7 +416,7 @@ export const defaultFormData = {
   lgbtq_friendly: false,
   culturally_sensitive: true,
   
-  // Lifestyle Preferences (standardized names)
+  // Lifestyle Preferences
   social_level: 3,
   cleanliness_level: 3,
   noise_tolerance: 3,
@@ -302,14 +434,14 @@ export const defaultFormData = {
   plays_instruments: false,
   tv_streaming_regular: false,
   
-  // Household Management (standardized names)
-  chore_sharing_style: '',
+  // Household Management (✅ FIXED: Schema field name)
+  chore_sharing_preference: '', // ✅ CORRECTED: Was chore_sharing_style
   shared_groceries: false,
   communication_style: '',
   conflict_resolution_style: '',
   preferred_support_structure: '',
   
-  // Pets & Smoking (standardized names)
+  // Pets & Smoking
   pets_owned: false,
   pets_comfortable: false,
   pet_preference: '',
@@ -350,5 +482,95 @@ export const defaultFormData = {
   recovery_accountability: false,
   shared_recovery_activities: false,
   mentorship_interest: false,
-  recovery_community: false
+  recovery_community: false,
+  
+  // ✅ NEW: Algorithm metadata (read-only, auto-calculated by database)
+  completion_percentage: 0,
+  profile_quality_score: 0,
+  last_updated_section: null,
+  compatibility_scores: {},
+  search_preferences: {},
+  matching_weights: {}
+};
+
+// SCHEMA ALIGNED: Form sections for navigation
+export const FORM_SECTIONS = [
+  {
+    id: 'personal-info',
+    title: 'Personal Information',
+    description: 'Basic personal details and contact information',
+    fields: ['date_of_birth', 'primary_phone', 'gender_identity', 'biological_sex']
+  },
+  {
+    id: 'location-preferences', 
+    title: 'Location & Housing',
+    description: 'Where you want to live and housing preferences',
+    fields: ['primary_city', 'primary_state', 'budget_min', 'budget_max', 'move_in_date']
+  },
+  {
+    id: 'recovery-info',
+    title: 'Recovery Information', 
+    description: 'Your recovery journey and support needs',
+    fields: ['recovery_stage', 'recovery_methods', 'program_types', 'primary_issues']
+  },
+  {
+    id: 'roommate-preferences',
+    title: 'Roommate Preferences',
+    description: 'What you\'re looking for in a roommate',
+    fields: ['preferred_roommate_gender', 'age_range_min', 'age_range_max']
+  },
+  {
+    id: 'lifestyle-preferences',
+    title: 'Lifestyle Preferences',
+    description: 'Daily routines and living preferences', 
+    fields: ['social_level', 'cleanliness_level', 'noise_tolerance', 'work_schedule']
+  },
+  {
+    id: 'compatibility',
+    title: 'About You',
+    description: 'Tell potential roommates about yourself',
+    fields: ['about_me', 'looking_for', 'interests']
+  }
+];
+
+// Helper function to validate field against schema constraints
+export const validateFieldConstraints = (fieldName, value) => {
+  const errors = [];
+  
+  switch (fieldName) {
+    case 'age_range_min':
+      if (value < VALIDATION_RULES.MIN_AGE) {
+        errors.push(`Minimum age must be ${VALIDATION_RULES.MIN_AGE} or higher`);
+      }
+      break;
+      
+    case 'age_range_max':
+      if (value > VALIDATION_RULES.MAX_AGE) {
+        errors.push(`Maximum age cannot exceed ${VALIDATION_RULES.MAX_AGE}`);
+      }
+      break;
+      
+    case 'budget_min':
+    case 'budget_max':
+      if (value < VALIDATION_RULES.MIN_BUDGET) {
+        errors.push('Budget must be positive');
+      }
+      break;
+      
+    case 'social_level':
+    case 'cleanliness_level': 
+    case 'noise_tolerance':
+      if (value < VALIDATION_RULES.MIN_SOCIAL_LEVEL || value > VALIDATION_RULES.MAX_SOCIAL_LEVEL) {
+        errors.push(`${fieldName.replace('_', ' ')} must be between 1 and 5`);
+      }
+      break;
+      
+    case 'move_in_date':
+      if (value && new Date(value) < new Date()) {
+        errors.push('Move-in date cannot be in the past');
+      }
+      break;
+  }
+  
+  return errors;
 };

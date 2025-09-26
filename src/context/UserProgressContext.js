@@ -1,6 +1,6 @@
-// src/contexts/UserProgressContext.js - UPDATED: Use matchingProfiles service
+// src/context/UserProgressContext.js - PHASE 3 CORRECTED VERSION
 import React, { createContext, useContext, useEffect, useState } from 'react';
-import { useAuth } from './AuthContext';  
+import { useAuth } from '../hooks/useAuth'; // ✅ FIXED: Correct import path
 import { db } from '../utils/supabase';
 
 const UserProgressContext = createContext({});
@@ -76,44 +76,31 @@ export const UserProgressProvider = ({ children }) => {
     }
   };
 
-  // ✅ UPDATED: Check if basic profile is complete using matchingProfiles service
+  // ✅ UPDATED: Check basic profile completion - simplified to use registrant_profiles
   const checkBasicProfile = async () => {
-    if (!user) return false;
+    if (!user || !profile) return false;
 
     try {
       console.log('🔍 Checking basic profile completion...');
       
-      // ✅ FIXED: Use matchingProfiles service instead of applicantForms
-      const result = await db.matchingProfiles.getByUserId(user.id);
-      
-      if (!result.success) {
-        if (result.code === 'NOT_FOUND') {
-          console.log('📋 No matching profile found - basic profile incomplete');
-          return false;
-        }
-        console.error('Error checking basic profile:', result.error);
-        return false;
-      }
-
-      const data = result.data;
-
-      // ✅ UPDATED: Check required fields using correct field names from new schema
-      const hasRequiredFields = !!(
-        data?.date_of_birth && 
-        data?.primary_phone &&
-        data?.primary_city &&
-        data?.primary_state
+      // ✅ FIXED: Check basic profile using registrant_profiles data (from AuthContext)
+      // Basic profile = registrant_profiles with complete basic info
+      const hasBasicInfo = !!(
+        profile?.first_name &&
+        profile?.last_name &&
+        profile?.email &&
+        profile?.roles?.length > 0
       );
 
       console.log('📋 Basic profile check:', {
-        hasDateOfBirth: !!data?.date_of_birth,
-        hasPrimaryPhone: !!data?.primary_phone,
-        hasPrimaryCity: !!data?.primary_city,
-        hasPrimaryState: !!data?.primary_state,
-        isComplete: hasRequiredFields
+        hasFirstName: !!profile?.first_name,
+        hasLastName: !!profile?.last_name,
+        hasEmail: !!profile?.email,
+        hasRoles: !!(profile?.roles?.length > 0),
+        isComplete: hasBasicInfo
       });
 
-      return hasRequiredFields;
+      return hasBasicInfo;
 
     } catch (error) {
       console.error('Error in checkBasicProfile:', error);
@@ -142,13 +129,15 @@ export const UserProgressProvider = ({ children }) => {
 
       const data = result.data;
 
-      // ✅ UPDATED: Check completion using new schema fields and computed values
+      // ✅ UPDATED: Check completion using correct schema fields and computed values
       const isComplete = !!(
         data?.profile_completed && 
         data?.about_me && 
         data?.looking_for &&
         data?.recovery_stage &&
-        data?.budget_max
+        data?.budget_max &&
+        data?.primary_city &&
+        data?.primary_state
       );
 
       console.log('📋 Matching profile check:', {
@@ -157,6 +146,8 @@ export const UserProgressProvider = ({ children }) => {
         hasLookingFor: !!data?.looking_for,
         hasRecoveryStage: !!data?.recovery_stage,
         hasBudgetMax: !!data?.budget_max,
+        hasPrimaryCity: !!data?.primary_city,
+        hasPrimaryState: !!data?.primary_state,
         completionPercentage: data?.completion_percentage || 0,
         isComplete
       });
@@ -169,29 +160,33 @@ export const UserProgressProvider = ({ children }) => {
     }
   };
 
-  // Check match status (no changes needed - this doesn't use applicantForms)
+  // ✅ UPDATED: Check match status using correct service methods
   const checkMatches = async () => {
     if (!user) return { hasMatches: false, activeMatching: false };
 
     try {
       console.log('🔍 Checking match status...');
       
-      const { data: requests, error } = await db.matchRequests.getByUserId(user.id);
+      // ✅ FIXED: Use correct service method that returns proper format
+      const result = await db.matchRequests.getByUserId(user.id);
       
-      if (error) {
-        console.error('Error checking matches:', error);
+      if (!result.success) {
+        console.error('Error checking matches:', result.error);
         return { hasMatches: false, activeMatching: false };
       }
 
-      const hasMatches = requests?.some(request => request.status === 'matched') || false;
-      const activeMatching = requests?.some(request => 
+      const requests = result.data || [];
+
+      const hasMatches = requests.some(request => request.status === 'approved') || false;
+      const activeMatching = requests.some(request => 
         ['pending', 'approved'].includes(request.status)
       ) || false;
 
       console.log('🔍 Match status check:', {
-        totalRequests: requests?.length || 0,
+        totalRequests: requests.length,
         hasMatches,
-        activeMatching
+        activeMatching,
+        requestStatuses: requests.map(r => r.status)
       });
 
       return { hasMatches, activeMatching };
@@ -228,12 +223,63 @@ export const UserProgressProvider = ({ children }) => {
     const steps = [
       progress.basicProfile,
       !hasRole('applicant') || progress.matchingProfile,
-      !hasRole('applicant') || progress.activeMatching,
-      !hasRole('applicant') || progress.hasMatches
+      !hasRole('applicant') || progress.activeMatching
     ];
 
     const completedSteps = steps.filter(Boolean).length;
     return Math.round((completedSteps / steps.length) * 100);
+  };
+
+  // ✅ NEW: Get role-specific progress requirements
+  const getRoleRequirements = () => {
+    const roles = profile?.roles || [];
+    const requirements = {
+      basicProfile: true, // All users need basic profile
+      matchingProfile: roles.includes('applicant'),
+      employerProfile: roles.includes('employer'),
+      landlordProfile: roles.includes('landlord'),
+      peerSupportProfile: roles.includes('peer-support')
+    };
+
+    return requirements;
+  };
+
+  // ✅ NEW: Check completion for specific user roles
+  const getCompletionByRole = () => {
+    const requirements = getRoleRequirements();
+    const completion = {
+      total: 0,
+      completed: 0,
+      missing: []
+    };
+
+    if (requirements.basicProfile) {
+      completion.total++;
+      if (progress.basicProfile) {
+        completion.completed++;
+      } else {
+        completion.missing.push('basicProfile');
+      }
+    }
+
+    if (requirements.matchingProfile) {
+      completion.total++;
+      if (progress.matchingProfile) {
+        completion.completed++;
+      } else {
+        completion.missing.push('matchingProfile');
+      }
+    }
+
+    // TODO: Add checks for other role-specific profiles when implemented
+    // if (requirements.employerProfile) { ... }
+    // if (requirements.landlordProfile) { ... }
+    // if (requirements.peerSupportProfile) { ... }
+
+    completion.percentage = completion.total > 0 ? 
+      Math.round((completion.completed / completion.total) * 100) : 100;
+
+    return completion;
   };
 
   // Manual progress updates
@@ -270,6 +316,43 @@ export const UserProgressProvider = ({ children }) => {
     updateProgress({ hasMatches: true });
   };
 
+  // ✅ NEW: Get next step guidance
+  const getNextStepGuidance = () => {
+    if (!progress.basicProfile) {
+      return {
+        step: 'basicProfile',
+        title: 'Complete Your Basic Profile',
+        description: 'Add your basic information to get started',
+        path: '/profile/basic'
+      };
+    }
+
+    if (hasRole('applicant') && !progress.matchingProfile) {
+      return {
+        step: 'matchingProfile',
+        title: 'Complete Your Matching Profile',
+        description: 'Tell us about your housing needs and preferences',
+        path: '/matching/profile'
+      };
+    }
+
+    if (hasRole('applicant') && !progress.activeMatching) {
+      return {
+        step: 'startMatching',
+        title: 'Start Finding Matches',
+        description: 'Begin connecting with potential roommates and housing',
+        path: '/matching/discover'
+      };
+    }
+
+    return {
+      step: 'complete',
+      title: 'Profile Complete',
+      description: 'Your profile is set up and ready!',
+      path: '/dashboard'
+    };
+  };
+
   const value = {
     // Progress state
     progress,
@@ -279,6 +362,9 @@ export const UserProgressProvider = ({ children }) => {
     isOnboardingComplete: isOnboardingComplete(),
     canAccessMainApp: canAccessMainApp(),
     progressPercentage: getProgressPercentage(),
+    roleRequirements: getRoleRequirements(),
+    completionByRole: getCompletionByRole(),
+    nextStepGuidance: getNextStepGuidance(),
     
     // Methods
     refreshProgress,

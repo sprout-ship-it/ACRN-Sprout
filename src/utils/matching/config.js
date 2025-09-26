@@ -1,637 +1,414 @@
-// src/utils/matching/config.js - ENHANCED WITH COMPLETE PRIORITY MATRIX INTEGRATION
+// src/utils/matching/config.js - PHASE 4 CORRECTED VERSION
 
 /**
- * ✅ ENHANCED: Matching Algorithm Configuration v2.0
- * Centralized configuration aligned with Master Data Mapping Table priority matrix
- * Implements Core → High → Medium → Low factor weighting system
+ * Matching Algorithm Configuration
+ * Aligned with actual database schema and Phase 1-3 architecture
+ * ✅ UPDATED: Uses correct field names and values from schema
  */
 
-// ===== ENHANCED COMPATIBILITY WEIGHTS =====
-// ✅ UPDATED: Based on Master Data Mapping Table priority matrix
-// Core (70%) + High (25%) + Medium (4%) + Low (1%) = 100%
-export const ENHANCED_COMPATIBILITY_WEIGHTS = {
-  // 🔴 CORE FACTORS (Primary Matching) - 70% total weight
-  location: 20,                    // primary_city/primary_state compatibility - PRIMARY MATCH FACTOR
-  budget: 18,                      // budget_min/budget_max alignment - PRIMARY MATCH FACTOR  
-  recovery_core: 16,               // recovery_stage + recovery_methods + primary_issues - PRIMARY MATCH FACTOR
-  lifestyle_core: 16,              // social_level + cleanliness_level + noise_tolerance - PRIMARY MATCH FACTOR
-  
-  // 🟡 HIGH FACTORS (Secondary Matching) - 25% total weight
-  recovery_environment: 8,         // substance_free_home_required + spiritual_affiliation - COMPATIBILITY FACTOR
-  gender_preferences: 6,           // preferred_roommate_gender compatibility - HIGH FACTOR
-  schedule_compatibility: 4,       // bedtime_preference + work_schedule - HIGH FACTOR
-  communication_style: 4,          // conflict_resolution_style + communication_style - HIGH FACTOR
-  housing_safety: 3,              // smoking_status + pets compatibility - HIGH FACTOR
-  
-  // 🟢 MEDIUM FACTORS (Compatibility Enhancement) - 4% total weight
-  shared_interests: 2,            // interests + important_qualities alignment - MEDIUM FACTOR
-  timing_flexibility: 1,          // move_in_date + timing compatibility - MEDIUM FACTOR
-  goals_alignment: 1,             // short_term_goals + long_term_vision - MEDIUM FACTOR
-  
-  // ⚪ LOW FACTORS (Nice-to-Have) - 1% total weight
-  extended_compatibility: 1       // additional_interests + profile personality - LOW FACTOR
-};
+import { 
+  RECOVERY_STAGES, 
+  SPIRITUAL_AFFILIATIONS, 
+  USER_ROLES,
+  MATCHING
+} from '../constants';
 
-// ===== LEGACY COMPATIBILITY WEIGHTS =====
-// Maintained for backwards compatibility with existing code
+// ===== CORE COMPATIBILITY WEIGHTS =====
+// ✅ UPDATED: Using MATCHING constants from constants.js for consistency
 export const COMPATIBILITY_WEIGHTS = {
-  location: 20,
-  lifestyle: 20,     
-  recovery: 18,      
-  budget: 15,        
-  gender: 10,        
-  age: 6,           
-  spiritual: 5,      
-  preferences: 4,    
-  interests: 2,      
-  housing: 1         
+  // Core factors (70% total) - Deal breakers and primary compatibility
+  location: MATCHING.WEIGHTS.CORE * 0.25,        // 17.5% - primary_city/primary_state
+  budget: MATCHING.WEIGHTS.CORE * 0.25,          // 17.5% - budget_min/budget_max alignment
+  recovery: MATCHING.WEIGHTS.CORE * 0.25,        // 17.5% - recovery_stage + recovery_methods
+  lifestyle: MATCHING.WEIGHTS.CORE * 0.25,       // 17.5% - social_level + cleanliness_level + noise_tolerance
+  
+  // High factors (25% total) - Important compatibility
+  gender: MATCHING.WEIGHTS.HIGH * 0.4,           // 10% - preferred_roommate_gender
+  spiritual: MATCHING.WEIGHTS.HIGH * 0.3,        // 7.5% - spiritual_affiliation
+  schedule: MATCHING.WEIGHTS.HIGH * 0.2,         // 5% - work_schedule compatibility
+  housing_safety: MATCHING.WEIGHTS.HIGH * 0.1,   // 2.5% - smoking + pets
+  
+  // Medium factors (4% total) - Nice to have compatibility
+  interests: MATCHING.WEIGHTS.MEDIUM * 0.5,      // 2% - interests overlap
+  timing: MATCHING.WEIGHTS.MEDIUM * 0.3,         // 1.2% - move_in_date alignment
+  goals: MATCHING.WEIGHTS.MEDIUM * 0.2,          // 0.8% - goals alignment
+  
+  // Low factors (1% total) - Bonus compatibility
+  personality: MATCHING.WEIGHTS.LOW              // 1% - personality fit
 };
 
-// ===== ENHANCED MINIMUM THRESHOLDS =====
-export const ENHANCED_MATCHING_THRESHOLDS = {
-  // Overall compatibility requirements
-  MIN_OVERALL_SCORE: 40,                    // Minimum overall score to show a match
-  GOOD_MATCH_SCORE: 65,                     // Score for "good" compatibility level
-  EXCELLENT_MATCH_SCORE: 85,                // Score for "excellent" compatibility level
-  
-  // ✅ NEW: Priority-based minimums
-  PRIORITY_MINIMUMS: {
-    core_factors: 50,                       // Core factors must meet 50% minimum
-    high_factors: 40,                       // High factors should meet 40% minimum
-    medium_factors: 30,                     // Medium factors nice to have 30%+
-    low_factors: 20                         // Low factors minimal impact
-  },
-  
-  // Hard exclusions (0 = complete incompatibility)
-  HARD_FILTERS: {
-    gender_preferences: 0,                  // Gender incompatibility is absolute
-    deal_breaker_substance_use: 0,          // Substance use deal breakers
-    deal_breaker_pets: 0,                   // Pet deal breakers
-    deal_breaker_smoking: 0,                // Smoking deal breakers
-    deal_breaker_financial_issues: 0        // Financial reliability deal breakers
-  },
-  
-  // ✅ ENHANCED: Core factor minimums (based on priority)
-  CORE_FACTOR_MINIMUMS: {
-    location: 40,                           // Must have reasonable location compatibility
-    budget: 50,                             // Budget must be somewhat aligned
-    recovery_core: 45,                      // Recovery compatibility is critical
-    lifestyle_core: 35                      // Lifestyle differences can be worked out
-  },
-  
-  // High factor recommended minimums
-  HIGH_FACTOR_MINIMUMS: {
-    recovery_environment: 60,               // Recovery environment very important
-    gender_preferences: 100,                // Gender preferences must be respected (hard filter)
-    schedule_compatibility: 35,             // Some schedule flexibility possible
-    communication_style: 40,               // Communication important for success
-    housing_safety: 50                     // Safety factors important
-  }
-};
-
-// ===== LEGACY THRESHOLDS (for compatibility) =====
+// ===== MATCHING THRESHOLDS =====
+// ✅ UPDATED: Using MATCHING constants for consistency
 export const MATCHING_THRESHOLDS = {
-  MIN_OVERALL_SCORE: 30,
-  HARD_FILTERS: {
-    gender: 0
+  // Overall compatibility requirements
+  MIN_OVERALL_SCORE: MATCHING.THRESHOLDS.MINIMUM,     // 50% minimum
+  GOOD_MATCH_SCORE: MATCHING.THRESHOLDS.MODERATE,     // 70% for good match
+  EXCELLENT_MATCH_SCORE: MATCHING.THRESHOLDS.GOOD,    // 80% for excellent match
+  
+  // Deal breaker thresholds (hard filters)
+  DEAL_BREAKERS: {
+    substance_free_mismatch: 0,        // Must respect substance-free requirements
+    gender_preference_mismatch: 0,     // Must respect gender preferences
+    budget_completely_incompatible: 0, // Budgets must have some overlap
+    location_too_far: 0               // Must be in compatible locations
   },
+  
+  // Core factor minimums
+  CORE_MINIMUMS: {
+    location: 40,                     // 40% minimum location compatibility
+    budget: 45,                       // 45% minimum budget compatibility
+    recovery: 50,                     // 50% minimum recovery compatibility
+    lifestyle: 35                     // 35% minimum lifestyle compatibility
+  },
+  
+  // Recommended minimums for quality matches
   RECOMMENDED_MINIMUMS: {
-    recovery: 40,
-    lifestyle: 35,
-    location: 30,
-    budget: 40
+    gender: 80,                       // Gender preferences should be respected
+    spiritual: 60,                    // Spiritual compatibility helpful
+    schedule: 40,                     // Some schedule flexibility possible
+    housing_safety: 50               // Safety factors important
   }
 };
 
-// ===== ENHANCED SCORING PARAMETERS =====
-export const ENHANCED_SCORING_CONFIG = {
-  // ✅ ENHANCED: Lifestyle scales (1-5) scoring
+// ===== SCORING CONFIGURATION =====
+export const SCORING_CONFIG = {
+  // ✅ UPDATED: Lifestyle scales (1-5 from schema)
   LIFESTYLE_SCALES: {
-    POINTS_PER_LEVEL: 25,                   // 25 points reduction per level difference
-    PERFECT_MATCH: 100,                     // Same level
-    ONE_LEVEL_DIFF: 75,                     // Adjacent levels  
-    TWO_LEVEL_DIFF: 50,                     // Two levels apart
-    THREE_LEVEL_DIFF: 25,                   // Three levels apart
-    FOUR_LEVEL_DIFF: 0                      // Maximum difference (1 vs 5)
+    PERFECT_MATCH: 100,               // Same level (e.g., both 3)
+    ONE_LEVEL_DIFF: 75,              // One level apart (e.g., 3 vs 4)
+    TWO_LEVEL_DIFF: 50,              // Two levels apart (e.g., 3 vs 5)
+    THREE_LEVEL_DIFF: 25,            // Three levels apart (e.g., 2 vs 5)
+    FOUR_LEVEL_DIFF: 0               // Maximum difference (e.g., 1 vs 5)
   },
 
-  // ✅ ENHANCED: Recovery compatibility scoring
+  // ✅ UPDATED: Recovery compatibility using actual schema values
   RECOVERY: {
     STAGE_COMPATIBILITY: {
-      SAME_STAGE: 100,
-      ADJACENT_STAGES: 80,                  // One stage apart (e.g., early → stabilizing)
-      TWO_STAGES: 60,                       // Two stages apart (e.g., early → stable)
-      THREE_STAGES: 40                      // Three stages apart (e.g., early → long-term)
+      SAME_STAGE: 100,                // Same recovery_stage
+      ADJACENT_STAGES: 80,            // Compatible stages (early -> stable)
+      DISTANT_STAGES: 50,             // Distant but workable
+      INCOMPATIBLE_STAGES: 25         // Very different stages
     },
     METHODS_OVERLAP: {
-      HIGH_OVERLAP: 100,                    // 80%+ methods in common
-      MODERATE_OVERLAP: 75,                 // 50-79% methods in common
-      SOME_OVERLAP: 50,                     // 25-49% methods in common
-      LOW_OVERLAP: 25,                      // 1-24% methods in common
-      NO_OVERLAP: 0                         // No methods in common
+      HIGH_OVERLAP: 100,              // 75%+ recovery_methods in common
+      MODERATE_OVERLAP: 80,           // 50-74% methods in common
+      SOME_OVERLAP: 60,               // 25-49% methods in common
+      LOW_OVERLAP: 40,                // 1-24% methods in common
+      NO_OVERLAP: 20                  // No methods in common but not disqualifying
     },
     ISSUES_COMPATIBILITY: {
-      SHARED_ISSUES: 100,                   // Understanding through shared experience
-      DIFFERENT_ISSUES: 75,                 // Different but complementary support
-      CONFLICTING_ISSUES: 25                // Potentially conflicting issues
+      SHARED_PRIMARY_ISSUES: 100,     // Same primary_issues
+      COMPATIBLE_ISSUES: 80,          // Different but supportive
+      NEUTRAL_ISSUES: 60,             // No conflict
+      CONFLICTING_ISSUES: 30          // Potentially problematic
     }
   },
 
-  // ✅ ENHANCED: Budget compatibility with standardized fields
+  // ✅ UPDATED: Budget compatibility using schema fields
   BUDGET: {
-    EXACT_MATCH: 100,                       // Same budget_max
-    SCORE_REDUCTION_PER_50: 2,              // Reduce by 2 points per $50 difference
-    SCORE_REDUCTION_PER_100: 4,             // Reduce by 4 points per $100 difference
-    MIN_SCORE: 0,
-    ACCEPTABLE_DIFFERENCE: 200,             // $200 difference still good compatibility
-    MAJOR_DIFFERENCE: 500                   // $500+ difference is concerning
+    OVERLAP_SCORING: {
+      LARGE_OVERLAP: 100,             // Budgets overlap significantly
+      MODERATE_OVERLAP: 80,           // Some budget overlap
+      SMALL_OVERLAP: 60,              // Minimal overlap
+      ADJACENT_NO_OVERLAP: 40,        // Close but no overlap
+      NO_OVERLAP: 0                   // No budget compatibility
+    },
+    MAX_ACCEPTABLE_GAP: 300,          // $300 max gap for good compatibility
+    PENALTY_PER_100: 5               // 5 point penalty per $100 gap
   },
 
-  // ✅ ENHANCED: Location compatibility with standardized fields
+  // ✅ UPDATED: Location compatibility using schema fields
   LOCATION: {
-    EXACT_CITY_STATE: 100,                  // Same primary_city and primary_state
-    SAME_CITY: 100,                         // Same primary_city
-    SAME_STATE_NEARBY: 75,                  // Same state, nearby cities
-    SAME_STATE_FAR: 60,                     // Same state, distant cities
-    NEARBY_STATES: 50,                      // Adjacent states
-    DIFFERENT_REGIONS: 40,                  // Different regions
-    CROSS_COUNTRY: 30                       // Cross-country distance
+    SAME_CITY_STATE: 100,            // Same primary_city and primary_state
+    SAME_CITY: 100,                  // Same primary_city
+    NEARBY_CITIES: 80,               // Same state, nearby cities
+    SAME_STATE: 60,                  // Same primary_state, different cities
+    NEARBY_STATES: 40,               // Adjacent states
+    DIFFERENT_REGIONS: 20            // Different regions
   },
 
-  // ✅ ENHANCED: Gender preference compatibility
+  // ✅ UPDATED: Gender preference compatibility
   GENDER_PREFERENCES: {
-    MUTUAL_COMPATIBILITY: 100,              // Both users' preferences satisfied
-    ONE_WAY_COMPATIBILITY: 50,              // Only one user's preference satisfied
-    NO_COMPATIBILITY: 0,                    // Neither preference satisfied (hard filter)
-    INCLUSIVE_BONUS: 10                     // Bonus for gender_inclusive users
+    MUTUAL_MATCH: 100,               // Both users' preferred_roommate_gender satisfied
+    ONE_WAY_MATCH: 50,               // Only one preference satisfied
+    NO_MATCH: 0,                     // Neither preference satisfied
+    INCLUSIVE_BONUS: 10              // Bonus for gender_inclusive users
   },
 
-  // ✅ ENHANCED: Schedule compatibility matrix
+  // Schedule compatibility
   SCHEDULE: {
-    BEDTIME_COMPATIBILITY: {
-      SAME_PREFERENCE: 100,
-      COMPATIBLE_PATTERNS: 75,              // e.g., early + moderate
-      NEUTRAL_PATTERNS: 50,                 // e.g., moderate + varies
-      INCOMPATIBLE_PATTERNS: 25             // e.g., early + late
-    },
-    WORK_SCHEDULE_COMPATIBILITY: {
+    COMPATIBLE_SCHEDULES: {
       SAME_SCHEDULE: 100,
-      COMPLEMENTARY_SCHEDULES: 80,          // e.g., day shift + night shift
-      FLEXIBLE_SCHEDULES: 70,               // One or both have flexibility
-      CONFLICTING_SCHEDULES: 40             // Potential conflicts
+      COMPLEMENTARY: 80,             // Different but compatible
+      FLEXIBLE: 70,                  // Some flexibility possible
+      CONFLICTING: 30                // Likely scheduling conflicts
     }
   },
 
-  // ✅ ENHANCED: Communication style compatibility
-  COMMUNICATION: {
-    COMMUNICATION_STYLE: {
-      SAME_STYLE: 100,
-      COMPATIBLE_STYLES: 80,                // e.g., direct + casual check-ins
-      NEUTRAL_STYLES: 60,                   // e.g., written + group meetings
-      CHALLENGING_STYLES: 40                // e.g., direct + minimal communication
-    },
-    CONFLICT_RESOLUTION: {
-      SAME_APPROACH: 100,
-      COMPLEMENTARY_APPROACHES: 85,         // e.g., direct + mediated
-      WORKABLE_APPROACHES: 65,              // Different but manageable
-      PROBLEMATIC_APPROACHES: 30            // Likely to cause issues
-    }
+  // ✅ UPDATED: Spiritual compatibility using correct affiliations
+  SPIRITUAL: {
+    EXACT_MATCH: 100,                // Same spiritual_affiliation
+    COMPATIBLE_GROUPS: 85,           // Compatible spiritual groups
+    NEUTRAL_COMPATIBILITY: 70,       // No conflict
+    SOME_TENSION: 50,                // Some potential issues
+    MAJOR_INCOMPATIBILITY: 25        // Likely conflicts
   },
 
-  // Age compatibility (legacy support)
+  // Age compatibility (calculated from date_of_birth)
   AGE: {
-    PERFECT_MATCH: 0,
-    EXCELLENT_DIFF: 3,
-    GOOD_DIFF: 6,
-    FAIR_DIFF: 10,
-    POOR_DIFF: 15,
-    SCORES: {
-      PERFECT: 100,
-      EXCELLENT: 90,
-      GOOD: 75,
-      FAIR: 60,
-      POOR: 45,
-      VERY_POOR: 30
-    }
+    SAME_AGE: 100,
+    WITHIN_2_YEARS: 95,
+    WITHIN_5_YEARS: 85,
+    WITHIN_10_YEARS: 70,
+    WITHIN_15_YEARS: 55,
+    OVER_15_YEARS: 40
   },
 
-  // Smoking compatibility matrix (enhanced)
+  // Smoking compatibility
   SMOKING: {
-    SAME_STATUS: 100,
-    COMPATIBILITY_MATRIX: {
-      'non_smoker': { 
-        'non_smoker': 100,
-        'outdoor_only': 70, 
-        'occasional': 40, 
-        'regular': 20 
-      },
-      'outdoor_only': { 
-        'non_smoker': 70, 
-        'outdoor_only': 100,
-        'occasional': 80, 
-        'regular': 60 
-      },
-      'occasional': { 
-        'non_smoker': 40, 
-        'outdoor_only': 80, 
-        'occasional': 100,
-        'regular': 70 
-      },
-      'regular': { 
-        'non_smoker': 20, 
-        'outdoor_only': 60, 
-        'occasional': 70,
-        'regular': 100
-      }
-    }
+    BOTH_NON_SMOKERS: 100,
+    COMPATIBLE_SMOKING: 80,          // Both smoke or both don't mind
+    NEUTRAL: 60,                     // One smokes outside only
+    INCOMPATIBLE: 20                 // Non-smoker with indoor smoker
   },
 
-  // Spiritual compatibility (enhanced)
-  SPIRITUAL: {
-    EXACT_MATCH: 100,
-    SAME_GROUP: 90,
-    MODERATE_COMPATIBILITY: 70,
-    NEUTRAL: 65,
-    LOW_COMPATIBILITY: 35,
-    POTENTIAL_CONFLICT: 25
+  // Pet compatibility
+  PETS: {
+    BOTH_HAVE_PETS: 100,
+    BOTH_PET_FREE: 100,
+    ONE_HAS_COMPATIBLE: 80,          // One has pets, other is comfortable
+    ONE_HAS_NEUTRAL: 60,             // One has pets, other is neutral
+    INCOMPATIBLE: 0                  // Pet allergies or strong preferences
   }
-};
-
-// ===== LEGACY SCORING (for compatibility) =====
-export const SCORING_CONFIG = ENHANCED_SCORING_CONFIG;
-
-// ===== ENHANCED FILTER DEFAULTS =====
-export const ENHANCED_DEFAULT_FILTERS = {
-  minScore: 50,                             // Default minimum compatibility score
-  hideAlreadyMatched: true,                 // Hide already connected users
-  hideRequestsSent: true,                   // Hide users with pending requests
-  maxResults: 20,                           // Maximum results per query
-  
-  // ✅ NEW: Enhanced filtering options
-  priorityWeighting: 'balanced',            // balanced, strict, flexible
-  includeLowerScores: false,                // Include matches below minScore for learning
-  enhancedInsights: true,                   // Generate detailed match insights
-  
-  // Recovery-specific filters
-  recoveryStageFlexibility: 'moderate',     // strict, moderate, flexible
-  recoveryMethodsRequired: false,           // Require overlapping recovery methods
-  substanceFreeRequired: null,              // null, true, false
-  
-  // Lifestyle filters
-  lifestyleFlexibility: 'moderate',         // How flexible on lifestyle differences
-  scheduleCompatibilityRequired: false,    // Require compatible schedules
-  
-  // Available filter options (enhanced)
-  RECOVERY_STAGES: [
-    'early', 'stabilizing', 'stable', 'long-term'
-  ],
-  AGE_RANGES: [
-    '18-25', '26-35', '36-45', '46-55', '56-65', '65+'
-  ],
-  BUDGET_RANGES: [
-    'Under $500', '$500-$750', '$750-$1000', '$1000-$1500', 'Over $1500'
-  ],
-  MIN_SCORES: [30, 40, 50, 60, 70, 80, 90],
-  
-  // ✅ NEW: Enhanced filter categories
-  SPIRITUAL_AFFILIATIONS: [
-    'christian-protestant', 'christian-catholic', 'muslim', 'jewish', 
-    'buddhist', 'spiritual-not-religious', 'agnostic', 'atheist', 'other'
-  ],
-  RECOVERY_METHODS: [
-    '12-step', 'smart-recovery', 'therapy', 'medication-assisted', 
-    'faith-based', 'secular', 'holistic', 'community-support'
-  ],
-  HOUSING_TYPES: [
-    'Shared house/apartment', 'Private room in house', 'Studio apartment',
-    'Recovery residence', 'Sober living house', 'Transitional housing'
-  ]
-};
-
-// Legacy default filters (for compatibility)
-export const DEFAULT_FILTERS = {
-  minScore: 50,
-  hideAlreadyMatched: true,
-  hideRequestsSent: true,
-  maxResults: 20,
-  RECOVERY_STAGES: ['early', 'stabilizing', 'stable', 'long-term'],
-  AGE_RANGES: ['18-25', '26-35', '36-45', '46-65'],
-  MIN_SCORES: [30, 40, 50, 60, 70, 80]
-};
-
-// ===== ENHANCED FLAG THRESHOLDS =====
-// ✅ UPDATED: Based on priority system and realistic expectations
-
-// Red flag thresholds (concerns to highlight)
-export const ENHANCED_RED_FLAG_THRESHOLDS = {
-  overall: 45,                              // Overall compatibility below 45%
-  core_factors: 40,                         // Core factors below 40% is concerning
-  high_factors: 35,                         // High factors below 35% is concerning
-  
-  // Individual factor thresholds
-  location: 35,                             // Location compatibility below 35%
-  budget: 40,                               // Budget compatibility below 40%
-  recovery_core: 45,                        // Recovery compatibility below 45%
-  lifestyle_core: 35,                       // Lifestyle compatibility below 35%
-  recovery_environment: 50,                 // Recovery environment below 50%
-  gender_preferences: 50,                   // Gender preferences below 50%
-  schedule_compatibility: 30,               // Schedule compatibility below 30%
-  communication_style: 35,                  // Communication style below 35%
-  housing_safety: 40,                       // Housing safety below 40%
-  
-  // Legacy support
-  lifestyle: 40,
-  recovery: 50,
-  spiritual: 40,
-  age: 45
-};
-
-// Green flag thresholds (strengths to highlight)
-export const ENHANCED_GREEN_FLAG_THRESHOLDS = {
-  overall: 80,                              // Overall compatibility above 80%
-  core_factors: 75,                         // Core factors above 75% is excellent
-  high_factors: 70,                         // High factors above 70% is great
-  
-  // Individual factor thresholds
-  location: 90,                             // Location compatibility above 90%
-  budget: 85,                               // Budget compatibility above 85%
-  recovery_core: 80,                        // Recovery compatibility above 80%
-  lifestyle_core: 80,                       // Lifestyle compatibility above 80%
-  recovery_environment: 75,                 // Recovery environment above 75%
-  gender_preferences: 100,                  // Perfect gender compatibility
-  schedule_compatibility: 75,               // Schedule compatibility above 75%
-  communication_style: 80,                  // Communication style above 80%
-  housing_safety: 85,                       // Housing safety above 85%
-  shared_interests: 70,                     // Shared interests above 70%
-  
-  // Legacy support
-  lifestyle: 85,
-  recovery: 85,
-  budget: 90,
-  spiritual: 90,
-  age: 90,
-  interests: 70
-};
-
-// Legacy flag thresholds (for compatibility)
-export const RED_FLAG_THRESHOLDS = ENHANCED_RED_FLAG_THRESHOLDS;
-export const GREEN_FLAG_THRESHOLDS = ENHANCED_GREEN_FLAG_THRESHOLDS;
-
-// ===== ENHANCED COMPATIBILITY GROUPS =====
-export const ENHANCED_COMPATIBILITY_GROUPS = {
-  SPIRITUAL: {
-    CHRISTIAN: ['christian-protestant', 'christian-catholic'],
-    SPIRITUAL_NOT_RELIGIOUS: ['spiritual-not-religious', 'agnostic'],
-    NON_RELIGIOUS: ['agnostic', 'atheist'],
-    MAJOR_RELIGIONS: ['muslim', 'jewish', 'buddhist', 'hindu'],
-    OTHER: ['other', 'prefer-not-to-say']
-  },
-  
-  RECOVERY_METHODS: {
-    TWELVE_STEP: ['12-step', 'aa-alcoholics-anonymous', 'na-narcotics-anonymous', 'ca-cocaine-anonymous'],
-    SECULAR: ['smart-recovery', 'secular-recovery', 'lifering', 'sos-secular'],
-    FAITH_BASED: ['celebrate-recovery', 'faith-based-program', 'christian-recovery'],
-    PROFESSIONAL: ['clinical-therapy', 'outpatient-therapy', 'intensive-outpatient', 'psychiatrist'],
-    HOLISTIC: ['meditation', 'yoga', 'acupuncture', 'nutrition-therapy', 'exercise-therapy'],
-    MEDICATION_ASSISTED: ['suboxone', 'methadone', 'naltrexone', 'medication-assisted-treatment'],
-    COMMUNITY: ['peer-support', 'support-groups', 'community-meetings', 'online-support']
-  },
-  
-  RECOVERY_STAGES: {
-    EARLY_RECOVERY: ['early'],
-    STABILIZING_RECOVERY: ['stabilizing'],
-    STABLE_RECOVERY: ['stable'],
-    LONG_TERM_RECOVERY: ['long-term']
-  },
-  
-  PRIMARY_ISSUES: {
-    SUBSTANCE_RELATED: ['alcohol-addiction', 'drug-addiction', 'prescription-drug-abuse', 'marijuana-dependency'],
-    MENTAL_HEALTH: ['depression', 'anxiety', 'ptsd', 'bipolar-disorder', 'eating-disorder'],
-    BEHAVIORAL: ['gambling-addiction', 'sex-addiction', 'internet-addiction', 'shopping-addiction'],
-    TRAUMA_RELATED: ['childhood-trauma', 'domestic-violence', 'sexual-trauma', 'military-trauma'],
-    DUAL_DIAGNOSIS: ['substance-abuse-mental-health', 'addiction-depression', 'addiction-anxiety']
-  }
-};
-
-// Legacy compatibility groups (for compatibility)
-export const COMPATIBILITY_GROUPS = ENHANCED_COMPATIBILITY_GROUPS;
-
-// ===== ENHANCED VALIDATION RULES =====
-export const ENHANCED_VALIDATION_CONFIG = {
-  // ✅ UPDATED: Core requirements based on Master Data Mapping
-  CORE_REQUIRED_FIELDS: [
-    'user_id', 'primary_city', 'primary_state', 'budget_min', 'budget_max',
-    'preferred_roommate_gender', 'recovery_stage', 'recovery_methods', 'primary_issues',
-    'spiritual_affiliation', 'social_level', 'cleanliness_level', 'noise_tolerance',
-    'work_schedule', 'move_in_date', 'about_me', 'looking_for'
-  ],
-  
-  HIGH_PRIORITY_FIELDS: [
-    'date_of_birth', 'substance_free_home_required', 'bedtime_preference',
-    'conflict_resolution_style', 'smoking_status', 'pets_owned', 'pets_comfortable'
-  ],
-  
-  MEDIUM_PRIORITY_FIELDS: [
-    'interests', 'important_qualities', 'housing_types_accepted', 
-    'lease_duration', 'move_in_flexibility'
-  ],
-  
-  LOW_PRIORITY_FIELDS: [
-    'additional_interests', 'short_term_goals', 'long_term_vision'
-  ],
-  
-  // Scoring weights for validation
-  CORE_WEIGHT: 70,
-  HIGH_PRIORITY_WEIGHT: 20,
-  MEDIUM_PRIORITY_WEIGHT: 8,
-  LOW_PRIORITY_WEIGHT: 2,
-  
-  // Minimum validation scores
-  MIN_CORE_COMPLETION: 85,                  // 85% of core fields required
-  MIN_OVERALL_COMPLETION: 70,               // 70% overall completion required
-  MIN_VALIDATION_SCORE: 80,                 // Higher threshold for enhanced matching
-  
-  // Points deducted for missing fields
-  MISSING_CORE_PENALTY: 10,                 // 10 points per missing core field
-  MISSING_HIGH_PENALTY: 5,                  // 5 points per missing high priority field
-  MISSING_MEDIUM_PENALTY: 2,                // 2 points per missing medium priority field
-  MISSING_LOW_PENALTY: 1                    // 1 point per missing low priority field
-};
-
-// Legacy validation config (for compatibility)
-export const VALIDATION_CONFIG = {
-  REQUIRED_FIELDS: ['user_id', 'recovery_stage', 'budget_max'],
-  RECOMMENDED_FIELDS: ['age', 'gender', 'cleanliness_level', 'noise_level', 'social_level', 'smoking_status', 'interests'],
-  MIN_VALIDATION_SCORE: 70,
-  MISSING_REQUIRED_PENALTY: 25,
-  MISSING_RECOMMENDED_PENALTY: 5
-};
-
-// ===== ENHANCED ALGORITHM PERFORMANCE =====
-export const ENHANCED_PERFORMANCE_CONFIG = {
-  // Batch processing
-  MAX_BATCH_SIZE: 50,                       // Smaller batches for more complex calculations
-  OPTIMAL_BATCH_SIZE: 25,                   // Optimal performance batch size
-  
-  // Caching strategy
-  CACHE_DURATION_MINUTES: 15,               // Cache compatibility calculations
-  PROFILE_CACHE_DURATION: 60,               // Cache transformed profiles longer
-  RESULTS_CACHE_DURATION: 10,               // Cache final results shorter
-  
-  // Performance limits
-  MAX_CALCULATION_TIME: 8000,               // Increased for enhanced algorithm (8 seconds)
-  MAX_PROFILES_TO_PROCESS: 200,             // Maximum profiles to consider
-  TIMEOUT_WARNING_THRESHOLD: 5000,         // Warn if calculation takes >5 seconds
-  
-  // ✅ NEW: Enhanced algorithm settings
-  USE_PARALLEL_PROCESSING: true,            // Process profiles in parallel where possible
-  ENABLE_PROGRESSIVE_LOADING: true,         // Load and display results progressively
-  OPTIMIZE_FOR_MOBILE: true,                // Optimize calculations for mobile devices
-  
-  // Quality vs Speed trade-offs
-  CALCULATION_QUALITY: 'high',              // high, medium, fast
-  ENABLE_DEEP_INSIGHTS: true,               // Generate detailed insights (slower)
-  SKIP_LOW_PROBABILITY_MATCHES: true,       // Skip obviously incompatible profiles early
-  
-  // Memory management
-  MAX_CACHED_PROFILES: 500,                 // Maximum profiles to keep in memory
-  CLEANUP_INTERVAL_MINUTES: 30             // Clean up old cache entries
-};
-
-// Legacy performance config (for compatibility)
-export const PERFORMANCE_CONFIG = {
-  MAX_BATCH_SIZE: 100,
-  CACHE_DURATION_MINUTES: 15,
-  MAX_CALCULATION_TIME: 5000
 };
 
 // ===== DEAL BREAKER CONFIGURATION =====
+// ✅ UPDATED: Based on actual schema fields
 export const DEAL_BREAKER_CONFIG = {
-  // Hard exclusions that completely block matches
+  // Hard exclusions (completely prevent matching)
   ABSOLUTE_DEAL_BREAKERS: [
-    'deal_breaker_substance_use',
-    'deal_breaker_financial_issues',
-    'preferred_roommate_gender_mismatch'
+    {
+      field: 'substance_free_home_required',
+      check: (user, candidate) => {
+        return user.substance_free_home_required && !candidate.substance_free_home_required;
+      }
+    },
+    {
+      field: 'preferred_roommate_gender',
+      check: (user, candidate) => {
+        // Check if gender preferences are incompatible
+        if (user.preferred_roommate_gender === 'any' || candidate.preferred_roommate_gender === 'any') {
+          return false; // 'any' is compatible with everything
+        }
+        // More complex gender compatibility logic would go here
+        return false; // Simplified for now
+      }
+    }
   ],
-  
-  // Strong preferences that heavily impact scoring
-  STRONG_DEAL_BREAKERS: [
+
+  // Strong preferences (major impact on scoring)
+  STRONG_PREFERENCES: [
     'deal_breaker_pets',
     'deal_breaker_smoking',
-    'deal_breaker_loudness'
+    'deal_breaker_financial_issues'
+  ],
+
+  // Moderate preferences (moderate impact on scoring)
+  MODERATE_PREFERENCES: [
+    'deal_breaker_loudness',
+    'deal_breaker_uncleanliness'
+  ],
+
+  // Scoring penalties
+  ABSOLUTE_PENALTY: 0,              // Complete exclusion
+  STRONG_PENALTY: -30,              // Major penalty
+  MODERATE_PENALTY: -15             // Moderate penalty
+};
+
+// ===== DEFAULT FILTERS =====
+export const DEFAULT_FILTERS = {
+  minScore: 50,                     // Minimum compatibility score
+  maxResults: 20,                   // Maximum results to return
+  hideAlreadyMatched: true,         // Hide users with existing connections
+  hideRequestsSent: true,           // Hide users with pending requests
+  
+  // Available filter options
+  RECOVERY_STAGES: Object.values(RECOVERY_STAGES),
+  SPIRITUAL_AFFILIATIONS: SPIRITUAL_AFFILIATIONS,
+  AGE_RANGES: [
+    { min: 18, max: 25, label: '18-25' },
+    { min: 26, max: 35, label: '26-35' },
+    { min: 36, max: 45, label: '36-45' },
+    { min: 46, max: 55, label: '46-55' },
+    { min: 56, max: 65, label: '56-65' },
+    { min: 66, max: 100, label: '65+' }
+  ],
+  BUDGET_RANGES: [
+    { min: 0, max: 500, label: 'Under $500' },
+    { min: 500, max: 800, label: '$500-$800' },
+    { min: 800, max: 1200, label: '$800-$1,200' },
+    { min: 1200, max: 1600, label: '$1,200-$1,600' },
+    { min: 1600, max: 2000, label: '$1,600-$2,000' },
+    { min: 2000, max: 5000, label: 'Over $2,000' }
+  ],
+  MIN_SCORES: [30, 40, 50, 60, 70, 80]
+};
+
+// ===== FLAG THRESHOLDS =====
+export const RED_FLAG_THRESHOLDS = {
+  overall: 45,                      // Overall compatibility below 45%
+  location: 35,                     // Location compatibility concerns
+  budget: 40,                       // Budget compatibility concerns
+  recovery: 45,                     // Recovery compatibility concerns
+  lifestyle: 35,                    // Lifestyle compatibility concerns
+  gender: 50,                       // Gender preference concerns
+  spiritual: 40                     // Spiritual compatibility concerns
+};
+
+export const GREEN_FLAG_THRESHOLDS = {
+  overall: 80,                      // Overall compatibility above 80%
+  location: 85,                     // Excellent location compatibility
+  budget: 85,                       // Excellent budget compatibility
+  recovery: 85,                     // Excellent recovery compatibility
+  lifestyle: 80,                    // Great lifestyle compatibility
+  gender: 100,                      // Perfect gender compatibility
+  spiritual: 85,                    // Great spiritual compatibility
+  interests: 70                     // Good shared interests
+};
+
+// ===== COMPATIBILITY GROUPS =====
+// ✅ UPDATED: Using actual values from constants and schema
+export const COMPATIBILITY_GROUPS = {
+  SPIRITUAL: {
+    CHRISTIAN: ['Christian', 'Catholic'],
+    SPIRITUAL: ['Spiritual (non-religious)', 'Other'],
+    NON_RELIGIOUS: ['Agnostic', 'Atheist'],
+    RELIGIOUS: ['Jewish', 'Islamic', 'Buddhist', 'Hindu'],
+    FLEXIBLE: ['Prefer not to say']
+  },
+  
+  RECOVERY_STAGES: {
+    EARLY: ['early'],
+    STABLE: ['stable', 'maintained'],
+    LONG_TERM: ['long-term']
+  },
+  
+  // Recovery methods would be grouped here based on actual schema values
+  RECOVERY_METHODS: {
+    TWELVE_STEP: ['AA (Alcoholics Anonymous)', 'NA (Narcotics Anonymous)'],
+    SECULAR: ['SMART Recovery', 'Secular recovery'],
+    FAITH_BASED: ['Celebrate Recovery', 'Faith-based program'],
+    PROFESSIONAL: ['Outpatient therapy', 'Intensive outpatient (IOP)'],
+    HOLISTIC: ['Meditation/Spirituality']
+  }
+};
+
+// ===== VALIDATION CONFIGURATION =====
+export const VALIDATION_CONFIG = {
+  // ✅ UPDATED: Required fields from actual schema
+  REQUIRED_FIELDS: [
+    'user_id',
+    'primary_city',
+    'primary_state', 
+    'budget_min',
+    'budget_max',
+    'preferred_roommate_gender',
+    'recovery_stage',
+    'recovery_methods',
+    'primary_issues',
+    'spiritual_affiliation',
+    'social_level',
+    'cleanliness_level',
+    'noise_tolerance',
+    'work_schedule',
+    'move_in_date',
+    'about_me',
+    'looking_for'
   ],
   
-  // Moderate preferences that impact scoring
-  MODERATE_DEAL_BREAKERS: [
-    'deal_breaker_uncleanliness',
-    'conflicting_schedules'
+  RECOMMENDED_FIELDS: [
+    'date_of_birth',
+    'substance_free_home_required',
+    'interests',
+    'important_qualities',
+    'housing_types_accepted'
   ],
   
-  // Scoring impact
-  ABSOLUTE_SCORE: 0,                        // Complete incompatibility
-  STRONG_PENALTY: -50,                      // Major penalty
-  MODERATE_PENALTY: -25                     // Moderate penalty
+  // Scoring
+  MIN_VALIDATION_SCORE: 75,         // 75% of required fields must be complete
+  MISSING_REQUIRED_PENALTY: 15,     // 15 points per missing required field
+  MISSING_RECOMMENDED_PENALTY: 3    // 3 points per missing recommended field
+};
+
+// ===== PERFORMANCE CONFIGURATION =====
+export const PERFORMANCE_CONFIG = {
+  MAX_BATCH_SIZE: 50,               // Process up to 50 profiles at once
+  CACHE_DURATION_MINUTES: 15,       // Cache results for 15 minutes
+  MAX_CALCULATION_TIME: 5000,       // 5 second timeout
+  MAX_PROFILES_TO_PROCESS: 200,     // Maximum profiles to consider
+  TIMEOUT_WARNING_THRESHOLD: 3000,  // Warn if taking over 3 seconds
+  
+  // Quality settings
+  ENABLE_DETAILED_INSIGHTS: true,   // Generate detailed match explanations
+  USE_PARALLEL_PROCESSING: false,   // Keep simple for now
+  SKIP_OBVIOUS_MISMATCHES: true     // Skip clearly incompatible profiles early
 };
 
 // ===== HELPER FUNCTIONS =====
 
 /**
- * ✅ ENHANCED: Validate that enhanced weights add up to 100
- */
-export const validateEnhancedWeights = () => {
-  const total = Object.values(ENHANCED_COMPATIBILITY_WEIGHTS).reduce((sum, weight) => sum + weight, 0);
-  if (Math.abs(total - 100) > 0.1) { // Allow small floating point differences
-    console.warn(`⚠️ Enhanced compatibility weights total ${total}%, should be 100%`);
-  }
-  return Math.abs(total - 100) <= 0.1;
-};
-
-/**
- * Legacy weight validation (for compatibility)
+ * Validate that weights add up to 100%
  */
 export const validateWeights = () => {
   const total = Object.values(COMPATIBILITY_WEIGHTS).reduce((sum, weight) => sum + weight, 0);
-  if (total !== 100) {
-    console.warn(`⚠️ Legacy compatibility weights total ${total}%, should be 100%`);
+  const isValid = Math.abs(total - 100) < 0.1; // Allow small floating point differences
+  
+  if (!isValid) {
+    console.warn(`⚠️ Compatibility weights total ${total.toFixed(1)}%, should be 100%`);
   }
-  return total === 100;
+  
+  return isValid;
 };
 
 /**
- * ✅ ENHANCED: Get weight for compatibility category
- */
-export const getEnhancedWeight = (category) => {
-  return ENHANCED_COMPATIBILITY_WEIGHTS[category] || 0;
-};
-
-/**
- * Legacy get weight (for compatibility)
+ * Get weight for compatibility category
  */
 export const getWeight = (category) => {
   return COMPATIBILITY_WEIGHTS[category] || 0;
 };
 
 /**
- * ✅ ENHANCED: Check if score meets enhanced thresholds
- */
-export const meetsEnhancedThreshold = (category, score, level = 'core') => {
-  const thresholds = ENHANCED_MATCHING_THRESHOLDS;
-  
-  if (level === 'core') {
-    const threshold = thresholds.CORE_FACTOR_MINIMUMS[category];
-    return !threshold || score >= threshold;
-  } else if (level === 'high') {
-    const threshold = thresholds.HIGH_FACTOR_MINIMUMS[category];
-    return !threshold || score >= threshold;
-  } else {
-    const threshold = thresholds.PRIORITY_MINIMUMS[level];
-    return !threshold || score >= threshold;
-  }
-};
-
-/**
- * Legacy threshold check (for compatibility)
+ * Check if score meets minimum threshold
  */
 export const meetsMinimumThreshold = (category, score) => {
-  const threshold = MATCHING_THRESHOLDS.RECOMMENDED_MINIMUMS[category];
+  const threshold = MATCHING_THRESHOLDS.CORE_MINIMUMS[category] || 
+                   MATCHING_THRESHOLDS.RECOMMENDED_MINIMUMS[category];
   return !threshold || score >= threshold;
 };
 
 /**
- * ✅ ENHANCED: Determine if score should generate flags
- */
-export const shouldGenerateEnhancedRedFlag = (category, score) => {
-  const threshold = ENHANCED_RED_FLAG_THRESHOLDS[category];
-  return threshold && score < threshold;
-};
-
-export const shouldGenerateEnhancedGreenFlag = (category, score) => {
-  const threshold = ENHANCED_GREEN_FLAG_THRESHOLDS[category];
-  return threshold && score >= threshold;
-};
-
-/**
- * Legacy flag functions (for compatibility)
+ * Check for red flags
  */
 export const shouldGenerateRedFlag = (category, score) => {
   const threshold = RED_FLAG_THRESHOLDS[category];
   return threshold && score < threshold;
 };
 
+/**
+ * Check for green flags
+ */
 export const shouldGenerateGreenFlag = (category, score) => {
   const threshold = GREEN_FLAG_THRESHOLDS[category];
   return threshold && score >= threshold;
 };
 
 /**
- * ✅ ENHANCED: Get compatibility group with enhanced groupings
+ * Get spiritual compatibility group
  */
-export const getEnhancedCompatibilityGroup = (type, value) => {
-  const groups = ENHANCED_COMPATIBILITY_GROUPS[type];
-  if (!groups) return 'OTHER';
-  
-  for (const [groupName, values] of Object.entries(groups)) {
-    if (values.includes(value)) {
+export const getSpiritualCompatibilityGroup = (affiliation) => {
+  const groups = COMPATIBILITY_GROUPS.SPIRITUAL;
+  for (const [groupName, affiliations] of Object.entries(groups)) {
+    if (affiliations.includes(affiliation)) {
       return groupName;
     }
   }
@@ -639,119 +416,60 @@ export const getEnhancedCompatibilityGroup = (type, value) => {
 };
 
 /**
- * Legacy compatibility group function
+ * Check for absolute deal breakers
  */
-export const getSpiritualCompatibilityGroup = (affiliation) => {
-  return getEnhancedCompatibilityGroup('SPIRITUAL', affiliation);
+export const hasAbsoluteDealBreakers = (userProfile, candidateProfile) => {
+  return DEAL_BREAKER_CONFIG.ABSOLUTE_DEAL_BREAKERS.some(dealBreaker => {
+    return dealBreaker.check(userProfile, candidateProfile);
+  });
 };
 
 /**
- * ✅ ENHANCED: Check for deal breakers
+ * Calculate age from date_of_birth
  */
-export const checkDealBreakers = (userProfile, candidateProfile) => {
-  const dealBreakers = {
-    absolute: [],
-    strong: [],
-    moderate: []
-  };
+export const calculateAge = (dateOfBirth) => {
+  if (!dateOfBirth) return null;
   
-  // Check absolute deal breakers
-  if (userProfile.deal_breaker_substance_use && !candidateProfile.substance_free_home_required) {
-    dealBreakers.absolute.push('substance_use');
+  const today = new Date();
+  const birthDate = new Date(dateOfBirth);
+  let age = today.getFullYear() - birthDate.getFullYear();
+  const monthDiff = today.getMonth() - birthDate.getMonth();
+  
+  if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birthDate.getDate())) {
+    age--;
   }
   
-  if (userProfile.deal_breaker_financial_issues && !candidateProfile.financially_stable) {
-    dealBreakers.absolute.push('financial_reliability');
-  }
-  
-  // Check strong deal breakers
-  if (userProfile.deal_breaker_pets && candidateProfile.pets_owned) {
-    dealBreakers.strong.push('pets');
-  }
-  
-  if (userProfile.deal_breaker_smoking && candidateProfile.smoking_status !== 'non_smoker') {
-    dealBreakers.strong.push('smoking');
-  }
-  
-  // Check moderate deal breakers
-  if (userProfile.deal_breaker_uncleanliness && candidateProfile.cleanliness_level < 3) {
-    dealBreakers.moderate.push('cleanliness');
-  }
-  
-  return dealBreakers;
+  return age;
 };
 
 /**
- * ✅ ENHANCED: Export comprehensive configuration summary
- */
-export const getEnhancedConfigSummary = () => {
-  return {
-    algorithmVersion: '2.0_enhanced',
-    weightsValid: validateEnhancedWeights(),
-    totalWeight: Object.values(ENHANCED_COMPATIBILITY_WEIGHTS).reduce((sum, weight) => sum + weight, 0),
-    categories: Object.keys(ENHANCED_COMPATIBILITY_WEIGHTS),
-    priorityLevels: {
-      core: 70,
-      high: 25,
-      medium: 4,
-      low: 1
-    },
-    thresholds: ENHANCED_MATCHING_THRESHOLDS,
-    redFlagThresholds: ENHANCED_RED_FLAG_THRESHOLDS,
-    greenFlagThresholds: ENHANCED_GREEN_FLAG_THRESHOLDS,
-    dealBreakerConfig: DEAL_BREAKER_CONFIG,
-    performanceConfig: ENHANCED_PERFORMANCE_CONFIG
-  };
-};
-
-/**
- * Legacy config summary (for compatibility)
+ * Get configuration summary
  */
 export const getConfigSummary = () => {
   return {
+    version: '1.0',
     weightsValid: validateWeights(),
     totalWeight: Object.values(COMPATIBILITY_WEIGHTS).reduce((sum, weight) => sum + weight, 0),
     categories: Object.keys(COMPATIBILITY_WEIGHTS),
-    thresholds: MATCHING_THRESHOLDS,
-    redFlagThresholds: RED_FLAG_THRESHOLDS,
-    greenFlagThresholds: GREEN_FLAG_THRESHOLDS
+    coreMinimums: MATCHING_THRESHOLDS.CORE_MINIMUMS,
+    dealBreakerCount: DEAL_BREAKER_CONFIG.ABSOLUTE_DEAL_BREAKERS.length,
+    performanceSettings: {
+      maxBatchSize: PERFORMANCE_CONFIG.MAX_BATCH_SIZE,
+      timeout: PERFORMANCE_CONFIG.MAX_CALCULATION_TIME,
+      cacheMinutes: PERFORMANCE_CONFIG.CACHE_DURATION_MINUTES
+    }
   };
 };
 
-// Validate configurations on import
-validateEnhancedWeights();
+// Validate configuration on import
 validateWeights();
 
-// ===== ENHANCED EXPORTS =====
+// Export default configuration
 export default {
-  // Enhanced configuration (primary)
-  ENHANCED_COMPATIBILITY_WEIGHTS,
-  ENHANCED_MATCHING_THRESHOLDS,
-  ENHANCED_SCORING_CONFIG,
-  ENHANCED_DEFAULT_FILTERS,
-  ENHANCED_RED_FLAG_THRESHOLDS,
-  ENHANCED_GREEN_FLAG_THRESHOLDS,
-  ENHANCED_COMPATIBILITY_GROUPS,
-  ENHANCED_VALIDATION_CONFIG,
-  ENHANCED_PERFORMANCE_CONFIG,
-  
-  // Deal breaker configuration
-  DEAL_BREAKER_CONFIG,
-  
-  // Enhanced helper functions
-  validateEnhancedWeights,
-  getEnhancedWeight,
-  meetsEnhancedThreshold,
-  shouldGenerateEnhancedRedFlag,
-  shouldGenerateEnhancedGreenFlag,
-  getEnhancedCompatibilityGroup,
-  checkDealBreakers,
-  getEnhancedConfigSummary,
-  
-  // Legacy compatibility
   COMPATIBILITY_WEIGHTS,
   MATCHING_THRESHOLDS,
   SCORING_CONFIG,
+  DEAL_BREAKER_CONFIG,
   DEFAULT_FILTERS,
   RED_FLAG_THRESHOLDS,
   GREEN_FLAG_THRESHOLDS,
@@ -759,12 +477,14 @@ export default {
   VALIDATION_CONFIG,
   PERFORMANCE_CONFIG,
   
-  // Legacy helper functions
+  // Helper functions
   validateWeights,
   getWeight,
   meetsMinimumThreshold,
   shouldGenerateRedFlag,
   shouldGenerateGreenFlag,
   getSpiritualCompatibilityGroup,
+  hasAbsoluteDealBreakers,
+  calculateAge,
   getConfigSummary
 };

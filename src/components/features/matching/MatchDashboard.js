@@ -1,232 +1,271 @@
-// src/components/features/matching/MatchDashboard.js - UPDATED WITH CSS MODULE
+// src/components/features/matching/MatchDashboard.js - SCHEMA ALIGNED & CLEANED
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../../../context/AuthContext';
+import { db } from '../../../utils/supabase';
 
-// ✅ UPDATED: Import our new CSS foundation and component module
+// Import CSS foundation and component module
 import '../../../styles/main.css';
 import styles from './MatchDashboard.module.css';
 
-// ==================== MOCK DATA ====================
-
-const mockMatchInfo = {
-  roommate: {
-    name: 'Sarah M.',
-    age: 28,
-    recoveryStage: 'Stable (8 months)',
-    location: 'Austin, TX',
-    interests: ['Yoga', 'Cooking', 'Reading']
-  },
-  matchDate: '2024-08-20',
-  sharedCriteria: {
-    location: 'Austin, TX',
-    priceRange: '$800-$1,500',
-    housingTypes: ['Apartment', 'House'],
-    moveInDate: '2024-10-01'
-  }
-};
-
-const mockHousingListings = [
-  {
-    id: 1,
-    title: 'Sunny 2BR Apartment Near Recovery Center',
-    address: '123 Recovery Lane, Austin, TX',
-    price: 1200,
-    bedrooms: 2,
-    bathrooms: 1,
-    isRecoveryFriendly: true,
-    amenities: ['Laundry', 'Parking', 'Gym'],
-    description: 'Beautiful apartment in recovery-friendly community'
-  },
-  {
-    id: 2,
-    title: 'Peaceful House with Garden',
-    address: '456 Serenity Drive, Austin, TX',
-    price: 1400,
-    bedrooms: 3,
-    bathrooms: 2,
-    isRecoveryFriendly: true,
-    amenities: ['Yard', 'Garage', 'Pet-friendly'],
-    description: 'Quiet neighborhood perfect for recovery'
-  },
-  {
-    id: 3,
-    title: 'Downtown Loft - Walking Distance to Meetings',
-    address: '789 Hope Street, Austin, TX',
-    price: 1100,
-    bedrooms: 1,
-    bathrooms: 1,
-    isRecoveryFriendly: false,
-    amenities: ['Pool', 'Fitness center'],
-    description: 'Modern loft in the heart of the city'
-  }
-];
-
-const mockPeerSupport = [
-  {
-    id: 1,
-    name: 'Dr. Jennifer L.',
-    title: 'Licensed Peer Recovery Specialist',
-    matchScore: 95,
-    specialties: ['AA/NA Programs', 'Trauma-Informed Care', 'Family Therapy'],
-    experience: '8 years',
-    location: 'Austin, TX',
-    description: 'Specializes in early to mid-stage recovery support with emphasis on building healthy relationships.'
-  },
-  {
-    id: 2,
-    name: 'Michael R.',
-    title: 'Certified Recovery Coach',
-    matchScore: 88,
-    specialties: ['SMART Recovery', 'Mindfulness', 'Career Counseling'],
-    experience: '5 years',
-    location: 'Austin, TX',
-    description: 'Focuses on holistic recovery approaches and life skills development.'
-  },
-  {
-    id: 3,
-    name: 'Amanda K.',
-    title: 'Peer Support Specialist',
-    matchScore: 92,
-    specialties: ['Women in Recovery', 'Secular Programs', 'Housing Support'],
-    experience: '6 years',
-    location: 'Austin, TX',
-    description: 'Passionate about helping women navigate housing and recovery challenges.'
-  }
-];
-
-// ==================== MATCH DASHBOARD COMPONENT ====================
-
 const MatchDashboard = ({ onBack }) => {
   const { user, profile } = useAuth();
-  const [activeTab, setActiveTab] = useState('housing');
-  const [housingResults, setHousingResults] = useState(mockHousingListings);
-  const [peerResults, setPeerResults] = useState(mockPeerSupport);
-  const [loading, setLoading] = useState(false);
-  const [housingFilters, setHousingFilters] = useState({
-    location: 'Austin, TX',
-    maxPrice: '1500',
-    bedrooms: '',
-    type: ''
-  });
   
-  // Handle housing search
+  // State management
+  const [activeTab, setActiveTab] = useState('housing');
+  const [housingResults, setHousingResults] = useState([]);
+  const [peerResults, setPeerResults] = useState([]);
+  const [matchedRoommate, setMatchedRoommate] = useState(null);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState(null);
+  
+  // ✅ SCHEMA ALIGNED: Housing filters using database field names
+  const [housingFilters, setHousingFilters] = useState({
+    city: '',
+    state: '',
+    max_rent: '', // Schema field: monthly_rent
+    min_bedrooms: '',
+    property_type: '',
+    is_recovery_housing: null // Schema field
+  });
+
+  // ✅ SCHEMA ALIGNED: Peer support filters using database field names
+  const [peerFilters, setPeerFilters] = useState({
+    service_city: '',
+    service_state: '',
+    specialties: [],
+    recovery_methods: [], // Schema field
+    accepting_clients: true // Schema field
+  });
+
+  /**
+   * ✅ SCHEMA ALIGNED: Load user's matched roommate data
+   */
+  const loadMatchedRoommate = async () => {
+    try {
+      // This would fetch from match_groups or housing_matches table
+      // For now, we'll set to null until real matching is implemented
+      setMatchedRoommate(null);
+    } catch (err) {
+      console.error('Error loading matched roommate:', err);
+      setError('Failed to load roommate match information');
+    }
+  };
+
+  /**
+   * ✅ SCHEMA ALIGNED: Search for housing using properties table
+   */
   const handleHousingSearch = async () => {
     setLoading(true);
+    setError(null);
     
     try {
-      // Simulate API call
-      await new Promise(resolve => setTimeout(resolve, 1500));
-      
-      // Filter results based on criteria
-      let filtered = mockHousingListings;
-      
-      if (housingFilters.maxPrice) {
-        filtered = filtered.filter(listing => listing.price <= parseInt(housingFilters.maxPrice));
-      }
-      
-      if (housingFilters.bedrooms) {
-        filtered = filtered.filter(listing => listing.bedrooms >= parseInt(housingFilters.bedrooms));
-      }
-      
-      // Prioritize recovery-friendly properties
-      filtered.sort((a, b) => {
-        if (a.isRecoveryFriendly && !b.isRecoveryFriendly) return -1;
-        if (!a.isRecoveryFriendly && b.isRecoveryFriendly) return 1;
-        return 0;
+      const result = await db.properties.searchProperties({
+        city: housingFilters.city || undefined,
+        state: housingFilters.state || undefined,
+        max_monthly_rent: housingFilters.max_rent ? parseInt(housingFilters.max_rent) : undefined,
+        min_bedrooms: housingFilters.min_bedrooms ? parseInt(housingFilters.min_bedrooms) : undefined,
+        property_type: housingFilters.property_type || undefined,
+        is_recovery_housing: housingFilters.is_recovery_housing,
+        accepting_applications: true // Only show available properties
       });
       
-      setHousingResults(filtered);
+      if (result.success) {
+        setHousingResults(result.data || []);
+      } else {
+        throw new Error(result.error || 'Failed to search housing');
+      }
       
-    } catch (error) {
-      console.error('Error searching housing:', error);
+    } catch (err) {
+      console.error('Error searching housing:', err);
+      setError(err.message);
+      setHousingResults([]);
     } finally {
       setLoading(false);
     }
   };
-  
-  // Handle peer support search
+
+  /**
+   * ✅ SCHEMA ALIGNED: Search for peer support using peer_support_profiles table
+   */
   const handlePeerSearch = async () => {
     setLoading(true);
+    setError(null);
     
     try {
-      // Simulate API call
-      await new Promise(resolve => setTimeout(resolve, 1000));
+      const result = await db.peerSupport.searchPeerSupport({
+        service_city: peerFilters.service_city || undefined,
+        service_state: peerFilters.service_state || undefined,
+        specialties: peerFilters.specialties.length > 0 ? peerFilters.specialties : undefined,
+        recovery_methods: peerFilters.recovery_methods.length > 0 ? peerFilters.recovery_methods : undefined,
+        accepting_clients: peerFilters.accepting_clients
+      });
       
-      // Sort by match score
-      const sorted = [...mockPeerSupport].sort((a, b) => b.matchScore - a.matchScore);
-      setPeerResults(sorted);
+      if (result.success) {
+        setPeerResults(result.data || []);
+      } else {
+        throw new Error(result.error || 'Failed to search peer support');
+      }
       
-    } catch (error) {
-      console.error('Error searching peer support:', error);
+    } catch (err) {
+      console.error('Error searching peer support:', err);
+      setError(err.message);
+      setPeerResults([]);
     } finally {
       setLoading(false);
     }
   };
-  
-  // Handle contact actions
-  const handleContactLandlord = (listing) => {
-    alert(`Contacting landlord for: ${listing.title}`);
+
+  /**
+   * ✅ SCHEMA ALIGNED: Handle contacting property landlord
+   */
+  const handleContactLandlord = async (property) => {
+    try {
+      // This would create a match_request with property_id
+      const result = await db.matchRequests.create({
+        requester_type: 'applicant',
+        requester_id: user.id,
+        recipient_type: 'landlord', 
+        recipient_id: property.landlord_id,
+        property_id: property.id, // Schema field for property-specific requests
+        request_type: 'housing',
+        message: `Interested in your property: ${property.title}`
+      });
+      
+      if (result.success) {
+        alert(`Contact request sent for: ${property.title}`);
+      } else {
+        throw new Error(result.error || 'Failed to send contact request');
+      }
+      
+    } catch (err) {
+      console.error('Error contacting landlord:', err);
+      alert('Failed to send contact request. Please try again.');
+    }
   };
-  
-  const handleContactPeer = (peer) => {
-    alert(`Connecting with ${peer.name} for peer support services`);
+
+  /**
+   * ✅ SCHEMA ALIGNED: Handle contacting peer support specialist
+   */
+  const handleContactPeer = async (peer) => {
+    try {
+      // This would create a peer_support_match
+      const result = await db.matchRequests.create({
+        requester_type: 'applicant',
+        requester_id: user.id,
+        recipient_type: 'peer-support',
+        recipient_id: peer.id,
+        request_type: 'peer-support',
+        message: `Interested in peer support services`
+      });
+      
+      if (result.success) {
+        alert(`Connection request sent to ${peer.first_name || peer.professional_title}`);
+      } else {
+        throw new Error(result.error || 'Failed to send connection request');
+      }
+      
+    } catch (err) {
+      console.error('Error connecting with peer:', err);
+      alert('Failed to send connection request. Please try again.');
+    }
   };
-  
+
+  /**
+   * ✅ SCHEMA ALIGNED: Get user's location from profile
+   */
+  const getUserLocation = () => {
+    if (profile?.primary_city && profile?.primary_state) {
+      return `${profile.primary_city}, ${profile.primary_state}`;
+    }
+    return null;
+  };
+
+  /**
+   * ✅ SCHEMA ALIGNED: Auto-populate filters from user profile
+   */
+  const useMyLocation = () => {
+    if (profile?.primary_city && profile?.primary_state) {
+      setHousingFilters(prev => ({
+        ...prev,
+        city: profile.primary_city,
+        state: profile.primary_state
+      }));
+      setPeerFilters(prev => ({
+        ...prev,
+        service_city: profile.primary_city,
+        service_state: profile.primary_state
+      }));
+    } else {
+      alert('No location found in your profile. Please update your matching profile.');
+    }
+  };
+
   // Load initial data
   useEffect(() => {
+    loadMatchedRoommate();
+    
     if (activeTab === 'housing') {
       handleHousingSearch();
     } else if (activeTab === 'peer-support') {
       handlePeerSearch();
     }
   }, [activeTab]);
-  
+
   return (
     <div className="content">
       {/* Header */}
       <div className="text-center mb-5">
         <h1 className="welcome-title">Match Dashboard</h1>
         <p className="welcome-text">
-          Search for housing and connect with peer support specialists with your matched roommate
+          Search for housing and connect with peer support specialists
         </p>
-      </div>
-      
-      {/* Match Information */}
-      <div className="card mb-5">
-        <div className="card-header">
-          <h2 className="card-title">Your Roommate Match</h2>
-          <span className="badge badge-success">Matched</span>
-        </div>
         
-        <div className="grid-2 mb-4">
-          <div className="card">
-            <h3 className="card-title">You</h3>
-            <div className="card-text">
-              {profile?.first_name || 'Your Name'}<br/>
-              Ready to find housing together
-            </div>
+        {/* Show user location if available */}
+        {getUserLocation() && (
+          <div className="alert alert-info">
+            <strong>Your preferred location:</strong> {getUserLocation()}
+            <button 
+              className="btn btn-outline btn-sm ml-2"
+              onClick={useMyLocation}
+            >
+              Use My Location
+            </button>
+          </div>
+        )}
+      </div>
+
+      {/* Roommate Match Information */}
+      {matchedRoommate ? (
+        <div className="card mb-5">
+          <div className="card-header">
+            <h2 className="card-title">Your Roommate Match</h2>
+            <span className="badge badge-success">Matched</span>
           </div>
           
-          <div className="card">
-            <h3 className="card-title">{mockMatchInfo.roommate.name}</h3>
-            <div className="card-text">
-              Age: {mockMatchInfo.roommate.age}<br/>
-              Recovery: {mockMatchInfo.roommate.recoveryStage}<br/>
-              Interests: {mockMatchInfo.roommate.interests.join(', ')}
+          <div className="grid-2 mb-4">
+            <div className="card">
+              <h3 className="card-title">You</h3>
+              <div className="card-text">
+                {profile?.first_name || 'Your Name'}<br/>
+                Ready to find housing together
+              </div>
+            </div>
+            
+            <div className="card">
+              <h3 className="card-title">{matchedRoommate.first_name}</h3>
+              <div className="card-text">
+                Recovery: {matchedRoommate.recovery_stage}<br/>
+                Location: {matchedRoommate.primary_city}, {matchedRoommate.primary_state}
+              </div>
             </div>
           </div>
         </div>
-        
-        <div className="alert alert-info">
-          <h4 className="mb-2">Shared Housing Criteria</h4>
-          <div className="grid-auto text-gray-600">
-            <div><strong>Location:</strong> {mockMatchInfo.sharedCriteria.location}</div>
-            <div><strong>Budget:</strong> {mockMatchInfo.sharedCriteria.priceRange}</div>
-            <div><strong>Types:</strong> {mockMatchInfo.sharedCriteria.housingTypes.join(', ')}</div>
-            <div><strong>Move-in:</strong> {mockMatchInfo.sharedCriteria.moveInDate}</div>
-          </div>
+      ) : (
+        <div className="alert alert-info mb-5">
+          <h4>No Roommate Match Yet</h4>
+          <p>You can still search for housing and peer support services independently.</p>
         </div>
-      </div>
+      )}
       
       {/* Action Tabs */}
       <div className="navigation mb-5">
@@ -265,31 +304,43 @@ const MatchDashboard = ({ onBack }) => {
       
       {/* Content Sections */}
       <div className="card">
-        {/* Housing Search Tab */}
+        {/* ✅ SCHEMA ALIGNED: Housing Search Tab */}
         {activeTab === 'housing' && (
           <>
             <h3 className="card-title">🏠 Available Housing</h3>
             
-            {/* ✅ UPDATED: Search Controls using CSS module */}
+            {/* Search Controls */}
             <div className="alert alert-info mb-4">
               <div className={styles.filterRowPrimary}>
                 <div className="form-group">
-                  <label className="label">Location</label>
+                  <label className="label">City</label>
                   <input
                     className="input"
                     type="text"
-                    value={housingFilters.location}
-                    onChange={(e) => setHousingFilters(prev => ({ ...prev, location: e.target.value }))}
-                    placeholder="City, State"
+                    value={housingFilters.city}
+                    onChange={(e) => setHousingFilters(prev => ({ ...prev, city: e.target.value }))}
+                    placeholder="Austin"
                   />
                 </div>
                 
                 <div className="form-group">
-                  <label className="label">Max Price</label>
+                  <label className="label">State</label>
+                  <input
+                    className="input"
+                    type="text"
+                    value={housingFilters.state}
+                    onChange={(e) => setHousingFilters(prev => ({ ...prev, state: e.target.value }))}
+                    placeholder="TX"
+                    maxLength="2"
+                  />
+                </div>
+                
+                <div className="form-group">
+                  <label className="label">Max Rent</label>
                   <select
                     className="input"
-                    value={housingFilters.maxPrice}
-                    onChange={(e) => setHousingFilters(prev => ({ ...prev, maxPrice: e.target.value }))}
+                    value={housingFilters.max_rent}
+                    onChange={(e) => setHousingFilters(prev => ({ ...prev, max_rent: e.target.value }))}
                   >
                     <option value="">Any price</option>
                     <option value="1000">Up to $1,000</option>
@@ -303,8 +354,8 @@ const MatchDashboard = ({ onBack }) => {
                   <label className="label">Min Bedrooms</label>
                   <select
                     className="input"
-                    value={housingFilters.bedrooms}
-                    onChange={(e) => setHousingFilters(prev => ({ ...prev, bedrooms: e.target.value }))}
+                    value={housingFilters.min_bedrooms}
+                    onChange={(e) => setHousingFilters(prev => ({ ...prev, min_bedrooms: e.target.value }))}
                   >
                     <option value="">Any</option>
                     <option value="1">1+</option>
@@ -314,8 +365,24 @@ const MatchDashboard = ({ onBack }) => {
                 </div>
                 
                 <div className="form-group">
+                  <label className="label">Property Type</label>
+                  <select
+                    className="input"
+                    value={housingFilters.property_type}
+                    onChange={(e) => setHousingFilters(prev => ({ ...prev, property_type: e.target.value }))}
+                  >
+                    <option value="">Any type</option>
+                    <option value="apartment">Apartment</option>
+                    <option value="house">House</option>
+                    <option value="condo">Condo</option>
+                    <option value="townhouse">Townhouse</option>
+                    <option value="studio">Studio</option>
+                  </select>
+                </div>
+                
+                <div className="form-group">
                   <button
-                    className="btn btn-secondary"
+                    className="btn btn-primary"
                     onClick={handleHousingSearch}
                     disabled={loading}
                   >
@@ -323,12 +390,34 @@ const MatchDashboard = ({ onBack }) => {
                   </button>
                 </div>
               </div>
+              
+              {/* Recovery Housing Filter */}
+              <div className="checkbox-item mt-3">
+                <input
+                  type="checkbox"
+                  id="recovery-housing"
+                  checked={housingFilters.is_recovery_housing === true}
+                  onChange={(e) => setHousingFilters(prev => ({ 
+                    ...prev, 
+                    is_recovery_housing: e.target.checked ? true : null 
+                  }))}
+                />
+                <label htmlFor="recovery-housing">
+                  Recovery housing only
+                </label>
+              </div>
             </div>
             
-            {/* ✅ UPDATED: Housing Results using CSS module */}
+            {/* Housing Results */}
+            {error && (
+              <div className="alert alert-error mb-4">
+                <strong>Error:</strong> {error}
+              </div>
+            )}
+            
             {loading ? (
               <div className={styles.loadingState}>
-                <div className={styles.loadingText}>Finding the perfect housing options for you...</div>
+                <div className={styles.loadingText}>Finding housing options...</div>
               </div>
             ) : housingResults.length === 0 ? (
               <div className="empty-state">
@@ -338,34 +427,38 @@ const MatchDashboard = ({ onBack }) => {
               </div>
             ) : (
               <div className={styles.searchResultsGrid}>
-                {housingResults.map(listing => (
-                  <div key={listing.id} className={styles.searchResultCard}>
-                    {/* ✅ UPDATED: Housing card placeholder using CSS module */}
+                {housingResults.map(property => (
+                  <div key={property.id} className={styles.searchResultCard}>
                     <div className={styles.housingCardPlaceholder}>
                       <div className={styles.housingCardIcon}>🏠</div>
                     </div>
                     
                     <div className={styles.searchResultContent}>
-                      {listing.isRecoveryFriendly && (
+                      {property.is_recovery_housing && (
                         <span className="badge badge-warning mb-2">
-                          Recovery Friendly
+                          Recovery Housing
                         </span>
                       )}
                       
-                      <h4 className={styles.searchResultTitle}>{listing.title}</h4>
-                      <p className={styles.searchResultAddress}>{listing.address}</p>
+                      <h4 className={styles.searchResultTitle}>{property.title}</h4>
+                      <p className={styles.searchResultAddress}>
+                        {property.address}, {property.city}, {property.state} {property.zip_code}
+                      </p>
                       <p className={styles.searchResultPrice}>
-                        ${listing.price}/month
+                        ${property.monthly_rent}/month
                       </p>
                       
                       <div className={styles.searchResultDetails}>
-                        {listing.bedrooms} bed • {listing.bathrooms} bath<br/>
-                        {listing.amenities.join(' • ')}
+                        {property.bedrooms} bed • {property.bathrooms} bath<br/>
+                        Type: {property.property_type}
+                        {property.amenities && property.amenities.length > 0 && (
+                          <><br/>Amenities: {property.amenities.join(', ')}</>
+                        )}
                       </div>
                       
                       <button
                         className={`btn btn-primary ${styles.searchResultButton}`}
-                        onClick={() => handleContactLandlord(listing)}
+                        onClick={() => handleContactLandlord(property)}
                       >
                         Contact Landlord
                       </button>
@@ -377,18 +470,65 @@ const MatchDashboard = ({ onBack }) => {
           </>
         )}
         
-        {/* ✅ UPDATED: Peer Support Tab using CSS module */}
+        {/* ✅ SCHEMA ALIGNED: Peer Support Tab */}
         {activeTab === 'peer-support' && (
           <>
             <h3 className="card-title">🤝 Peer Support Specialists</h3>
             
-            <p className="card-text mb-5">
-              Connect with peer support specialists who understand your recovery journey and can provide ongoing guidance.
-            </p>
+            {/* Search Controls */}
+            <div className="alert alert-info mb-4">
+              <div className={styles.filterRowPrimary}>
+                <div className="form-group">
+                  <label className="label">City</label>
+                  <input
+                    className="input"
+                    type="text"
+                    value={peerFilters.service_city}
+                    onChange={(e) => setPeerFilters(prev => ({ ...prev, service_city: e.target.value }))}
+                    placeholder="Austin"
+                  />
+                </div>
+                
+                <div className="form-group">
+                  <label className="label">State</label>
+                  <input
+                    className="input"
+                    type="text"
+                    value={peerFilters.service_state}
+                    onChange={(e) => setPeerFilters(prev => ({ ...prev, service_state: e.target.value }))}
+                    placeholder="TX"
+                    maxLength="2"
+                  />
+                </div>
+                
+                <div className="form-group">
+                  <button
+                    className="btn btn-primary"
+                    onClick={handlePeerSearch}
+                    disabled={loading}
+                  >
+                    {loading ? 'Searching...' : 'Search'}
+                  </button>
+                </div>
+              </div>
+            </div>
+            
+            {/* Peer Results */}
+            {error && (
+              <div className="alert alert-error mb-4">
+                <strong>Error:</strong> {error}
+              </div>
+            )}
             
             {loading ? (
               <div className={styles.loadingState}>
-                <div className={styles.loadingText}>Finding compatible peer support specialists...</div>
+                <div className={styles.loadingText}>Finding peer support specialists...</div>
+              </div>
+            ) : peerResults.length === 0 ? (
+              <div className="empty-state">
+                <div className="empty-state-icon">🤝</div>
+                <h3 className="empty-state-title">No specialists found</h3>
+                <p>No peer support specialists found. Try adjusting your search criteria.</p>
               </div>
             ) : (
               <div className={styles.searchResultsGrid}>
@@ -396,37 +536,40 @@ const MatchDashboard = ({ onBack }) => {
                   <div key={peer.id} className={styles.peerSupportCard}>
                     <div className={styles.peerSupportHeader}>
                       <div className={styles.peerSupportInfo}>
-                        <h4 className="card-title">{peer.name}</h4>
-                        <p className="card-subtitle">{peer.title}</p>
+                        <h4 className="card-title">{peer.professional_title}</h4>
+                        <p className="card-subtitle">
+                          {peer.service_city}, {peer.service_state}
+                        </p>
                       </div>
-                      <span className="badge badge-success">{peer.matchScore}% Match</span>
+                      {peer.years_experience && (
+                        <span className="badge badge-info">{peer.years_experience} years</span>
+                      )}
                     </div>
                     
-                    <div className={styles.peerSupportSpecialties}>
-                      <div className="label mb-2">Specialties</div>
-                      <div className={styles.specialtyBadges}>
-                        {peer.specialties.map((specialty, i) => (
-                          <span key={i} className={`badge badge-info ${styles.mr1} ${styles.mb1}`}>
-                            {specialty}
-                          </span>
-                        ))}
+                    {peer.specialties && peer.specialties.length > 0 && (
+                      <div className={styles.peerSupportSpecialties}>
+                        <div className="label mb-2">Specialties</div>
+                        <div className={styles.specialtyBadges}>
+                          {peer.specialties.map((specialty, i) => (
+                            <span key={i} className={`badge badge-info ${styles.mr1} ${styles.mb1}`}>
+                              {specialty}
+                            </span>
+                          ))}
+                        </div>
                       </div>
-                    </div>
+                    )}
                     
-                    <div className={styles.peerSupportDetails}>
-                      <strong>Experience:</strong> {peer.experience}<br/>
-                      <strong>Location:</strong> {peer.location}
-                    </div>
-                    
-                    <p className={styles.peerSupportDescription}>
-                      {peer.description}
-                    </p>
+                    {peer.bio && (
+                      <p className={styles.peerSupportDescription}>
+                        {peer.bio.substring(0, 150)}...
+                      </p>
+                    )}
                     
                     <button
                       className={`btn btn-primary ${styles.peerSupportButton}`}
                       onClick={() => handleContactPeer(peer)}
                     >
-                      Connect with {peer.name.split(' ')[0]}
+                      Connect with Specialist
                     </button>
                   </div>
                 ))}

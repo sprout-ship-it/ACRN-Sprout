@@ -131,166 +131,190 @@ const createEmployerService = (supabaseClient) => {
     /**
      * Get available employer profiles with filters
      */
-    getAvailable: async (filters = {}) => {
-      try {
-        console.log('💼 Employers: Fetching available profiles with filters:', filters);
+getAvailable: async (filters = {}) => {
+  try {
+    console.log('💼 Employers: Fetching available profiles with filters:', filters);
 
-        let query = supabaseClient
-          .from(profiles.tableName)
-          .select('*')
-          .eq('profile_completed', true);
+    let query = supabaseClient
+      .from(profiles.tableName)
+      .select('*')
+      .eq('profile_completed', true);
 
-        // Apply filters
-        if (filters.isActivelyHiring) {
-          query = query.eq('is_actively_hiring', true);
-        }
+    // Apply filters with correct field names
+    if (filters.isActivelyHiring) {
+      query = query.eq('accepting_applications', true); // ✅ FIXED: was 'is_actively_hiring'
+    }
 
-        if (filters.industry) {
-          query = query.eq('industry', filters.industry);
-        }
+    if (filters.industry) {
+      query = query.eq('industry', filters.industry);
+    }
 
-        if (filters.city) {
-          query = query.ilike('city', `%${filters.city}%`);
-        }
+    if (filters.city) {
+      query = query.ilike('service_city', `%${filters.city}%`); // ✅ FIXED: was 'city'
+    }
 
-        if (filters.state) {
-          query = query.eq('state', filters.state);
-        }
+    if (filters.state) {
+      query = query.eq('service_state', filters.state); // ✅ FIXED: was 'state'
+    }
 
-        if (filters.businessType) {
-          query = query.eq('business_type', filters.businessType);
-        }
+    if (filters.businessType) {
+      query = query.eq('business_type', filters.businessType);
+    }
 
-        if (filters.remoteWork) {
-          query = query.eq('remote_work_options', filters.remoteWork);
-        }
+    // ✅ REMOVED: remote_work_options doesn't exist in schema
+    
+    // Array filters with correct field names
+    if (filters.recoveryMethods && filters.recoveryMethods.length > 0) {
+      query = query.overlaps('supported_recovery_methods', filters.recoveryMethods); // ✅ FIXED: was 'recovery_friendly_features'
+    }
 
-        // Array filters
-        if (filters.recoveryFeatures && filters.recoveryFeatures.length > 0) {
-          query = query.overlaps('recovery_friendly_features', filters.recoveryFeatures);
-        }
+    if (filters.jobTypes && filters.jobTypes.length > 0) {
+      query = query.overlaps('job_types_available', filters.jobTypes); // ✅ FIXED: was 'current_openings'
+    }
 
-        if (filters.jobTypes && filters.jobTypes.length > 0) {
-          query = query.overlaps('current_openings', filters.jobTypes);
-        }
+    const { data, error } = await query
+      .eq('is_active', true) // ✅ ADDED: filter for active profiles
+      .eq('accepting_applications', true) // ✅ ADDED: filter for accepting applications
+      .order('updated_at', { ascending: false })
+      .limit(filters.limit || 50);
 
-        const { data, error } = await query
-          .order('is_actively_hiring', { ascending: false })
-          .order('updated_at', { ascending: false })
-          .limit(filters.limit || 50);
+    if (error) {
+      console.error('❌ Employers: GetAvailable failed:', error.message);
+      return { success: false, data: [], error };
+    }
 
-        if (error) {
-          console.error('❌ Employers: GetAvailable failed:', error.message);
-          return { success: false, data: [], error };
-        }
+    console.log(`✅ Employers: Found ${data?.length || 0} available profiles`);
+    return { success: true, data: data || [], error: null };
 
-        console.log(`✅ Employers: Found ${data?.length || 0} available profiles`);
-        return { success: true, data: data || [], error: null };
+  } catch (err) {
+    console.error('💥 Employers: GetAvailable exception:', err);
+    return { success: false, data: [], error: { message: err.message } };
+  }
+},
 
-      } catch (err) {
-        console.error('💥 Employers: GetAvailable exception:', err);
-        return { success: false, data: [], error: { message: err.message } };
-      }
-    },
 
     /**
      * Search employer profiles
      */
-    search: async (searchTerm, filters = {}) => {
-      try {
-        console.log('💼 Employers: Searching profiles:', searchTerm);
+search: async (searchTerm, filters = {}) => {
+  try {
+    console.log('💼 Employers: Searching profiles:', searchTerm);
 
-        let query = supabaseClient
-          .from(profiles.tableName)
-          .select('*')
-          .eq('profile_completed', true);
+    let query = supabaseClient
+      .from(profiles.tableName)
+      .select('*')
+      .eq('profile_completed', true)
+      .eq('is_active', true);
 
-        // Text search
-        if (searchTerm) {
-          query = query.or(`company_name.ilike.%${searchTerm}%,description.ilike.%${searchTerm}%,industry.ilike.%${searchTerm}%`);
+    // Text search with correct field names
+    if (searchTerm) {
+      // ✅ FIXED: Use business_name instead of company_name which doesn't exist
+      query = query.or(`business_name.ilike.%${searchTerm}%,description.ilike.%${searchTerm}%,industry.ilike.%${searchTerm}%`);
+    }
+
+    // Apply additional filters with correct field names
+    const fieldMappings = {
+      city: 'service_city',
+      state: 'service_state',
+      isActivelyHiring: 'accepting_applications',
+      // Remove fields that don't exist in schema
+    };
+
+    Object.entries(filters).forEach(([key, value]) => {
+      if (value !== null && value !== undefined && value !== '') {
+        const actualField = fieldMappings[key] || key;
+        
+        // Skip fields that don't exist in schema
+        if (['remoteWork', 'recoveryFeatures'].includes(key)) {
+          return;
         }
 
-        // Apply additional filters
-        Object.entries(filters).forEach(([key, value]) => {
-          if (value !== null && value !== undefined && value !== '') {
-            if (Array.isArray(value) && value.length > 0) {
-              query = query.overlaps(key, value);
-            } else {
-              query = query.eq(key, value);
-            }
+        if (Array.isArray(value) && value.length > 0) {
+          // Map array field names
+          if (key === 'jobTypes') {
+            query = query.overlaps('job_types_available', value);
+          } else if (key === 'recoveryMethods') {
+            query = query.overlaps('supported_recovery_methods', value);
+          } else {
+            query = query.overlaps(actualField, value);
           }
-        });
-
-        const { data, error } = await query
-          .order('is_actively_hiring', { ascending: false })
-          .limit(20);
-
-        if (error) {
-          console.error('❌ Employers: Search failed:', error.message);
-          return { success: false, data: [], error };
+        } else {
+          query = query.eq(actualField, value);
         }
-
-        console.log(`✅ Employers: Search found ${data?.length || 0} results`);
-        return { success: true, data: data || [], error: null };
-
-      } catch (err) {
-        console.error('💥 Employers: Search exception:', err);
-        return { success: false, data: [], error: { message: err.message } };
       }
-    },
+    });
+
+    const { data, error } = await query
+      .order('accepting_applications', { ascending: false }) // ✅ FIXED: was 'is_actively_hiring'
+      .limit(20);
+
+    if (error) {
+      console.error('❌ Employers: Search failed:', error.message);
+      return { success: false, data: [], error };
+    }
+
+    console.log(`✅ Employers: Search found ${data?.length || 0} results`);
+    return { success: true, data: data || [], error: null };
+
+  } catch (err) {
+    console.error('💥 Employers: Search exception:', err);
+    return { success: false, data: [], error: { message: err.message } };
+  }
+},
 
     /**
      * Get employer statistics
      */
-    getStatistics: async (userId = null) => {
-      try {
-        console.log('💼 Employers: Fetching statistics', userId ? `for user: ${userId}` : 'system-wide');
+getStatistics: async (userId = null) => {
+  try {
+    console.log('💼 Employers: Fetching statistics', userId ? `for user: ${userId}` : 'system-wide');
 
-        let query = supabaseClient
-          .from(profiles.tableName)
-          .select('industry, business_type, is_actively_hiring, created_at');
+    let query = supabaseClient
+      .from(profiles.tableName)
+      .select('industry, business_type, accepting_applications, is_active, created_at'); // ✅ FIXED: was 'is_actively_hiring'
 
-        if (userId) {
-          query = query.eq('user_id', userId);
-        }
-
-        const { data, error } = await query;
-
-        if (error) {
-          console.error('❌ Employers: Statistics failed:', error.message);
-          return { success: false, data: null, error };
-        }
-
-        const stats = {
-          total: data.length,
-          activelyHiring: data.filter(p => p.is_actively_hiring).length,
-          byIndustry: {},
-          byBusinessType: {},
-          recentlyAdded: data.filter(p => {
-            const createdDate = new Date(p.created_at);
-            const weekAgo = new Date();
-            weekAgo.setDate(weekAgo.getDate() - 7);
-            return createdDate > weekAgo;
-          }).length
-        };
-
-        // Group by industry and business type
-        data.forEach(profile => {
-          const industry = profile.industry || 'Unknown';
-          const businessType = profile.business_type || 'Unknown';
-          
-          stats.byIndustry[industry] = (stats.byIndustry[industry] || 0) + 1;
-          stats.byBusinessType[businessType] = (stats.byBusinessType[businessType] || 0) + 1;
-        });
-
-        console.log('✅ Employers: Statistics calculated');
-        return { success: true, data: stats, error: null };
-
-      } catch (err) {
-        console.error('💥 Employers: Statistics exception:', err);
-        return { success: false, data: null, error: { message: err.message } };
-      }
+    if (userId) {
+      query = query.eq('user_id', userId);
     }
+
+    const { data, error } = await query;
+
+    if (error) {
+      console.error('❌ Employers: Statistics failed:', error.message);
+      return { success: false, data: null, error };
+    }
+
+    const stats = {
+      total: data.length,
+      active: data.filter(p => p.is_active).length,
+      acceptingApplications: data.filter(p => p.accepting_applications).length, // ✅ FIXED: was 'activelyHiring'
+      byIndustry: {},
+      byBusinessType: {},
+      recentlyAdded: data.filter(p => {
+        const createdDate = new Date(p.created_at);
+        const weekAgo = new Date();
+        weekAgo.setDate(weekAgo.getDate() - 7);
+        return createdDate > weekAgo;
+      }).length
+    };
+
+    // Group by industry and business type
+    data.forEach(profile => {
+      const industry = profile.industry || 'Unknown';
+      const businessType = profile.business_type || 'Unknown';
+      
+      stats.byIndustry[industry] = (stats.byIndustry[industry] || 0) + 1;
+      stats.byBusinessType[businessType] = (stats.byBusinessType[businessType] || 0) + 1;
+    });
+
+    console.log('✅ Employers: Statistics calculated');
+    return { success: true, data: stats, error: null };
+
+  } catch (err) {
+    console.error('💥 Employers: Statistics exception:', err);
+    return { success: false, data: null, error: { message: err.message } };
+  }
+}
   };
 
   // Favorites service

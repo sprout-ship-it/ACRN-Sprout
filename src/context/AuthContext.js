@@ -1,6 +1,6 @@
-// src/context/AuthContext.js - FIXED VERSION
+// src/context/AuthContext.js - PHASE 3 CORRECTED VERSION
 import React, { createContext, useContext, useEffect, useState } from 'react'
-import { auth, db } from '../utils/supabase'
+import { supabase } from '../utils/supabase'
 
 // Create and export AuthContext
 export const AuthContext = createContext({})
@@ -26,35 +26,17 @@ export const AuthProvider = ({ children }) => {
     console.log('🔐 AuthProvider: Initializing auth state...')
     
     let mounted = true
-    let initTimeout = null
 
     const initializeAuth = async () => {
       try {
-        // Prevent infinite loading with timeout
-        initTimeout = setTimeout(() => {
-          if (mounted) {
-            console.log('⚠️ AuthProvider: Initialization timeout - setting unauthenticated')
-            setUser(null)
-            setProfile(null)
-            setLoading(false)
-            setError(null)
-          }
-        }, 8000)
-
         // Get current session
         console.log('🔐 AuthProvider: Checking for existing session...')
-        const sessionResult = await auth.getSession()
+        const { data: { session }, error: sessionError } = await supabase.auth.getSession()
         
-        // Clear timeout on response
-        if (initTimeout) {
-          clearTimeout(initTimeout)
-          initTimeout = null
-        }
-
         if (!mounted) return
 
-        if (sessionResult.error) {
-          console.error('❌ AuthProvider: Session error:', sessionResult.error.message)
+        if (sessionError) {
+          console.error('❌ AuthProvider: Session error:', sessionError.message)
           setUser(null)
           setProfile(null)
           setLoading(false)
@@ -62,25 +44,17 @@ export const AuthProvider = ({ children }) => {
           return
         }
 
-        if (sessionResult.session?.user) {
+        if (session?.user) {
           console.log('✅ AuthProvider: Active session found, loading profile...')
-          setUser(sessionResult.session.user)
+          setUser(session.user)
           
-          // Load profile with error handling
+          // Load profile - simplified since trigger should have created it
           try {
-            await loadUserProfile(sessionResult.session.user.id)
+            await loadUserProfile(session.user.id)
           } catch (profileErr) {
-            console.error('⚠️ AuthProvider: Profile load failed, but keeping user logged in:', profileErr)
-            // Create minimal profile to prevent blocking
-            setProfile({
-              id: sessionResult.session.user.id,
-              user_id: sessionResult.session.user.id, // ✅ ADDED: Correct field
-              email: sessionResult.session.user.email,
-              first_name: sessionResult.session.user.user_metadata?.firstName || 'User',
-              last_name: sessionResult.session.user.user_metadata?.lastName || '',
-              roles: ['applicant'],
-              is_active: true
-            })
+            console.error('⚠️ AuthProvider: Profile load failed:', profileErr)
+            // Don't create fallback profile - let the app handle missing profile case
+            setProfile(null)
           }
         } else {
           console.log('ℹ️ AuthProvider: No active session')
@@ -92,10 +66,6 @@ export const AuthProvider = ({ children }) => {
         setError(null)
 
       } catch (err) {
-        if (initTimeout) {
-          clearTimeout(initTimeout)
-        }
-        
         if (mounted) {
           console.error('💥 AuthProvider: Init failed:', err.message)
           setUser(null)
@@ -108,7 +78,7 @@ export const AuthProvider = ({ children }) => {
 
     // Set up auth state listener
     console.log('🔐 AuthProvider: Setting up auth state listener...')
-    const subscription = auth.onAuthStateChange(async (event, session) => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
       if (!mounted) return
 
       console.log('🔐 AuthProvider: Auth state changed:', event)
@@ -124,73 +94,18 @@ export const AuthProvider = ({ children }) => {
         setUser(session.user)
         setLoading(true)
         
-        const profileResult = await loadUserProfile(session.user.id)
-        
-        // ✅ FIXED: Check if profile was found, if not create one
-        if (!profileResult || profileResult.error?.code === 'NOT_FOUND') {
-          console.log('⚠️ AuthProvider: No profile found after sign in, attempting to create...')
-          
+        // Profile should be created by database trigger, so just load it
+        // Add small delay to allow trigger to complete
+        setTimeout(async () => {
           try {
-            const userData = session.user.user_metadata
-            console.log('👤 AuthProvider: User metadata for profile creation:', userData)
-            
-            if (userData?.firstName) {
-              console.log('👤 AuthProvider: Creating missing profile after sign in...')
-              
-              // ✅ FIXED: Correct schema for registrant_profiles table
-              const profileData = {
-                user_id: session.user.id, // ✅ FIXED: Use user_id, not id
-                email: session.user.email,
-                first_name: userData.firstName || '',
-                last_name: userData.lastName || '',
-                roles: userData.roles || ['applicant']
-              }
-
-              console.log('👤 AuthProvider: Creating profile with data:', profileData)
-
-              const createResult = await db.profiles.create(profileData)
-              
-              if (createResult.success && createResult.data) {
-                console.log('✅ AuthProvider: Profile created successfully after sign in')
-                setProfile(createResult.data)
-              } else {
-                console.error('❌ AuthProvider: Profile creation failed:', createResult.error)
-                throw createResult.error
-              }
-            } else {
-              console.log('⚠️ AuthProvider: No user metadata available, creating basic profile')
-              // Create basic profile without metadata
-              const profileData = {
-                user_id: session.user.id,
-                email: session.user.email,
-                first_name: 'User',
-                last_name: '',
-                roles: ['applicant']
-              }
-              
-              const createResult = await db.profiles.create(profileData)
-              if (createResult.success && createResult.data) {
-                console.log('✅ AuthProvider: Basic profile created successfully')
-                setProfile(createResult.data)
-              } else {
-                throw new Error('Failed to create basic profile')
-              }
-            }
-          } catch (createErr) {
-            console.error('❌ AuthProvider: Profile creation failed after sign in:', createErr)
-            // Create minimal in-memory profile to unblock user
-            setProfile({
-              user_id: session.user.id,
-              email: session.user.email,
-              first_name: session.user.user_metadata?.firstName || 'User',
-              last_name: session.user.user_metadata?.lastName || '',
-              roles: ['applicant'],
-              is_active: true
-            })
+            await loadUserProfile(session.user.id)
+          } catch (err) {
+            console.error('❌ AuthProvider: Profile load after sign in failed:', err)
+            setProfile(null)
           }
-        }
+          setLoading(false)
+        }, 1000) // 1 second delay for trigger to complete
         
-        setLoading(false)
       } else if (event === 'TOKEN_REFRESHED' && session.user) {
         console.log('🔄 AuthProvider: Token refreshed')
         setUser(session.user)
@@ -204,133 +119,130 @@ export const AuthProvider = ({ children }) => {
     // Cleanup
     return () => {
       mounted = false
-      if (initTimeout) {
-        clearTimeout(initTimeout)
-      }
       subscription?.unsubscribe()
     }
   }, [])
 
-  // ✅ FIXED: Load user profile by auth.users.id (but look up by user_id in registrant_profiles)
+  // Load user profile by auth.users.id
   const loadUserProfile = async (authUserId) => {
     console.log('👤 AuthProvider: Loading profile for auth user:', authUserId)
     
-    return new Promise((resolve, reject) => {
-      const profileTimeout = setTimeout(() => {
-        reject(new Error('Profile loading timed out'))
-      }, 6000)
+    try {
+      // Query registrant_profiles by user_id field (which references auth.users.id)
+      const { data, error } = await supabase
+        .from('registrant_profiles')
+        .select('*')
+        .eq('user_id', authUserId)
+        .single()
 
-      // ✅ FIXED: Query by user_id field (which references auth.users.id)
-      db.profiles.getByUserId(authUserId)
-        .then((result) => {
-          clearTimeout(profileTimeout)
-          
-          if (result.error) {
-            if (result.error.code === 'NOT_FOUND' || result.error.code === 'PGRST116') {
-              console.log('ℹ️ AuthProvider: No profile found (new user)')
-              setProfile(null)
-              resolve()
-            } else {
-              console.error('❌ AuthProvider: Profile error:', result.error.message)
-              reject(result.error)
-            }
-            return
-          }
+      if (error) {
+        if (error.code === 'PGRST116') {
+          console.log('ℹ️ AuthProvider: No profile found (may still be creating via trigger)')
+          setProfile(null)
+          return
+        }
+        console.error('❌ AuthProvider: Profile query error:', error.message)
+        throw error
+      }
 
-          if (result.data) {
-            console.log('✅ AuthProvider: Profile loaded successfully')
-            setProfile(result.data)
-            setError(null)
-            resolve()
-          } else {
-            console.log('ℹ️ AuthProvider: No profile data')
-            setProfile(null)
-            resolve()
-          }
-        })
-        .catch(err => {
-          clearTimeout(profileTimeout)
-          reject(err)
-        })
-    })
+      if (data) {
+        console.log('✅ AuthProvider: Profile loaded successfully')
+        setProfile(data)
+        setError(null)
+      } else {
+        console.log('ℹ️ AuthProvider: No profile data returned')
+        setProfile(null)
+      }
+    } catch (err) {
+      console.error('💥 AuthProvider: Profile loading failed:', err.message)
+      throw err
+    }
   }
 
-  // ✅ FIXED: Sign up new user - simplified, profile creation moved to auth state change
+  // Sign up new user - simplified since trigger handles profile creation
   const signUp = async (email, password, userData) => {
     console.log('🔐 AuthProvider: Starting sign up for:', email)
     setLoading(true)
     setError(null)
 
     try {
-      // ✅ FIXED: Handle the correct return format from authService
-      const authResult = await auth.signUp(email, password, userData)
-      
-      if (!authResult.success || authResult.error) {
-        console.error('❌ AuthProvider: Sign up error:', authResult.error?.message)
-        setError(authResult.error)
+      const { data, error: signUpError } = await supabase.auth.signUp({
+        email,
+        password,
+        options: {
+          data: {
+            first_name: userData.firstName || '',
+            last_name: userData.lastName || '',
+            role: userData.role || 'applicant'
+          }
+        }
+      })
+
+      if (signUpError) {
+        console.error('❌ AuthProvider: Sign up error:', signUpError.message)
+        setError(signUpError)
         setLoading(false)
-        return { data: null, error: authResult.error }
+        return { data: null, error: signUpError }
       }
 
-      console.log('✅ AuthProvider: Sign up successful - profile creation will happen in auth state change')
+      console.log('✅ AuthProvider: Sign up successful - database trigger will create profile')
       setLoading(false)
-      return { data: authResult.data, error: null }
+      return { data, error: null }
 
     } catch (err) {
       console.error('💥 AuthProvider: Sign up failed:', err.message)
-      setError({ message: err.message, code: 'signup_exception' })
+      const error = { message: err.message, code: 'signup_exception' }
+      setError(error)
       setLoading(false)
-      return { data: null, error: { message: err.message, code: 'signup_exception' } }
+      return { data: null, error }
     }
   }
 
-  // ✅ FIXED: Sign in existing user - handle correct return format
+  // Sign in existing user
   const signIn = async (email, password) => {
     console.log('🔐 AuthProvider: Starting sign in for:', email)
     setLoading(true)
     setError(null)
 
     try {
-      const authResult = await auth.signIn(email, password)
-      
-      if (!authResult.success || authResult.error) {
-        console.error('❌ AuthProvider: Sign in error:', authResult.error?.message)
-        setError(authResult.error)
+      const { data, error: signInError } = await supabase.auth.signInWithPassword({
+        email,
+        password
+      })
+
+      if (signInError) {
+        console.error('❌ AuthProvider: Sign in error:', signInError.message)
+        setError(signInError)
         setLoading(false)
-        return { data: null, error: authResult.error }
+        return { data: null, error: signInError }
       }
 
       console.log('✅ AuthProvider: Sign in successful')
       setLoading(false)
-      return { data: authResult.data, error: null }
+      return { data, error: null }
 
     } catch (err) {
       console.error('💥 AuthProvider: Sign in failed:', err.message)
-      setError({ message: err.message, code: 'signin_exception' })
+      const error = { message: err.message, code: 'signin_exception' }
+      setError(error)
       setLoading(false)
-      return { data: null, error: { message: err.message, code: 'signin_exception' } }
+      return { data: null, error }
     }
   }
 
-  // Sign out user with aggressive timeout
+  // Sign out user
   const signOut = async () => {
     console.log('🔐 AuthProvider: Starting sign out...')
     setLoading(true)
 
     try {
-      // Race logout against aggressive timeout
-      const logoutPromise = auth.signOut()
-      const timeoutPromise = new Promise((_, reject) => 
-        setTimeout(() => reject(new Error('Logout timed out')), 3000)
-      )
+      const { error: signOutError } = await supabase.auth.signOut()
 
-      const result = await Promise.race([logoutPromise, timeoutPromise])
-
-      if (result.error) {
-        console.error('❌ AuthProvider: Sign out error:', result.error.message)
+      if (signOutError) {
+        console.error('❌ AuthProvider: Sign out error:', signOutError.message)
       }
 
-      // Always clear local state regardless of server response
+      // Always clear local state
       console.log('✅ AuthProvider: Clearing local auth state')
       setUser(null)
       setProfile(null)
@@ -340,10 +252,10 @@ export const AuthProvider = ({ children }) => {
       return { error: null }
 
     } catch (err) {
-      console.error('💥 AuthProvider: Sign out failed or timed out:', err.message)
+      console.error('💥 AuthProvider: Sign out failed:', err.message)
       
-      // Clear local state even on failure/timeout
-      console.log('🔧 AuthProvider: Force clearing local state after timeout')
+      // Clear local state even on failure
+      console.log('🔧 AuthProvider: Force clearing local state')
       setUser(null)
       setProfile(null)
       setError(null)
@@ -387,7 +299,7 @@ export const AuthProvider = ({ children }) => {
 
   // Computed values
   const isAuthenticated = !!(user && profile)
-  const isNewUser = !!(user && !profile)
+  const isNewUser = !!(user && !profile) // Profile still being created or missing
 
   // Context value
   const value = {

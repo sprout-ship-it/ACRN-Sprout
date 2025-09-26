@@ -1,7 +1,7 @@
-// src/components/dashboard/EmployerManagement.js
+// src/components/features/employer/EmployerManagement.js
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../../../context/AuthContext';
-import { supabase } from '../../../utils/supabase';
+import { db } from '../../../utils/supabase';
 import styles from './EmployerManagement.module.css';
 
 // Import form sections
@@ -18,6 +18,7 @@ const EmployerManagement = () => {
   const [editingEmployer, setEditingEmployer] = useState(null);
   const [currentSection, setCurrentSection] = useState(0);
   const [errors, setErrors] = useState({});
+  const [error, setError] = useState(null);
 
   // Form data structure
   const [formData, setFormData] = useState({
@@ -79,21 +80,32 @@ const EmployerManagement = () => {
   ];
 
   useEffect(() => {
-    fetchEmployers();
-  }, []);
+    if (user?.id) {
+      fetchEmployers();
+    }
+  }, [user?.id]);
 
   const fetchEmployers = async () => {
-    try {
-      const { data, error } = await supabase
-        .from('employer_profiles')
-        .select('*')
-        .eq('user_id', user.id)
-        .order('created_at', { ascending: false });
+    if (!user?.id) return;
 
-      if (error) throw error;
-      setEmployers(data || []);
-    } catch (error) {
-      console.error('Error fetching employers:', error);
+    try {
+      setError(null);
+      console.log('📊 Fetching employer profiles for user:', user.id);
+      
+      const result = await db.employerProfiles.getByUserId(user.id);
+      
+      if (result.error && !result.data) {
+        throw new Error(result.error.message || 'Failed to fetch employer profiles');
+      }
+      
+      const employerData = result.data || [];
+      console.log(`✅ Loaded ${employerData.length} employer profiles`);
+      setEmployers(employerData);
+      
+    } catch (err) {
+      console.error('💥 Error fetching employers:', err);
+      setError(err.message || 'Failed to load employer profiles');
+      setEmployers([]);
     }
   };
 
@@ -101,6 +113,7 @@ const EmployerManagement = () => {
     setEditingEmployer(null);
     setShowForm(true);
     setCurrentSection(0);
+    setError(null);
   };
 
   // Handle input changes for all field types
@@ -201,6 +214,8 @@ const EmployerManagement = () => {
     }
 
     setLoading(true);
+    setError(null);
+    
     try {
       // Create employer data object
       const employerData = {
@@ -242,26 +257,30 @@ const EmployerManagement = () => {
         profile_completed: true
       };
 
+      console.log('💼 Saving employer profile:', employerData);
+
       let result;
       if (editingEmployer) {
-        result = await supabase
-          .from('employer_profiles')
-          .update(employerData)
-          .eq('id', editingEmployer.id);
+        result = await db.employerProfiles.update(editingEmployer.id, employerData);
       } else {
-        result = await supabase
-          .from('employer_profiles')
-          .insert([employerData]);
+        result = await db.employerProfiles.create(employerData);
       }
 
-      if (result.error) throw result.error;
+      if (result.error) {
+        throw new Error(result.error.message || 'Failed to save employer profile');
+      }
 
+      console.log('✅ Employer profile saved successfully');
       await fetchEmployers();
       resetForm();
+      
+      // Show success message
+      setError(null);
       alert(editingEmployer ? 'Employer profile updated successfully!' : 'Employer profile added successfully!');
-    } catch (error) {
-      console.error('Error saving employer:', error);
-      alert('Error saving employer profile. Please try again.');
+      
+    } catch (err) {
+      console.error('💥 Error saving employer:', err);
+      setError(err.message || 'Failed to save employer profile. Please try again.');
     } finally {
       setLoading(false);
     }
@@ -282,6 +301,7 @@ const EmployerManagement = () => {
     setShowForm(false);
     setCurrentSection(0);
     setErrors({});
+    setError(null);
   };
 
   // Load employer data for editing
@@ -326,6 +346,7 @@ const EmployerManagement = () => {
     setEditingEmployer(employer);
     setShowForm(true);
     setCurrentSection(0);
+    setError(null);
   };
 
   const deleteEmployer = async (employerId) => {
@@ -334,18 +355,22 @@ const EmployerManagement = () => {
     }
 
     try {
-      const { error } = await supabase
-        .from('employer_profiles')
-        .delete()
-        .eq('id', employerId);
+      setError(null);
+      console.log('🗑️ Deleting employer profile:', employerId);
+      
+      const result = await db.employerProfiles.delete(employerId);
+      
+      if (result.error) {
+        throw new Error(result.error.message || 'Failed to delete employer profile');
+      }
 
-      if (error) throw error;
-
+      console.log('✅ Employer profile deleted successfully');
       await fetchEmployers();
       alert('Employer profile deleted successfully');
-    } catch (error) {
-      console.error('Error deleting employer:', error);
-      alert('Error deleting employer profile. Please try again.');
+      
+    } catch (err) {
+      console.error('💥 Error deleting employer:', err);
+      setError(err.message || 'Failed to delete employer profile. Please try again.');
     }
   };
 
@@ -384,6 +409,13 @@ const EmployerManagement = () => {
           + Add Employer Profile
         </button>
       </div>
+
+      {/* Error Display */}
+      {error && (
+        <div className="alert alert-danger mb-4">
+          <strong>Error:</strong> {error}
+        </div>
+      )}
 
       {/* Employers List */}
       {employers.length === 0 ? (
@@ -493,6 +525,13 @@ const EmployerManagement = () => {
                 ×
               </button>
             </div>
+            
+            {/* Form Error Display */}
+            {error && (
+              <div className="alert alert-danger mb-4">
+                <strong>Error:</strong> {error}
+              </div>
+            )}
             
             <form onSubmit={handleSubmit}>
               {/* Section Navigation */}

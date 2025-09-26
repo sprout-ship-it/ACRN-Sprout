@@ -1,8 +1,13 @@
-// src/pages/Dashboard.js - UPDATED WITH CSS MODULES
+// src/pages/Dashboard.js - SCHEMA COMPLIANT VERSION
 import React, { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../hooks/useAuth'
-import { db } from '../utils/supabase'
+
+// ✅ UPDATED: Import individual schema-compliant services
+import { getMatchingProfile } from '../utils/database/matchingProfilesService'
+import { getPeerSupportProfileByUserId } from '../utils/database/peerSupportService'
+import { getEmployerProfilesByUserId } from '../utils/database/employerService'
+
 import styles from './Dashboard.module.css'
 
 const Dashboard = () => {
@@ -14,7 +19,7 @@ const Dashboard = () => {
   })
   const [profileError, setProfileError] = useState(null)
 
-  // Calculate profile completeness
+  // ✅ SCHEMA COMPLIANT: Calculate profile completeness using correct services and IDs
   useEffect(() => {
     let isMounted = true;
     let timeoutId = null;
@@ -31,9 +36,10 @@ const Dashboard = () => {
         return
       }
 
-      if (!profile) {
+      // ✅ UPDATED: Check for profile (registrant_profiles record) not just user
+      if (!profile?.id) {
         timeoutId = setTimeout(() => {
-          if (isMounted && !profile) {
+          if (isMounted && !profile?.id) {
             console.warn('Dashboard: Profile still not loaded after timeout, showing fallback')
             setProfileStats({ completionPercentage: 0, loading: false })
             setProfileError('Profile information is taking longer than expected to load.')
@@ -63,42 +69,57 @@ const Dashboard = () => {
 
         if (hasRole('applicant')) {
           try {
-            const { data: applicantProfile } = await db.applicantForms.getByUserId(user.id)
+            // ✅ SCHEMA COMPLIANT: Use profile.id and correct service
+            const result = await getMatchingProfile(profile.id)
             
-            if (applicantProfile && isMounted) {
+            if (result.success && result.data && isMounted) {
+              const applicantProfile = result.data
               let completedFields = 0
-              const totalFields = 8
+              const totalFields = 10 // Updated for comprehensive profile
               
+              // ✅ SCHEMA COMPLIANT: Use exact schema field names
               if (applicantProfile.date_of_birth) completedFields++
-              if (applicantProfile.phone) completedFields++
+              if (applicantProfile.primary_phone) completedFields++
               if (applicantProfile.about_me) completedFields++
               if (applicantProfile.looking_for) completedFields++
               if (applicantProfile.recovery_stage) completedFields++
-              if (applicantProfile.budget_max) completedFields++
-              if (applicantProfile.preferred_city && applicantProfile.preferred_state) completedFields++
+              if (applicantProfile.budget_min && applicantProfile.budget_max) completedFields++
+              if (applicantProfile.primary_city && applicantProfile.primary_state) completedFields++
               if (applicantProfile.interests?.length > 0) completedFields++
+              if (applicantProfile.recovery_methods?.length > 0) completedFields++
+              if (applicantProfile.spiritual_affiliation) completedFields++
               
               completionPercentage = Math.round((completedFields / totalFields) * 100)
+              
+              // Use the calculated completion_percentage if available
+              if (applicantProfile.completion_percentage !== null && applicantProfile.completion_percentage !== undefined) {
+                completionPercentage = applicantProfile.completion_percentage
+              }
             }
           } catch (error) {
             console.warn('Error loading applicant profile:', error)
           }
         }
         
-        else if (hasRole('peer')) {
+        else if (hasRole('peer-support') || hasRole('peer')) {
           try {
-            const { data: peerProfile } = await db.peerSupportProfiles.getByUserId(user.id)
+            // ✅ SCHEMA COMPLIANT: Use profile.id and correct service
+            const result = await getPeerSupportProfileByUserId(profile.id)
             
-            if (peerProfile && isMounted) {
+            if (result.success && result.data && isMounted) {
+              const peerProfile = result.data
               let completedFields = 0
-              const totalFields = 6
+              const totalFields = 8 // Updated for comprehensive profile
               
-              if (peerProfile.age) completedFields++
-              if (peerProfile.phone) completedFields++
+              // ✅ SCHEMA COMPLIANT: Use exact schema field names
+              if (peerProfile.primary_phone) completedFields++
               if (peerProfile.bio) completedFields++
+              if (peerProfile.professional_title) completedFields++
               if (peerProfile.specialties?.length > 0) completedFields++
               if (peerProfile.time_in_recovery) completedFields++
               if (peerProfile.supported_recovery_methods?.length > 0) completedFields++
+              if (peerProfile.service_city && peerProfile.service_state) completedFields++
+              if (peerProfile.profile_completed) completedFields++
               
               completionPercentage = Math.round((completedFields / totalFields) * 100)
             }
@@ -108,34 +129,38 @@ const Dashboard = () => {
         }
         
         else if (hasRole('landlord')) {
-          completionPercentage = profile?.phone ? 100 : 80
+          // ✅ SCHEMA COMPLIANT: Landlords use registrant_profiles basic info
+          completionPercentage = (profile?.first_name && profile?.last_name && profile?.email) ? 100 : 80
         }
 
         else if (hasRole('employer')) {
           try {
-            const { data: employerProfiles } = await db.employerProfiles.getByUserId(user.id)
+            // ✅ SCHEMA COMPLIANT: Use profile.id and correct service
+            const result = await getEmployerProfilesByUserId(profile.id)
             
-            if (employerProfiles && employerProfiles.length > 0 && isMounted) {
-              const employerProfile = employerProfiles[0]
+            if (result.success && result.data && result.data.length > 0 && isMounted) {
+              const employerProfile = result.data[0]
               let completedFields = 0
               const totalFields = 8
               
-              if (employerProfile.company_name) completedFields++
+              // ✅ SCHEMA COMPLIANT: Use exact schema field names from employer_profiles
+              if (employerProfile.business_type) completedFields++
               if (employerProfile.industry) completedFields++
               if (employerProfile.description) completedFields++
-              if (employerProfile.recovery_friendly_features?.length > 0) completedFields++
               if (employerProfile.job_types_available?.length > 0) completedFields++
               if (employerProfile.benefits_offered?.length > 0) completedFields++
-              if (employerProfile.hiring_practices) completedFields++
+              if (employerProfile.supported_recovery_methods?.length > 0) completedFields++
+              if (employerProfile.service_city && employerProfile.service_state) completedFields++
               if (employerProfile.profile_completed) completedFields++
               
               completionPercentage = Math.round((completedFields / totalFields) * 100)
             } else {
-              completionPercentage = profile?.phone ? 20 : 0
+              // No employer profile yet
+              completionPercentage = (profile?.first_name && profile?.last_name) ? 20 : 0
             }
           } catch (error) {
             console.warn('Error loading employer profile:', error)
-            completionPercentage = profile?.phone ? 20 : 0
+            completionPercentage = (profile?.first_name && profile?.last_name) ? 20 : 0
           }
         }
 
@@ -165,7 +190,7 @@ const Dashboard = () => {
     }
   }, [user, profile, hasRole, authLoading])
 
-  // Dashboard cards - these are the detailed cards with descriptions
+  // ✅ SCHEMA COMPLIANT: Dashboard cards with proper role checking
   const getDashboardCards = () => {
     const cards = []
     
@@ -173,7 +198,7 @@ const Dashboard = () => {
       return cards
     }
     
-    // Role-specific dashboard cards with CSS module classes
+    // Role-specific dashboard cards
     if (hasRole('applicant')) {
       cards.push(
         { 
@@ -211,7 +236,8 @@ const Dashboard = () => {
       )
     }
     
-    if (hasRole('peer')) {
+    // ✅ UPDATED: Check both 'peer' and 'peer-support' role names (schema uses 'peer-support')
+    if (hasRole('peer-support') || hasRole('peer')) {
       cards.push(
         { 
           id: 'peer-dashboard', 
@@ -250,7 +276,7 @@ const Dashboard = () => {
       )
     }
     
-    // Universal cards with CSS module classes
+    // Universal cards
     cards.push(
       { 
         id: 'connections', 
@@ -274,7 +300,7 @@ const Dashboard = () => {
   }
 
   const handleCardClick = (card) => {
-    console.log('🔄 Dashboard card clicked:', card.label, 'Path:', card.path)
+    console.log('Dashboard card clicked:', card.label, 'Path:', card.path)
     if (card.path) {
       navigate(card.path)
     }
@@ -327,10 +353,12 @@ const Dashboard = () => {
       )
     }
 
+    // ✅ SCHEMA COMPLIANT: Use exact role names and display proper labels
     const roleLabels = profile?.roles?.map(role => {
       switch(role) {
         case 'applicant': return 'Housing Seeker'
-        case 'peer': return 'Peer Specialist'
+        case 'peer-support': return 'Peer Specialist'
+        case 'peer': return 'Peer Specialist' // Legacy compatibility
         case 'landlord': return 'Property Owner'
         case 'employer': return 'Recovery-Friendly Employer'
         default: return role.charAt(0).toUpperCase() + role.slice(1)
@@ -400,7 +428,7 @@ const Dashboard = () => {
         </div>
       </div>
       
-      {/* Multi-Role Access Summary */}
+      {/* ✅ SCHEMA COMPLIANT: Multi-Role Access Summary with correct role handling */}
       {profile?.roles?.length > 1 && (
         <div className={`card ${styles.multiRoleSection}`}>
           <h3 className="card-title">Your Multi-Role Access</h3>
@@ -411,11 +439,15 @@ const Dashboard = () => {
             {profile.roles.map(role => (
               <div key={role} className={styles.roleAccessCard}>
                 <div className={styles.roleAccessTitle}>
-                  {role.charAt(0).toUpperCase() + role.slice(1)} Access:
+                  {role === 'applicant' && 'Housing Seeker'}
+                  {(role === 'peer-support' || role === 'peer') && 'Peer Specialist'}
+                  {role === 'landlord' && 'Property Owner'}
+                  {role === 'employer' && 'Employer'}
+                  {' Access:'}
                 </div>
                 <div className={styles.roleAccessDescription}>
                   {role === 'applicant' && 'Find roommates, browse properties, connect with peer support, find employment'}
-                  {role === 'peer' && 'Offer peer support, manage clients, provide services'}
+                  {(role === 'peer-support' || role === 'peer') && 'Offer peer support, manage clients, provide services'}
                   {role === 'landlord' && 'List properties, review applications, manage rentals'}
                   {role === 'employer' && 'Post jobs, review applications, manage company profiles'}
                 </div>

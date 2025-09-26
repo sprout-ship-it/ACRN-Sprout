@@ -1,6 +1,12 @@
-// src/utils/database/profileService.js - FIXED VERSION
+// src/utils/database/profileService.js - Optimized for Schema Trigger Integration
 /**
  * Profiles service for registrant_profiles table operations
+ * 
+ * ID HIERARCHY:
+ * auth.users.id → registrant_profiles.user_id → registrant_profiles.id → role_table.user_id
+ * 
+ * This service manages the central hub (registrant_profiles) for role selection
+ * UPDATED: Optimized for automatic trigger-based profile creation
  */
 
 const createProfilesService = (supabaseClient) => {
@@ -12,17 +18,47 @@ const createProfilesService = (supabaseClient) => {
 
   const service = {
     /**
-     * Create a new profile
+     * Create a new registrant profile manually
+     * NOTE: This is primarily for fallback scenarios since the trigger should handle most cases
+     * 
+     * @param {Object} profileData - Profile data including user_id from auth.users.id
+     * @returns {Promise<Object>} Creation result
      */
     create: async (profileData) => {
       try {
-        console.log('👤 Profiles: Creating profile with data:', profileData);
+        console.log('👤 Profiles: Manual profile creation (fallback mode):', {
+          ...profileData,
+          email: profileData.email ? '***' : undefined
+        });
+
+        // Validate required fields for registrant_profiles table
+        const requiredFields = ['user_id', 'first_name', 'last_name', 'email', 'roles'];
+        const missingFields = requiredFields.filter(field => !profileData[field]);
+        
+        if (missingFields.length > 0) {
+          throw new Error(`Missing required fields: ${missingFields.join(', ')}`);
+        }
+
+        // Ensure roles is an array and contains valid roles
+        if (!Array.isArray(profileData.roles) || profileData.roles.length === 0) {
+          throw new Error('Roles must be a non-empty array');
+        }
+
+        const validRoles = ['applicant', 'landlord', 'employer', 'peer-support'];
+        const invalidRoles = profileData.roles.filter(role => !validRoles.includes(role));
+        if (invalidRoles.length > 0) {
+          throw new Error(`Invalid roles: ${invalidRoles.join(', ')}`);
+        }
 
         const { data, error } = await supabaseClient
           .from(tableName)
           .insert({
-            ...profileData,
-            // Don't override created_at and updated_at if they're provided
+            user_id: profileData.user_id, // References auth.users.id
+            first_name: profileData.first_name,
+            last_name: profileData.last_name,
+            email: profileData.email.toLowerCase().trim(),
+            roles: profileData.roles,
+            is_active: profileData.is_active ?? true,
             created_at: profileData.created_at || new Date().toISOString(),
             updated_at: profileData.updated_at || new Date().toISOString()
           })
@@ -30,21 +66,101 @@ const createProfilesService = (supabaseClient) => {
           .single();
 
         if (error) {
-          console.error('❌ Profiles: Create failed:', error.message, error);
+          console.error('❌ Profiles: Manual create failed:', error.message, error);
           return { success: false, data: null, error };
         }
 
-        console.log('✅ Profiles: Profile created successfully');
+        console.log('✅ Profiles: Manual registrant profile created successfully', {
+          id: data.id,
+          user_id: data.user_id,
+          roles: data.roles
+        });
+        
         return { success: true, data, error: null };
 
       } catch (err) {
-        console.error('💥 Profiles: Create exception:', err);
+        console.error('💥 Profiles: Manual create exception:', err);
+        return { success: false, data: null, error: { message: err.message } };
+      }
+    },
+
+    /**
+     * ✅ PRIMARY METHOD: Get profile by user_id (auth.users.id)
+     * This is the primary method AuthContext uses for looking up trigger-created profiles
+     * 
+     * @param {string} authUserId - auth.users.id 
+     * @param {boolean} waitForTrigger - Whether to retry if profile not found (for new registrations)
+     * @returns {Promise<Object>} Profile data
+     */
+    getByUserId: async (authUserId, waitForTrigger = false) => {
+      try {
+        console.log('👤 Profiles: Fetching profile by auth.users.id (user_id field):', authUserId);
+
+        const fetchProfile = async () => {
+          const { data, error } = await supabaseClient
+            .from(tableName)
+            .select('*')
+            .eq('user_id', authUserId) // Query by user_id field which references auth.users.id
+            .single();
+
+          return { data, error };
+        };
+
+        let { data, error } = await fetchProfile();
+
+        // ✅ NEW: Handle trigger delay for new registrations
+        if (error && error.code === 'PGRST116' && waitForTrigger) {
+          console.log('⏳ Profiles: Profile not found, waiting for trigger (max 3 attempts)...');
+          
+          // Retry up to 3 times with exponential backoff
+          for (let attempt = 1; attempt <= 3; attempt++) {
+            await new Promise(resolve => setTimeout(resolve, attempt * 500)); // 500ms, 1s, 1.5s
+            
+            const retry = await fetchProfile();
+            if (retry.data && !retry.error) {
+              data = retry.data;
+              error = retry.error;
+              console.log(`✅ Profiles: Profile found on attempt ${attempt + 1}`);
+              break;
+            }
+          }
+        }
+
+        if (error) {
+          if (error.code === 'PGRST116') {
+            console.log('ℹ️ Profiles: No profile found for auth user:', authUserId);
+            return { 
+              success: false, 
+              data: null, 
+              error: { code: 'NOT_FOUND', message: 'Profile not found' },
+              triggerMightHaveFailed: waitForTrigger // Indicate if this was expected to exist
+            };
+          }
+          console.error('❌ Profiles: GetByUserId failed:', error.message);
+          return { success: false, data: null, error };
+        }
+
+        console.log('✅ Profiles: Profile retrieved by user_id successfully', {
+          registrant_id: data.id,
+          user_id: data.user_id,
+          roles: data.roles,
+          created_at: data.created_at
+        });
+        
+        return { success: true, data, error: null };
+
+      } catch (err) {
+        console.error('💥 Profiles: GetByUserId exception:', err);
         return { success: false, data: null, error: { message: err.message } };
       }
     },
 
     /**
      * Get profile by registrant_profiles.id
+     * Used when we already have the registrant profile ID
+     * 
+     * @param {string} id - registrant_profiles.id
+     * @returns {Promise<Object>} Profile data
      */
     getById: async (id) => {
       try {
@@ -65,7 +181,7 @@ const createProfilesService = (supabaseClient) => {
           return { success: false, data: null, error };
         }
 
-        console.log('✅ Profiles: Profile retrieved successfully');
+        console.log('✅ Profiles: Profile retrieved successfully by registrant ID');
         return { success: true, data, error: null };
 
       } catch (err) {
@@ -75,43 +191,75 @@ const createProfilesService = (supabaseClient) => {
     },
 
     /**
-     * ✅ NEW: Get profile by user_id (which references auth.users.id)
-     * This is what AuthContext needs for looking up profiles by auth user ID
+     * ✅ ENHANCED: Verify and retrieve profile after signup
+     * Optimized for the trigger-based registration flow
+     * 
+     * @param {string} authUserId - auth.users.id from signup
+     * @param {number} maxWaitMs - Maximum time to wait for trigger (default 5000ms)
+     * @returns {Promise<Object>} Profile verification result
      */
-    getByUserId: async (authUserId) => {
-      try {
-        console.log('👤 Profiles: Fetching profile by auth.users.id (user_id field):', authUserId);
-
-        const { data, error } = await supabaseClient
-          .from(tableName)
-          .select('*')
-          .eq('user_id', authUserId) // Query by user_id field which references auth.users.id
-          .single();
-
-        if (error) {
-          if (error.code === 'PGRST116') {
-            console.log('ℹ️ Profiles: No profile found for auth user:', authUserId);
-            return { success: false, data: null, error: { code: 'NOT_FOUND', message: 'Profile not found' } };
-          }
-          console.error('❌ Profiles: GetByUserId failed:', error.message);
-          return { success: false, data: null, error };
+    verifyTriggerProfile: async (authUserId, maxWaitMs = 5000) => {
+      console.log('🔍 Profiles: Verifying trigger created profile for:', authUserId);
+      
+      const startTime = Date.now();
+      const pollInterval = 500; // Check every 500ms
+      
+      while ((Date.now() - startTime) < maxWaitMs) {
+        const result = await service.getByUserId(authUserId, false);
+        
+        if (result.success && result.data) {
+          console.log('✅ Profiles: Trigger profile verified successfully:', {
+            registrant_id: result.data.id,
+            time_taken: Date.now() - startTime + 'ms'
+          });
+          return {
+            success: true,
+            profileExists: true,
+            profile: result.data,
+            registrantProfileId: result.data.id,
+            timeTaken: Date.now() - startTime
+          };
         }
-
-        console.log('✅ Profiles: Profile retrieved by user_id successfully');
-        return { success: true, data, error: null };
-
-      } catch (err) {
-        console.error('💥 Profiles: GetByUserId exception:', err);
-        return { success: false, data: null, error: { message: err.message } };
+        
+        // Wait before next attempt
+        if ((Date.now() - startTime) < maxWaitMs) {
+          await new Promise(resolve => setTimeout(resolve, pollInterval));
+        }
       }
+      
+      console.warn('⚠️ Profiles: Trigger profile verification timed out after', maxWaitMs + 'ms');
+      return {
+        success: false,
+        profileExists: false,
+        error: 'Trigger profile creation timed out',
+        suggestion: 'Profile trigger may have failed - consider manual profile creation',
+        timeTaken: Date.now() - startTime
+      };
     },
 
     /**
-     * Update profile
+     * Update profile by registrant_profiles.id
+     * 
+     * @param {string} id - registrant_profiles.id
+     * @param {Object} updates - Fields to update
+     * @returns {Promise<Object>} Update result
      */
     update: async (id, updates) => {
       try {
-        console.log('👤 Profiles: Updating profile:', id);
+        console.log('👤 Profiles: Updating profile by registrant ID:', id);
+
+        // Validate roles if being updated
+        if (updates.roles) {
+          if (!Array.isArray(updates.roles) || updates.roles.length === 0) {
+            throw new Error('Roles must be a non-empty array');
+          }
+          
+          const validRoles = ['applicant', 'landlord', 'employer', 'peer-support'];
+          const invalidRoles = updates.roles.filter(role => !validRoles.includes(role));
+          if (invalidRoles.length > 0) {
+            throw new Error(`Invalid roles: ${invalidRoles.join(', ')}`);
+          }
+        }
 
         const { data, error } = await supabaseClient
           .from(tableName)
@@ -128,7 +276,7 @@ const createProfilesService = (supabaseClient) => {
           return { success: false, data: null, error };
         }
 
-        console.log('✅ Profiles: Profile updated successfully');
+        console.log('✅ Profiles: Profile updated successfully by registrant ID');
         return { success: true, data, error: null };
 
       } catch (err) {
@@ -138,11 +286,29 @@ const createProfilesService = (supabaseClient) => {
     },
 
     /**
-     * ✅ NEW: Update profile by user_id (auth.users.id)
+     * Update profile by user_id (auth.users.id)
+     * Useful when we only have the auth user ID
+     * 
+     * @param {string} authUserId - auth.users.id
+     * @param {Object} updates - Fields to update  
+     * @returns {Promise<Object>} Update result
      */
     updateByUserId: async (authUserId, updates) => {
       try {
         console.log('👤 Profiles: Updating profile by user_id:', authUserId);
+
+        // Validate roles if being updated
+        if (updates.roles) {
+          if (!Array.isArray(updates.roles) || updates.roles.length === 0) {
+            throw new Error('Roles must be a non-empty array');
+          }
+          
+          const validRoles = ['applicant', 'landlord', 'employer', 'peer-support'];
+          const invalidRoles = updates.roles.filter(role => !validRoles.includes(role));
+          if (invalidRoles.length > 0) {
+            throw new Error(`Invalid roles: ${invalidRoles.join(', ')}`);
+          }
+        }
 
         const { data, error } = await supabaseClient
           .from(tableName)
@@ -169,7 +335,10 @@ const createProfilesService = (supabaseClient) => {
     },
 
     /**
-     * Delete profile (soft delete by setting is_active = false)
+     * Soft delete profile (set is_active = false)
+     * 
+     * @param {string} id - registrant_profiles.id
+     * @returns {Promise<Object>} Delete result
      */
     delete: async (id) => {
       try {
@@ -200,10 +369,19 @@ const createProfilesService = (supabaseClient) => {
 
     /**
      * Get profiles by role
+     * Uses the roles array field
+     * 
+     * @param {string} role - Role to search for
+     * @returns {Promise<Object>} Profiles with that role
      */
     getByRole: async (role) => {
       try {
         console.log('👤 Profiles: Fetching profiles by role:', role);
+
+        const validRoles = ['applicant', 'landlord', 'employer', 'peer-support'];
+        if (!validRoles.includes(role)) {
+          throw new Error(`Invalid role: ${role}. Valid roles: ${validRoles.join(', ')}`);
+        }
 
         const { data, error } = await supabaseClient
           .from(tableName)
@@ -228,6 +406,10 @@ const createProfilesService = (supabaseClient) => {
 
     /**
      * Search profiles by name or email
+     * 
+     * @param {string} searchTerm - Search term
+     * @param {number} limit - Result limit
+     * @returns {Promise<Object>} Matching profiles
      */
     search: async (searchTerm, limit = 20) => {
       try {
@@ -235,10 +417,11 @@ const createProfilesService = (supabaseClient) => {
 
         const { data, error } = await supabaseClient
           .from(tableName)
-          .select('id, first_name, last_name, email, roles')
+          .select('id, first_name, last_name, email, roles, created_at')
           .or(`first_name.ilike.%${searchTerm}%,last_name.ilike.%${searchTerm}%,email.ilike.%${searchTerm}%`)
           .eq('is_active', true)
-          .limit(limit);
+          .limit(limit)
+          .order('created_at', { ascending: false });
 
         if (error) {
           console.error('❌ Profiles: Search failed:', error.message);
@@ -256,6 +439,8 @@ const createProfilesService = (supabaseClient) => {
 
     /**
      * Get profile statistics
+     * 
+     * @returns {Promise<Object>} Statistics data
      */
     getStatistics: async () => {
       try {
@@ -283,7 +468,7 @@ const createProfilesService = (supabaseClient) => {
           }).length
         };
 
-        // Count by role
+        // Count by role (users can have multiple roles)
         data.forEach(profile => {
           if (profile.roles && Array.isArray(profile.roles)) {
             profile.roles.forEach(role => {
@@ -302,49 +487,17 @@ const createProfilesService = (supabaseClient) => {
     },
 
     /**
-     * Batch update profiles
-     */
-    batchUpdate: async (updates) => {
-      try {
-        console.log('👤 Profiles: Batch updating', updates.length, 'profiles');
-
-        const operations = updates.map(({ id, data }) =>
-          service.update(id, data)
-        );
-
-        const results = await Promise.allSettled(operations);
-        
-        const successful = results.filter(r => r.status === 'fulfilled' && r.value.success);
-        const failed = results.filter(r => r.status === 'rejected' || !r.value?.success);
-
-        console.log(`✅ Profiles: Batch update complete - ${successful.length} success, ${failed.length} failed`);
-        
-        return {
-          success: true,
-          data: {
-            successful: successful.length,
-            failed: failed.length,
-            total: updates.length,
-            results
-          },
-          error: null
-        };
-
-      } catch (err) {
-        console.error('💥 Profiles: Batch update exception:', err);
-        return { success: false, data: null, error: { message: err.message } };
-      }
-    },
-
-    /**
-     * Check if email exists
+     * Check if email exists in registrant_profiles
+     * 
+     * @param {string} email - Email to check
+     * @returns {Promise<Object>} Existence check result
      */
     emailExists: async (email) => {
       try {
         const { data, error } = await supabaseClient
           .from(tableName)
           .select('id')
-          .eq('email', email.toLowerCase())
+          .eq('email', email.toLowerCase().trim())
           .single();
 
         if (error && error.code === 'PGRST116') {

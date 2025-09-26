@@ -1,17 +1,17 @@
-// src/utils/matching/algorithm.js - ENHANCED WITH COMPLETE MASTER DATA MAPPING INTEGRATION
+// src/utils/matching/algorithm.js - SCHEMA ALIGNED VERSION
 
 /**
- * Enhanced matching algorithm for Recovery Housing Connect
- * ✅ COMPLETE INTEGRATION: Master Data Mapping Table + Priority Matrix
- * ✅ STANDARDIZED: All field names updated to match database schema
- * ✅ COMPREHENSIVE: All form sections and compatibility factors included
+ * ✅ SCHEMA ALIGNED: Enhanced matching algorithm for Recovery Housing Connect
+ * ✅ ALL FIELD NAMES: Aligned with applicant_matching_profiles schema
+ * ✅ STANDARDIZED: Uses correct database field names throughout
+ * ✅ TRANSFORM INTEGRATION: Expects profiles from transformProfileForAlgorithm()
  */
 
 // Import the location compatibility function
-import { calculateLocationCompatibility as baseLocationCompatibility } from './dataTransform';
+import { calculateLocationCompatibility as baseLocationCompatibility, calculateAge } from './dataTransform.js';
 
 /**
- * ✅ ENHANCED: Complete priority-based weights from Master Data Mapping Table
+ * ✅ SCHEMA ALIGNED: Complete priority-based weights from Master Data Mapping Table
  */
 const ENHANCED_COMPATIBILITY_WEIGHTS = {
   // 🔴 CORE FACTORS (Primary Matching) - 70% total weight
@@ -37,14 +37,14 @@ const ENHANCED_COMPATIBILITY_WEIGHTS = {
 };
 
 /**
- * ✅ ENHANCED: Calculate comprehensive compatibility with full Master Data integration
- * @param {Object} user1 - First user's complete profile data
- * @param {Object} user2 - Second user's complete profile data
+ * ✅ SCHEMA ALIGNED: Calculate comprehensive compatibility with full Master Data integration
+ * @param {Object} user1 - First user's transformed profile data (from transformProfileForAlgorithm)
+ * @param {Object} user2 - Second user's transformed profile data (from transformProfileForAlgorithm)
  * @returns {Object} Detailed compatibility analysis with priority-based scoring
  */
 export const calculateDetailedCompatibility = (user1, user2) => {
   try {
-    console.log(`🔄 Calculating enhanced compatibility between users`);
+    console.log('🔄 Calculating enhanced compatibility between users');
     
     // Validate input data
     if (!user1 || !user2) {
@@ -95,7 +95,7 @@ export const calculateDetailedCompatibility = (user1, user2) => {
     
     const overallScore = totalWeight > 0 ? Math.round(totalScore / totalWeight) : 0;
     
-    // ✅ ENHANCED: Include priority-based breakdown
+    // Include priority-based breakdown
     const priorityBreakdown = calculatePriorityBreakdown(scores);
     
     return {
@@ -106,7 +106,7 @@ export const calculateDetailedCompatibility = (user1, user2) => {
       user2_id: user2.id || user2.user_id,
       calculated_at: new Date().toISOString(),
       weights: ENHANCED_COMPATIBILITY_WEIGHTS,
-      algorithm_version: '2.0_enhanced'
+      algorithm_version: '2.0_schema_aligned'
     };
     
   } catch (error) {
@@ -116,7 +116,7 @@ export const calculateDetailedCompatibility = (user1, user2) => {
 };
 
 /**
- * ✅ NEW: Calculate priority-based breakdown for better insights
+ * Calculate priority-based breakdown for better insights
  */
 const calculatePriorityBreakdown = (scores) => {
   const coreFactors = ['location', 'budget', 'recovery_core', 'lifestyle_core'];
@@ -142,8 +142,8 @@ const calculatePriorityBreakdown = (scores) => {
 };
 
 /**
- * ✅ NEW: Calculate recovery core compatibility (PRIMARY MATCH FACTOR)
- * Combines: recovery_stage + recovery_methods + primary_issues
+ * ✅ SCHEMA ALIGNED: Calculate recovery core compatibility (PRIMARY MATCH FACTOR)
+ * Uses: recovery_stage + recovery_methods + primary_issues (schema field names)
  */
 export const calculateRecoveryCoreCompatibility = (user1, user2) => {
   let totalScore = 0;
@@ -174,8 +174,8 @@ export const calculateRecoveryCoreCompatibility = (user1, user2) => {
 };
 
 /**
- * ✅ NEW: Calculate lifestyle core compatibility (PRIMARY MATCH FACTOR)
- * Uses: social_level + cleanliness_level + noise_tolerance (1-5 scales)
+ * ✅ SCHEMA ALIGNED: Calculate lifestyle core compatibility (PRIMARY MATCH FACTOR)
+ * Uses: social_level + cleanliness_level + noise_tolerance (schema field names, 1-5 scales)
  */
 export const calculateLifestyleCoreCompatibility = (user1, user2) => {
   let totalScore = 0;
@@ -209,8 +209,8 @@ export const calculateLifestyleCoreCompatibility = (user1, user2) => {
 };
 
 /**
- * ✅ NEW: Calculate recovery environment compatibility (HIGH FACTOR)
- * Includes: substance_free_home_required + spiritual_affiliation + recovery support preferences
+ * ✅ SCHEMA ALIGNED: Calculate recovery environment compatibility (HIGH FACTOR)
+ * Uses: substance_free_home_required + spiritual_affiliation + recovery support preferences
  */
 export const calculateRecoveryEnvironmentCompatibility = (user1, user2) => {
   let totalScore = 0;
@@ -251,12 +251,12 @@ export const calculateRecoveryEnvironmentCompatibility = (user1, user2) => {
 };
 
 /**
- * ✅ ENHANCED: Calculate gender preferences compatibility (HIGH FACTOR)
- * Uses: preferred_roommate_gender + gender_inclusive
+ * ✅ SCHEMA ALIGNED: Calculate gender preferences compatibility (HIGH FACTOR)
+ * Uses: preferred_roommate_gender + gender_identity + gender_inclusive (schema field names)
  */
 export const calculateGenderPreferencesCompatibility = (user1, user2) => {
-  const user1Gender = user1.gender_identity || user1.gender;
-  const user2Gender = user2.gender_identity || user2.gender;
+  const user1Gender = user1.gender_identity;
+  const user2Gender = user2.gender_identity;
   
   const user1Pref = user1.preferred_roommate_gender;
   const user2Pref = user2.preferred_roommate_gender;
@@ -282,8 +282,8 @@ export const calculateGenderPreferencesCompatibility = (user1, user2) => {
 };
 
 /**
- * ✅ NEW: Calculate schedule compatibility (HIGH FACTOR)
- * Includes: bedtime_preference + work_schedule + early_riser + night_owl
+ * ✅ SCHEMA ALIGNED: Calculate schedule compatibility (HIGH FACTOR)
+ * Uses: bedtime_preference + work_schedule + early_riser + night_owl (schema field names)
  */
 export const calculateScheduleCompatibility = (user1, user2) => {
   let totalScore = 0;
@@ -332,8 +332,8 @@ export const calculateScheduleCompatibility = (user1, user2) => {
 };
 
 /**
- * ✅ NEW: Calculate communication compatibility (HIGH FACTOR)
- * Includes: communication_style + conflict_resolution_style + chore_sharing_style
+ * ✅ SCHEMA ALIGNED: Calculate communication compatibility (HIGH FACTOR)
+ * Uses: communication_style + conflict_resolution_style + chore_sharing_style (schema field names)
  */
 export const calculateCommunicationCompatibility = (user1, user2) => {
   let totalScore = 0;
@@ -364,8 +364,8 @@ export const calculateCommunicationCompatibility = (user1, user2) => {
 };
 
 /**
- * ✅ NEW: Calculate housing safety compatibility (HIGH FACTOR)
- * Includes: smoking_status + pets + substance considerations
+ * ✅ SCHEMA ALIGNED: Calculate housing safety compatibility (HIGH FACTOR)
+ * Uses: smoking_status + pets_owned + pets_comfortable (schema field names)
  */
 export const calculateHousingSafetyCompatibility = (user1, user2) => {
   let totalScore = 0;
@@ -395,8 +395,8 @@ export const calculateHousingSafetyCompatibility = (user1, user2) => {
 };
 
 /**
- * ✅ NEW: Calculate shared interests compatibility (MEDIUM FACTOR)
- * Enhanced version with interests + important_qualities
+ * ✅ SCHEMA ALIGNED: Calculate shared interests compatibility (MEDIUM FACTOR)
+ * Uses: interests + important_qualities (schema field names)
  */
 export const calculateSharedInterestsCompatibility = (user1, user2) => {
   let totalScore = 0;
@@ -420,8 +420,8 @@ export const calculateSharedInterestsCompatibility = (user1, user2) => {
 };
 
 /**
- * ✅ NEW: Calculate timing compatibility (MEDIUM FACTOR)
- * Includes: move_in_date + move_in_flexibility + lease_duration
+ * ✅ SCHEMA ALIGNED: Calculate timing compatibility (MEDIUM FACTOR)
+ * Uses: move_in_date + move_in_flexibility + lease_duration (schema field names)
  */
 export const calculateTimingCompatibility = (user1, user2) => {
   let totalScore = 0;
@@ -454,8 +454,8 @@ export const calculateTimingCompatibility = (user1, user2) => {
 };
 
 /**
- * ✅ NEW: Calculate goals compatibility (MEDIUM FACTOR)
- * Includes: short_term_goals + long_term_vision alignment
+ * ✅ SCHEMA ALIGNED: Calculate goals compatibility (MEDIUM FACTOR)
+ * Uses: short_term_goals + long_term_vision (schema field names)
  */
 export const calculateGoalsCompatibility = (user1, user2) => {
   // This would require NLP analysis for text comparison
@@ -471,8 +471,8 @@ export const calculateGoalsCompatibility = (user1, user2) => {
 };
 
 /**
- * ✅ NEW: Calculate extended compatibility (LOW FACTOR)
- * Includes: additional_interests + profile text quality
+ * ✅ SCHEMA ALIGNED: Calculate extended compatibility (LOW FACTOR)
+ * Uses: additional_interests + profile completeness (schema field names)
  */
 export const calculateExtendedCompatibility = (user1, user2) => {
   let totalScore = 0;
@@ -499,96 +499,14 @@ export const calculateExtendedCompatibility = (user1, user2) => {
   return factors > 0 ? Math.round(totalScore / factors) : 50;
 };
 
-// ===== ENHANCED HELPER FUNCTIONS =====
+// ===== SCHEMA ALIGNED CORE FUNCTIONS =====
 
 /**
- * ✅ ENHANCED: Communication style compatibility matrix
- */
-const calculateCommunicationStyleCompatibility = (style1, style2) => {
-  if (style1 === style2) return 100;
-  
-  const compatibility = {
-    'direct-verbal': { 'written-notes': 70, 'casual-check-ins': 80, 'group-meetings': 60 },
-    'written-notes': { 'direct-verbal': 70, 'casual-check-ins': 60, 'group-meetings': 80 },
-    'group-meetings': { 'direct-verbal': 60, 'written-notes': 80, 'casual-check-ins': 70 },
-    'casual-check-ins': { 'direct-verbal': 80, 'written-notes': 60, 'group-meetings': 70 },
-    'minimal-communication': { 'direct-verbal': 30, 'written-notes': 50, 'group-meetings': 20, 'casual-check-ins': 40 }
-  };
-  
-  return compatibility[style1]?.[style2] || 50;
-};
-
-/**
- * ✅ ENHANCED: Conflict resolution compatibility matrix
- */
-const calculateConflictResolutionCompatibility = (style1, style2) => {
-  if (style1 === style2) return 100;
-  
-  const compatibility = {
-    'direct-communication': { 'mediated-discussion': 80, 'written-communication': 60, 'avoid-conflict': 30 },
-    'mediated-discussion': { 'direct-communication': 80, 'written-communication': 90, 'avoid-conflict': 70 },
-    'written-communication': { 'direct-communication': 60, 'mediated-discussion': 90, 'avoid-conflict': 80 },
-    'avoid-conflict': { 'direct-communication': 30, 'mediated-discussion': 70, 'written-communication': 80 }
-  };
-  
-  return compatibility[style1]?.[style2] || 50;
-};
-
-/**
- * ✅ NEW: Chore style compatibility matrix
- */
-const calculateChoreStyleCompatibility = (style1, style2) => {
-  if (style1 === style2) return 100;
-  
-  const compatibility = {
-    'formal-schedule': { 'informal-sharing': 70, 'individual-responsibility': 60, 'hire-help': 80, 'flexible': 50 },
-    'informal-sharing': { 'formal-schedule': 70, 'individual-responsibility': 80, 'hire-help': 60, 'flexible': 90 },
-    'individual-responsibility': { 'formal-schedule': 60, 'informal-sharing': 80, 'hire-help': 70, 'flexible': 70 },
-    'hire-help': { 'formal-schedule': 80, 'informal-sharing': 60, 'individual-responsibility': 70, 'flexible': 60 },
-    'flexible': { 'formal-schedule': 50, 'informal-sharing': 90, 'individual-responsibility': 70, 'hire-help': 60 }
-  };
-  
-  return compatibility[style1]?.[style2] || 60;
-};
-
-/**
- * ✅ NEW: Simple text similarity calculation
- */
-const calculateTextSimilarity = (text1, text2) => {
-  const words1 = text1.split(/\s+/);
-  const words2 = text2.split(/\s+/);
-  const commonWords = words1.filter(word => words2.includes(word));
-  const totalWords = new Set([...words1, ...words2]).size;
-  
-  return totalWords > 0 ? Math.round((commonWords.length / totalWords) * 100) : 0;
-};
-
-/**
- * ✅ NEW: Calculate profile completeness score
- */
-const calculateProfileCompleteness = (profile) => {
-  const requiredFields = [
-    'primary_city', 'primary_state', 'budget_min', 'budget_max', 'preferred_roommate_gender',
-    'recovery_stage', 'recovery_methods', 'primary_issues', 'spiritual_affiliation',
-    'social_level', 'cleanliness_level', 'noise_tolerance', 'work_schedule',
-    'move_in_date', 'about_me', 'looking_for'
-  ];
-  
-  const completedFields = requiredFields.filter(field => {
-    const value = profile[field];
-    return value !== null && value !== undefined && value !== '' && 
-           (!Array.isArray(value) || value.length > 0);
-  });
-  
-  return Math.round((completedFields.length / requiredFields.length) * 100);
-};
-
-// ===== EXISTING FUNCTIONS (Updated with standardized field names) =====
-
-/**
- * ✅ UPDATED: Location compatibility with full standardization
+ * ✅ SCHEMA ALIGNED: Location compatibility with standardized fields
+ * Uses: primary_city + primary_state + primary_location (schema field names)
  */
 export const calculateLocationCompatibility = (user1, user2) => {
+  // Use primary_location if available (auto-generated by database), otherwise construct from parts
   const location1 = user1.primary_location || 
                    (user1.primary_city && user1.primary_state ? 
                     `${user1.primary_city}, ${user1.primary_state}` : null);
@@ -602,13 +520,13 @@ export const calculateLocationCompatibility = (user1, user2) => {
   // Exact match
   if (location1.toLowerCase() === location2.toLowerCase()) return 100;
   
-  // Same state check
-  const state1 = user1.primary_state || extractStateFromLocation(location1);
-  const state2 = user2.primary_state || extractStateFromLocation(location2);
+  // Same state check using schema fields
+  const state1 = user1.primary_state;
+  const state2 = user2.primary_state;
   
   if (state1 && state2 && state1.toLowerCase() === state2.toLowerCase()) {
-    const city1 = user1.primary_city || extractCityFromLocation(location1);
-    const city2 = user2.primary_city || extractCityFromLocation(location2);
+    const city1 = user1.primary_city;
+    const city2 = user2.primary_city;
     
     if (city1 && city2 && city1.toLowerCase() === city2.toLowerCase()) {
       return 100; // Same city
@@ -620,52 +538,51 @@ export const calculateLocationCompatibility = (user1, user2) => {
 };
 
 /**
- * ✅ UPDATED: Budget compatibility with standardized fields
+ * ✅ SCHEMA ALIGNED: Budget compatibility with standardized fields
+ * Uses: budget_min + budget_max (schema field names)
  */
 export const calculateBudgetCompatibility = (user1, user2) => {
-  const budget1 = user1.budget_max;
-  const budget2 = user2.budget_max;
+  const budget1Max = user1.budget_max;
+  const budget2Max = user2.budget_max;
+  const budget1Min = user1.budget_min;
+  const budget2Min = user2.budget_min;
   
-  if (!budget1 || !budget2) return 50;
+  if (!budget1Max || !budget2Max) return 50;
   
-  const budgetDiff = Math.abs(budget1 - budget2);
+  // Check for budget range overlap
+  const overlap = !(budget1Max < budget2Min || budget2Max < budget1Min);
+  if (overlap) {
+    // Calculate similarity based on range centers
+    const center1 = (budget1Min + budget1Max) / 2;
+    const center2 = (budget2Min + budget2Max) / 2;
+    const diff = Math.abs(center1 - center2);
+    
+    // Decrease score by 2 points for every $50 difference in centers
+    const score = Math.max(60, 100 - Math.floor(diff / 50) * 2);
+    return score;
+  }
   
-  if (budgetDiff === 0) return 100;
+  // No overlap - check how close they are
+  const gap = Math.min(
+    Math.abs(budget1Max - budget2Min),
+    Math.abs(budget2Max - budget1Min)
+  );
   
-  // Decrease score by 2 points for every $50 difference
-  const score = Math.max(0, 100 - Math.floor(budgetDiff / 50) * 2);
-  return score;
+  return Math.max(20, 60 - Math.floor(gap / 100) * 5);
 };
-
-// ===== MAINTAIN EXISTING FUNCTIONS FOR BACKWARDS COMPATIBILITY =====
 
 /**
- * Legacy lifestyle compatibility (maintained for backwards compatibility)
+ * ✅ SCHEMA ALIGNED: Age compatibility using calculated age
+ * Uses: age (calculated from date_of_birth by dataTransform)
  */
-export const calculateLifestyleCompatibility = (user1, user2) => {
-  return calculateLifestyleCoreCompatibility(user1, user2);
-};
-
-/**
- * Legacy recovery compatibility (maintained for backwards compatibility)
- */
-export const calculateRecoveryCompatibility = (user1, user2) => {
-  return calculateRecoveryCoreCompatibility(user1, user2);
-};
-
-/**
- * Legacy gender compatibility (maintained for backwards compatibility)
- */
-export const calculateGenderCompatibility = (user1, user2) => {
-  return calculateGenderPreferencesCompatibility(user1, user2);
-};
-
-// ===== KEEP ALL EXISTING HELPER FUNCTIONS =====
-
 export const calculateAgeCompatibility = (user1, user2) => {
-  if (!user1.age || !user2.age) return 50;
+  // Age should be calculated by dataTransform from date_of_birth
+  const age1 = user1.age || calculateAge(user1.date_of_birth);
+  const age2 = user2.age || calculateAge(user2.date_of_birth);
   
-  const ageDiff = Math.abs(user1.age - user2.age);
+  if (!age1 || !age2) return 50;
+  
+  const ageDiff = Math.abs(age1 - age2);
   
   if (ageDiff === 0) return 100;
   if (ageDiff <= 3) return 90;
@@ -675,6 +592,10 @@ export const calculateAgeCompatibility = (user1, user2) => {
   return 30;
 };
 
+/**
+ * ✅ SCHEMA ALIGNED: Spiritual compatibility
+ * Uses: spiritual_affiliation (schema field name)
+ */
 export const calculateSpiritualCompatibility = (user1, user2) => {
   const spiritual1 = user1.spiritual_affiliation;
   const spiritual2 = user2.spiritual_affiliation;
@@ -706,21 +627,33 @@ export const calculateSpiritualCompatibility = (user1, user2) => {
   return isConflict ? 35 : 60;
 };
 
+/**
+ * ✅ SCHEMA ALIGNED: Interests compatibility
+ * Uses: interests (schema field name)
+ */
 export const calculateInterestsCompatibility = (user1, user2) => {
   if (!user1.interests || !user2.interests) return 50;
   return calculateArrayOverlapScore(user1.interests, user2.interests);
 };
 
+/**
+ * ✅ SCHEMA ALIGNED: Housing compatibility
+ * Uses: housing_assistance (schema field name - NOT housing_subsidy)
+ */
 export const calculateHousingCompatibility = (user1, user2) => {
-  const subsidy1 = user1.housing_assistance || user1.housing_subsidy || [];
-  const subsidy2 = user2.housing_assistance || user2.housing_subsidy || [];
+  const assistance1 = user1.housing_assistance || [];
+  const assistance2 = user2.housing_assistance || [];
   
-  if (subsidy1.length === 0 && subsidy2.length === 0) return 75;
+  if (assistance1.length === 0 && assistance2.length === 0) return 75;
   
-  const overlap = calculateArrayOverlapScore(subsidy1, subsidy2);
+  const overlap = calculateArrayOverlapScore(assistance1, assistance2);
   return Math.max(50, overlap);
 };
 
+/**
+ * ✅ SCHEMA ALIGNED: Preferences compatibility
+ * Uses: pets_owned, pets_comfortable, overnight_guests_ok, shared_groceries, smoking_status, guests_policy (schema field names)
+ */
 export const calculatePreferencesCompatibility = (user1, user2) => {
   let totalScore = 0;
   let factors = 0;
@@ -740,6 +673,7 @@ export const calculatePreferencesCompatibility = (user1, user2) => {
     factors++;
   }
   
+  // Use guests_policy (schema field name)
   const guestPolicy1 = user1.guests_policy;
   const guestPolicy2 = user2.guests_policy;
   
@@ -752,19 +686,92 @@ export const calculatePreferencesCompatibility = (user1, user2) => {
   return factors > 0 ? Math.round(totalScore / factors) : 50;
 };
 
-// ===== ALL EXISTING HELPER FUNCTIONS (kept for compatibility) =====
+// ===== ENHANCED HELPER FUNCTIONS =====
 
-const extractStateFromLocation = (location) => {
-  if (!location) return null;
-  const parts = location.split(',').map(p => p.trim());
-  return parts.length > 1 ? parts[parts.length - 1] : null;
+/**
+ * Communication style compatibility matrix
+ */
+const calculateCommunicationStyleCompatibility = (style1, style2) => {
+  if (style1 === style2) return 100;
+  
+  const compatibility = {
+    'direct-verbal': { 'written-notes': 70, 'casual-check-ins': 80, 'group-meetings': 60 },
+    'written-notes': { 'direct-verbal': 70, 'casual-check-ins': 60, 'group-meetings': 80 },
+    'group-meetings': { 'direct-verbal': 60, 'written-notes': 80, 'casual-check-ins': 70 },
+    'casual-check-ins': { 'direct-verbal': 80, 'written-notes': 60, 'group-meetings': 70 },
+    'minimal-communication': { 'direct-verbal': 30, 'written-notes': 50, 'group-meetings': 20, 'casual-check-ins': 40 }
+  };
+  
+  return compatibility[style1]?.[style2] || 50;
 };
 
-const extractCityFromLocation = (location) => {
-  if (!location) return null;
-  const parts = location.split(',').map(p => p.trim());
-  return parts.length > 0 ? parts[0] : null;
+/**
+ * Conflict resolution compatibility matrix
+ */
+const calculateConflictResolutionCompatibility = (style1, style2) => {
+  if (style1 === style2) return 100;
+  
+  const compatibility = {
+    'direct-communication': { 'mediated-discussion': 80, 'written-communication': 60, 'avoid-conflict': 30 },
+    'mediated-discussion': { 'direct-communication': 80, 'written-communication': 90, 'avoid-conflict': 70 },
+    'written-communication': { 'direct-communication': 60, 'mediated-discussion': 90, 'avoid-conflict': 80 },
+    'avoid-conflict': { 'direct-communication': 30, 'mediated-discussion': 70, 'written-communication': 80 }
+  };
+  
+  return compatibility[style1]?.[style2] || 50;
 };
+
+/**
+ * Chore style compatibility matrix
+ */
+const calculateChoreStyleCompatibility = (style1, style2) => {
+  if (style1 === style2) return 100;
+  
+  const compatibility = {
+    'formal-schedule': { 'informal-sharing': 70, 'individual-responsibility': 60, 'hire-help': 80, 'flexible': 50 },
+    'informal-sharing': { 'formal-schedule': 70, 'individual-responsibility': 80, 'hire-help': 60, 'flexible': 90 },
+    'individual-responsibility': { 'formal-schedule': 60, 'informal-sharing': 80, 'hire-help': 70, 'flexible': 70 },
+    'hire-help': { 'formal-schedule': 80, 'informal-sharing': 60, 'individual-responsibility': 70, 'flexible': 60 },
+    'flexible': { 'formal-schedule': 50, 'informal-sharing': 90, 'individual-responsibility': 70, 'hire-help': 60 }
+  };
+  
+  return compatibility[style1]?.[style2] || 60;
+};
+
+/**
+ * Simple text similarity calculation
+ */
+const calculateTextSimilarity = (text1, text2) => {
+  const words1 = text1.split(/\s+/);
+  const words2 = text2.split(/\s+/);
+  const commonWords = words1.filter(word => words2.includes(word));
+  const totalWords = new Set([...words1, ...words2]).size;
+  
+  return totalWords > 0 ? Math.round((commonWords.length / totalWords) * 100) : 0;
+};
+
+/**
+ * ✅ SCHEMA ALIGNED: Calculate profile completeness score
+ * Uses schema field names for required fields
+ */
+const calculateProfileCompleteness = (profile) => {
+  const requiredFields = [
+    'primary_city', 'primary_state', 'budget_min', 'budget_max', 'preferred_roommate_gender',
+    'recovery_stage', 'recovery_methods', 'primary_issues', 'spiritual_affiliation',
+    'social_level', 'cleanliness_level', 'noise_tolerance', 'work_schedule',
+    'move_in_date', 'about_me', 'looking_for'
+  ];
+  
+  const completedFields = requiredFields.filter(field => {
+    const value = profile[field];
+    return value !== null && value !== undefined && value !== '' && 
+           (!Array.isArray(value) || value.length > 0);
+  });
+  
+  return Math.round((completedFields.length / requiredFields.length) * 100);
+};
+
+// ===== EXISTING HELPER FUNCTIONS (Updated for schema alignment) =====
 
 const isCompatibleBedtime = (bedtime1, bedtime2) => {
   const compatible = {
@@ -865,6 +872,29 @@ const calculateArrayOverlapScore = (array1, array2) => {
   const union = [...new Set([...array1, ...array2])];
   
   return Math.round((overlap.length / union.length) * 100);
+};
+
+// ===== LEGACY COMPATIBILITY FUNCTIONS =====
+
+/**
+ * Legacy lifestyle compatibility (maintained for backwards compatibility)
+ */
+export const calculateLifestyleCompatibility = (user1, user2) => {
+  return calculateLifestyleCoreCompatibility(user1, user2);
+};
+
+/**
+ * Legacy recovery compatibility (maintained for backwards compatibility)
+ */
+export const calculateRecoveryCompatibility = (user1, user2) => {
+  return calculateRecoveryCoreCompatibility(user1, user2);
+};
+
+/**
+ * Legacy gender compatibility (maintained for backwards compatibility)
+ */
+export const calculateGenderCompatibility = (user1, user2) => {
+  return calculateGenderPreferencesCompatibility(user1, user2);
 };
 
 // ===== MAIN EXPORT FUNCTIONS =====

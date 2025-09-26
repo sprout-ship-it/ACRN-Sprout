@@ -1,6 +1,14 @@
-// src/utils/database/matchRequestsService.js - Match requests service module
+// src/utils/database/matchRequestsService.js - Corrected for New Schema
 /**
  * Match requests service for match_requests table operations
+ * 
+ * SCHEMA STRUCTURE:
+ * - requester_type + requester_id: Who is making the request (role-specific ID)
+ * - recipient_type + recipient_id: Who is receiving the request (role-specific ID)  
+ * - request_type: Type of connection (housing, employment, peer-support, roommate)
+ * - status: pending, accepted, rejected, withdrawn
+ * 
+ * This handles generic connection requests between different user roles
  */
 
 const createMatchRequestsService = (supabaseClient) => {
@@ -10,64 +18,127 @@ const createMatchRequestsService = (supabaseClient) => {
 
   const tableName = 'match_requests';
 
+  // Valid values from schema constraints
+  const VALID_USER_TYPES = ['applicant', 'landlord', 'employer', 'peer-support'];
+  const VALID_REQUEST_TYPES = ['housing', 'employment', 'peer-support', 'roommate'];
+  const VALID_STATUSES = ['pending', 'accepted', 'rejected', 'withdrawn'];
+
   const service = {
     /**
      * Create a new match request
+     * @param {Object} requestData - Request data including types and IDs
+     * @returns {Object} Database response
      */
-    create: async (requestData) => {
-      try {
-        console.log('🤝 MatchRequests: Creating request from', requestData.requester_id, 'to', requestData.target_id);
+      create: async (requestData) => {
+        try {
+          console.log('🤝 MatchRequests: Creating request', {
+            from: `${requestData.requester_type}:${requestData.requester_id}`,
+            to: `${requestData.recipient_type}:${requestData.recipient_id}`,
+            type: requestData.request_type,
+            property: requestData.property_id || null
+          });
 
-        // Check for existing request
-        const existingResult = await service.getExistingRequest(requestData.requester_id, requestData.target_id);
-        if (existingResult.success && existingResult.data) {
-          return { 
-            success: false, 
-            data: null, 
-            error: { message: 'Match request already exists', code: 'REQUEST_EXISTS' }
-          };
+          // Validate required fields
+          const requiredFields = ['requester_type', 'requester_id', 'recipient_type', 'recipient_id', 'request_type'];
+          for (const field of requiredFields) {
+            if (!requestData[field]) {
+              throw new Error(`Missing required field: ${field}`);
+            }
+          }
+
+          // ✅ NEW: Validate property_id for housing requests
+          if (requestData.request_type === 'housing') {
+            if (!requestData.property_id) {
+              throw new Error('property_id is required for housing requests');
+            }
+          }
+
+          // Validate field values
+          if (!VALID_USER_TYPES.includes(requestData.requester_type)) {
+            throw new Error(`Invalid requester_type: ${requestData.requester_type}`);
+          }
+
+          if (!VALID_USER_TYPES.includes(requestData.recipient_type)) {
+            throw new Error(`Invalid recipient_type: ${requestData.recipient_type}`);
+          }
+
+          if (!VALID_REQUEST_TYPES.includes(requestData.request_type)) {
+            throw new Error(`Invalid request_type: ${requestData.request_type}`);
+          }
+
+          // Prevent self-requests
+          if (requestData.requester_type === requestData.recipient_type && 
+              requestData.requester_id === requestData.recipient_id) {
+            throw new Error('Cannot send request to yourself');
+          }
+
+          // ✅ UPDATED: Check for existing request including property_id
+          const existingResult = await service.getExistingRequest(
+            requestData.requester_type, 
+            requestData.requester_id,
+            requestData.recipient_type, 
+            requestData.recipient_id,
+            requestData.request_type,
+            requestData.property_id // Add property_id to uniqueness check
+          );
+
+          if (existingResult.success && existingResult.data) {
+            return { 
+              success: false, 
+              data: null, 
+              error: { message: 'Match request already exists', code: 'REQUEST_EXISTS' }
+            };
+          }
+
+          const { data, error } = await supabaseClient
+            .from(tableName)
+            .insert({
+              requester_type: requestData.requester_type,
+              requester_id: requestData.requester_id,
+              recipient_type: requestData.recipient_type,
+              recipient_id: requestData.recipient_id,
+              request_type: requestData.request_type,
+              property_id: requestData.property_id || null, // ✅ NEW: Include property_id
+              message: requestData.message || null,
+              status: requestData.status || 'pending',
+              created_at: new Date().toISOString(),
+              updated_at: new Date().toISOString()
+            })
+            .select()
+            .single();
+
+          if (error) {
+            console.error('❌ MatchRequests: Create failed:', error.message);
+            return { success: false, data: null, error };
+          }
+
+          console.log('✅ MatchRequests: Request created successfully');
+          return { success: true, data, error: null };
+
+        } catch (err) {
+          console.error('💥 MatchRequests: Create exception:', err);
+          return { success: false, data: null, error: { message: err.message } };
         }
-
-        const { data, error } = await supabaseClient
-          .from(tableName)
-          .insert({
-            ...requestData,
-            status: requestData.status || 'pending',
-            created_at: new Date().toISOString(),
-            updated_at: new Date().toISOString()
-          })
-          .select()
-          .single();
-
-        if (error) {
-          console.error('❌ MatchRequests: Create failed:', error.message);
-          return { success: false, data: null, error };
-        }
-
-        console.log('✅ MatchRequests: Request created successfully');
-        return { success: true, data, error: null };
-
-      } catch (err) {
-        console.error('💥 MatchRequests: Create exception:', err);
-        return { success: false, data: null, error: { message: err.message } };
-      }
-    },
+      },
 
     /**
-     * Get match requests for a user (sent and received)
+     * Get match requests by role-specific user ID
+     * @param {string} userType - User type (applicant, landlord, etc.)
+     * @param {string} userId - Role-specific user ID
+     * @returns {Object} Database response
      */
-    getByUserId: async (userId) => {
+    getByUserId: async (userType, userId) => {
       try {
-        console.log('🤝 MatchRequests: Fetching requests for user:', userId);
+        console.log('🤝 MatchRequests: Fetching requests for', `${userType}:${userId}`);
+
+        if (!VALID_USER_TYPES.includes(userType)) {
+          throw new Error(`Invalid user type: ${userType}`);
+        }
 
         const { data, error } = await supabaseClient
           .from(tableName)
-          .select(`
-            *,
-            requester:registrant_profiles!requester_id(id, first_name, last_name, email),
-            target:registrant_profiles!target_id(id, first_name, last_name, email)
-          `)
-          .or(`requester_id.eq.${userId},target_id.eq.${userId}`)
+          .select('*')
+          .or(`and(requester_type.eq.${userType},requester_id.eq.${userId}),and(recipient_type.eq.${userType},recipient_id.eq.${userId})`)
           .order('created_at', { ascending: false });
 
         if (error) {
@@ -75,7 +146,7 @@ const createMatchRequestsService = (supabaseClient) => {
           return { success: false, data: [], error };
         }
 
-        console.log(`✅ MatchRequests: Found ${data?.length || 0} requests for user`);
+        console.log(`✅ MatchRequests: Found ${data?.length || 0} requests`);
         return { success: true, data: data || [], error: null };
 
       } catch (err) {
@@ -86,17 +157,22 @@ const createMatchRequestsService = (supabaseClient) => {
 
     /**
      * Get sent requests for a user
+     * @param {string} userType - User type
+     * @param {string} userId - Role-specific user ID
+     * @returns {Object} Database response
      */
-    getSentRequests: async (userId) => {
+    getSentRequests: async (userType, userId) => {
       try {
-        console.log('🤝 MatchRequests: Fetching sent requests for user:', userId);
+        console.log('🤝 MatchRequests: Fetching sent requests for', `${userType}:${userId}`);
+
+        if (!VALID_USER_TYPES.includes(userType)) {
+          throw new Error(`Invalid user type: ${userType}`);
+        }
 
         const { data, error } = await supabaseClient
           .from(tableName)
-          .select(`
-            *,
-            target:registrant_profiles!target_id(id, first_name, last_name, email)
-          `)
+          .select('*')
+          .eq('requester_type', userType)
           .eq('requester_id', userId)
           .order('created_at', { ascending: false });
 
@@ -116,18 +192,23 @@ const createMatchRequestsService = (supabaseClient) => {
 
     /**
      * Get received requests for a user
+     * @param {string} userType - User type
+     * @param {string} userId - Role-specific user ID
+     * @returns {Object} Database response
      */
-    getReceivedRequests: async (userId) => {
+    getReceivedRequests: async (userType, userId) => {
       try {
-        console.log('🤝 MatchRequests: Fetching received requests for user:', userId);
+        console.log('🤝 MatchRequests: Fetching received requests for', `${userType}:${userId}`);
+
+        if (!VALID_USER_TYPES.includes(userType)) {
+          throw new Error(`Invalid user type: ${userType}`);
+        }
 
         const { data, error } = await supabaseClient
           .from(tableName)
-          .select(`
-            *,
-            requester:registrant_profiles!requester_id(id, first_name, last_name, email)
-          `)
-          .eq('target_id', userId)
+          .select('*')
+          .eq('recipient_type', userType)
+          .eq('recipient_id', userId)
           .order('created_at', { ascending: false });
 
         if (error) {
@@ -146,18 +227,33 @@ const createMatchRequestsService = (supabaseClient) => {
 
     /**
      * Update match request status
+     * @param {string} requestId - Request ID
+     * @param {Object} updates - Fields to update
+     * @returns {Object} Database response
      */
-    update: async (id, updates) => {
+    update: async (requestId, updates) => {
       try {
-        console.log('🤝 MatchRequests: Updating request:', id);
+        console.log('🤝 MatchRequests: Updating request:', requestId);
+
+        // Validate status if being updated
+        if (updates.status && !VALID_STATUSES.includes(updates.status)) {
+          throw new Error(`Invalid status: ${updates.status}`);
+        }
+
+        const updateData = {
+          ...updates,
+          updated_at: new Date().toISOString()
+        };
+
+        // Set responded_at when status changes from pending
+        if (updates.status && updates.status !== 'pending') {
+          updateData.responded_at = new Date().toISOString();
+        }
 
         const { data, error } = await supabaseClient
           .from(tableName)
-          .update({
-            ...updates,
-            updated_at: new Date().toISOString()
-          })
-          .eq('id', id)
+          .update(updateData)
+          .eq('id', requestId)
           .select()
           .single();
 
@@ -176,44 +272,29 @@ const createMatchRequestsService = (supabaseClient) => {
     },
 
     /**
-     * Approve a match request
+     * Accept/approve a match request
+     * @param {string} requestId - Request ID
+     * @returns {Object} Database response
      */
-    approve: async (requestId, approvedBy) => {
+    accept: async (requestId) => {
       try {
-        console.log('🤝 MatchRequests: Approving request:', requestId);
-
-        const updates = {
-          status: 'approved',
-          target_approved: true,
-          approved_at: new Date().toISOString(),
-          approved_by: approvedBy
-        };
-
-        return await service.update(requestId, updates);
-
+        console.log('🤝 MatchRequests: Accepting request:', requestId);
+        return await service.update(requestId, { status: 'accepted' });
       } catch (err) {
-        console.error('💥 MatchRequests: Approve exception:', err);
+        console.error('💥 MatchRequests: Accept exception:', err);
         return { success: false, data: null, error: { message: err.message } };
       }
     },
 
     /**
      * Reject a match request
+     * @param {string} requestId - Request ID
+     * @returns {Object} Database response
      */
-    reject: async (requestId, rejectedBy, reason = null) => {
+    reject: async (requestId) => {
       try {
         console.log('🤝 MatchRequests: Rejecting request:', requestId);
-
-        const updates = {
-          status: 'rejected',
-          target_approved: false,
-          rejected_at: new Date().toISOString(),
-          rejected_by: rejectedBy,
-          rejection_reason: reason
-        };
-
-        return await service.update(requestId, updates);
-
+        return await service.update(requestId, { status: 'rejected' });
       } catch (err) {
         console.error('💥 MatchRequests: Reject exception:', err);
         return { success: false, data: null, error: { message: err.message } };
@@ -221,63 +302,77 @@ const createMatchRequestsService = (supabaseClient) => {
     },
 
     /**
-     * Cancel a match request (by requester)
+     * Withdraw a match request (by requester)
+     * @param {string} requestId - Request ID
+     * @returns {Object} Database response
      */
-    cancel: async (requestId, cancelledBy) => {
+    withdraw: async (requestId) => {
       try {
-        console.log('🤝 MatchRequests: Cancelling request:', requestId);
-
-        const updates = {
-          status: 'cancelled',
-          cancelled_at: new Date().toISOString(),
-          cancelled_by: cancelledBy
-        };
-
-        return await service.update(requestId, updates);
-
+        console.log('🤝 MatchRequests: Withdrawing request:', requestId);
+        return await service.update(requestId, { status: 'withdrawn' });
       } catch (err) {
-        console.error('💥 MatchRequests: Cancel exception:', err);
+        console.error('💥 MatchRequests: Withdraw exception:', err);
         return { success: false, data: null, error: { message: err.message } };
       }
     },
 
     /**
-     * Get existing request between two users
+     * Get existing request between two users for a specific request type
+     * @param {string} requesterType - Requester user type
+     * @param {string} requesterId - Requester ID
+     * @param {string} recipientType - Recipient user type
+     * @param {string} recipientId - Recipient ID
+     * @param {string} requestType - Request type
+     * @returns {Object} Database response
      */
-    getExistingRequest: async (userId1, userId2) => {
-      try {
-        const { data, error } = await supabaseClient
-          .from(tableName)
-          .select('*')
-          .or(`and(requester_id.eq.${userId1},target_id.eq.${userId2}),and(requester_id.eq.${userId2},target_id.eq.${userId1})`)
-          .in('status', ['pending', 'approved'])
-          .single();
+      getExistingRequest: async (requesterType, requesterId, recipientType, recipientId, requestType, propertyId = null) => {
+        try {
+          let query = supabaseClient
+            .from(tableName)
+            .select('*')
+            .eq('requester_type', requesterType)
+            .eq('requester_id', requesterId)
+            .eq('recipient_type', recipientType)
+            .eq('recipient_id', recipientId)
+            .eq('request_type', requestType)
+            .in('status', ['pending', 'accepted']);
 
-        if (error && error.code === 'PGRST116') {
-          return { success: true, data: null, error: null };
+          // ✅ NEW: Include property_id in uniqueness check for housing requests
+          if (requestType === 'housing' && propertyId) {
+            query = query.eq('property_id', propertyId);
+          }
+
+          const { data, error } = await query.maybeSingle();
+
+          if (error) {
+            return { success: false, data: null, error };
+          }
+
+          return { success: true, data, error: null };
+
+        } catch (err) {
+          console.error('💥 MatchRequests: GetExistingRequest exception:', err);
+          return { success: false, data: null, error: { message: err.message } };
         }
-
-        if (error) {
-          return { success: false, data: null, error };
-        }
-
-        return { success: true, data, error: null };
-
-      } catch (err) {
-        console.error('💥 MatchRequests: GetExistingRequest exception:', err);
-        return { success: false, data: null, error: { message: err.message } };
-      }
-    },
+      },
 
     /**
      * Get pending requests count for a user
+     * @param {string} userType - User type
+     * @param {string} userId - Role-specific user ID
+     * @returns {Object} Database response
      */
-    getPendingCount: async (userId) => {
+    getPendingCount: async (userType, userId) => {
       try {
+        if (!VALID_USER_TYPES.includes(userType)) {
+          throw new Error(`Invalid user type: ${userType}`);
+        }
+
         const { data, error } = await supabaseClient
           .from(tableName)
           .select('id', { count: 'exact' })
-          .eq('target_id', userId)
+          .eq('recipient_type', userType)
+          .eq('recipient_id', userId)
           .eq('status', 'pending');
 
         if (error) {
@@ -286,7 +381,7 @@ const createMatchRequestsService = (supabaseClient) => {
         }
 
         const count = data?.length || 0;
-        console.log(`✅ MatchRequests: ${count} pending requests for user`);
+        console.log(`✅ MatchRequests: ${count} pending requests for ${userType}:${userId}`);
         return { success: true, data: count, error: null };
 
       } catch (err) {
@@ -297,14 +392,17 @@ const createMatchRequestsService = (supabaseClient) => {
 
     /**
      * Get request statistics for a user
+     * @param {string} userType - User type
+     * @param {string} userId - Role-specific user ID
+     * @returns {Object} Database response
      */
-    getStatistics: async (userId) => {
+    getStatistics: async (userType, userId) => {
       try {
-        console.log('🤝 MatchRequests: Fetching statistics for user:', userId);
+        console.log('🤝 MatchRequests: Fetching statistics for', `${userType}:${userId}`);
 
         const [sentResult, receivedResult] = await Promise.all([
-          service.getSentRequests(userId),
-          service.getReceivedRequests(userId)
+          service.getSentRequests(userType, userId),
+          service.getReceivedRequests(userType, userId)
         ]);
 
         if (!sentResult.success || !receivedResult.success) {
@@ -318,20 +416,26 @@ const createMatchRequestsService = (supabaseClient) => {
           sent: {
             total: sent.length,
             pending: sent.filter(r => r.status === 'pending').length,
-            approved: sent.filter(r => r.status === 'approved').length,
+            accepted: sent.filter(r => r.status === 'accepted').length,
             rejected: sent.filter(r => r.status === 'rejected').length,
-            cancelled: sent.filter(r => r.status === 'cancelled').length
+            withdrawn: sent.filter(r => r.status === 'withdrawn').length
           },
           received: {
             total: received.length,
             pending: received.filter(r => r.status === 'pending').length,
-            approved: received.filter(r => r.status === 'approved').length,
+            accepted: received.filter(r => r.status === 'accepted').length,
             rejected: received.filter(r => r.status === 'rejected').length
           },
-          matches: {
-            active: [...sent, ...received].filter(r => r.status === 'approved').length
-          }
+          byRequestType: {},
+          activeConnections: [...sent, ...received].filter(r => r.status === 'accepted').length
         };
+
+        // Group by request type
+        [...sent, ...received].forEach(request => {
+          if (request.request_type) {
+            stats.byRequestType[request.request_type] = (stats.byRequestType[request.request_type] || 0) + 1;
+          }
+        });
 
         console.log('✅ MatchRequests: Statistics calculated');
         return { success: true, data: stats, error: null };
@@ -344,15 +448,17 @@ const createMatchRequestsService = (supabaseClient) => {
 
     /**
      * Delete a match request
+     * @param {string} requestId - Request ID
+     * @returns {Object} Database response
      */
-    delete: async (id) => {
+    delete: async (requestId) => {
       try {
-        console.log('🤝 MatchRequests: Deleting request:', id);
+        console.log('🤝 MatchRequests: Deleting request:', requestId);
 
         const { data, error } = await supabaseClient
           .from(tableName)
           .delete()
-          .eq('id', id)
+          .eq('id', requestId)
           .select();
 
         if (error) {
@@ -370,36 +476,77 @@ const createMatchRequestsService = (supabaseClient) => {
     },
 
     /**
-     * Cleanup old requests
+     * Get requests by type
+     * @param {string} requestType - Request type
+     * @param {Object} filters - Additional filters
+     * @returns {Object} Database response
      */
-    cleanupOldRequests: async (daysOld = 90) => {
+    getByRequestType: async (requestType, filters = {}) => {
       try {
-        console.log(`🤝 MatchRequests: Cleaning up requests older than ${daysOld} days`);
-
-        const cutoffDate = new Date();
-        cutoffDate.setDate(cutoffDate.getDate() - daysOld);
-
-        const { data, error } = await supabaseClient
-          .from(tableName)
-          .delete()
-          .lt('created_at', cutoffDate.toISOString())
-          .in('status', ['rejected', 'cancelled'])
-          .select();
-
-        if (error) {
-          console.error('❌ MatchRequests: Cleanup failed:', error.message);
-          return { success: false, data: null, error };
+        if (!VALID_REQUEST_TYPES.includes(requestType)) {
+          throw new Error(`Invalid request type: ${requestType}`);
         }
 
-        const cleanedCount = data?.length || 0;
-        console.log(`✅ MatchRequests: Cleaned up ${cleanedCount} old requests`);
-        return { success: true, data: { cleanedCount }, error: null };
+        let query = supabaseClient
+          .from(tableName)
+          .select('*')
+          .eq('request_type', requestType);
+
+        // Apply additional filters
+        if (filters.status) {
+          query = query.eq('status', filters.status);
+        }
+
+        if (filters.requesterType) {
+          query = query.eq('requester_type', filters.requesterType);
+        }
+
+        if (filters.recipientType) {
+          query = query.eq('recipient_type', filters.recipientType);
+        }
+
+        const { data, error } = await query
+          .order('created_at', { ascending: false })
+          .limit(filters.limit || 100);
+
+        if (error) {
+          throw new Error(`Database error: ${error.message}`);
+        }
+
+        return { success: true, data: data || [], error: null };
 
       } catch (err) {
-        console.error('💥 MatchRequests: Cleanup exception:', err);
-        return { success: false, data: null, error: { message: err.message } };
+        console.error('💥 MatchRequests: GetByRequestType exception:', err);
+        return { success: false, data: [], error: { message: err.message } };
       }
-    }
+    },
+      getByPropertyId: async (propertyId) => {
+        try {
+          console.log('🤝 MatchRequests: Fetching requests for property:', propertyId);
+
+          const { data, error } = await supabaseClient
+            .from(tableName)
+            .select('*')
+            .eq('property_id', propertyId)
+            .eq('request_type', 'housing')
+            .order('created_at', { ascending: false });
+
+          if (error) {
+            console.error('❌ MatchRequests: GetByPropertyId failed:', error.message);
+            return { success: false, data: [], error };
+          }
+
+          console.log(`✅ MatchRequests: Found ${data?.length || 0} property requests`);
+          return { success: true, data: data || [], error: null };
+
+        } catch (err) {
+          console.error('💥 MatchRequests: GetByPropertyId exception:', err);
+          return { success: false, data: [], error: { message: err.message } };
+        }
+      },
+    // Legacy method names for backward compatibility
+    approve: async (requestId) => service.accept(requestId),
+    cancel: async (requestId) => service.withdraw(requestId)
   };
 
   return service;

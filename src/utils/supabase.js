@@ -1,17 +1,21 @@
-// src/utils/supabase.js - CLEANED: Removed legacy applicantForms
+// src/utils/supabase.js - Updated for Refactored Schema with Properties Table
 import { createClient } from '@supabase/supabase-js'
 
-// Import all service modules
+// Import service modules (core services that we've verified)
 import createAuthService from './database/authService'
 import createProfilesService from './database/profileService'
+import createMatchingProfilesService from './database/matchingProfilesService'
 import createMatchRequestsService from './database/matchRequestsService'
-import createPropertiesService from './database/propertiesService'
-import createEmployerService from './database/employerService'
-import createPeerSupportService from './database/peerSupportService'
 import createMatchGroupsService from './database/matchGroupsService'
-import createCommunicationService from './database/communicationService'
-import MatchingProfilesService from './database/matchingProfilesService'
-import pssClientsService from './database/pssClients'
+
+// ✅ NEW: Import properties service (critical for refactored schema)
+import createPropertiesService from './database/propertiesService'
+
+// TODO: Import remaining role-specific services as we verify alignment
+// import createLandlordProfilesService from './database/landlordProfilesService'
+// import createEmployerService from './database/employerService'
+// import createPeerSupportService from './database/peerSupportService'
+// import createCommunicationService from './database/communicationService'
 
 console.log('🔧 Supabase client initializing...')
 
@@ -23,7 +27,7 @@ if (!supabaseUrl || !supabaseAnonKey) {
   throw new Error('Missing Supabase environment variables. Please check your .env file.')
 }
 
-// Create Supabase client with simplified config
+// Create Supabase client
 export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
   auth: {
     autoRefreshToken: true,
@@ -35,20 +39,15 @@ export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
 
 console.log('✅ Supabase client created')
 
-// Initialize all services
+// Initialize core services
 const authService = createAuthService(supabase)
 const profilesService = createProfilesService(supabase)
+const matchingProfilesService = createMatchingProfilesService(supabase)
 const matchRequestsService = createMatchRequestsService(supabase)
-const propertiesService = createPropertiesService(supabase)
-const employerService = createEmployerService(supabase)
-const peerSupportService = createPeerSupportService(supabase)
 const matchGroupsService = createMatchGroupsService(supabase)
-const communicationService = createCommunicationService(supabase)
+const propertiesService = createPropertiesService(supabase) // ✅ NEW: Critical service
 
-// ✅ UPDATED: Create proper matching profiles service instance
-const matchingProfilesService = new MatchingProfilesService(supabase)
-
-// Simplified auth helpers (wrapper around authService)
+// Authentication helpers
 export const auth = {
   signUp: authService.signUp,
   signIn: authService.signIn,
@@ -62,10 +61,13 @@ export const auth = {
   getAuthStatus: authService.getAuthStatus
 }
 
-// Database helpers - organized by service
+// ✅ UPDATED: Database helpers organized by refactored schema structure
 export const db = {
-  // Registrant profiles operations
-  profiles: {
+  // ============================================================================
+  // CORE PROFILES - Central hub for role selection (registrant_profiles table)
+  // Flow: auth.users.id → registrant_profiles.user_id → registrant_profiles.id
+  // ============================================================================
+  registrantProfiles: {
     create: profilesService.create,
     getById: profilesService.getById,
     getByUserId: profilesService.getByUserId,
@@ -75,52 +77,70 @@ export const db = {
     getByRole: profilesService.getByRole,
     search: profilesService.search,
     getStatistics: profilesService.getStatistics,
-    batchUpdate: profilesService.batchUpdate,
     emailExists: profilesService.emailExists
   },
 
-  // Backward compatibility alias
-  registrantProfiles: {
-    getById: profilesService.getById,
-    create: profilesService.create,
-    update: profilesService.update
-  },
-
-  // ✅ UPDATED: Comprehensive matching profiles operations (replaces applicantForms)
+  // ============================================================================
+  // APPLICANT MATCHING PROFILES (applicant_matching_profiles table)
+  // Flow: registrant_profiles.id → applicant_matching_profiles.user_id → applicant_matching_profiles.id
+  // ============================================================================
   matchingProfiles: {
     // Core CRUD operations
-    create: matchingProfilesService.create.bind(matchingProfilesService),
-    getByUserId: matchingProfilesService.getByUserId.bind(matchingProfilesService),
-    update: matchingProfilesService.update.bind(matchingProfilesService),
-    upsert: matchingProfilesService.upsert.bind(matchingProfilesService),
-    delete: matchingProfilesService.delete.bind(matchingProfilesService),
+    create: matchingProfilesService.create,
+    getByUserId: matchingProfilesService.getByUserId,
+    getById: matchingProfilesService.getById,
+    update: matchingProfilesService.update,
+    upsert: matchingProfilesService.upsert,
+    delete: matchingProfilesService.delete,
 
     // Query operations
-    getActiveProfiles: matchingProfilesService.getActiveProfiles.bind(matchingProfilesService),
-    getByLocation: matchingProfilesService.getByLocation.bind(matchingProfilesService),
-    getByRecoveryStage: matchingProfilesService.getByRecoveryStage.bind(matchingProfilesService),
-    searchProfiles: matchingProfilesService.searchProfiles.bind(matchingProfilesService),
+    getActiveProfiles: matchingProfilesService.getActiveProfiles,
+    getByLocation: matchingProfilesService.getByLocation,
+    getByRecoveryStage: matchingProfilesService.getByRecoveryStage,
+    searchProfiles: matchingProfilesService.searchProfiles,
 
-    // Statistics and utilities
-    getStatistics: matchingProfilesService.getStatistics.bind(matchingProfilesService),
-    clearCache: matchingProfilesService.clearCache.bind(matchingProfilesService),
-
-    // Helper methods
-    calculateCompletionPercentage: matchingProfilesService.calculateCompletionPercentage.bind(matchingProfilesService),
-    calculateQualityScore: matchingProfilesService.calculateQualityScore.bind(matchingProfilesService),
-    isProfileCompleted: matchingProfilesService.isProfileCompleted.bind(matchingProfilesService)
+    // Utility methods
+    calculateCompletionPercentage: matchingProfilesService.calculateCompletionPercentage,
+    calculateQualityScore: matchingProfilesService.calculateQualityScore,
+    isProfileCompleted: matchingProfilesService.isProfileCompleted,
+    getStatistics: matchingProfilesService.getStatistics
   },
 
-  // ✅ LEGACY COMPATIBILITY: Alias for old code that might still reference applicantForms
-  // TODO: Remove these after updating all components
-  applicantForms: {
-    create: matchingProfilesService.create.bind(matchingProfilesService),
-    getByUserId: matchingProfilesService.getByUserId.bind(matchingProfilesService),
-    update: matchingProfilesService.update.bind(matchingProfilesService),
-    getActiveProfiles: matchingProfilesService.getActiveProfiles.bind(matchingProfilesService)
+  // ============================================================================
+  // ✅ NEW: PROPERTIES - Individual property listings (properties table)
+  // Flow: landlord_profiles.id → properties.landlord_id → properties.id
+  // ============================================================================
+  properties: {
+    // Core CRUD operations
+    create: propertiesService.create,
+    getById: propertiesService.getById,
+    getByLandlordId: propertiesService.getByLandlordId,
+    update: propertiesService.update,
+    delete: propertiesService.delete,
+
+    // Property search and filtering
+    getAvailable: propertiesService.getAvailable,
+    getRecoveryHousing: propertiesService.getRecoveryHousing,
+    getGeneralRentals: propertiesService.getGeneralRentals,
+    searchByLocation: propertiesService.searchByLocation,
+    getByPriceRange: propertiesService.getByPriceRange,
+    getMatchingProperties: propertiesService.getMatchingProperties,
+
+    // Property management
+    updateStatus: propertiesService.updateStatus,
+    updateAvailableBeds: propertiesService.updateAvailableBeds,
+    toggleAcceptingApplications: propertiesService.toggleAcceptingApplications,
+
+    // Analytics and bulk operations
+    getStatistics: propertiesService.getStatistics,
+    bulkUpdate: propertiesService.bulkUpdate
   },
 
-  // Match request operations
+  // ============================================================================
+  // MATCH REQUESTS - Connection requests between users
+  // ✅ UPDATED: Now supports property-specific requests
+  // Uses role-specific IDs + property_id for housing requests
+  // ============================================================================
   matchRequests: {
     create: matchRequestsService.create,
     getByUserId: matchRequestsService.getByUserId,
@@ -133,72 +153,14 @@ export const db = {
     getExistingRequest: matchRequestsService.getExistingRequest,
     getPendingCount: matchRequestsService.getPendingCount,
     getStatistics: matchRequestsService.getStatistics,
-    delete: matchRequestsService.delete,
-    cleanupOldRequests: matchRequestsService.cleanupOldRequests
+    delete: matchRequestsService.delete
   },
 
-  // Property operations
-  properties: {
-    create: propertiesService.create,
-    getByLandlordId: propertiesService.getByLandlordId,
-    getAvailable: propertiesService.getAvailable,
-    getById: propertiesService.getById,
-    update: propertiesService.update,
-    delete: propertiesService.delete,
-    updateStatus: propertiesService.updateStatus,
-    searchByLocation: propertiesService.searchByLocation,
-    getStatistics: propertiesService.getStatistics,
-    bulkUpdate: propertiesService.bulkUpdate,
-    getByPriceRange: propertiesService.getByPriceRange
-  },
-
-  // Employer operations
-  employerProfiles: {
-    create: employerService.profiles.create,
-    getByUserId: employerService.profiles.getByUserId,
-    update: employerService.profiles.update,
-    delete: employerService.profiles.delete,
-    getAvailable: employerService.profiles.getAvailable,
-    search: employerService.profiles.search,
-    getStatistics: employerService.profiles.getStatistics
-  },
-
-  // Employer favorites operations
-  employerFavorites: {
-    getByUserId: employerService.favorites.getByUserId,
-    add: employerService.favorites.add,
-    remove: employerService.favorites.remove,
-    isFavorited: employerService.favorites.isFavorited,
-    getEmployerFavoritesCount: employerService.favorites.getEmployerFavoritesCount,
-    checkMultipleFavorites: employerService.favorites.checkMultipleFavorites,
-    toggle: employerService.favorites.toggle
-  },
-
-  // Peer support operations
-  peerSupportProfiles: {
-    create: peerSupportService.create,
-    getByUserId: peerSupportService.getByUserId,
-    update: peerSupportService.update,
-    delete: peerSupportService.delete,
-    getAvailable: peerSupportService.getAvailable,
-    search: peerSupportService.search,
-    getBySpecialty: peerSupportService.getBySpecialty,
-    getByServiceArea: peerSupportService.getByServiceArea,
-    updateAvailability: peerSupportService.updateAvailability,
-    getStatistics: peerSupportService.getStatistics,
-    getById: peerSupportService.getById,
-    bulkUpdate: peerSupportService.bulkUpdate
-  },
-
-  // Legacy alias for peer support
-  peerSupport: {
-    create: peerSupportService.create,
-    getByUserId: peerSupportService.getByUserId,
-    getAvailable: peerSupportService.getAvailable,
-    update: peerSupportService.update
-  },
-
-  // Match Groups operations
+  // ============================================================================
+  // MATCH GROUPS - Complete housing solutions 
+  // ✅ UPDATED: Now references properties.id instead of landlord_profiles.id
+  // Uses applicant_matching_profiles.id + properties.id + peer_support_profiles.id
+  // ============================================================================
   matchGroups: {
     create: matchGroupsService.create,
     getByUserId: matchGroupsService.getByUserId,
@@ -208,45 +170,54 @@ export const db = {
     endGroup: matchGroupsService.endGroup,
     completeGroup: matchGroupsService.completeGroup,
     getConnectionSummary: matchGroupsService.getConnectionSummary,
-    getStatistics: matchGroupsService.getStatistics,
-    // Helper methods
-    getMatchType: matchGroupsService.getMatchType,
-    getOtherPerson: matchGroupsService.getOtherPerson,
-    getUserRole: matchGroupsService.getUserRole,
-    isUserInGroup: matchGroupsService.isUserInGroup
-  },
+    getStatistics: matchGroupsService.getStatistics
+  }
 
-  // Communication operations
-  communicationTemplates: {
-    create: communicationService.templates.create,
-    getByCategory: communicationService.templates.getByCategory,
-    getByUserId: communicationService.templates.getByUserId,
-    getById: communicationService.templates.getById,
-    update: communicationService.templates.update,
-    delete: communicationService.templates.delete
-  },
-
-  communicationLogs: {
-    create: communicationService.logs.create,
-    getByMatchGroup: communicationService.logs.getByMatchGroup,
-    getByUserId: communicationService.logs.getByUserId
-  },
-
-  // PSS Clients operations (using existing service)
-  pssClients: pssClientsService
+  // ============================================================================
+  // TODO: Add remaining role-specific services as we verify alignment:
+  // - landlordProfiles (simplified landlord_profiles table - business info only)
+  // - employerProfiles (employer_profiles table) 
+  // - peerSupportProfiles (peer_support_profiles table)
+  // - housingMatches (applicant_matching_profiles.id + properties.id)
+  // - employmentMatches, peerSupportMatches
+  // - favorites system (enhanced to support property favorites)
+  // ============================================================================
 }
 
-// ✅ NEW: Helper function to get current table status
-export const getTableInfo = () => {
+// ✅ UPDATED: Schema information reflecting refactored structure
+export const getSchemaInfo = () => {
   return {
-    matchingProfilesTable: 'applicant_matching_profiles',
-    legacyTable: 'applicant_forms', // Deprecated, do not use
-    migration: 'completed',
-    version: '2.0'
+    schemaVersion: '2.0-refactored',
+    idFlow: 'auth.users.id → registrant_profiles.user_id → registrant_profiles.id → role_table.user_id → role_table.id',
+    coreArchitecture: {
+      userAuth: 'auth.users (managed by Supabase)',
+      centralHub: 'registrant_profiles (role selection & multi-role support)', 
+      roleProfiles: {
+        applicants: 'applicant_matching_profiles',
+        landlords: 'landlord_profiles (business info only)',
+        properties: 'properties (property-specific data)', // ✅ NEW
+        employers: 'employer_profiles',
+        peerSupport: 'peer_support_profiles'
+      }
+    },
+    relationshipTables: {
+      housingMatches: 'Uses applicant_matching_profiles.id + properties.id', // ✅ UPDATED
+      employmentMatches: 'Uses applicant_matching_profiles.id + employer_profiles.id',
+      peerSupportMatches: 'Uses applicant_matching_profiles.id + peer_support_profiles.id',
+      matchGroups: 'Uses applicant_matching_profiles.id + properties.id + peer_support_profiles.id', // ✅ UPDATED
+      matchRequests: 'Enhanced with property_id for housing-specific requests', // ✅ UPDATED
+      favorites: 'Supports both profile favorites and property favorites' // ✅ NEW
+    },
+    keyChanges: {
+      propertiesTable: 'Separated property data from landlord_profiles for multi-property support',
+      updatedReferences: 'Housing matches/groups now reference properties.id instead of landlord_profiles.id',
+      enhancedRequests: 'Match requests support property-specific housing requests',
+      propertyTypes: 'Supports both general rentals and recovery housing with different field sets'
+    }
   }
 }
 
-console.log('✅ Supabase module fully loaded with updated matching profiles service')
-console.log('🗑️ Legacy applicantForms methods removed, using matchingProfiles service')
+console.log('✅ Supabase module loaded with refactored schema structure')
+console.log('📋 Schema Info:', getSchemaInfo())
 
 export default supabase

@@ -1,6 +1,13 @@
-// src/utils/database/matchGroupsService.js - Match groups service module
+// src/utils/database/matchGroupsService.js - Corrected for New Schema
 /**
- * Match groups service for match_groups table operations
+ * SCHEMA STRUCTURE:
+ * Complete housing solutions with role-specific IDs:
+ * - applicant_1_id: applicant_matching_profiles.id (required)
+ * - applicant_2_id: applicant_matching_profiles.id (optional roommate)
+ * - property_id: properties.id (required) // ✅ CHANGED: property_id not landlord_id
+ * - peer_support_id: peer_support_profiles.id (optional)
+ * 
+ * Status flow: forming → confirmed → active → completed/disbanded
  */
 
 const createMatchGroupsService = (supabaseClient) => {
@@ -10,164 +17,286 @@ const createMatchGroupsService = (supabaseClient) => {
 
   const tableName = 'match_groups';
 
+  // Valid status values from schema constraints
+  const VALID_STATUSES = ['forming', 'confirmed', 'active', 'completed', 'disbanded'];
+
   const service = {
     /**
      * Create a new match group
+     * @param {Object} groupData - Group data with role-specific IDs
+     * @returns {Object} Database response
      */
-    create: async (groupData) => {
-      try {
-        console.log('🤝 MatchGroups: Creating match group');
+create: async (groupData) => {
+  try {
+    console.log('🏠 MatchGroups: Creating match group');
 
-        const { data, error } = await supabaseClient
-          .from(tableName)
-          .insert({
-            ...groupData,
-            status: groupData.status || 'active',
-            created_at: new Date().toISOString(),
-            updated_at: new Date().toISOString()
-          })
-          .select()
-          .single();
+    // Validate required fields
+    if (!groupData.applicant_1_id) {
+      throw new Error('applicant_1_id is required');
+    }
 
-        if (error) {
-          console.error('❌ MatchGroups: Create failed:', error.message);
-          return { success: false, data: null, error };
-        }
+    // ✅ CHANGED: property_id is required, not landlord_id
+    if (!groupData.property_id) {
+      throw new Error('property_id is required');
+    }
 
-        console.log('✅ MatchGroups: Match group created successfully');
-        return { success: true, data, error: null };
+    // Validate status if provided
+    if (groupData.status && !VALID_STATUSES.includes(groupData.status)) {
+      throw new Error(`Invalid status: ${groupData.status}`);
+    }
 
-      } catch (err) {
-        console.error('💥 MatchGroups: Create exception:', err);
-        return { success: false, data: null, error: { message: err.message } };
-      }
-    },
+    // Ensure different applicants if both provided
+    if (groupData.applicant_2_id && groupData.applicant_1_id === groupData.applicant_2_id) {
+      throw new Error('applicant_1_id and applicant_2_id must be different');
+    }
+
+    const { data, error } = await supabaseClient
+      .from(tableName)
+      .insert({
+        applicant_1_id: groupData.applicant_1_id,
+        applicant_2_id: groupData.applicant_2_id || null,
+        property_id: groupData.property_id, // ✅ CHANGED: property_id instead of landlord_id
+        peer_support_id: groupData.peer_support_id || null,
+        group_name: groupData.group_name || null,
+        move_in_date: groupData.move_in_date || null,
+        status: groupData.status || 'forming',
+        group_chat_active: groupData.group_chat_active || false,
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString()
+      })
+      .select()
+      .single();
+
+    if (error) {
+      console.error('❌ MatchGroups: Create failed:', error.message);
+      return { success: false, data: null, error };
+    }
+
+    console.log('✅ MatchGroups: Match group created successfully');
+    return { success: true, data, error: null };
+
+  } catch (err) {
+    console.error('💥 MatchGroups: Create exception:', err);
+    return { success: false, data: null, error: { message: err.message } };
+  }
+},
 
     /**
-     * Get match groups for a user
+     * Get match groups by role-specific user ID
+     * @param {string} userType - User type (applicant, landlord, peer-support)
+     * @param {string} userId - Role-specific user ID
+     * @returns {Object} Database response
      */
-    getByUserId: async (userId) => {
-      try {
-        console.log('🤝 MatchGroups: Fetching match groups for user:', userId);
+getByUserId: async (userType, userId) => {
+  try {
+    console.log('🏠 MatchGroups: Fetching match groups for', `${userType}:${userId}`);
 
-        const { data, error } = await supabaseClient
-          .from(tableName)
-          .select(`
-            *,
-            applicant_1:registrant_profiles!applicant_1_id(
-              id, 
-              first_name, 
-              email,
-              applicant_forms(phone)
-            ),
-            applicant_2:registrant_profiles!applicant_2_id(
-              id, 
-              first_name, 
-              email,
-              applicant_forms(phone)
-            ),
-            landlord:registrant_profiles!landlord_id(
-              id, 
-              first_name, 
-              email,
-              properties(phone)
-            ),
-            peer_support:registrant_profiles!peer_support_id(
-              id, 
-              first_name, 
-              email,
-              peer_support_profiles(phone)
-            ),
-            property:properties!property_id(id, title, city, monthly_rent)
-          `)
-          .or(`applicant_1_id.eq.${userId},applicant_2_id.eq.${userId},landlord_id.eq.${userId},peer_support_id.eq.${userId}`)
-          .order('created_at', { ascending: false });
-
-        if (error) {
-          console.error('❌ MatchGroups: GetByUserId failed:', error.message);
-          return { success: false, data: [], error };
+    let orClause;
+    switch (userType) {
+      case 'applicant':
+        orClause = `applicant_1_id.eq.${userId},applicant_2_id.eq.${userId}`;
+        break;
+      case 'landlord':
+        // ✅ CHANGED: Need to join through properties table to find landlord's groups
+        // This requires a different approach since we don't directly reference landlord_id
+        const { data: properties, error: propsError } = await supabaseClient
+          .from('properties')
+          .select('id')
+          .eq('landlord_id', userId);
+        
+        if (propsError) {
+          console.error('❌ MatchGroups: Failed to get landlord properties:', propsError);
+          return { success: false, data: [], error: propsError };
         }
+        
+        if (!properties || properties.length === 0) {
+          console.log('ℹ️ MatchGroups: No properties found for landlord:', userId);
+          return { success: true, data: [], error: null };
+        }
+        
+        const propertyIds = properties.map(p => p.id);
+        orClause = propertyIds.map(id => `property_id.eq.${id}`).join(',');
+        break;
+      case 'peer-support':
+        orClause = `peer_support_id.eq.${userId}`;
+        break;
+      default:
+        throw new Error(`Invalid user type: ${userType}`);
+    }
 
-        console.log(`✅ MatchGroups: Found ${data?.length || 0} match groups for user`);
-        return { success: true, data: data || [], error: null };
+    const { data, error } = await supabaseClient
+      .from(tableName)
+      .select(`
+        *,
+        applicant_1:applicant_matching_profiles!applicant_1_id(
+          id, 
+          primary_phone,
+          about_me,
+          primary_city,
+          primary_state
+        ),
+        applicant_2:applicant_matching_profiles!applicant_2_id(
+          id, 
+          primary_phone,
+          about_me,
+          primary_city,
+          primary_state
+        ),
+        property:properties!property_id(
+          id,
+          title,
+          address,
+          city,
+          state,
+          monthly_rent,
+          property_type,
+          landlord:landlord_profiles!landlord_id(
+            id,
+            primary_phone,
+            business_name,
+            contact_email
+          )
+        ),
+        peer_support:peer_support_profiles!peer_support_id(
+          id, 
+          primary_phone,
+          bio,
+          service_city,
+          service_state
+        )
+      `)
+      .or(orClause)
+      .order('created_at', { ascending: false });
 
-      } catch (err) {
-        console.error('💥 MatchGroups: GetByUserId exception:', err);
-        return { success: false, data: [], error: { message: err.message } };
-      }
-    },
+    if (error) {
+      console.error('❌ MatchGroups: GetByUserId failed:', error.message);
+      return { success: false, data: [], error };
+    }
+
+    console.log(`✅ MatchGroups: Found ${data?.length || 0} match groups`);
+    return { success: true, data: data || [], error: null };
+
+  } catch (err) {
+    console.error('💥 MatchGroups: GetByUserId exception:', err);
+    return { success: false, data: [], error: { message: err.message } };
+  }
+},
 
     /**
-     * Get match group by ID
+     * Get match group by ID with full details
+     * @param {string} groupId - Match group ID
+     * @returns {Object} Database response
      */
-    getById: async (id) => {
-      try {
-        console.log('🤝 MatchGroups: Fetching match group by ID:', id);
+getById: async (groupId) => {
+  try {
+    console.log('🏠 MatchGroups: Fetching match group by ID:', groupId);
 
-        const { data, error } = await supabaseClient
-          .from(tableName)
-          .select(`
-            *,
-            applicant_1:registrant_profiles!applicant_1_id(
-              id, 
-              first_name, 
-              email,
-              applicant_forms(phone)
-            ),
-            applicant_2:registrant_profiles!applicant_2_id(
-              id, 
-              first_name, 
-              email,
-              applicant_forms(phone)
-            ),
-            landlord:registrant_profiles!landlord_id(
-              id, 
-              first_name, 
-              email,
-              properties(phone)
-            ),
-            peer_support:registrant_profiles!peer_support_id(
-              id, 
-              first_name, 
-              email,
-              peer_support_profiles(phone)
-            ),
-            property:properties!property_id(id, title, address, city, monthly_rent, phone)
-          `)
-          .eq('id', id)
-          .single();
+    const { data, error } = await supabaseClient
+      .from(tableName)
+      .select(`
+        *,
+        applicant_1:applicant_matching_profiles!applicant_1_id(
+          id, 
+          primary_phone,
+          about_me,
+          primary_city,
+          primary_state,
+          recovery_stage,
+          move_in_date
+        ),
+        applicant_2:applicant_matching_profiles!applicant_2_id(
+          id, 
+          primary_phone,
+          about_me,
+          primary_city,
+          primary_state,
+          recovery_stage,
+          move_in_date
+        ),
+        property:properties!property_id(
+          id,
+          title,
+          address,
+          city,
+          state,
+          monthly_rent,
+          property_type,
+          bedrooms,
+          bathrooms,
+          landlord:landlord_profiles!landlord_id(
+            id,
+            primary_phone,
+            contact_email,
+            business_name,
+            bio
+          )
+        ),
+        peer_support:peer_support_profiles!peer_support_id(
+          id, 
+          primary_phone,
+          contact_email,
+          bio,
+          professional_title,
+          service_city,
+          service_state,
+          specialties
+        )
+      `)
+      .eq('id', groupId)
+      .single();
 
-        if (error) {
-          if (error.code === 'PGRST116') {
-            return { success: false, data: null, error: { code: 'NOT_FOUND', message: 'Match group not found' } };
-          }
-          console.error('❌ MatchGroups: GetById failed:', error.message);
-          return { success: false, data: null, error };
-        }
-
-        console.log('✅ MatchGroups: Match group retrieved successfully');
-        return { success: true, data, error: null };
-
-      } catch (err) {
-        console.error('💥 MatchGroups: GetById exception:', err);
-        return { success: false, data: null, error: { message: err.message } };
+    if (error) {
+      if (error.code === 'PGRST116') {
+        return { success: false, data: null, error: { code: 'NOT_FOUND', message: 'Match group not found' } };
       }
-    },
+      console.error('❌ MatchGroups: GetById failed:', error.message);
+      return { success: false, data: null, error };
+    }
+
+    console.log('✅ MatchGroups: Match group retrieved successfully');
+    return { success: true, data, error: null };
+
+  } catch (err) {
+    console.error('💥 MatchGroups: GetById exception:', err);
+    return { success: false, data: null, error: { message: err.message } };
+  }
+},
 
     /**
      * Update match group
+     * @param {string} groupId - Match group ID
+     * @param {Object} updates - Fields to update
+     * @returns {Object} Database response
      */
-    update: async (id, updates) => {
+    update: async (groupId, updates) => {
       try {
-        console.log('🤝 MatchGroups: Updating match group:', id);
+        console.log('🏠 MatchGroups: Updating match group:', groupId);
+
+        // Validate status if being updated
+        if (updates.status && !VALID_STATUSES.includes(updates.status)) {
+          throw new Error(`Invalid status: ${updates.status}`);
+        }
+
+        // Validate applicant constraint if being updated
+        if (updates.applicant_2_id && updates.applicant_1_id && 
+            updates.applicant_1_id === updates.applicant_2_id) {
+          throw new Error('applicant_1_id and applicant_2_id must be different');
+        }
+
+        const updateData = {
+          ...updates,
+          updated_at: new Date().toISOString()
+        };
+
+        // Update last_activity when group data changes
+        if (Object.keys(updates).some(key => key !== 'last_activity')) {
+          updateData.last_activity = new Date().toISOString();
+        }
 
         const { data, error } = await supabaseClient
           .from(tableName)
-          .update({
-            ...updates,
-            updated_at: new Date().toISOString()
-          })
-          .eq('id', id)
+          .update(updateData)
+          .eq('id', groupId)
           .select()
           .single();
 
@@ -186,42 +315,44 @@ const createMatchGroupsService = (supabaseClient) => {
     },
 
     /**
-     * End/dissolve a match group
+     * Confirm a forming group (move from 'forming' to 'confirmed')
+     * @param {string} groupId - Match group ID
+     * @returns {Object} Database response
      */
-    endGroup: async (groupId, endedBy, reason = null) => {
+    confirmGroup: async (groupId) => {
       try {
-        console.log('🤝 MatchGroups: Ending match group:', groupId);
-
-        const updates = {
-          status: 'dissolved',
-          dissolved_at: new Date().toISOString(),
-          dissolved_reason: reason,
-          dissolved_by: endedBy
-        };
-
-        return await service.update(groupId, updates);
-
+        console.log('🏠 MatchGroups: Confirming match group:', groupId);
+        return await service.update(groupId, { status: 'confirmed' });
       } catch (err) {
-        console.error('💥 MatchGroups: EndGroup exception:', err);
+        console.error('💥 MatchGroups: ConfirmGroup exception:', err);
+        return { success: false, data: null, error: { message: err.message } };
+      }
+    },
+
+    /**
+     * Activate a confirmed group (move to 'active' status)
+     * @param {string} groupId - Match group ID
+     * @returns {Object} Database response
+     */
+    activateGroup: async (groupId) => {
+      try {
+        console.log('🏠 MatchGroups: Activating match group:', groupId);
+        return await service.update(groupId, { status: 'active' });
+      } catch (err) {
+        console.error('💥 MatchGroups: ActivateGroup exception:', err);
         return { success: false, data: null, error: { message: err.message } };
       }
     },
 
     /**
      * Complete a match group
+     * @param {string} groupId - Match group ID
+     * @returns {Object} Database response
      */
-    completeGroup: async (groupId, completedBy) => {
+    completeGroup: async (groupId) => {
       try {
-        console.log('🤝 MatchGroups: Completing match group:', groupId);
-
-        const updates = {
-          status: 'completed',
-          completed_at: new Date().toISOString(),
-          completed_by: completedBy
-        };
-
-        return await service.update(groupId, updates);
-
+        console.log('🏠 MatchGroups: Completing match group:', groupId);
+        return await service.update(groupId, { status: 'completed' });
       } catch (err) {
         console.error('💥 MatchGroups: CompleteGroup exception:', err);
         return { success: false, data: null, error: { message: err.message } };
@@ -229,47 +360,52 @@ const createMatchGroupsService = (supabaseClient) => {
     },
 
     /**
-     * Get connection summary for a user
+     * Disband a match group
+     * @param {string} groupId - Match group ID
+     * @returns {Object} Database response
      */
-    getConnectionSummary: async (userId) => {
+    disbandGroup: async (groupId) => {
       try {
-        console.log('🤝 MatchGroups: Getting connection summary for user:', userId);
+        console.log('🏠 MatchGroups: Disbanding match group:', groupId);
+        return await service.update(groupId, { status: 'disbanded' });
+      } catch (err) {
+        console.error('💥 MatchGroups: DisbandGroup exception:', err);
+        return { success: false, data: null, error: { message: err.message } };
+      }
+    },
 
-        // Get all groups for user
-        const { data: groups, error } = await supabaseClient
-          .from(tableName)
-          .select(`
-            id,
-            status,
-            match_type,
-            created_at,
-            applicant_1_id,
-            applicant_2_id,
-            landlord_id,
-            peer_support_id,
-            property_id
-          `)
-          .or(`applicant_1_id.eq.${userId},applicant_2_id.eq.${userId},landlord_id.eq.${userId},peer_support_id.eq.${userId}`);
+    /**
+     * Get connection summary for a user
+     * @param {string} userType - User type
+     * @param {string} userId - Role-specific user ID
+     * @returns {Object} Connection summary
+     */
+    getConnectionSummary: async (userType, userId) => {
+      try {
+        console.log('🏠 MatchGroups: Getting connection summary for', `${userType}:${userId}`);
 
-        if (error) {
-          console.error('❌ MatchGroups: GetConnectionSummary failed:', error.message);
-          return { success: false, data: { active: 0, completed: 0, total: 0 }, error };
+        const groupsResult = await service.getByUserId(userType, userId);
+        if (!groupsResult.success) {
+          return { success: false, data: { active: 0, completed: 0, total: 0 }, error: groupsResult.error };
         }
 
-        if (!groups) {
-          return { success: true, data: { active: 0, completed: 0, total: 0 }, error: null };
-        }
+        const groups = groupsResult.data || [];
 
         const summary = {
+          total: groups.length,
+          forming: groups.filter(g => g.status === 'forming').length,
+          confirmed: groups.filter(g => g.status === 'confirmed').length,
           active: groups.filter(g => g.status === 'active').length,
           completed: groups.filter(g => g.status === 'completed').length,
-          dissolved: groups.filter(g => g.status === 'dissolved').length,
-          total: groups.length,
-          byType: {
-            housing: groups.filter(g => g.property_id).length,
-            peer_support: groups.filter(g => g.peer_support_id).length,
-            applicant_peer: groups.filter(g => g.applicant_1_id && g.applicant_2_id && !g.property_id && !g.peer_support_id).length
-          }
+          disbanded: groups.filter(g => g.status === 'disbanded').length,
+          withRoommate: groups.filter(g => g.applicant_2_id).length,
+          withPeerSupport: groups.filter(g => g.peer_support_id).length,
+          recentActivity: groups.filter(g => {
+            const lastActivity = new Date(g.last_activity || g.updated_at);
+            const weekAgo = new Date();
+            weekAgo.setDate(weekAgo.getDate() - 7);
+            return lastActivity > weekAgo;
+          }).length
         };
 
         console.log('✅ MatchGroups: Connection summary calculated');
@@ -283,141 +419,152 @@ const createMatchGroupsService = (supabaseClient) => {
 
     /**
      * Get statistics for match groups
+     * @returns {Object} Statistics data
      */
-    getStatistics: async () => {
+getStatistics: async () => {
+  try {
+    console.log('🏠 MatchGroups: Fetching statistics');
+
+    // ✅ CHANGED: Remove monthly_rent since it's not in match_groups table
+    const { data, error } = await supabaseClient
+      .from(tableName)
+      .select('status, applicant_2_id, peer_support_id, group_chat_active, created_at');
+
+    if (error) {
+      console.error('❌ MatchGroups: Statistics failed:', error.message);
+      return { success: false, data: null, error };
+    }
+
+    const stats = {
+      total: data.length,
+      byStatus: {
+        forming: data.filter(g => g.status === 'forming').length,
+        confirmed: data.filter(g => g.status === 'confirmed').length,
+        active: data.filter(g => g.status === 'active').length,
+        completed: data.filter(g => g.status === 'completed').length,
+        disbanded: data.filter(g => g.status === 'disbanded').length
+      },
+      groupTypes: {
+        withRoommate: data.filter(g => g.applicant_2_id).length,
+        withPeerSupport: data.filter(g => g.peer_support_id).length,
+        withBoth: data.filter(g => g.applicant_2_id && g.peer_support_id).length,
+        soloApplicant: data.filter(g => !g.applicant_2_id && !g.peer_support_id).length
+      },
+      communication: {
+        activeChatGroups: data.filter(g => g.group_chat_active).length,
+        chatAdoptionRate: data.length > 0 ? Math.round((data.filter(g => g.group_chat_active).length / data.length) * 100) : 0
+      },
+      // ✅ REMOVED: financials section since monthly_rent is in properties table now
+      recentActivity: data.filter(g => {
+        const createdDate = new Date(g.created_at);
+        const monthAgo = new Date();
+        monthAgo.setMonth(monthAgo.getMonth() - 1);
+        return createdDate > monthAgo;
+      }).length
+    };
+
+    console.log('✅ MatchGroups: Statistics calculated');
+    return { success: true, data: stats, error: null };
+
+  } catch (err) {
+    console.error('💥 MatchGroups: Statistics exception:', err);
+    return { success: false, data: null, error: { message: err.message } };
+  }
+},
+
+
+    /**
+     * Delete match group (hard delete)
+     * @param {string} groupId - Match group ID
+     * @returns {Object} Database response
+     */
+    delete: async (groupId) => {
       try {
-        console.log('🤝 MatchGroups: Fetching statistics');
+        console.log('🏠 MatchGroups: Deleting match group:', groupId);
 
         const { data, error } = await supabaseClient
           .from(tableName)
-          .select('status, match_type, created_at, property_id, peer_support_id');
+          .delete()
+          .eq('id', groupId)
+          .select();
 
         if (error) {
-          console.error('❌ MatchGroups: Statistics failed:', error.message);
+          console.error('❌ MatchGroups: Delete failed:', error.message);
           return { success: false, data: null, error };
         }
 
-        const stats = {
-          total: data.length,
-          byStatus: {
-            active: data.filter(g => g.status === 'active').length,
-            completed: data.filter(g => g.status === 'completed').length,
-            dissolved: data.filter(g => g.status === 'dissolved').length
-          },
-          byType: {
-            housing: data.filter(g => g.property_id).length,
-            peer_support: data.filter(g => g.peer_support_id).length,
-            applicant_peer: data.filter(g => !g.property_id && !g.peer_support_id).length
-          },
-          recentMatches: data.filter(g => {
-            const createdDate = new Date(g.created_at);
-            const weekAgo = new Date();
-            weekAgo.setDate(weekAgo.getDate() - 7);
-            return createdDate > weekAgo;
-          }).length
-        };
-
-        console.log('✅ MatchGroups: Statistics calculated');
-        return { success: true, data: stats, error: null };
-
-      } catch (err) {
-        console.error('💥 MatchGroups: Statistics exception:', err);
-        return { success: false, data: null, error: { message: err.message } };
-      }
-    },
-
-    // Helper methods
-
-    /**
-     * Determine match type from match group data
-     */
-    getMatchType: (matchGroup) => {
-      if (matchGroup.property_id && matchGroup.landlord_id) {
-        return 'housing';
-      } else if (matchGroup.peer_support_id) {
-        return 'peer_support';
-      } else if (matchGroup.applicant_1_id && matchGroup.applicant_2_id) {
-        return 'applicant_peer';
-      }
-      return 'unknown';
-    },
-
-    /**
-     * Get the other person in the match relative to current user
-     */
-    getOtherPerson: (matchGroup, currentUserId) => {
-      const matchType = service.getMatchType(matchGroup);
-      
-      switch (matchType) {
-        case 'housing':
-          if (matchGroup.landlord_id === currentUserId) {
-            return matchGroup.applicant_1 || matchGroup.applicant_2;
-          } else {
-            return matchGroup.landlord;
-          }
-        
-        case 'peer_support':
-          if (matchGroup.peer_support_id === currentUserId) {
-            return matchGroup.applicant_1 || matchGroup.applicant_2;
-          } else {
-            return matchGroup.peer_support;
-          }
-        
-        case 'applicant_peer':
-          if (matchGroup.applicant_1_id === currentUserId) {
-            return matchGroup.applicant_2;
-          } else {
-            return matchGroup.applicant_1;
-          }
-        
-        default:
-          return null;
-      }
-    },
-
-    /**
-     * Get user's role in match group
-     */
-    getUserRole: (matchGroup, userId) => {
-      if (matchGroup.applicant_1_id === userId || matchGroup.applicant_2_id === userId) {
-        return 'applicant';
-      } else if (matchGroup.landlord_id === userId) {
-        return 'landlord';
-      } else if (matchGroup.peer_support_id === userId) {
-        return 'peer_support';
-      }
-      return 'unknown';
-    },
-
-    /**
-     * Check if user is part of match group
-     */
-    isUserInGroup: (matchGroup, userId) => {
-      return [
-        matchGroup.applicant_1_id,
-        matchGroup.applicant_2_id,
-        matchGroup.landlord_id,
-        matchGroup.peer_support_id
-      ].includes(userId);
-    },
-
-    /**
-     * Delete match group (soft delete)
-     */
-    delete: async (id) => {
-      try {
-        console.log('🤝 MatchGroups: Soft deleting match group:', id);
-
-        return await service.update(id, { 
-          status: 'deleted',
-          deleted_at: new Date().toISOString()
-        });
+        console.log('✅ MatchGroups: Match group deleted successfully');
+        return { success: true, data, error: null };
 
       } catch (err) {
         console.error('💥 MatchGroups: Delete exception:', err);
         return { success: false, data: null, error: { message: err.message } };
       }
-    }
+    },
+
+    // ===== UTILITY METHODS =====
+
+    /**
+     * Get user's role in match group
+     * @param {Object} matchGroup - Match group data
+     * @param {string} userType - User type
+     * @param {string} userId - Role-specific user ID
+     * @returns {string} User's role in the group
+     */
+getUserRole: (matchGroup, userType, userId) => {
+  switch (userType) {
+    case 'applicant':
+      if (matchGroup.applicant_1_id === userId) return 'applicant_1';
+      if (matchGroup.applicant_2_id === userId) return 'applicant_2';
+      break;
+    case 'landlord':
+      // ✅ CHANGED: Check through property relationship
+      if (matchGroup.property && matchGroup.property.landlord && matchGroup.property.landlord.id === userId) {
+        return 'landlord';
+      }
+      break;
+    case 'peer-support':
+      if (matchGroup.peer_support_id === userId) return 'peer_support';
+      break;
+  }
+  return 'none';
+},
+
+    /**
+     * Check if user is part of match group
+     * @param {Object} matchGroup - Match group data
+     * @param {string} userType - User type
+     * @param {string} userId - Role-specific user ID
+     * @returns {boolean} Whether user is in the group
+     */
+    isUserInGroup: (matchGroup, userType, userId) => {
+      return service.getUserRole(matchGroup, userType, userId) !== 'none';
+    },
+
+    /**
+     * Get group composition summary
+     * @param {Object} matchGroup - Match group data
+     * @returns {Object} Group composition details
+     */
+getGroupComposition: (matchGroup) => {
+  return {
+    hasRoommate: !!matchGroup.applicant_2_id,
+    hasPeerSupport: !!matchGroup.peer_support_id,
+    hasProperty: !!matchGroup.property_id, // ✅ CHANGED: Check property_id
+    memberCount: [
+      matchGroup.applicant_1_id,
+      matchGroup.applicant_2_id,
+      matchGroup.property_id, // ✅ CHANGED: property_id not landlord_id
+      matchGroup.peer_support_id
+    ].filter(id => id).length,
+    groupType: matchGroup.applicant_2_id && matchGroup.peer_support_id ? 'full' :
+               matchGroup.applicant_2_id ? 'roommate' :
+               matchGroup.peer_support_id ? 'peer_support' : 'minimal'
+  };
+},
+
+    // Legacy method names for backward compatibility
+    endGroup: async (groupId) => service.disbandGroup(groupId)
   };
 
   return service;

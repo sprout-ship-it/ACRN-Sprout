@@ -1,11 +1,12 @@
-// src/utils/matching/sectionValidation.js - FIXED WITH STANDARDIZED FIELD NAMES
+// src/utils/matching/sectionValidation.js - Enhanced with Schema Constraints
 /**
  * Section-level validation utility for matching profile form
  * Validates each section and prevents navigation if critical issues exist
+ * ENHANCED: Added schema constraint alignment and improved validation messages
  */
 
 /**
- * Validation rules for each section - UPDATED with standardized field names
+ * Validation rules for each section - ENHANCED with schema constraints
  */
 const SECTION_VALIDATION_RULES = {
   personal: {
@@ -17,68 +18,111 @@ const SECTION_VALIDATION_RULES = {
         const birthDate = new Date(value);
         const today = new Date();
         const age = today.getFullYear() - birthDate.getFullYear();
-        if (age < 18) return 'Must be 18 or older';
+        const monthDiff = today.getMonth() - birthDate.getMonth();
+        
+        // More precise age calculation
+        if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birthDate.getDate())) {
+          age--;
+        }
+        
+        if (age < 18) return 'Must be 18 or older to use this service';
+        if (age > 100) return 'Please enter a valid birth date';
         return null;
       },
       primary_phone: (value) => {
-        if (!value) return 'Phone number is required';
+        if (!value) return 'Phone number is required for potential roommate contact';
         const phoneRegex = /^\(\d{3}\)\s\d{3}-\d{4}$|^\d{10}$|^\d{3}-\d{3}-\d{4}$/;
-        if (!phoneRegex.test(value.replace(/\s/g, ''))) {
-          return 'Please enter a valid phone number';
+        const cleanPhone = value.replace(/\s/g, '');
+        if (!phoneRegex.test(cleanPhone)) {
+          return 'Please enter a valid phone number (10 digits)';
         }
         return null;
       }
     }
   },
 
-location: {
-  required: ['primary_city', 'primary_state', 'budget_min', 'budget_max', 'max_commute_minutes', 'move_in_date', 'housing_types_accepted'],
-  warnings: [],
-  validations: {
-    primary_city: (value) => !value ? 'Primary city is required' : null,
-    primary_state: (value) => !value ? 'Primary state is required' : null,
-    budget_min: (value) => {
-      if (!value) return 'Minimum budget is required';
-      const min = parseInt(value);
-      if (min < 200) return 'Minimum budget should be at least $200';
-      if (min > 4500) return 'Minimum budget cannot exceed $4,500';
-      return null;
-    },
-    budget_max: (value, formData) => {
-      if (!value) return 'Maximum budget is required';
-      const max = parseInt(value);
-      const min = parseInt(formData.budget_min || 0);
-      if (max < 300) return 'Maximum budget should be at least $300';
-      if (max > 5000) return 'Maximum budget cannot exceed $5,000';
-      if (max < min) return 'Maximum budget must be greater than minimum budget';
-      return null;
-    },
-    max_commute_minutes: (value) => !value ? 'Maximum commute time preference is required' : null,
-    move_in_date: (value) => {
-      if (!value) return 'Move-in date is required';
-      const moveDate = new Date(value);
-      const today = new Date();
-      if (moveDate < today) return 'Move-in date cannot be in the past';
-      return null;
-    },
-    housing_types_accepted: (value) => {
-      if (!value || !Array.isArray(value) || value.length === 0) {
-        return 'Please select at least one housing type you would consider';
+  location: {
+    required: ['primary_city', 'primary_state', 'budget_min', 'budget_max', 'max_commute_minutes', 'move_in_date', 'housing_types_accepted'],
+    warnings: ['search_radius_miles', 'target_zip_codes'],
+    validations: {
+      primary_city: (value) => {
+        if (!value) return 'Primary city is required for location-based matching';
+        if (value.length < 2) return 'Please enter a valid city name';
+        return null;
+      },
+      primary_state: (value) => {
+        if (!value) return 'Primary state is required for location-based matching';
+        return null;
+      },
+      budget_min: (value) => {
+        if (!value) return 'Minimum budget is required for housing search';
+        const min = parseInt(value);
+        if (isNaN(min)) return 'Please enter a valid number';
+        if (min < 200) return 'Minimum budget should be at least $200 for realistic housing options';
+        if (min > 4500) return 'Minimum budget cannot exceed $4,500';
+        return null;
+      },
+      budget_max: (value, formData) => {
+        if (!value) return 'Maximum budget is required for housing search';
+        const max = parseInt(value);
+        const min = parseInt(formData.budget_min || 0);
+        if (isNaN(max)) return 'Please enter a valid number';
+        if (max < 300) return 'Maximum budget should be at least $300 for realistic housing options';
+        if (max > 5000) return 'Maximum budget cannot exceed $5,000';
+        if (max < min) return 'Maximum budget must be greater than minimum budget';
+        if (max - min < 100) return 'Budget range should be at least $100 for flexibility';
+        return null;
+      },
+      max_commute_minutes: (value) => {
+        if (!value) return 'Maximum commute time preference is required';
+        const minutes = parseInt(value);
+        if (isNaN(minutes)) return 'Please enter a valid number';
+        if (minutes < 15) return 'Minimum commute tolerance should be at least 15 minutes';
+        if (minutes > 180) return 'Maximum commute cannot exceed 3 hours';
+        return null;
+      },
+      move_in_date: (value) => {
+        if (!value) return 'Move-in date is required for housing timeline matching';
+        const moveDate = new Date(value);
+        const today = new Date();
+        const maxFuture = new Date();
+        maxFuture.setFullYear(today.getFullYear() + 1);
+        
+        if (isNaN(moveDate.getTime())) return 'Please enter a valid date';
+        if (moveDate < today) return 'Move-in date cannot be in the past';
+        if (moveDate > maxFuture) return 'Move-in date cannot be more than 1 year in the future';
+        return null;
+      },
+      housing_types_accepted: (value) => {
+        if (!value || !Array.isArray(value) || value.length === 0) {
+          return 'Please select at least one housing type you would consider';
+        }
+        if (value.length > 6) {
+          return 'Please select no more than 6 housing types for focused matching';
+        }
+        return null;
       }
-      return null;
     }
-  }
-},
+  },
 
   recovery: {
-    required: ['recovery_stage', 'spiritual_affiliation', 'primary_issues', 'recovery_methods', 'program_types'],
-    warnings: ['recovery_context'],
+    required: ['recovery_stage', 'spiritual_affiliation', 'primary_issues', 'recovery_methods', 'program_types', 'substance_free_home_required'],
+    warnings: ['recovery_context', 'time_in_recovery'],
     validations: {
-      recovery_stage: (value) => !value ? 'Recovery stage is required' : null,
-      spiritual_affiliation: (value) => !value ? 'Spiritual/religious approach is required' : null,
+      recovery_stage: (value) => {
+        if (!value) return 'Recovery stage is required for appropriate roommate matching';
+        return null;
+      },
+      spiritual_affiliation: (value) => {
+        if (!value) return 'Spiritual/religious approach preference is required for compatibility';
+        return null;
+      },
       primary_issues: (value) => {
         if (!value || !Array.isArray(value) || value.length === 0) {
-          return 'Please select at least one primary issue you are addressing';
+          return 'Please select at least one primary issue you are addressing in recovery';
+        }
+        if (value.length > 5) {
+          return 'Please select your top 5 primary issues for focused matching';
         }
         return null;
       },
@@ -86,11 +130,23 @@ location: {
         if (!value || !Array.isArray(value) || value.length === 0) {
           return 'Please select at least one recovery method you use or are interested in';
         }
+        if (value.length > 8) {
+          return 'Please select your top 8 recovery methods for focused matching';
+        }
         return null;
       },
       program_types: (value) => {
         if (!value || !Array.isArray(value) || value.length === 0) {
           return 'Please select at least one program type you attend or would be comfortable with';
+        }
+        if (value.length > 6) {
+          return 'Please select your top 6 program types for focused matching';
+        }
+        return null;
+      },
+      substance_free_home_required: (value) => {
+        if (value === null || value === undefined) {
+          return 'Please specify if you require a substance-free home environment';
         }
         return null;
       }
@@ -98,49 +154,67 @@ location: {
   },
 
   roommate: {
-    required: ['preferred_roommate_gender', 'smoking_status'],
-    warnings: ['age_range_min', 'age_range_max'],
+    required: ['preferred_roommate_gender', 'smoking_status', 'smoking_preference'],
+    warnings: ['age_range_min', 'age_range_max', 'pet_preference'],
     validations: {
-      preferred_roommate_gender: (value) => !value ? 'Roommate gender preference is required' : null,
-      smoking_status: (value) => !value ? 'Your smoking status is required' : null,
+      preferred_roommate_gender: (value) => {
+        if (!value) return 'Roommate gender preference is required for appropriate matching';
+        return null;
+      },
+      smoking_status: (value) => {
+        if (!value) return 'Your smoking status is required for compatibility matching';
+        return null;
+      },
+      smoking_preference: (value) => {
+        if (!value) return 'Your smoking preference for roommates is required';
+        return null;
+      },
       age_range_min: (value, formData) => {
         const min = parseInt(value || 18);
         const max = parseInt(formData.age_range_max || 65);
+        if (isNaN(min)) return 'Please enter a valid minimum age';
+        if (min < 18) return 'Minimum age must be at least 18';
         if (min >= max) return 'Minimum age must be less than maximum age';
         return null;
       },
       age_range_max: (value, formData) => {
         const max = parseInt(value || 65);
         const min = parseInt(formData.age_range_min || 18);
+        if (isNaN(max)) return 'Please enter a valid maximum age';
+        if (max > 100) return 'Maximum age cannot exceed 100';
         if (max <= min) return 'Maximum age must be greater than minimum age';
+        if (max - min < 5) return 'Age range should be at least 5 years for better matching';
         return null;
       }
     }
   },
 
   lifestyle: {
-    required: ['work_schedule'],
-    warnings: ['social_level', 'cleanliness_level', 'noise_tolerance'],
+    required: ['work_schedule', 'social_level', 'cleanliness_level', 'noise_tolerance'],
+    warnings: ['bedtime_preference', 'guests_policy'],
     validations: {
-      work_schedule: (value) => !value ? 'Work schedule is required' : null,
+      work_schedule: (value) => {
+        if (!value) return 'Work schedule is required for lifestyle compatibility';
+        return null;
+      },
       social_level: (value) => {
         const level = parseInt(value);
         if (isNaN(level) || level < 1 || level > 5) {
-          return 'Please select your social interaction level (1-5)';
+          return 'Please select your social interaction level (1 = Very Private, 5 = Very Social)';
         }
         return null;
       },
       cleanliness_level: (value) => {
         const level = parseInt(value);
         if (isNaN(level) || level < 1 || level > 5) {
-          return 'Please select your cleanliness level (1-5)';
+          return 'Please select your cleanliness level (1 = Very Relaxed, 5 = Very Organized)';
         }
         return null;
       },
       noise_tolerance: (value) => {
         const level = parseInt(value);
         if (isNaN(level) || level < 1 || level > 5) {
-          return 'Please select your noise tolerance level (1-5)';
+          return 'Please select your noise tolerance level (1 = Need Quiet, 5 = High Tolerance)';
         }
         return null;
       }
@@ -148,15 +222,18 @@ location: {
   },
 
   compatibility: {
-    required: ['about_me', 'looking_for'],
-    warnings: ['interests'],
+    required: ['about_me', 'looking_for', 'interests'],
+    warnings: ['important_qualities', 'deal_breakers'],
     validations: {
       about_me: (value) => {
         if (!value || value.trim().length === 0) {
           return 'Please tell potential roommates about yourself';
         }
         if (value.trim().length < 50) {
-          return 'Please provide more details about yourself (at least 50 characters)';
+          return 'Please provide more details about yourself (at least 50 characters) to help with matching';
+        }
+        if (value.trim().length > 1000) {
+          return 'Please keep your description under 1000 characters';
         }
         return null;
       },
@@ -167,16 +244,58 @@ location: {
         if (value.trim().length < 50) {
           return 'Please provide more details about what you are looking for (at least 50 characters)';
         }
+        if (value.trim().length > 1000) {
+          return 'Please keep your description under 1000 characters';
+        }
         return null;
       },
       interests: (value) => {
         if (!value || !Array.isArray(value) || value.length === 0) {
-          return 'Please select at least one interest or hobby';
+          return 'Please select at least one interest or hobby for compatibility matching';
+        }
+        if (value.length > 10) {
+          return 'Please select your top 10 interests for focused matching';
         }
         return null;
       }
     }
   }
+};
+
+/**
+ * ✅ ENHANCED: Schema constraint validation
+ * Validates against database-level constraints
+ */
+const validateSchemaConstraints = (formData) => {
+  const errors = {};
+
+  // Check age range constraint from schema
+  const ageMin = parseInt(formData.age_range_min || 18);
+  const ageMax = parseInt(formData.age_range_max || 65);
+  if (ageMin < 18) errors.age_range_min = 'Minimum age must be at least 18 (database constraint)';
+  if (ageMax > 100) errors.age_range_max = 'Maximum age cannot exceed 100 (database constraint)';
+
+  // Check budget range constraint
+  const budgetMin = parseInt(formData.budget_min || 0);
+  const budgetMax = parseInt(formData.budget_max || 0);
+  if (budgetMin > budgetMax) errors.budget_max = 'Maximum budget must be greater than minimum budget';
+
+  // Check move-in date constraint
+  if (formData.move_in_date) {
+    const moveDate = new Date(formData.move_in_date);
+    const today = new Date();
+    if (moveDate < today) errors.move_in_date = 'Move-in date cannot be in the past (database constraint)';
+  }
+
+  // Check lifestyle levels are within range (1-5)
+  ['social_level', 'cleanliness_level', 'noise_tolerance'].forEach(field => {
+    const level = parseInt(formData[field]);
+    if (formData[field] && (isNaN(level) || level < 1 || level > 5)) {
+      errors[field] = `${getFieldDisplayName(field)} must be between 1 and 5 (database constraint)`;
+    }
+  });
+
+  return errors;
 };
 
 /**
@@ -187,7 +306,6 @@ location: {
  */
 export const validateSection = (sectionId, formData) => {
   console.log('🔍 Validating section:', sectionId);
-  console.log('🔍 Form data keys:', Object.keys(formData));
   
   const rules = SECTION_VALIDATION_RULES[sectionId];
   if (!rules) {
@@ -200,10 +318,13 @@ export const validateSection = (sectionId, formData) => {
   const requiredMissing = [];
   const warningsMissing = [];
 
+  // ✅ ENHANCED: Add schema constraint validation
+  const schemaErrors = validateSchemaConstraints(formData);
+  Object.assign(errors, schemaErrors);
+
   // Check required fields
   rules.required.forEach(field => {
     const value = formData[field];
-    console.log(`🔍 Checking required field ${field}:`, value);
     
     // Check if field has a custom validation function
     if (rules.validations[field]) {
@@ -211,9 +332,6 @@ export const validateSection = (sectionId, formData) => {
       if (error) {
         errors[field] = error;
         requiredMissing.push(field);
-        console.log(`❌ Validation error for ${field}:`, error);
-      } else {
-        console.log(`✅ Field ${field} passed custom validation`);
       }
     } else {
       // Default required field validation
@@ -221,14 +339,10 @@ export const validateSection = (sectionId, formData) => {
         const errorMsg = `${getFieldDisplayName(field)} is required`;
         errors[field] = errorMsg;
         requiredMissing.push(field);
-        console.log(`❌ Required field ${field} is missing:`, errorMsg);
       } else if (Array.isArray(value) && value.length === 0) {
         const errorMsg = `Please select at least one option for ${getFieldDisplayName(field)}`;
         errors[field] = errorMsg;
         requiredMissing.push(field);
-        console.log(`❌ Array field ${field} is empty:`, errorMsg);
-      } else {
-        console.log(`✅ Required field ${field} has value:`, value);
       }
     }
   });
@@ -248,13 +362,6 @@ export const validateSection = (sectionId, formData) => {
   }
 
   const isValid = Object.keys(errors).length === 0;
-  
-  console.log(`🔍 Section ${sectionId} validation result:`, {
-    isValid,
-    errorCount: Object.keys(errors).length,
-    errors: Object.keys(errors),
-    warningCount: Object.keys(warnings).length
-  });
 
   return {
     isValid,
@@ -398,9 +505,7 @@ export const getSectionStatus = (sectionId, formData) => {
 };
 
 /**
- * Generate user-friendly field names - UPDATED with standardized field names
- * @param {string} fieldName - Technical field name
- * @returns {string} User-friendly name
+ * Generate user-friendly field names - ENHANCED with all schema fields
  */
 export const getFieldDisplayName = (fieldName) => {
   const displayNames = {
@@ -418,6 +523,8 @@ export const getFieldDisplayName = (fieldName) => {
     max_commute_minutes: 'Maximum Commute Time',
     move_in_date: 'Move-in Date',
     housing_types_accepted: 'Housing Types',
+    search_radius_miles: 'Search Radius',
+    target_zip_codes: 'Target Zip Codes',
     
     // Recovery Section
     recovery_stage: 'Recovery Stage',
@@ -426,23 +533,31 @@ export const getFieldDisplayName = (fieldName) => {
     recovery_methods: 'Recovery Methods',
     program_types: 'Program Types',
     recovery_context: 'Recovery Context',
+    time_in_recovery: 'Time in Recovery',
+    substance_free_home_required: 'Substance-Free Home Required',
     
     // Roommate Section
     preferred_roommate_gender: 'Roommate Gender Preference',
     smoking_status: 'Your Smoking Status',
+    smoking_preference: 'Roommate Smoking Preference',
     age_range_min: 'Minimum Age Preference',
     age_range_max: 'Maximum Age Preference',
+    pet_preference: 'Pet Preference',
     
     // Lifestyle Section
     work_schedule: 'Work Schedule',
     social_level: 'Social Interaction Level',
     cleanliness_level: 'Cleanliness Level',
     noise_tolerance: 'Noise Tolerance',
+    bedtime_preference: 'Bedtime Preference',
+    guests_policy: 'Guests Policy',
     
     // Compatibility Section
     about_me: 'About Me',
     looking_for: 'What I\'m Looking For',
-    interests: 'Interests & Hobbies'
+    interests: 'Interests & Hobbies',
+    important_qualities: 'Important Qualities',
+    deal_breakers: 'Deal Breakers'
   };
 
   return displayNames[fieldName] || fieldName.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());

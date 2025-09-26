@@ -1,4 +1,4 @@
-// src/pages/Landing.js - UPDATED WITH CSS MODULES
+// src/pages/Landing.js - SCHEMA COMPLIANT VERSION
 import React, { useState } from 'react'
 import { useAuth } from '../hooks/useAuth';
 import LoginForm from '../components/auth/LoginForm';
@@ -83,7 +83,7 @@ const Landing = () => {
         </div>
       </div>
 
-      {/* Role selection section */}
+      {/* ✅ SCHEMA COMPLIANT: Role selection section with correct role names */}
       <div className={styles.roleSelectionCard}>
         <h3 className={styles.roleSelectionTitle}>Who Can Join Our Platform?</h3>
         <p className={`${styles.roleSelectionSubtitle} text-center mb-4`}>
@@ -102,9 +102,10 @@ const Landing = () => {
             <div className={styles.roleClickHint}>Click to register →</div>
           </div>
           
+          {/* ✅ FIXED: Use 'peer-support' role name to match schema */}
           <div 
             className={`${styles.roleCard} ${styles.roleCardPeerSupport}`} 
-            onClick={() => handleRoleClick('peer')}
+            onClick={() => handleRoleClick('peer-support')}
           >
             <div className={styles.roleIcon}>🤝</div>
             <h4 className={styles.roleTitle}>Peer Support Specialists</h4>

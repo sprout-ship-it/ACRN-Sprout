@@ -266,7 +266,7 @@ const loadFavorites = useCallback(async () => {
   const findNearbyEmployers = useCallback(async () => {
     try {
       // Try to get user's location from their matching profile
-      const { data: applicantProfile } = await db.applicantForms.getByUserId(user.id);
+      const { data: applicantProfile } = await db.matchingProfiles.getByUserId(user.id);
       if (applicantProfile?.preferred_city || applicantProfile?.preferred_state) {
         // Combine city and state if both exist, otherwise use what's available
         const location = applicantProfile.preferred_city && applicantProfile.preferred_state 

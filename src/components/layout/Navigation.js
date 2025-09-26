@@ -1,4 +1,4 @@
-// src/components/layout/Navigation.js - UPDATED WITH STREAMLINED PEER NAVIGATION
+// src/components/layout/Navigation.js - SCHEMA-ALIGNED NAVIGATION
 import React from 'react'
 import { useLocation, useNavigate } from 'react-router-dom'
 import { useAuth } from '../../context/AuthContext'
@@ -9,7 +9,7 @@ const Navigation = () => {
   const location = useLocation()
   const navigate = useNavigate()
 
-  // Get navigation items based on user roles - FIXED ROUTE PATHS
+  // Get navigation items based on user roles - FIXED ROLE REFERENCES
   const getNavigationItems = () => {
     const baseItems = [
       { 
@@ -20,7 +20,7 @@ const Navigation = () => {
       }
     ]
 
-    // Role-specific profile management with CORRECT paths
+    // Role-specific profile management with CORRECT schema role names
     if (hasRole('applicant')) {
       baseItems.push({
         id: 'applicant-profile',
@@ -41,7 +41,8 @@ const Navigation = () => {
       })
     }
 
-    if (hasRole('peer')) {
+    // ✅ FIXED: Use 'peer-support' role name from schema
+    if (hasRole('peer-support')) {
       baseItems.push({
         id: 'peer-profile',
         label: 'My Profile',
@@ -61,8 +62,8 @@ const Navigation = () => {
       })
     }
 
-    // UPDATED: Connections only for non-peer users (peer specialists use the integrated hub)
-    if (!hasRole('peer')) {
+    // ✅ FIXED: Connections only for non-peer-support users
+    if (!hasRole('peer-support')) {
       baseItems.push(
         { 
           id: 'connections', 
@@ -75,7 +76,7 @@ const Navigation = () => {
       )
     }
 
-    // Role-specific feature navigation with CORRECT paths
+    // Role-specific feature navigation with schema-aligned paths
     if (hasRole('applicant')) {
       baseItems.push(
         { 
@@ -83,7 +84,7 @@ const Navigation = () => {
           label: 'Find Roommates', 
           icon: '🔍',
           path: '/app/find-matches',
-          description: 'Discover compatible roommates',
+          description: 'Discover compatible roommates using our matching algorithm',
           className: 'nav-housing-seeker'
         },
         { 
@@ -91,7 +92,7 @@ const Navigation = () => {
           label: 'Find Housing', 
           icon: '🏘️',
           path: '/app/property-search',
-          description: 'Search for recovery-friendly housing',
+          description: 'Search for recovery-friendly housing properties',
           className: 'nav-property-owner'
         },
         { 
@@ -99,7 +100,7 @@ const Navigation = () => {
           label: 'Find Support', 
           icon: '👥',
           path: '/app/find-peer-support',
-          description: 'Connect with peer support specialists',
+          description: 'Connect with certified peer support specialists',
           className: 'nav-peer-support'
         },
         { 
@@ -120,29 +121,29 @@ const Navigation = () => {
           label: 'My Properties', 
           icon: '🏢',
           path: '/app/properties',
-          description: 'Manage your rental properties',
+          description: 'Manage your rental properties and housing listings',
           className: 'nav-property-owner'
         },
         { 
-          id: 'tenants', 
+          id: 'tenant-requests', 
           label: 'Tenant Requests', 
           icon: '📋',
-          path: '/app/tenants',
-          description: 'Review tenant applications and requests',
+          path: '/app/tenant-requests',
+          description: 'Review tenant applications and housing match requests',
           className: 'nav-property-owner'
         }
       )
     }
 
-    // UPDATED: Streamlined peer navigation - just one "Support Hub"
-    if (hasRole('peer')) {
+    // ✅ FIXED: Peer support navigation with correct role name
+    if (hasRole('peer-support')) {
       baseItems.push(
         { 
           id: 'peer-dashboard', 
           label: 'Support Hub', 
           icon: '📊',
           path: '/app/peer-dashboard',
-          description: 'Comprehensive peer support client management dashboard',
+          description: 'Comprehensive peer support client management and match dashboard',
           className: 'nav-peer-support'
         }
       )
@@ -152,38 +153,38 @@ const Navigation = () => {
       baseItems.push(
         { 
           id: 'employer-management', 
-          label: 'Manage Companies', 
+          label: 'Manage Profile', 
           icon: '🏢',
-          path: '/app/employers',
-          description: 'Manage your company profiles',
+          path: '/app/employer-management',
+          description: 'Manage your employer profile and job opportunities',
           className: 'nav-employer'
         },
         { 
-          id: 'candidates', 
-          label: 'Candidates', 
+          id: 'job-candidates', 
+          label: 'Job Candidates', 
           icon: '👥',
-          path: '/app/candidates',
-          description: 'Review job applications and candidates',
+          path: '/app/job-candidates',
+          description: 'Review employment applications and candidate matches',
           className: 'nav-employer'
         }
       )
     }
 
-    // Universal tools with Communications instead of Messages
+    // Universal tools - aligned with schema-based communication system
     baseItems.push(
       { 
         id: 'communications', 
-        label: 'Communications', 
+        label: 'Messages', 
         icon: '💬',
         path: '/app/communications',
-        description: 'Manage secure communication with your connections'
+        description: 'Secure messaging with your connections and match requests'
       },
       { 
         id: 'settings', 
         label: 'Settings', 
         icon: '⚙️',
         path: '/app/settings',
-        description: 'Manage account preferences and privacy'
+        description: 'Account preferences, privacy settings, and profile management'
       }
     )
 
@@ -211,17 +212,31 @@ const Navigation = () => {
     return location.pathname.startsWith(path)
   }
 
-  // Helper to get user's role-specific greeting
+  // ✅ FIXED: Helper to get user's role-specific greeting with correct role names
   const getRoleGreeting = () => {
     if (!profile) return ''
     
     const roles = profile.roles || []
     if (roles.includes('applicant')) return '🏠 Housing Seeker'
     if (roles.includes('landlord')) return '🏢 Property Owner' 
-    if (roles.includes('peer')) return '🤝 Peer Specialist'
+    if (roles.includes('peer-support')) return '🤝 Peer Support Specialist' // Fixed role name
     if (roles.includes('employer')) return '💼 Recovery-Friendly Employer'
     return '👋 Community Member'
   }
+
+  // ✅ NEW: Helper to get completion status for profiles
+  const getProfileCompletionStatus = () => {
+    if (!profile) return null
+    
+    // This would integrate with your profile completion logic
+    // For now, just show a general tip
+    return {
+      isComplete: false, // This would be calculated based on actual profile data
+      message: 'Complete your profile to unlock all features'
+    }
+  }
+
+  const completionStatus = getProfileCompletionStatus()
 
   return (
     <>
@@ -237,6 +252,11 @@ const Navigation = () => {
           marginBottom: '1rem'
         }}>
           {getRoleGreeting()}
+          {profile.roles && profile.roles.length > 1 && (
+            <span style={{ fontSize: '0.8rem', opacity: 0.7, marginLeft: '8px' }}>
+              (+{profile.roles.length - 1} more role{profile.roles.length > 2 ? 's' : ''})
+            </span>
+          )}
         </div>
       )}
 
@@ -259,17 +279,19 @@ const Navigation = () => {
         })}
       </nav>
 
-      {/* Quick progress indicator for incomplete profiles */}
-      {profile && (
+      {/* Profile completion indicator */}
+      {profile && completionStatus && !completionStatus.isComplete && (
         <div style={{
           padding: '10px 20px',
           background: 'var(--bg-light-cream)',
           fontSize: '0.8rem',
           color: 'var(--gray-600)',
           textAlign: 'center',
-          marginTop: '1rem'
+          marginTop: '1rem',
+          borderRadius: '8px',
+          border: '1px solid var(--border-beige)'
         }}>
-          💡 Tip: Complete your profile to unlock all features
+          💡 {completionStatus.message}
         </div>
       )}
 
@@ -296,6 +318,7 @@ const Navigation = () => {
           color: #6b7280;
           transition: all 0.2s ease;
           cursor: pointer;
+          text-decoration: none;
         }
 
         .nav-grid-item:hover {
@@ -320,52 +343,66 @@ const Navigation = () => {
           line-height: 1.2;
         }
 
-        /* Role-specific navigation colors */
+        /* Role-specific navigation colors - aligned with schema roles */
         .nav-housing-seeker:hover,
         .nav-housing-seeker.active {
-          background: #8b5cf6; /* Purple */
+          background: #8b5cf6; /* Purple for applicants */
         }
 
         .nav-peer-support:hover,
         .nav-peer-support.active {
-          background: #3b82f6; /* Blue */
+          background: #3b82f6; /* Blue for peer support */
         }
 
         .nav-employer:hover,
         .nav-employer.active {
-          background: #ef4444; /* Red */
+          background: #ef4444; /* Red for employers */
         }
 
         .nav-property-owner:hover,
         .nav-property-owner.active {
-          background: #f59e0b; /* Yellow/Orange */
+          background: #f59e0b; /* Orange for landlords */
         }
 
         .nav-connections:hover,
         .nav-connections.active {
-          background: #374151; /* Dark gray/black */
+          background: #374151; /* Dark gray for connections */
         }
 
         /* Default hover for items without specific colors */
         .nav-grid-item:not(.nav-housing-seeker):not(.nav-peer-support):not(.nav-employer):not(.nav-property-owner):not(.nav-connections):hover,
         .nav-grid-item:not(.nav-housing-seeker):not(.nav-peer-support):not(.nav-employer):not(.nav-property-owner):not(.nav-connections).active {
-          background: #6366f1; /* Default purple */
+          background: #6366f1; /* Default indigo */
         }
 
-        /* Mobile responsive */
+        /* Mobile responsive grid adjustments */
         @media (max-width: 768px) {
           .dashboard-grid-nav {
             grid-template-columns: repeat(3, 1fr);
+            gap: 6px;
+            padding: 8px;
+          }
+          
+          .nav-grid-item {
+            padding: 10px 6px;
           }
           
           .nav-grid-item .nav-label {
             font-size: 0.7rem;
+          }
+          
+          .nav-grid-item .nav-icon {
+            font-size: 1.3rem;
           }
         }
 
         @media (max-width: 480px) {
           .dashboard-grid-nav {
             grid-template-columns: repeat(2, 1fr);
+          }
+          
+          .nav-grid-item .nav-label {
+            font-size: 0.65rem;
           }
         }
       `}</style>
