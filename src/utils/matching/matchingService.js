@@ -1,6 +1,6 @@
-// src/utils/matching/matchingService.js - ENHANCED WITH COMPLETE DATABASE INTEGRATION
+// src/utils/matching/matchingService.js - ENHANCED WITH COMPLETE DATABASE INTEGRATION - SCHEMA ALIGNED
 
-import { db } from '../supabase';
+import { supabase } from '../supabase';
 import { calculateDetailedCompatibility } from './algorithm';
 import { transformProfileForAlgorithm } from './dataTransform';
 import { generateDetailedFlags } from './compatibility';
@@ -14,6 +14,7 @@ import {
 /**
  * ✅ ENHANCED: Complete matching service with full database schema integration
  * Works with: applicant_matching_profiles table + enhanced algorithm + priority matrix
+ * ✅ FIXED: All database calls now use direct Supabase queries aligned with new schema
  */
 class EnhancedMatchingService {
   constructor() {
@@ -165,13 +166,14 @@ class EnhancedMatchingService {
 
   /**
    * ✅ ENHANCED: Load user profile from standardized database table
+   * ✅ FIXED: Direct Supabase query instead of db service layer
    */
   async loadUserProfile(userId) {
     try {
       console.log(`🔍 Loading user matching profile from ${this.tableName}...`);
       
-      // Query the new applicant_matching_profiles table
-      const { data, error } = await db
+      // ✅ FIXED: Direct Supabase query to the correct table
+      const { data, error } = await supabase
         .from(this.tableName)
         .select('*')
         .eq('user_id', userId)
@@ -364,7 +366,6 @@ class EnhancedMatchingService {
       age_flexibility: dbProfile.age_flexibility,
       prefer_recovery_experience: dbProfile.prefer_recovery_experience,
       supportive_of_recovery: dbProfile.supportive_of_recovery,
-      substance_free_home_required: dbProfile.substance_free_home_required, // ✅ FIXED: Roommate preference also uses correct field
       respect_privacy: dbProfile.respect_privacy,
       social_interaction_level: dbProfile.social_interaction_level,
       similar_schedules: dbProfile.similar_schedules,
@@ -401,12 +402,13 @@ class EnhancedMatchingService {
 
   /**
    * ✅ ENHANCED: Load all active profiles with optimized query
+   * ✅ FIXED: Direct Supabase query instead of db service layer
    */
   async loadActiveProfiles(excludeUserId = null) {
     try {
       console.log(`🔍 Loading active profiles from ${this.tableName}...`);
       
-      let query = db
+      let query = supabase
         .from(this.tableName)
         .select('*')
         .eq('is_active', true)
@@ -437,6 +439,7 @@ class EnhancedMatchingService {
 
   /**
    * ✅ ENHANCED: Load excluded users with better query optimization
+   * ✅ FIXED: Direct Supabase queries instead of db service layer
    */
   async loadExcludedUsers(userId) {
     try {
@@ -487,11 +490,11 @@ class EnhancedMatchingService {
   }
 
   /**
-   * ✅ NEW: Load match requests with error handling
+   * ✅ FIXED: Load match requests with error handling - Direct Supabase query
    */
   async loadMatchRequests(userId) {
     try {
-      const { data, error } = await db
+      const { data, error } = await supabase
         .from('match_requests')
         .select('*')
         .or(`requester_id.eq.${userId},target_id.eq.${userId}`);
@@ -509,12 +512,12 @@ class EnhancedMatchingService {
   }
 
   /**
-   * ✅ NEW: Load match groups with error handling
+   * ✅ FIXED: Load match groups with error handling - Direct Supabase query
    */
   async loadMatchGroups(userId) {
     try {
-      // Check if match_groups table exists and has the expected structure
-      const { data, error } = await db
+      // ✅ FIXED: Direct Supabase query to match_groups table
+      const { data, error } = await supabase
         .from('match_groups')
         .select('*')
         .or(`applicant_1_id.eq.${userId},applicant_2_id.eq.${userId},peer_support_id.eq.${userId},landlord_id.eq.${userId}`);
@@ -533,6 +536,7 @@ class EnhancedMatchingService {
 
   /**
    * ✅ ENHANCED: Load sent requests for UI feedback
+   * ✅ FIXED: Uses direct Supabase calls
    */
   async loadSentRequests(userId) {
     try {
@@ -804,6 +808,7 @@ class EnhancedMatchingService {
 
   /**
    * ✅ ENHANCED: Send match request with enhanced data
+   * ✅ FIXED: Direct Supabase query instead of db service layer
    */
   async sendMatchRequest(currentUserId, targetMatch) {
     try {
@@ -822,7 +827,8 @@ class EnhancedMatchingService {
         recommendation_strength: targetMatch.recommendationStrength?.strength || 'moderate'
       };
       
-      const { data, error } = await db
+      // ✅ FIXED: Direct Supabase query
+      const { data, error } = await supabase
         .from('match_requests')
         .insert(requestData)
         .select()
@@ -881,6 +887,7 @@ class EnhancedMatchingService {
 
   /**
    * ✅ ENHANCED: Update user profile with new data
+   * ✅ FIXED: Direct Supabase query instead of db service layer
    */
   async updateUserProfile(userId, profileData) {
     try {
@@ -891,7 +898,8 @@ class EnhancedMatchingService {
         updated_at: new Date().toISOString()
       };
       
-      const { data, error } = await db
+      // ✅ FIXED: Direct Supabase query
+      const { data, error } = await supabase
         .from(this.tableName)
         .update(updateData)
         .eq('user_id', userId)

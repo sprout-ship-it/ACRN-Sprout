@@ -1,4 +1,4 @@
-// src/contexts/UserProgressContext.js
+// src/contexts/UserProgressContext.js - UPDATED: Use matchingProfiles service
 import React, { createContext, useContext, useEffect, useState } from 'react';
 import { useAuth } from './AuthContext';  
 import { db } from '../utils/supabase';
@@ -76,51 +76,106 @@ export const UserProgressProvider = ({ children }) => {
     }
   };
 
-  // ✅ FIXED: Check if basic profile is complete using applicant_forms table
+  // ✅ UPDATED: Check if basic profile is complete using matchingProfiles service
   const checkBasicProfile = async () => {
     if (!user) return false;
 
     try {
-      const { data, error } = await db.applicantForms.getByUserId(user.id);
+      console.log('🔍 Checking basic profile completion...');
       
-      if (error && error.code !== 'PGRST116') { // PGRST116 = no rows returned
-        console.error('Error checking basic profile:', error);
+      // ✅ FIXED: Use matchingProfiles service instead of applicantForms
+      const result = await db.matchingProfiles.getByUserId(user.id);
+      
+      if (!result.success) {
+        if (result.code === 'NOT_FOUND') {
+          console.log('📋 No matching profile found - basic profile incomplete');
+          return false;
+        }
+        console.error('Error checking basic profile:', result.error);
         return false;
       }
 
-      // Consider basic profile complete if it exists and has required fields
-      return !!(data?.date_of_birth && data?.phone);
+      const data = result.data;
+
+      // ✅ UPDATED: Check required fields using correct field names from new schema
+      const hasRequiredFields = !!(
+        data?.date_of_birth && 
+        data?.primary_phone &&
+        data?.primary_city &&
+        data?.primary_state
+      );
+
+      console.log('📋 Basic profile check:', {
+        hasDateOfBirth: !!data?.date_of_birth,
+        hasPrimaryPhone: !!data?.primary_phone,
+        hasPrimaryCity: !!data?.primary_city,
+        hasPrimaryState: !!data?.primary_state,
+        isComplete: hasRequiredFields
+      });
+
+      return hasRequiredFields;
+
     } catch (error) {
       console.error('Error in checkBasicProfile:', error);
       return false;
     }
   };
 
-  // Check if matching profile is complete (for applicants only)
+  // ✅ UPDATED: Check if matching profile is complete using matchingProfiles service
   const checkMatchingProfile = async () => {
     if (!user || !hasRole('applicant')) return true; // Non-applicants don't need matching profiles
 
     try {
-      const { data, error } = await db.matchingProfiles.getByUserId(user.id);
+      console.log('🔍 Checking matching profile completion...');
       
-      if (error && error.code !== 'PGRST116') {
-        console.error('Error checking matching profile:', error);
+      // ✅ FIXED: Use matchingProfiles service consistently
+      const result = await db.matchingProfiles.getByUserId(user.id);
+      
+      if (!result.success) {
+        if (result.code === 'NOT_FOUND') {
+          console.log('📋 No matching profile found - matching profile incomplete');
+          return false;
+        }
+        console.error('Error checking matching profile:', result.error);
         return false;
       }
 
-      // Consider matching profile complete if it exists and is marked as completed
-      return !!(data?.profile_completed && data?.about_me && data?.looking_for);
+      const data = result.data;
+
+      // ✅ UPDATED: Check completion using new schema fields and computed values
+      const isComplete = !!(
+        data?.profile_completed && 
+        data?.about_me && 
+        data?.looking_for &&
+        data?.recovery_stage &&
+        data?.budget_max
+      );
+
+      console.log('📋 Matching profile check:', {
+        profileCompleted: !!data?.profile_completed,
+        hasAboutMe: !!data?.about_me,
+        hasLookingFor: !!data?.looking_for,
+        hasRecoveryStage: !!data?.recovery_stage,
+        hasBudgetMax: !!data?.budget_max,
+        completionPercentage: data?.completion_percentage || 0,
+        isComplete
+      });
+
+      return isComplete;
+
     } catch (error) {
       console.error('Error in checkMatchingProfile:', error);
       return false;
     }
   };
 
-  // Check match status
+  // Check match status (no changes needed - this doesn't use applicantForms)
   const checkMatches = async () => {
     if (!user) return { hasMatches: false, activeMatching: false };
 
     try {
+      console.log('🔍 Checking match status...');
+      
       const { data: requests, error } = await db.matchRequests.getByUserId(user.id);
       
       if (error) {
@@ -132,6 +187,12 @@ export const UserProgressProvider = ({ children }) => {
       const activeMatching = requests?.some(request => 
         ['pending', 'approved'].includes(request.status)
       ) || false;
+
+      console.log('🔍 Match status check:', {
+        totalRequests: requests?.length || 0,
+        hasMatches,
+        activeMatching
+      });
 
       return { hasMatches, activeMatching };
     } catch (error) {

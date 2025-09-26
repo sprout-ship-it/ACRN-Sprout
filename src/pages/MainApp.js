@@ -1,4 +1,4 @@
-// src/pages/MainApp.js - COMPLETE FIXED VERSION
+// src/pages/MainApp.js - UPDATED: Fixed profile completion checks for new schema
 import React, { useEffect, useState } from 'react'
 import { Routes, Route, Navigate, useNavigate, useLocation } from 'react-router-dom'
 import { useAuth } from '../hooks/useAuth';
@@ -57,7 +57,7 @@ const MainApp = () => {
     loading: true
   })
 
-  // ✅ FIXED: Check if user has completed their role-specific comprehensive profile
+  // ✅ UPDATED: Check if user has completed their role-specific comprehensive profile
   useEffect(() => {
     const checkProfileCompletion = async () => {
       if (!user || !profile?.roles?.length) {
@@ -74,34 +74,46 @@ const MainApp = () => {
         if (hasRole('applicant')) {
           console.log('👤 Checking applicant comprehensive profile...')
           
-          // ✅ FIXED: Use the correct service for applicant_matching_profiles
-          const { data: applicantProfile, success } = await db.matchingProfiles.getByUserId(user.id)
+          // ✅ UPDATED: Use matchingProfiles service with proper error handling
+          const result = await db.matchingProfiles.getByUserId(user.id)
           
-          // ✅ FIXED: Check for comprehensive profile completion using the actual schema fields
-          hasCompleteProfile = !!(
-            applicantProfile?.primary_city && 
-            applicantProfile?.primary_state && 
-            applicantProfile?.budget_min && 
-            applicantProfile?.budget_max &&
-            applicantProfile?.recovery_stage &&
-            applicantProfile?.about_me && 
-            applicantProfile?.looking_for &&
-            applicantProfile?.profile_completed
-          )
-          
-          console.log('👤 Applicant profile check:', { 
-            hasProfile: !!applicantProfile,
-            hasBasicInfo: !!(applicantProfile?.primary_city && applicantProfile?.budget_max),
-            hasRecoveryInfo: !!(applicantProfile?.recovery_stage),
-            hasContent: !!(applicantProfile?.about_me && applicantProfile?.looking_for),
-            isCompleted: !!applicantProfile?.profile_completed,
-            overallComplete: hasCompleteProfile
-          })
+          if (result.success && result.data) {
+            const applicantProfile = result.data;
+            
+            // ✅ UPDATED: Check for comprehensive profile completion using correct schema fields
+            hasCompleteProfile = !!(
+              applicantProfile?.primary_city && 
+              applicantProfile?.primary_state && 
+              applicantProfile?.budget_min && 
+              applicantProfile?.budget_max &&
+              applicantProfile?.recovery_stage &&
+              applicantProfile?.about_me && 
+              applicantProfile?.looking_for &&
+              applicantProfile?.profile_completed
+            )
+            
+            console.log('👤 Applicant profile check:', { 
+              hasProfile: !!applicantProfile,
+              hasLocation: !!(applicantProfile?.primary_city && applicantProfile?.primary_state),
+              hasBudget: !!(applicantProfile?.budget_min && applicantProfile?.budget_max),
+              hasRecoveryInfo: !!applicantProfile?.recovery_stage,
+              hasContent: !!(applicantProfile?.about_me && applicantProfile?.looking_for),
+              isCompleted: !!applicantProfile?.profile_completed,
+              completionPercentage: applicantProfile?.completion_percentage || 0,
+              overallComplete: hasCompleteProfile
+            })
+          } else {
+            console.log('👤 No applicant profile found or error:', result.error);
+            hasCompleteProfile = false;
+          }
         }
         
         else if (hasRole('peer')) {
           console.log('🤝 Checking peer support comprehensive profile...')
-          const { data: peerProfile } = await db.peerSupportProfiles.getByUserId(user.id)
+          const result = await db.peerSupportProfiles.getByUserId(user.id)
+          
+          // ✅ UPDATED: Handle service response format consistently
+          const peerProfile = result?.success ? result.data : result?.data || result;
           
           hasCompleteProfile = !!(
             peerProfile?.phone && 
@@ -121,17 +133,37 @@ const MainApp = () => {
         
         else if (hasRole('landlord')) {
           console.log('🏢 Checking landlord profile...')
-          hasCompleteProfile = !!profile?.phone
+          
+          // ✅ UPDATED: For landlords, check if they have basic contact info
+          // They might also have a matching profile for personal info
+          let landlordComplete = !!profile?.phone;
+          
+          if (!landlordComplete) {
+            // Check if they have personal info in matching profile
+            const result = await db.matchingProfiles.getByUserId(user.id);
+            if (result.success && result.data) {
+              landlordComplete = !!result.data.primary_phone;
+            }
+          }
+          
+          hasCompleteProfile = landlordComplete;
           
           console.log('🏢 Landlord profile check:', { 
-            hasPhone: !!profile?.phone,
+            hasProfilePhone: !!profile?.phone,
+            hasMatchingPhone: !!(await db.matchingProfiles.getByUserId(user.id)).data?.primary_phone,
             overallComplete: hasCompleteProfile
           })
         }
 
         else if (hasRole('employer')) {
           console.log('💼 Checking employer comprehensive profile...')
-          const { data: employerProfiles } = await db.employerProfiles.getByUserId(user.id)
+          const result = await db.employerProfiles.getByUserId(user.id)
+          
+          // ✅ UPDATED: Handle employer profiles response format
+          const employerProfiles = result?.success ? result.data : 
+                                  Array.isArray(result?.data) ? result.data :
+                                  result?.data ? [result.data] : 
+                                  Array.isArray(result) ? result : [];
           
           if (employerProfiles && employerProfiles.length > 0) {
             const employerProfile = employerProfiles[0]
@@ -276,7 +308,7 @@ const MainApp = () => {
     
     // For LANDLORDS - they should already have phone from registration, so go to dashboard
     else if (hasRole('landlord')) {
-      console.log('🏢 Landlord missing phone, updating profile setup')
+      console.log('🏢 Landlord missing contact info, updating profile setup')
       setProfileSetup(prev => ({ ...prev, hasComprehensiveProfile: true }))
       return null // Will re-render with updated state
     }
@@ -368,7 +400,7 @@ const MainApp = () => {
             {/* Redirect old routes */}
             <Route path="/messages" element={<Navigate to="/app/communications" replace />} />
             
-            {/* Basic profile route */}
+            {/* ✅ UPDATED: Basic profile route with new schema field names */}
             <Route path="/profile/basic" element={
               <div style={{ maxWidth: '800px', margin: '0 auto' }}>
                 <div className="card">

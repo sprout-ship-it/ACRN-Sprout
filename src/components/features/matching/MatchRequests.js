@@ -1,7 +1,7 @@
-// src/components/features/matching/MatchRequests.js - UPDATED WITH CSS MODULE
+// src/components/features/matching/MatchRequests.js - UPDATED WITH NEW SCHEMA ALIGNMENT
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../../../context/AuthContext';
-import { db } from '../../../utils/supabase';
+import { supabase } from '../../../utils/supabase';
 import LoadingSpinner from '../../ui/LoadingSpinner';
 
 // ✅ UPDATED: Import our new CSS foundation and component module
@@ -36,7 +36,26 @@ const Connections = () => {
 
     try {
       setLoading(true);
-      const { data, error } = await db.matchRequests.getByUserId(user.id);
+      
+      // ✅ FIXED: Direct Supabase query aligned with new schema
+      const { data, error } = await supabase
+        .from('match_requests')
+        .select(`
+          *,
+          requester:requester_id(
+            id,
+            first_name,
+            last_name,
+            email
+          ),
+          target:target_id(
+            id,
+            first_name,
+            last_name,
+            email
+          )
+        `)
+        .or(`requester_id.eq.${user.id},target_id.eq.${user.id}`);
       
       if (error) throw error;
       
@@ -135,11 +154,14 @@ const Connections = () => {
 
       // ✅ SIMPLIFIED: For employment connections, just approve the request (no match group needed)
       if (request.request_type === 'employment') {
-        const { error: updateError } = await db.matchRequests.update(requestId, {
-          status: 'matched',
-          target_approved: true,
-          matched_at: new Date().toISOString()
-        });
+        const { error: updateError } = await supabase
+          .from('match_requests')
+          .update({
+            status: 'matched',
+            target_approved: true,
+            matched_at: new Date().toISOString()
+          })
+          .eq('id', requestId);
         
         if (updateError) {
           throw updateError;
@@ -168,7 +190,10 @@ const Connections = () => {
       const matchGroupData = await determineMatchGroupStructure(request);
 
       // Step 2: Create the match group
-      const { data: matchGroup, error: groupError } = await db.matchGroups.create(matchGroupData);
+      const { data: matchGroup, error: groupError } = await supabase
+        .from('match_groups')
+        .insert(matchGroupData)
+        .select();
 
       if (groupError) {
         console.error('❌ Failed to create match group:', groupError);
@@ -178,12 +203,15 @@ const Connections = () => {
       console.log('✅ Match group created:', matchGroup);
 
       // Step 3: Update match request to matched status with group reference
-      const { error: matchedError } = await db.matchRequests.update(requestId, {
-        status: 'matched',
-        target_approved: true,
-        match_group_id: matchGroup[0].id,
-        matched_at: new Date().toISOString()
-      });
+      const { error: matchedError } = await supabase
+        .from('match_requests')
+        .update({
+          status: 'matched',
+          target_approved: true,
+          match_group_id: matchGroup[0].id,
+          matched_at: new Date().toISOString()
+        })
+        .eq('id', requestId);
 
       if (matchedError) {
         console.error('❌ Failed to update to matched status:', matchedError);
@@ -216,8 +244,23 @@ const Connections = () => {
   // ✅ IMPROVED: Better match group structure determination
   const determineMatchGroupStructure = async (request) => {
     try {
-      const { data: requesterProfile } = await db.profiles.getById(request.requester_id);
-      const { data: targetProfile } = await db.profiles.getById(request.target_id);
+      // ✅ FIXED: Query registrant_profiles for role information
+      const { data: requesterProfile, error: requesterError } = await supabase
+        .from('registrant_profiles')
+        .select('id, roles')
+        .eq('id', request.requester_id)
+        .single();
+
+      const { data: targetProfile, error: targetError } = await supabase
+        .from('registrant_profiles')
+        .select('id, roles')
+        .eq('id', request.target_id)
+        .single();
+
+      if (requesterError || targetError) {
+        console.error('Error loading profiles:', { requesterError, targetError });
+        // Fall back to basic structure
+      }
 
       const requesterRoles = requesterProfile?.roles || [];
       const targetRoles = targetProfile?.roles || [];
@@ -317,12 +360,15 @@ const Connections = () => {
       
       console.log('📩 Sending reconnection request:', requestData);
       
-      // Create new match request in database
-      const result = await db.matchRequests.create(requestData);
+      // ✅ FIXED: Create new match request in database using direct Supabase call
+      const { data, error } = await supabase
+        .from('match_requests')
+        .insert(requestData)
+        .select();
       
-      if (result.error) throw result.error;
+      if (error) throw error;
       
-      console.log('✅ Reconnection request sent:', result.data);
+      console.log('✅ Reconnection request sent:', data);
       
       // ✅ NEW: Update UI state to reflect sent request
       setSentReconnectionRequests(prev => new Set([...prev, otherUserId]));
@@ -369,7 +415,11 @@ const Connections = () => {
         rejected_at: new Date().toISOString()
       };
 
-      const { error } = await db.matchRequests.update(selectedRequest.id, updates);
+      // ✅ FIXED: Direct Supabase call
+      const { error } = await supabase
+        .from('match_requests')
+        .update(updates)
+        .eq('id', selectedRequest.id);
       
       if (error) throw error;
 
@@ -402,10 +452,14 @@ const Connections = () => {
     setActionLoading(true);
     
     try {
-      const { error } = await db.matchRequests.update(requestId, {
-        status: 'cancelled',
-        cancelled_at: new Date().toISOString()
-      });
+      // ✅ FIXED: Direct Supabase call
+      const { error } = await supabase
+        .from('match_requests')
+        .update({
+          status: 'cancelled',
+          cancelled_at: new Date().toISOString()
+        })
+        .eq('id', requestId);
       
       if (error) throw error;
 
@@ -437,11 +491,15 @@ const Connections = () => {
 
       // ✅ FIXED: Only end match group for non-employment connections
       if (request.match_group_id && request.request_type !== 'employment') {
-        const { error: groupError } = await db.matchGroups.endGroup(
-          request.match_group_id,
-          user.id,
-          'User initiated disconnect'
-        );
+        // ✅ FIXED: Direct Supabase call to end match group
+        const { error: groupError } = await supabase
+          .from('match_groups')
+          .update({
+            status: 'dissolved',
+            dissolved_at: new Date().toISOString(),
+            dissolved_reason: 'User initiated disconnect'
+          })
+          .eq('id', request.match_group_id);
         
         if (groupError) {
           console.error('❌ Failed to end match group:', groupError);
@@ -455,7 +513,11 @@ const Connections = () => {
         unmatched_by: user.id
       };
 
-      const { error: updateError } = await db.matchRequests.update(requestId, updates);
+      // ✅ FIXED: Direct Supabase call
+      const { error: updateError } = await supabase
+        .from('match_requests')
+        .update(updates)
+        .eq('id', requestId);
       
       if (updateError) {
         console.error('❌ Failed to update match request:', updateError);
@@ -476,9 +538,8 @@ const Connections = () => {
     }
   };
 
-  // ✅ IMPROVED: Handle view contact info for both employment and household connections
   /**
-   * ✅ IMPROVED: Enhanced contact info retrieval with better applicant_forms integration
+   * ✅ FIXED: Enhanced contact info retrieval with new schema integration
    */
   const handleViewContactInfo = async (request) => {
     try {
@@ -488,8 +549,12 @@ const Connections = () => {
       
       console.log('🔍 Fetching contact info for user:', otherUserId);
       
-      // Get basic profile info first
-      const { data: otherProfile, error: profileError } = await db.profiles.getById(otherUserId);
+      // ✅ FIXED: Get basic profile info from registrant_profiles
+      const { data: otherProfile, error: profileError } = await supabase
+        .from('registrant_profiles')
+        .select('*')
+        .eq('id', otherUserId)
+        .single();
       
       if (profileError) {
         console.error('Error fetching profile:', profileError);
@@ -502,56 +567,80 @@ const Connections = () => {
       
       // Initialize contact info with basic profile data
       let contactInfo = {
-        name: otherProfile.first_name || 'User',
+        name: `${otherProfile.first_name || 'User'} ${otherProfile.last_name || ''}`.trim(),
         email: otherProfile.email || 'Not provided',
-        phone: otherProfile.phone || 'Not provided',
+        phone: 'Not provided',
         connectionType: getConnectionType(request)
       };
       
-      // Try to get more detailed contact info based on connection type
+      // ✅ FIXED: Try to get more detailed contact info based on connection type and user roles
+      const userRoles = otherProfile.roles || [];
+      
       if (request.request_type === 'employment') {
         // For employment, try to get employer profile info
-        if (otherProfile.roles?.includes('employer')) {
+        if (userRoles.includes('employer')) {
           try {
-            const { data: employerProfiles } = await db.employerProfiles.getByUserId(otherUserId);
-            if (employerProfiles && employerProfiles.length > 0) {
-              const employerProfile = employerProfiles[0];
-              contactInfo.phone = employerProfile.phone || employerProfile.contact_phone || contactInfo.phone;
-              contactInfo.website = employerProfile.website;
-              contactInfo.companyName = employerProfile.company_name;
+            const { data: employerProfile } = await supabase
+              .from('employer_profiles')
+              .select('primary_phone, contact_email, contact_person, business_type, industry')
+              .eq('user_id', otherUserId)
+              .single();
+              
+            if (employerProfile) {
+              contactInfo.phone = employerProfile.primary_phone || contactInfo.phone;
+              contactInfo.email = employerProfile.contact_email || contactInfo.email;
+              contactInfo.contactPerson = employerProfile.contact_person;
+              contactInfo.companyType = employerProfile.business_type;
+              contactInfo.industry = employerProfile.industry;
             }
           } catch (err) {
             console.warn('Could not load employer profile:', err);
           }
         }
       } else {
-        // For other connection types, try to get applicant form data
-        try {
-          const { data: applicantData } = await db.applicantForms.getByUserId(otherUserId);
-          
-          if (applicantData) {
-            console.log('✅ Found applicant form data:', applicantData);
-            // Override phone if available in applicant form
-            if (applicantData.phone) {
-              contactInfo.phone = applicantData.phone;
-            }
+        // ✅ FIXED: For other connection types, try to get applicant matching profile data
+        if (userRoles.includes('applicant')) {
+          try {
+            const { data: applicantData } = await supabase
+              .from('applicant_matching_profiles')
+              .select('primary_phone, emergency_contact_name, emergency_contact_phone')
+              .eq('user_id', otherUserId)
+              .single();
             
-            // Add additional relevant info
-            if (applicantData.preferred_contact_method) {
-              contactInfo.preferredContactMethod = applicantData.preferred_contact_method;
+            if (applicantData) {
+              console.log('✅ Found applicant matching profile data:', applicantData);
+              // Override phone if available in applicant profile
+              if (applicantData.primary_phone) {
+                contactInfo.phone = applicantData.primary_phone;
+              }
+              
+              // Add emergency contact info if available
+              if (applicantData.emergency_contact_name) {
+                contactInfo.emergencyContact = {
+                  name: applicantData.emergency_contact_name,
+                  phone: applicantData.emergency_contact_phone
+                };
+              }
             }
+          } catch (err) {
+            console.warn('Could not load applicant matching profile data:', err);
           }
-        } catch (err) {
-          console.warn('Could not load applicant form data:', err);
         }
         
         // For peer support, try to get peer profile info
-        if (request.request_type === 'peer_support' && otherProfile.roles?.includes('peer')) {
+        if (request.request_type === 'peer_support' && userRoles.includes('peer')) {
           try {
-            const { data: peerProfile } = await db.peerSupportProfiles.getByUserId(otherUserId);
+            const { data: peerProfile } = await supabase
+              .from('peer_support_profiles')
+              .select('primary_phone, professional_title, years_experience, certifications')
+              .eq('user_id', otherUserId)
+              .single();
+              
             if (peerProfile) {
-              contactInfo.phone = peerProfile.phone || contactInfo.phone;
-              contactInfo.experience = peerProfile.time_in_recovery;
+              contactInfo.phone = peerProfile.primary_phone || contactInfo.phone;
+              contactInfo.professionalTitle = peerProfile.professional_title;
+              contactInfo.experience = peerProfile.years_experience;
+              contactInfo.certifications = peerProfile.certifications;
             }
           } catch (err) {
             console.warn('Could not load peer profile:', err);
@@ -559,14 +648,22 @@ const Connections = () => {
         }
         
         // For housing, try to get landlord info
-        if (request.request_type === 'housing' && otherProfile.roles?.includes('landlord')) {
+        if (request.request_type === 'housing' && userRoles.includes('landlord')) {
           try {
-            const { data: properties } = await db.properties.getByLandlordId(otherUserId);
-            if (properties && properties.length > 0) {
-              contactInfo.phone = properties[0].phone || contactInfo.phone;
+            const { data: landlordProfile } = await supabase
+              .from('landlord_profiles')
+              .select('primary_phone, contact_email, contact_person, property_type')
+              .eq('user_id', otherUserId)
+              .single();
+              
+            if (landlordProfile) {
+              contactInfo.phone = landlordProfile.primary_phone || contactInfo.phone;
+              contactInfo.email = landlordProfile.contact_email || contactInfo.email;
+              contactInfo.contactPerson = landlordProfile.contact_person;
+              contactInfo.propertyType = landlordProfile.property_type;
             }
           } catch (err) {
-            console.warn('Could not load property data:', err);
+            console.warn('Could not load landlord profile:', err);
           }
         }
       }
@@ -574,19 +671,6 @@ const Connections = () => {
       console.log('✅ Contact info prepared:', contactInfo);
       setContactInfo(contactInfo);
       setShowContactModal(true);
-      
-      // Optional: Log this contact view for analytics
-      try {
-        await db.contactViews.create({
-          viewer_id: user.id,
-          viewed_id: otherUserId,
-          connection_type: request.request_type,
-          request_id: request.id,
-          viewed_at: new Date().toISOString()
-        });
-      } catch (logErr) {
-        console.warn('Could not log contact view:', logErr);
-      }
       
     } catch (error) {
       console.error('💥 Error viewing contact info:', error);
@@ -1130,7 +1214,7 @@ const Connections = () => {
               </div>
               <h4 style={{ color: 'var(--primary-purple)', marginBottom: '0.5rem' }}>
                 {contactInfo.name}
-                {contactInfo.companyName && ` (${contactInfo.companyName})`}
+                {contactInfo.companyType && ` (${contactInfo.companyType})`}
               </h4>
               <p className="text-gray-600" style={{ margin: 0 }}>
                 Your {contactInfo.connectionType} contact
@@ -1174,28 +1258,23 @@ const Connections = () => {
                 </div>
               </div>
 
-              {/* Website link (if available) */}
-              {contactInfo.website && (
+              {/* Professional info (if available) */}
+              {contactInfo.professionalTitle && (
                 <div className={styles.contactItem}>
-                  <div className={styles.contactIcon}>🌐</div>
+                  <div className={styles.contactIcon}>🎓</div>
                   <div className={styles.contactInfo}>
-                    <div className={styles.contactLabel}>Website</div>
-                    <a 
-                      href={contactInfo.website}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className={styles.contactLink}
-                    >
-                      Visit Website →
-                    </a>
+                    <div className={styles.contactLabel}>Professional Title</div>
+                    <div className={styles.contactValue}>
+                      {contactInfo.professionalTitle}
+                    </div>
                   </div>
                 </div>
               )}
 
-              {/* Preferred contact method (if available) */}
-              {contactInfo.preferredContactMethod && (
+              {/* Contact person (if available) */}
+              {contactInfo.contactPerson && (
                 <div className="alert alert-info mt-3">
-                  <strong>Preferred Contact Method:</strong> {contactInfo.preferredContactMethod}
+                  <strong>Contact Person:</strong> {contactInfo.contactPerson}
                 </div>
               )}
             </div>

@@ -1,4 +1,4 @@
-// src/utils/supabase.js - REFACTORED VERSION
+// src/utils/supabase.js - CLEANED: Removed legacy applicantForms
 import { createClient } from '@supabase/supabase-js'
 
 // Import all service modules
@@ -45,6 +45,9 @@ const peerSupportService = createPeerSupportService(supabase)
 const matchGroupsService = createMatchGroupsService(supabase)
 const communicationService = createCommunicationService(supabase)
 
+// ✅ UPDATED: Create proper matching profiles service instance
+const matchingProfilesService = new MatchingProfilesService(supabase)
+
 // Simplified auth helpers (wrapper around authService)
 export const auth = {
   signUp: authService.signUp,
@@ -61,19 +64,20 @@ export const auth = {
 
 // Database helpers - organized by service
 export const db = {
-      profiles: {
-        create: profilesService.create,
-        getById: profilesService.getById,
-        getByUserId: profilesService.getByUserId, // ✅ ADDED: New method
-        update: profilesService.update,
-        updateByUserId: profilesService.updateByUserId, // ✅ ADDED: New method  
-        delete: profilesService.delete,
-        getByRole: profilesService.getByRole,
-        search: profilesService.search,
-        getStatistics: profilesService.getStatistics,
-        batchUpdate: profilesService.batchUpdate,
-        emailExists: profilesService.emailExists
-      },
+  // Registrant profiles operations
+  profiles: {
+    create: profilesService.create,
+    getById: profilesService.getById,
+    getByUserId: profilesService.getByUserId,
+    update: profilesService.update,
+    updateByUserId: profilesService.updateByUserId,
+    delete: profilesService.delete,
+    getByRole: profilesService.getByRole,
+    search: profilesService.search,
+    getStatistics: profilesService.getStatistics,
+    batchUpdate: profilesService.batchUpdate,
+    emailExists: profilesService.emailExists
+  },
 
   // Backward compatibility alias
   registrantProfiles: {
@@ -82,87 +86,39 @@ export const db = {
     update: profilesService.update
   },
 
-  // Applicant forms operations (using legacy structure for compatibility)
-  applicantForms: {
-    create: async (profileData) => {
-      console.log('📊 DB: applicantForms.create called', { userId: profileData.user_id })
-      try {
-        const { data, error } = await supabase
-          .from('applicant_forms')
-          .insert(profileData)
-          .select()
-        console.log('📊 DB: applicantForms.create result', { hasData: !!data, hasError: !!error })
-        return { data, error }
-      } catch (err) {
-        console.error('💥 DB: applicantForms.create failed', err)
-        return { data: null, error: err }
-      }
-    },
+  // ✅ UPDATED: Comprehensive matching profiles operations (replaces applicantForms)
+  matchingProfiles: {
+    // Core CRUD operations
+    create: matchingProfilesService.create.bind(matchingProfilesService),
+    getByUserId: matchingProfilesService.getByUserId.bind(matchingProfilesService),
+    update: matchingProfilesService.update.bind(matchingProfilesService),
+    upsert: matchingProfilesService.upsert.bind(matchingProfilesService),
+    delete: matchingProfilesService.delete.bind(matchingProfilesService),
 
-    getByUserId: async (userId) => {
-      console.log('📊 DB: applicantForms.getByUserId called', { userId })
-      try {
-        const { data, error } = await supabase
-          .from('applicant_forms')
-          .select('*')
-          .eq('user_id', userId)
-          .single()
-        
-        console.log('📊 DB: applicantForms.getByUserId result', { 
-          hasData: !!data, 
-          hasError: !!error 
-        })
+    // Query operations
+    getActiveProfiles: matchingProfilesService.getActiveProfiles.bind(matchingProfilesService),
+    getByLocation: matchingProfilesService.getByLocation.bind(matchingProfilesService),
+    getByRecoveryStage: matchingProfilesService.getByRecoveryStage.bind(matchingProfilesService),
+    searchProfiles: matchingProfilesService.searchProfiles.bind(matchingProfilesService),
 
-        return { data, error }
-      } catch (err) {
-        console.error('💥 DB: applicantForms.getByUserId failed', err)
-        return { data: null, error: err }
-      }
-    },
+    // Statistics and utilities
+    getStatistics: matchingProfilesService.getStatistics.bind(matchingProfilesService),
+    clearCache: matchingProfilesService.clearCache.bind(matchingProfilesService),
 
-    getActiveProfiles: async (excludeUserId = null) => {
-      console.log('📊 DB: applicantForms.getActiveProfiles called', { excludeUserId })
-      try {
-        let query = supabase
-          .from('applicant_forms')
-          .select(`
-            *,
-            registrant_profiles!inner(id, first_name, email)
-          `)
-          .eq('is_active', true)
-
-        if (excludeUserId) {
-          query = query.neq('user_id', excludeUserId)
-        }
-
-        const { data, error } = await query
-        console.log('📊 DB: applicantForms.getActiveProfiles result', { hasData: !!data, hasError: !!error })
-        return { data, error }
-      } catch (err) {
-        console.error('💥 DB: applicantForms.getActiveProfiles failed', err)
-        return { data: [], error: err }
-      }
-    },
-
-    update: async (userId, updates) => {
-      console.log('📊 DB: applicantForms.update called', { userId })
-      try {
-        const { data, error } = await supabase
-          .from('applicant_forms')
-          .update(updates)
-          .eq('user_id', userId)
-          .select()
-        console.log('📊 DB: applicantForms.update result', { hasData: !!data, hasError: !!error })
-        return { data, error }
-      } catch (err) {
-        console.error('💥 DB: applicantForms.update failed', err)
-        return { data: null, error: err }
-      }
-    }
+    // Helper methods
+    calculateCompletionPercentage: matchingProfilesService.calculateCompletionPercentage.bind(matchingProfilesService),
+    calculateQualityScore: matchingProfilesService.calculateQualityScore.bind(matchingProfilesService),
+    isProfileCompleted: matchingProfilesService.isProfileCompleted.bind(matchingProfilesService)
   },
 
-// Create service instance with supabase client
-matchingProfiles: new MatchingProfilesService(supabase),
+  // ✅ LEGACY COMPATIBILITY: Alias for old code that might still reference applicantForms
+  // TODO: Remove these after updating all components
+  applicantForms: {
+    create: matchingProfilesService.create.bind(matchingProfilesService),
+    getByUserId: matchingProfilesService.getByUserId.bind(matchingProfilesService),
+    update: matchingProfilesService.update.bind(matchingProfilesService),
+    getActiveProfiles: matchingProfilesService.getActiveProfiles.bind(matchingProfilesService)
+  },
 
   // Match request operations
   matchRequests: {
@@ -280,5 +236,17 @@ matchingProfiles: new MatchingProfilesService(supabase),
   pssClients: pssClientsService
 }
 
-console.log('✅ Supabase module fully loaded with refactored services')
+// ✅ NEW: Helper function to get current table status
+export const getTableInfo = () => {
+  return {
+    matchingProfilesTable: 'applicant_matching_profiles',
+    legacyTable: 'applicant_forms', // Deprecated, do not use
+    migration: 'completed',
+    version: '2.0'
+  }
+}
+
+console.log('✅ Supabase module fully loaded with updated matching profiles service')
+console.log('🗑️ Legacy applicantForms methods removed, using matchingProfiles service')
+
 export default supabase

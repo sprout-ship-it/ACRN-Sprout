@@ -1,9 +1,9 @@
-// src/utils/matching/dataTransform.js - FIXED: COMPLETE primary_location removal
+// src/utils/matching/dataTransform.js - UPDATED: Aligned with applicant_matching_profiles schema
 
 /**
  * ✅ ENHANCED: Data transformation utilities for converting between standardized database schema 
  * and matching algorithm expectations. Full integration with applicant_matching_profiles table.
- * ✅ CRITICAL FIX: primary_location completely excluded from all database write operations
+ * ✅ CRITICAL FIX: All field names aligned with new schema
  */
 
 /**
@@ -36,7 +36,7 @@ export const calculateAge = (dateOfBirth) => {
 };
 
 /**
- * ✅ ENHANCED: Transform standardized database record to algorithm-compatible format
+ * ✅ UPDATED: Transform standardized database record to algorithm-compatible format
  * @param {Object} dbProfile - Raw database record from applicant_matching_profiles table
  * @returns {Object|null} Transformed profile or null if invalid
  */
@@ -69,7 +69,7 @@ export const transformProfileForAlgorithm = (dbProfile) => {
     // ===== LOCATION (Standardized) =====
     primary_city: dbProfile.primary_city,
     primary_state: dbProfile.primary_state,
-    // ✅ SAFE: Read primary_location from database (for algorithm use only)
+    // ✅ PRIMARY_LOCATION: Read from auto-generated column
     primary_location: dbProfile.primary_location || 
                      (dbProfile.primary_city && dbProfile.primary_state ? 
                       `${dbProfile.primary_city}, ${dbProfile.primary_state}` : null),
@@ -225,7 +225,6 @@ export const transformProfileForAlgorithm = (dbProfile) => {
     age_flexibility: dbProfile.age_flexibility,
     prefer_recovery_experience: dbProfile.prefer_recovery_experience || false,
     supportive_of_recovery: dbProfile.supportive_of_recovery !== false, // Default true
-    substance_free_home_required: dbProfile.substance_free_home_required !== false,
     respect_privacy: dbProfile.respect_privacy !== false, // Default true
     social_interaction_level: dbProfile.social_interaction_level,
     similar_schedules: dbProfile.similar_schedules || false,
@@ -296,7 +295,7 @@ export const transformProfilesForAlgorithm = (dbProfiles) => {
 };
 
 /**
- * ✅ ENHANCED: Validate profile has minimum required data for enhanced matching
+ * ✅ UPDATED: Validate profile has minimum required data for enhanced matching
  * @param {Object} profile - Transformed profile object
  * @returns {Object} Validation result with isValid and missing fields
  */
@@ -309,7 +308,7 @@ export const validateProfileForMatching = (profile) => {
     };
   }
 
-  // ✅ UPDATED: Core requirements based on Master Data Mapping priority
+  // ✅ UPDATED: Core requirements based on new schema field names
   const coreRequired = [
     'user_id',
     'primary_city',
@@ -522,7 +521,7 @@ export const createProfileSummary = (profile) => {
 };
 
 /**
- * ✅ ENHANCED: Location compatibility with standardized fields
+ * ✅ UPDATED: Location compatibility with standardized fields
  * @param {Object} profile1 - First profile
  * @param {Object} profile2 - Second profile
  * @returns {number} Location compatibility score (0-100)
@@ -575,7 +574,7 @@ export const calculateLocationCompatibility = (profile1, profile2) => {
 };
 
 /**
- * ✅ CRITICAL FIX: Transform form submission data to database format - EXCLUDING primary_location
+ * ✅ CRITICAL FIX: Transform form submission data to database format - UPDATED field names
  * @param {Object} formData - Form data from EnhancedMatchingProfileForm
  * @param {string} userId - User ID
  * @returns {Object} Database-ready record WITHOUT primary_location
@@ -585,7 +584,7 @@ export const transformFormDataToDatabase = (formData, userId) => {
     throw new Error('Form data and user ID are required');
   }
 
-  // Calculate completion percentage
+  // ✅ UPDATED: Calculate completion percentage using correct field names
   const requiredFields = [
     'primary_city', 'primary_state', 'budget_min', 'budget_max', 
     'preferred_roommate_gender', 'recovery_stage', 'recovery_methods',
@@ -603,142 +602,142 @@ export const transformFormDataToDatabase = (formData, userId) => {
   const completionPercentage = Math.round((completedFields.length / requiredFields.length) * 100);
   const isCompleted = completionPercentage >= 80;
 
-  // ✅ CRITICAL FIX: Create database object WITHOUT primary_location
+  // ✅ CRITICAL FIX: Create database object WITHOUT primary_location & using correct field names
   const databaseRecord = {
     user_id: userId,
     
-    // Personal information
-    primary_phone: formData.phone,
-    date_of_birth: formData.dateOfBirth,
+    // ✅ UPDATED: Personal information with correct field names
+    primary_phone: formData.phone || formData.primary_phone,
+    date_of_birth: formData.dateOfBirth || formData.date_of_birth,
     
-    // Gender & Identity
-    gender_identity: formData.gender,
-    biological_sex: formData.sex,
-    preferred_roommate_gender: formData.preferredRoommateGender,
-    gender_inclusive: formData.genderInclusive || false,
+    // Gender & Identity (already correct)
+    gender_identity: formData.gender || formData.gender_identity,
+    biological_sex: formData.sex || formData.biological_sex,
+    preferred_roommate_gender: formData.preferredRoommateGender || formData.preferred_roommate_gender,
+    gender_inclusive: formData.genderInclusive || formData.gender_inclusive || false,
     
-    // Location - EXCLUDING primary_location (generated column)
+    // ✅ UPDATED: Location - using correct field names, EXCLUDING primary_location
     primary_city: formData.primary_city,
     primary_state: formData.primary_state,
     // ❌ CRITICAL: primary_location COMPLETELY REMOVED - database generates this
-    current_address: formData.address,
-    current_city: formData.city,
-    current_state: formData.state,
-    current_zip_code: formData.zipCode,
-    target_zip_codes: formData.targetZipCodes,
-    search_radius_miles: formData.searchRadius || 30,
-    location_flexibility: formData.locationFlexibility,
-    max_commute_minutes: formData.maxCommute,
-    transportation_method: formData.transportation,
+    current_address: formData.address || formData.current_address,
+    current_city: formData.city || formData.current_city,
+    current_state: formData.state || formData.current_state,
+    current_zip_code: formData.zipCode || formData.current_zip_code,
+    target_zip_codes: formData.targetZipCodes || formData.target_zip_codes,
+    search_radius_miles: formData.searchRadius || formData.search_radius_miles || 30,
+    location_flexibility: formData.locationFlexibility || formData.location_flexibility,
+    max_commute_minutes: formData.maxCommute || formData.max_commute_minutes,
+    transportation_method: formData.transportation || formData.transportation_method,
     
-    // Budget
+    // ✅ UPDATED: Budget with correct field names
     budget_min: parseInt(formData.budget_min) || 0,
     budget_max: parseInt(formData.budget_max) || 1000,
     
     // Housing assistance
-    housing_assistance: formData.housingSubsidy || [],
-    has_section8: formData.hasSection8 || false,
+    housing_assistance: formData.housingSubsidy || formData.housing_assistance || [],
+    has_section8: formData.hasSection8 || formData.has_section8 || false,
     
-    // Recovery
-    recovery_stage: formData.recoveryStage,
-    time_in_recovery: formData.timeInRecovery,
-    sobriety_date: formData.sobrietyDate,
-    primary_substance: formData.primarySubstance,
-    recovery_methods: formData.recoveryMethods || [],
-    program_types: formData.programType || [],
-    treatment_history: formData.treatmentHistory,
-    support_meetings: formData.supportMeetings,
-    sponsor_mentor: formData.sponsorMentor,
-    primary_issues: formData.primaryIssues || [],
-    spiritual_affiliation: formData.spiritualAffiliation,
+    // Recovery (field names already correct)
+    recovery_stage: formData.recoveryStage || formData.recovery_stage,
+    time_in_recovery: formData.timeInRecovery || formData.time_in_recovery,
+    sobriety_date: formData.sobrietyDate || formData.sobriety_date,
+    primary_substance: formData.primarySubstance || formData.primary_substance,
+    recovery_methods: formData.recoveryMethods || formData.recovery_methods || [],
+    program_types: formData.programType || formData.program_types || [],
+    treatment_history: formData.treatmentHistory || formData.treatment_history,
+    support_meetings: formData.supportMeetings || formData.support_meetings,
+    sponsor_mentor: formData.sponsorMentor || formData.sponsor_mentor,
+    primary_issues: formData.primaryIssues || formData.primary_issues || [],
+    spiritual_affiliation: formData.spiritualAffiliation || formData.spiritual_affiliation,
     
     // Recovery environment
-    want_recovery_support: formData.wantRecoverySupport || false,
-    comfortable_discussing_recovery: formData.comfortableDiscussing || false,
-    attend_meetings_together: formData.attendMeetingsTogether || false,
-    substance_free_home_required: formData.substanceFreeHome !== false,
-    recovery_goal_timeframe: formData.recoveryGoalTimeframe,
-    recovery_context: formData.recoveryContext,
+    want_recovery_support: formData.wantRecoverySupport || formData.want_recovery_support || false,
+    comfortable_discussing_recovery: formData.comfortableDiscussing || formData.comfortable_discussing_recovery || false,
+    attend_meetings_together: formData.attendMeetingsTogether || formData.attend_meetings_together || false,
+    substance_free_home_required: formData.substanceFreeHome !== false && formData.substance_free_home_required !== false,
+    recovery_goal_timeframe: formData.recoveryGoalTimeframe || formData.recovery_goal_timeframe,
+    recovery_context: formData.recoveryContext || formData.recovery_context,
     
     // Lifestyle
-    social_level: parseInt(formData.socialLevel) || 3,
-    cleanliness_level: parseInt(formData.cleanlinessLevel) || 3,
-    noise_tolerance: parseInt(formData.noiseLevel) || 3,
+    social_level: parseInt(formData.socialLevel || formData.social_level) || 3,
+    cleanliness_level: parseInt(formData.cleanlinessLevel || formData.cleanliness_level) || 3,
+    noise_tolerance: parseInt(formData.noiseLevel || formData.noise_tolerance) || 3,
     
     // Schedule & work
-    work_schedule: formData.workSchedule,
-    work_from_home_frequency: formData.workFromHome,
-    bedtime_preference: formData.bedtimePreference,
-    early_riser: formData.earlyRiser || false,
-    night_owl: formData.nightOwl || false,
+    work_schedule: formData.workSchedule || formData.work_schedule,
+    work_from_home_frequency: formData.workFromHome || formData.work_from_home_frequency,
+    bedtime_preference: formData.bedtimePreference || formData.bedtime_preference,
+    early_riser: formData.earlyRiser || formData.early_riser || false,
+    night_owl: formData.nightOwl || formData.night_owl || false,
     
     // Social & guests
-    guests_policy: formData.guestsPolicy,
-    social_activities_at_home: formData.socialActivitiesAtHome,
-    overnight_guests_ok: formData.overnightGuestsOk || false,
+    guests_policy: formData.guestsPolicy || formData.guests_policy,
+    social_activities_at_home: formData.socialActivitiesAtHome || formData.social_activities_at_home,
+    overnight_guests_ok: formData.overnightGuestsOk || formData.overnight_guests_ok || false,
     
     // Daily living
-    cooking_enthusiast: formData.cookingEnthusiast || false,
-    cooking_frequency: formData.cookingFrequency,
-    exercise_at_home: formData.exerciseAtHome || false,
-    plays_instruments: formData.musicInstruments || false,
-    tv_streaming_regular: formData.tvStreaming || false,
+    cooking_enthusiast: formData.cookingEnthusiast || formData.cooking_enthusiast || false,
+    cooking_frequency: formData.cookingFrequency || formData.cooking_frequency,
+    exercise_at_home: formData.exerciseAtHome || formData.exercise_at_home || false,
+    plays_instruments: formData.musicInstruments || formData.plays_instruments || false,
+    tv_streaming_regular: formData.tvStreaming || formData.tv_streaming_regular || false,
     
     // Communication
-    communication_style: formData.communicationStyle,
-    conflict_resolution_style: formData.conflictResolutionStyle,
-    chore_sharing_style: formData.choreSharingStyle,
-    chore_sharing_preference: formData.choreSharingPreference,
-    shared_groceries: formData.sharedGroceries || false,
-    preferred_support_structure: formData.preferredSupportStructure,
+    communication_style: formData.communicationStyle || formData.communication_style,
+    conflict_resolution_style: formData.conflictResolutionStyle || formData.conflict_resolution_style,
+    chore_sharing_style: formData.choreSharingStyle || formData.chore_sharing_style,
+    chore_sharing_preference: formData.choreSharingPreference || formData.chore_sharing_preference,
+    shared_groceries: formData.sharedGroceries || formData.shared_groceries || false,
+    preferred_support_structure: formData.preferredSupportStructure || formData.preferred_support_structure,
     
     // Pets & smoking
-    pets_owned: formData.petsOwned || false,
-    pets_comfortable: formData.petsComfortable || false,
-    pet_preference: formData.petPreference,
-    smoking_status: formData.smokingStatus,
-    smoking_preference: formData.smokingPreference,
+    pets_owned: formData.petsOwned || formData.pets_owned || false,
+    pets_comfortable: formData.petsComfortable || formData.pets_comfortable || false,
+    pet_preference: formData.petPreference || formData.pet_preference,
+    smoking_status: formData.smokingStatus || formData.smoking_status,
+    smoking_preference: formData.smokingPreference || formData.smoking_preference,
     
     // Housing
-    housing_types_accepted: formData.housingType || [],
-    preferred_bedrooms: formData.preferredBedrooms,
-    furnished_preference: formData.furnishedPreference,
-    utilities_included_preference: formData.utilitiesIncluded,
-    accessibility_needed: formData.accessibilityNeeded || false,
-    parking_required: formData.parkingRequired || false,
-    public_transit_access: formData.publicTransitAccess || false,
+    housing_types_accepted: formData.housingType || formData.housing_types_accepted || [],
+    preferred_bedrooms: formData.preferredBedrooms || formData.preferred_bedrooms,
+    furnished_preference: formData.furnishedPreference || formData.furnished_preference,
+    utilities_included_preference: formData.utilitiesIncluded || formData.utilities_included_preference,
+    accessibility_needed: formData.accessibilityNeeded || formData.accessibility_needed || false,
+    parking_required: formData.parkingRequired || formData.parking_required || false,
+    public_transit_access: formData.publicTransitAccess || formData.public_transit_access || false,
     
     // Timing
-    move_in_date: formData.moveInDate,
-    move_in_flexibility: formData.moveInFlexibility,
-    lease_duration: formData.leaseDuration,
-    relocation_timeline: formData.relocationTimeline,
+    move_in_date: formData.moveInDate || formData.move_in_date,
+    move_in_flexibility: formData.moveInFlexibility || formData.move_in_flexibility,
+    lease_duration: formData.leaseDuration || formData.lease_duration,
+    relocation_timeline: formData.relocationTimeline || formData.relocation_timeline,
     
     // Goals & aspirations
-    short_term_goals: formData.shortTermGoals,
-    long_term_vision: formData.longTermVision,
+    short_term_goals: formData.shortTermGoals || formData.short_term_goals,
+    long_term_vision: formData.longTermVision || formData.long_term_vision,
     interests: formData.interests || [],
-    additional_interests: formData.additionalInterests,
-    shared_activities_interest: formData.sharedActivities || false,
-    important_qualities: formData.importantQualities || [],
-    deal_breakers: formData.dealBreakers || [],
+    additional_interests: formData.additionalInterests || formData.additional_interests,
+    shared_activities_interest: formData.sharedActivities || formData.shared_activities_interest || false,
+    important_qualities: formData.importantQualities || formData.important_qualities || [],
+    deal_breakers: formData.dealBreakers || formData.deal_breakers || [],
     
     // Profile content
-    about_me: formData.aboutMe,
-    looking_for: formData.lookingFor,
-    additional_info: formData.additionalInfo,
-    special_needs: formData.specialNeeds,
+    about_me: formData.aboutMe || formData.about_me,
+    looking_for: formData.lookingFor || formData.looking_for,
+    additional_info: formData.additionalInfo || formData.additional_info,
+    special_needs: formData.specialNeeds || formData.special_needs,
     
     // Profile status
     is_active: formData.isActive !== false,
     profile_completed: isCompleted,
-    profile_visibility: formData.profileVisibility || 'verified-members',
+    profile_visibility: formData.profileVisibility || formData.profile_visibility || 'verified-members',
     completion_percentage: completionPercentage,
     
     // Emergency contact
-    emergency_contact_name: formData.emergencyContactName,
-    emergency_contact_phone: formData.emergencyContactPhone,
-    emergency_contact_relationship: formData.emergencyContactRelationship,
+    emergency_contact_name: formData.emergencyContactName || formData.emergency_contact_name,
+    emergency_contact_phone: formData.emergencyContactPhone || formData.emergency_contact_phone,
+    emergency_contact_relationship: formData.emergencyContactRelationship || formData.emergency_contact_relationship,
     
     // Timestamps
     updated_at: new Date().toISOString()
@@ -750,7 +749,7 @@ export const transformFormDataToDatabase = (formData, userId) => {
     delete databaseRecord.primary_location;
   }
 
-  console.log('Database record created (primary_location excluded):', {
+  console.log('✅ Database record created (primary_location excluded):', {
     userId,
     fieldCount: Object.keys(databaseRecord).length,
     completionPercentage,

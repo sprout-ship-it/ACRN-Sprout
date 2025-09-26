@@ -1,4 +1,4 @@
-// src/utils/database/matchingProfilesService.js - FIXED: No Circular Import
+// src/utils/database/matchingProfilesService.js - UPDATED: Aligned with applicant_matching_profiles schema
 /**
  * Enhanced database service for applicant_matching_profiles table
  * Handles CRUD operations with the standardized database schema
@@ -6,7 +6,7 @@
 class MatchingProfilesService {
   constructor(supabaseClient) {
     this.supabase = supabaseClient;
-    this.tableName = 'applicant_matching_profiles';
+    this.tableName = 'applicant_matching_profiles'; // ✅ CORRECT: Using new table name
     this.cache = new Map();
     this.cacheTimeout = 5 * 60 * 1000; // 5 minutes
   }
@@ -22,7 +22,7 @@ class MatchingProfilesService {
     try {
       console.log('Creating new matching profile for user:', profileData.user_id);
       
-      // Ensure required fields are present
+      // ✅ UPDATED: Required fields aligned with new schema
       const requiredFields = ['user_id', 'primary_city', 'primary_state', 'budget_max', 'recovery_stage'];
       for (const field of requiredFields) {
         if (!profileData[field]) {
@@ -33,8 +33,6 @@ class MatchingProfilesService {
       // Set default values for computed fields
       const profileWithDefaults = {
         ...profileData,
-        primary_location: profileData.primary_location || 
-                         `${profileData.primary_city}, ${profileData.primary_state}`,
         completion_percentage: this.calculateCompletionPercentage(profileData),
         profile_quality_score: this.calculateQualityScore(profileData),
         profile_completed: this.isProfileCompleted(profileData),
@@ -42,6 +40,11 @@ class MatchingProfilesService {
         created_at: new Date().toISOString(),
         updated_at: new Date().toISOString()
       };
+
+      // ✅ CRITICAL: Remove primary_location if present (it's auto-generated)
+      if ('primary_location' in profileWithDefaults) {
+        delete profileWithDefaults.primary_location;
+      }
 
       const { data, error } = await this.supabase
         .from(this.tableName)
@@ -128,6 +131,11 @@ class MatchingProfilesService {
         updated_at: new Date().toISOString()
       };
 
+      // ✅ CRITICAL: Remove primary_location if present (it's auto-generated)
+      if ('primary_location' in updatedData) {
+        delete updatedData.primary_location;
+      }
+
       // Recalculate computed fields if relevant data changed
       const fieldsAffectingCompletion = [
         'primary_city', 'primary_state', 'budget_min', 'budget_max',
@@ -147,16 +155,6 @@ class MatchingProfilesService {
           updatedData.completion_percentage = this.calculateCompletionPercentage(mergedData);
           updatedData.profile_quality_score = this.calculateQualityScore(mergedData);
           updatedData.profile_completed = this.isProfileCompleted(mergedData);
-        }
-      }
-
-      // Update primary_location if city or state changed
-      if (updates.primary_city || updates.primary_state) {
-        const currentResult = await this.getByUserId(userId, false);
-        if (currentResult.success) {
-          const city = updates.primary_city || currentResult.data.primary_city;
-          const state = updates.primary_state || currentResult.data.primary_state;
-          updatedData.primary_location = `${city}, ${state}`;
         }
       }
 
@@ -266,7 +264,7 @@ class MatchingProfilesService {
         query = query.neq('user_id', excludeUserId);
       }
 
-      // Apply filters
+      // Apply filters using correct field names
       if (filters.recovery_stage) {
         query = query.eq('recovery_stage', filters.recovery_stage);
       }
@@ -412,7 +410,7 @@ class MatchingProfilesService {
   // ===== HELPER METHODS =====
 
   /**
-   * Calculate completion percentage
+   * ✅ UPDATED: Calculate completion percentage using correct field names
    * @param {Object} profileData - Profile data
    * @returns {number} Completion percentage
    */
@@ -435,7 +433,7 @@ class MatchingProfilesService {
   }
 
   /**
-   * Calculate profile quality score
+   * ✅ UPDATED: Calculate profile quality score with bonus points
    * @param {Object} profileData - Profile data
    * @returns {number} Quality score
    */
