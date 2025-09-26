@@ -1,4 +1,4 @@
-// src/components/auth/RegisterForm.js - FIXED VERSION
+// src/components/auth/RegisterForm.js - FIXED userData structure
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
@@ -105,12 +105,12 @@ const RegisterForm = ({ onBackToLanding, preSelectedRole }) => {
       return;
     }
 
-    // ✅ FIXED: Structure userData to match AuthContext expectations
+    // ✅ FIXED: Structure userData to match trigger expectations (snake_case)
     const userData = {
-      firstName,
-      lastName,
-      role: selectedRoles[0], // Pass first role to trigger (single string)
-      allRoles: selectedRoles // Include all roles for potential future use
+      first_name: firstName,    // ✅ FIXED: snake_case to match trigger
+      last_name: lastName,      // ✅ FIXED: snake_case to match trigger
+      role: selectedRoles[0],   // Pass first role to trigger (single string)
+      all_roles: selectedRoles  // Include all roles for potential future use
     };
 
     console.log('🔄 RegisterForm submitting:', { email, userData });
