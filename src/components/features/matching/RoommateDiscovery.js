@@ -1,7 +1,7 @@
 // src/components/features/matching/RoommateDiscovery.js - SCHEMA ALIGNED
 import React, { useState, useEffect, useCallback } from 'react';
 import { useAuth } from '../../../context/AuthContext';
-import { enhancedMatchingService as matchingService } from '../../../utils/matching/matchingService';
+import matchingService from '../../../utils/matching/matchingService';
 import { DEFAULT_FILTERS } from '../../../utils/matching/config';
 
 // Import new components
