@@ -1,4 +1,4 @@
-// src/pages/MainApp.js - SCHEMA COMPLIANT VERSION
+// src/pages/MainApp.js - SCHEMA COMPLIANT VERSION (FIXED ROLES)
 import React, { useEffect, useState } from 'react'
 import { Routes, Route, Navigate, useNavigate, useLocation } from 'react-router-dom'
 import { useAuth } from '../hooks/useAuth';
@@ -114,7 +114,8 @@ const MainApp = () => {
           }
         }
         
-        else if (hasRole('peer')) {
+        // ✅ FIXED: Only check for 'peer-support' role (schema compliant)
+        else if (hasRole('peer-support')) {
           console.log('Checking peer support comprehensive profile...')
           
           // ✅ SCHEMA COMPLIANT: Use profile.id instead of user.id
@@ -267,8 +268,8 @@ const MainApp = () => {
       )
     }
     
-    // For PEER SPECIALISTS - show comprehensive peer support form
-    else if (hasRole('peer')) {
+    // ✅ FIXED: For PEER SPECIALISTS - show comprehensive peer support form (schema compliant)
+    else if (hasRole('peer-support')) {
       console.log('Redirecting peer specialist to comprehensive peer support form')
       return (
         <div className="app-background" style={{ minHeight: '100vh', padding: '20px 0' }}>
@@ -360,8 +361,8 @@ const MainApp = () => {
               </>
             )}
 
-            {/* Peer Support Routes */}
-            {hasRole('peer') && (
+            {/* ✅ FIXED: Peer Support Routes - Only check for 'peer-support' role */}
+            {hasRole('peer-support') && (
               <>
                 <Route path="/profile/peer-support" element={
                   <div style={{ maxWidth: '900px', margin: '0 auto' }}>
@@ -442,7 +443,7 @@ const MainApp = () => {
                       value={profile?.roles?.map(role => {
                         switch(role) {
                           case 'applicant': return 'Housing Seeker'
-                          case 'peer-support': return 'Peer Specialist'
+                          case 'peer-support': return 'Peer Specialist'  // ✅ FIXED: Only use 'peer-support'
                           case 'landlord': return 'Property Owner'
                           case 'employer': return 'Recovery-Friendly Employer'
                           default: return role.charAt(0).toUpperCase() + role.slice(1)

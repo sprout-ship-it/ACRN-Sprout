@@ -1,4 +1,4 @@
-// src/pages/Dashboard.js - SCHEMA COMPLIANT VERSION
+// src/pages/Dashboard.js - SCHEMA COMPLIANT VERSION (FIXED ROLES)
 import React, { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../hooks/useAuth'
@@ -101,7 +101,8 @@ const Dashboard = () => {
           }
         }
         
-        else if (hasRole('peer-support') || hasRole('peer')) {
+        // ✅ FIXED: Only check for 'peer-support' role (schema compliant)
+        else if (hasRole('peer-support')) {
           try {
             // ✅ SCHEMA COMPLIANT: Use profile.id and correct service
             const result = await getPeerSupportProfileByUserId(profile.id)
@@ -236,8 +237,8 @@ const Dashboard = () => {
       )
     }
     
-    // ✅ UPDATED: Check both 'peer' and 'peer-support' role names (schema uses 'peer-support')
-    if (hasRole('peer-support') || hasRole('peer')) {
+    // ✅ FIXED: Only check for 'peer-support' role (schema compliant)
+    if (hasRole('peer-support')) {
       cards.push(
         { 
           id: 'peer-dashboard', 
@@ -357,8 +358,7 @@ const Dashboard = () => {
     const roleLabels = profile?.roles?.map(role => {
       switch(role) {
         case 'applicant': return 'Housing Seeker'
-        case 'peer-support': return 'Peer Specialist'
-        case 'peer': return 'Peer Specialist' // Legacy compatibility
+        case 'peer-support': return 'Peer Specialist'  // ✅ FIXED: Only use 'peer-support'
         case 'landlord': return 'Property Owner'
         case 'employer': return 'Recovery-Friendly Employer'
         default: return role.charAt(0).toUpperCase() + role.slice(1)
@@ -440,14 +440,14 @@ const Dashboard = () => {
               <div key={role} className={styles.roleAccessCard}>
                 <div className={styles.roleAccessTitle}>
                   {role === 'applicant' && 'Housing Seeker'}
-                  {(role === 'peer-support' || role === 'peer') && 'Peer Specialist'}
+                  {role === 'peer-support' && 'Peer Specialist'}  {/* ✅ FIXED: Only use 'peer-support' */}
                   {role === 'landlord' && 'Property Owner'}
                   {role === 'employer' && 'Employer'}
                   {' Access:'}
                 </div>
                 <div className={styles.roleAccessDescription}>
                   {role === 'applicant' && 'Find roommates, browse properties, connect with peer support, find employment'}
-                  {(role === 'peer-support' || role === 'peer') && 'Offer peer support, manage clients, provide services'}
+                  {role === 'peer-support' && 'Offer peer support, manage clients, provide services'}  {/* ✅ FIXED */}
                   {role === 'landlord' && 'List properties, review applications, manage rentals'}
                   {role === 'employer' && 'Post jobs, review applications, manage company profiles'}
                 </div>

@@ -1,7 +1,7 @@
 // src/components/auth/RegisterForm.js - FIXED VERSION
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { useAuth } from '../../context/AuthContext'; // ✅ FIXED: Correct import
+import { useAuth } from '../../context/AuthContext';
 import LoadingSpinner from '../ui/LoadingSpinner';
 import '../../styles/global.css';
 
@@ -17,10 +17,10 @@ const RegisterForm = ({ onBackToLanding, preSelectedRole }) => {
   const [localError, setLocalError] = useState('');
   const [success, setSuccess] = useState(false);
 
-  const { signUp, loading, error, clearError } = useAuth(); // ✅ FIXED: Now uses correct context
+  const { signUp, loading, error, clearError } = useAuth();
   const navigate = useNavigate();
 
-  // ✅ UPDATED: Added employer role option with role IDs matching landing page
+  // ✅ FIXED: Corrected role IDs to match schema constraints
   const roles = [
     { 
       id: 'applicant', 
@@ -29,7 +29,7 @@ const RegisterForm = ({ onBackToLanding, preSelectedRole }) => {
       className: 'role-card-housing-seeker'
     },
     { 
-      id: 'peer', 
+      id: 'peer-support',  // ✅ FIXED: Changed from 'peer' to 'peer-support'
       label: 'Peer Support Specialists', 
       description: 'Providing peer support services',
       className: 'role-card-peer-support'
@@ -48,7 +48,7 @@ const RegisterForm = ({ onBackToLanding, preSelectedRole }) => {
     }
   ];
 
-  // ✅ NEW: Handle pre-selected role from landing page
+  // Handle pre-selected role from landing page
   useEffect(() => {
     if (preSelectedRole && !selectedRoles.includes(preSelectedRole)) {
       setSelectedRoles([preSelectedRole]);
@@ -105,15 +105,16 @@ const RegisterForm = ({ onBackToLanding, preSelectedRole }) => {
       return;
     }
 
+    // ✅ FIXED: Structure userData to match AuthContext expectations
     const userData = {
       firstName,
       lastName,
-      roles: selectedRoles
+      role: selectedRoles[0], // Pass first role to trigger (single string)
+      allRoles: selectedRoles // Include all roles for potential future use
     };
 
     console.log('🔄 RegisterForm submitting:', { email, userData });
 
-    // ✅ FIXED: Handle the correct return format from AuthContext
     const result = await signUp(email, password, userData);
     
     if (result && result.data && !result.error) {
@@ -128,17 +129,17 @@ const RegisterForm = ({ onBackToLanding, preSelectedRole }) => {
       setConfirmPassword('');
       setSelectedRoles([]);
       
-      // ✅ FIXED: Navigate to /app which will trigger the simplified onboarding flow in MainApp
+      // Navigate to /app which will trigger the simplified onboarding flow in MainApp
       setTimeout(() => {
         navigate('/app');
       }, 2000);
     } else {
-      console.error('❌ Registration failed:', result.error);
+      console.error('❌ Registration failed:', result?.error);
       // Error will be set in the AuthContext, so it will be displayed via the error state
     }
   };
 
-  const currentError = localError || error;
+  const currentError = localError || error?.message;
 
   if (success) {
     return (
@@ -146,7 +147,7 @@ const RegisterForm = ({ onBackToLanding, preSelectedRole }) => {
         <div style={{ maxWidth: '500px', margin: '0 auto' }}>
           <div className="card">
             <div className="alert alert-success">
-              <h3 style={{ margin: '0 0 10px 0', color: 'var(--success-text)' }}>Welcome to Recovery Housing Connect! 🎉</h3>
+              <h3 style={{ margin: '0 0 10px 0', color: 'var(--success-text)' }}>Welcome to Recovery Housing Connect!</h3>
               <p style={{ margin: '0' }}>
                 Account created successfully! Please check your email to verify your account if prompted.
               </p>
@@ -339,7 +340,6 @@ const RegisterForm = ({ onBackToLanding, preSelectedRole }) => {
               </div>
             </div>
             
-            {/* ✅ CRITICAL: Side-by-side button layout using button-grid */}
             <div className="button-grid">
               {onBackToLanding && (
                 <button 
