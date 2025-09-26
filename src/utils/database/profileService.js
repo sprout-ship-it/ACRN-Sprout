@@ -520,4 +520,62 @@ const createProfilesService = (supabaseClient) => {
   return service;
 };
 
+export const getRegistrantProfile = async (authUserId) => {
+  try {
+    console.log('👤 Fetching registrant profile for auth user ID:', authUserId);
+    
+    const { createClient } = await import('@supabase/supabase-js');
+    const supabaseUrl = process.env.REACT_APP_SUPABASE_URL;
+    const supabaseKey = process.env.REACT_APP_SUPABASE_ANON_KEY;
+    const supabase = createClient(supabaseUrl, supabaseKey);
+
+    const { data, error } = await supabase
+      .from('registrant_profiles')
+      .select('*')
+      .eq('user_id', authUserId)
+      .single();
+
+    if (error) {
+      if (error.code === 'PGRST116') {
+        return { success: false, error: 'Profile not found', code: 'NOT_FOUND' };
+      }
+      return { success: false, error: error.message };
+    }
+
+    return { success: true, data };
+  } catch (err) {
+    console.error('💥 Error in getRegistrantProfile:', err);
+    return { success: false, error: err.message };
+  }
+};
+
+export const getRegistrantProfileById = async (registrantProfileId) => {
+  try {
+    console.log('👤 Fetching registrant profile by ID:', registrantProfileId);
+    
+    const { createClient } = await import('@supabase/supabase-js');
+    const supabaseUrl = process.env.REACT_APP_SUPABASE_URL;
+    const supabaseKey = process.env.REACT_APP_SUPABASE_ANON_KEY;
+    const supabase = createClient(supabaseUrl, supabaseKey);
+
+    const { data, error } = await supabase
+      .from('registrant_profiles')
+      .select('*')
+      .eq('id', registrantProfileId)
+      .single();
+
+    if (error) {
+      if (error.code === 'PGRST116') {
+        return { success: false, error: 'Profile not found', code: 'NOT_FOUND' };
+      }
+      return { success: false, error: error.message };
+    }
+
+    return { success: true, data };
+  } catch (err) {
+    console.error('💥 Error in getRegistrantProfileById:', err);
+    return { success: false, error: err.message };
+  }
+};
+
 export default createProfilesService;

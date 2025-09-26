@@ -733,4 +733,123 @@ const createPropertiesService = (supabaseClient) => {
   return service;
 };
 
+export const getPropertyById = async (propertyId) => {
+  try {
+    console.log('🏠 Fetching property by ID:', propertyId);
+    
+    const { createClient } = await import('@supabase/supabase-js');
+    const supabaseUrl = process.env.REACT_APP_SUPABASE_URL;
+    const supabaseKey = process.env.REACT_APP_SUPABASE_ANON_KEY;
+    const supabase = createClient(supabaseUrl, supabaseKey);
+
+    const { data, error } = await supabase
+      .from('properties')
+      .select(`
+        *,
+        landlord_profile:landlord_profiles!inner(
+          id,
+          primary_phone,
+          contact_email,
+          registrant:registrant_profiles!inner(
+            first_name,
+            last_name
+          )
+        )
+      `)
+      .eq('id', propertyId)
+      .single();
+
+    if (error) {
+      if (error.code === 'PGRST116') {
+        return { success: false, error: 'Property not found', code: 'NOT_FOUND' };
+      }
+      return { success: false, error: error.message };
+    }
+
+    return { success: true, data };
+  } catch (err) {
+    console.error('💥 Error in getPropertyById:', err);
+    return { success: false, error: err.message };
+  }
+};
+
+export const getPropertiesByLandlordId = async (landlordId) => {
+  try {
+    console.log('🏠 Fetching properties for landlord ID:', landlordId);
+    
+    const { createClient } = await import('@supabase/supabase-js');
+    const supabaseUrl = process.env.REACT_APP_SUPABASE_URL;
+    const supabaseKey = process.env.REACT_APP_SUPABASE_ANON_KEY;
+    const supabase = createClient(supabaseUrl, supabaseKey);
+
+    const { data, error } = await supabase
+      .from('properties')
+      .select('*')
+      .eq('landlord_id', landlordId)
+      .order('created_at', { ascending: false });
+
+    if (error) {
+      console.error('❌ Error fetching properties:', error);
+      return { success: false, data: [], error };
+    }
+
+    return { success: true, data: data || [] };
+  } catch (err) {
+    console.error('💥 Error in getPropertiesByLandlordId:', err);
+    return { success: false, error: err.message, data: [] };
+  }
+};
+
+export const getAvailableProperties = async (filters = {}) => {
+  try {
+    console.log('🏠 Fetching available properties with filters:', filters);
+    
+    const { createClient } = await import('@supabase/supabase-js');
+    const supabaseUrl = process.env.REACT_APP_SUPABASE_URL;
+    const supabaseKey = process.env.REACT_APP_SUPABASE_ANON_KEY;
+    const supabase = createClient(supabaseUrl, supabaseKey);
+
+    let query = supabase
+      .from('properties')
+      .select(`
+        *,
+        landlord_profile:landlord_profiles!inner(
+          id,
+          primary_phone,
+          registrant:registrant_profiles!inner(
+            first_name,
+            last_name
+          )
+        )
+      `)
+      .eq('status', 'available')
+      .eq('accepting_applications', true);
+
+    // Apply basic filters
+    if (filters.city) {
+      query = query.ilike('city', `%${filters.city}%`);
+    }
+    if (filters.state) {
+      query = query.eq('state', filters.state);
+    }
+    if (filters.maxPrice) {
+      query = query.lte('monthly_rent', filters.maxPrice);
+    }
+
+    const { data, error } = await query
+      .order('updated_at', { ascending: false })
+      .limit(filters.limit || 50);
+
+    if (error) {
+      console.error('❌ Error fetching available properties:', error);
+      return { success: false, data: [], error };
+    }
+
+    return { success: true, data: data || [] };
+  } catch (err) {
+    console.error('💥 Error in getAvailableProperties:', err);
+    return { success: false, error: err.message, data: [] };
+  }
+};
+
 export default createPropertiesService;

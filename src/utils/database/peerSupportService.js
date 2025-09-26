@@ -511,6 +511,33 @@ getStatistics: async () => {
   };
 
   return service;
+};export const getPeerSupportProfileByUserId = async (registrantProfileId) => {
+  try {
+    console.log('🤝 Fetching peer support profile for registrant profile ID:', registrantProfileId);
+    
+    const { createClient } = require('@supabase/supabase-js');
+    const supabaseUrl = process.env.REACT_APP_SUPABASE_URL;
+    const supabaseKey = process.env.REACT_APP_SUPABASE_ANON_KEY;
+    const supabase = createClient(supabaseUrl, supabaseKey);
+
+    const { data, error } = await supabase
+      .from('peer_support_profiles')
+      .select('*')
+      .eq('user_id', registrantProfileId)
+      .single();
+
+    if (error) {
+      if (error.code === 'PGRST116') {
+        return { success: false, error: 'No peer support profile found', code: 'NOT_FOUND' };
+      }
+      throw new Error(`Database error: ${error.message}`);
+    }
+
+    return { success: true, data };
+  } catch (err) {
+    console.error('💥 Error in getPeerSupportProfileByUserId:', err);
+    return { success: false, error: err.message };
+  }
 };
 
 export default createPeerSupportService;

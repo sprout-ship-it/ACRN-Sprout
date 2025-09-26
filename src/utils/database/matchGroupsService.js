@@ -570,4 +570,255 @@ getGroupComposition: (matchGroup) => {
   return service;
 };
 
+export const getMatchGroupsByUserId = async (userType, userId) => {
+  try {
+    console.log('🏠 Fetching match groups for user:', userType, userId);
+    
+    const { createClient } = await import('@supabase/supabase-js');
+    const supabaseUrl = process.env.REACT_APP_SUPABASE_URL;
+    const supabaseKey = process.env.REACT_APP_SUPABASE_ANON_KEY;
+    const supabase = createClient(supabaseUrl, supabaseKey);
+
+    let orClause;
+    switch (userType) {
+      case 'applicant':
+        orClause = `applicant_1_id.eq.${userId},applicant_2_id.eq.${userId}`;
+        break;
+      case 'landlord':
+        // Need to join through properties table
+        const { data: properties, error: propsError } = await supabase
+          .from('properties')
+          .select('id')
+          .eq('landlord_id', userId);
+        
+        if (propsError) {
+          return { success: false, data: [], error: propsError };
+        }
+        
+        if (!properties || properties.length === 0) {
+          return { success: true, data: [], error: null };
+        }
+        
+        const propertyIds = properties.map(p => p.id);
+        orClause = propertyIds.map(id => `property_id.eq.${id}`).join(',');
+        break;
+      case 'peer-support':
+        orClause = `peer_support_id.eq.${userId}`;
+        break;
+      default:
+        return { success: false, error: `Invalid user type: ${userType}` };
+    }
+
+    const { data, error } = await supabase
+      .from('match_groups')
+      .select(`
+        *,
+        applicant_1:applicant_matching_profiles!applicant_1_id(
+          id, 
+          primary_phone,
+          about_me,
+          primary_city,
+          primary_state
+        ),
+        applicant_2:applicant_matching_profiles!applicant_2_id(
+          id, 
+          primary_phone,
+          about_me,
+          primary_city,
+          primary_state
+        ),
+        property:properties!property_id(
+          id,
+          title,
+          address,
+          city,
+          state,
+          monthly_rent,
+          property_type
+        ),
+        peer_support:peer_support_profiles!peer_support_id(
+          id, 
+          primary_phone,
+          bio,
+          service_city,
+          service_state
+        )
+      `)
+      .or(orClause)
+      .order('created_at', { ascending: false });
+
+    if (error) {
+      console.error('❌ Error fetching match groups:', error);
+      return { success: false, data: [], error };
+    }
+
+    return { success: true, data: data || [] };
+  } catch (err) {
+    console.error('💥 Error in getMatchGroupsByUserId:', err);
+    return { success: false, error: err.message, data: [] };
+  }
+};
+
+export const createMatchGroup = async (groupData) => {
+  try {
+    console.log('🏠 Creating match group:', groupData);
+    
+    const { createClient } = await import('@supabase/supabase-js');
+    const supabaseUrl = process.env.REACT_APP_SUPABASE_URL;
+    const supabaseKey = process.env.REACT_APP_SUPABASE_ANON_KEY;
+    const supabase = createClient(supabaseUrl, supabaseKey);
+
+    // Validate required fields
+    if (!groupData.applicant_1_id) {
+      return { success: false, error: 'applicant_1_id is required' };
+    }
+
+    if (!groupData.property_id) {
+      return { success: false, error: 'property_id is required' };
+    }
+
+    // Ensure different applicants if both provided
+    if (groupData.applicant_2_id && groupData.applicant_1_id === groupData.applicant_2_id) {
+      return { success: false, error: 'applicant_1_id and applicant_2_id must be different' };
+    }
+
+    const { data, error } = await supabase
+      .from('match_groups')
+      .insert({
+        applicant_1_id: groupData.applicant_1_id,
+        applicant_2_id: groupData.applicant_2_id || null,
+        property_id: groupData.property_id,
+        peer_support_id: groupData.peer_support_id || null,
+        group_name: groupData.group_name || null,
+        move_in_date: groupData.move_in_date || null,
+        status: groupData.status || 'forming',
+        group_chat_active: groupData.group_chat_active || false,
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString()
+      })
+      .select()
+      .single();
+
+    if (error) {
+      console.error('❌ Error creating match group:', error);
+      return { success: false, data: null, error };
+    }
+
+    return { success: true, data };
+  } catch (err) {
+    console.error('💥 Error in createMatchGroup:', err);
+    return { success: false, error: err.message };
+  }
+};
+
+export const updateMatchGroupStatus = async (groupId, status) => {
+  try {
+    console.log('🏠 Updating match group status:', groupId, status);
+    
+    const { createClient } = await import('@supabase/supabase-js');
+    const supabaseUrl = process.env.REACT_APP_SUPABASE_URL;
+    const supabaseKey = process.env.REACT_APP_SUPABASE_ANON_KEY;
+    const supabase = createClient(supabaseUrl, supabaseKey);
+
+    const validStatuses = ['forming', 'confirmed', 'active', 'completed', 'disbanded'];
+    if (!validStatuses.includes(status)) {
+      return { success: false, error: `Invalid status: ${status}` };
+    }
+
+    const updateData = {
+      status,
+      updated_at: new Date().toISOString(),
+      last_activity: new Date().toISOString()
+    };
+
+    const { data, error } = await supabase
+      .from('match_groups')
+      .update(updateData)
+      .eq('id', groupId)
+      .select()
+      .single();
+
+    if (error) {
+      console.error('❌ Error updating match group status:', error);
+      return { success: false, data: null, error };
+    }
+
+    return { success: true, data };
+  } catch (err) {
+    console.error('💥 Error in updateMatchGroupStatus:', err);
+    return { success: false, error: err.message };
+  }
+};
+
+export const getMatchGroupById = async (groupId) => {
+  try {
+    console.log('🏠 Fetching match group by ID:', groupId);
+    
+    const { createClient } = await import('@supabase/supabase-js');
+    const supabaseUrl = process.env.REACT_APP_SUPABASE_URL;
+    const supabaseKey = process.env.REACT_APP_SUPABASE_ANON_KEY;
+    const supabase = createClient(supabaseUrl, supabaseKey);
+
+    const { data, error } = await supabase
+      .from('match_groups')
+      .select(`
+        *,
+        applicant_1:applicant_matching_profiles!applicant_1_id(
+          id, 
+          primary_phone,
+          about_me,
+          primary_city,
+          primary_state,
+          recovery_stage,
+          move_in_date
+        ),
+        applicant_2:applicant_matching_profiles!applicant_2_id(
+          id, 
+          primary_phone,
+          about_me,
+          primary_city,
+          primary_state,
+          recovery_stage,
+          move_in_date
+        ),
+        property:properties!property_id(
+          id,
+          title,
+          address,
+          city,
+          state,
+          monthly_rent,
+          property_type,
+          bedrooms,
+          bathrooms
+        ),
+        peer_support:peer_support_profiles!peer_support_id(
+          id, 
+          primary_phone,
+          contact_email,
+          bio,
+          professional_title,
+          service_city,
+          service_state,
+          specialties
+        )
+      `)
+      .eq('id', groupId)
+      .single();
+
+    if (error) {
+      if (error.code === 'PGRST116') {
+        return { success: false, data: null, error: { code: 'NOT_FOUND', message: 'Match group not found' } };
+      }
+      console.error('❌ Error fetching match group:', error);
+      return { success: false, data: null, error };
+    }
+
+    return { success: true, data };
+  } catch (err) {
+    console.error('💥 Error in getMatchGroupById:', err);
+    return { success: false, error: err.message };
+  }
+};
+
 export default createMatchGroupsService;

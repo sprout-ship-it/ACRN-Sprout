@@ -552,4 +552,124 @@ const createMatchRequestsService = (supabaseClient) => {
   return service;
 };
 
+export const getMatchRequestsByUserId = async (userType, userId) => {
+  try {
+    console.log('🤝 Fetching match requests for user:', userType, userId);
+    
+    const { createClient } = await import('@supabase/supabase-js');
+    const supabaseUrl = process.env.REACT_APP_SUPABASE_URL;
+    const supabaseKey = process.env.REACT_APP_SUPABASE_ANON_KEY;
+    const supabase = createClient(supabaseUrl, supabaseKey);
+
+    const validUserTypes = ['applicant', 'landlord', 'employer', 'peer-support'];
+    if (!validUserTypes.includes(userType)) {
+      return { success: false, error: `Invalid user type: ${userType}` };
+    }
+
+    const { data, error } = await supabase
+      .from('match_requests')
+      .select('*')
+      .or(`and(requester_type.eq.${userType},requester_id.eq.${userId}),and(recipient_type.eq.${userType},recipient_id.eq.${userId})`)
+      .order('created_at', { ascending: false });
+
+    if (error) {
+      console.error('❌ Error fetching match requests:', error);
+      return { success: false, data: [], error };
+    }
+
+    return { success: true, data: data || [] };
+  } catch (err) {
+    console.error('💥 Error in getMatchRequestsByUserId:', err);
+    return { success: false, error: err.message, data: [] };
+  }
+};
+
+export const createMatchRequest = async (requestData) => {
+  try {
+    console.log('🤝 Creating match request:', requestData);
+    
+    const { createClient } = await import('@supabase/supabase-js');
+    const supabaseUrl = process.env.REACT_APP_SUPABASE_URL;
+    const supabaseKey = process.env.REACT_APP_SUPABASE_ANON_KEY;
+    const supabase = createClient(supabaseUrl, supabaseKey);
+
+    // Validate required fields
+    const requiredFields = ['requester_type', 'requester_id', 'recipient_type', 'recipient_id', 'request_type'];
+    for (const field of requiredFields) {
+      if (!requestData[field]) {
+        return { success: false, error: `Missing required field: ${field}` };
+      }
+    }
+
+    const { data, error } = await supabase
+      .from('match_requests')
+      .insert({
+        requester_type: requestData.requester_type,
+        requester_id: requestData.requester_id,
+        recipient_type: requestData.recipient_type,
+        recipient_id: requestData.recipient_id,
+        request_type: requestData.request_type,
+        property_id: requestData.property_id || null,
+        message: requestData.message || null,
+        status: requestData.status || 'pending',
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString()
+      })
+      .select()
+      .single();
+
+    if (error) {
+      console.error('❌ Error creating match request:', error);
+      return { success: false, data: null, error };
+    }
+
+    return { success: true, data };
+  } catch (err) {
+    console.error('💥 Error in createMatchRequest:', err);
+    return { success: false, error: err.message };
+  }
+};
+
+export const updateMatchRequestStatus = async (requestId, status) => {
+  try {
+    console.log('🤝 Updating match request status:', requestId, status);
+    
+    const { createClient } = await import('@supabase/supabase-js');
+    const supabaseUrl = process.env.REACT_APP_SUPABASE_URL;
+    const supabaseKey = process.env.REACT_APP_SUPABASE_ANON_KEY;
+    const supabase = createClient(supabaseUrl, supabaseKey);
+
+    const validStatuses = ['pending', 'accepted', 'rejected', 'withdrawn'];
+    if (!validStatuses.includes(status)) {
+      return { success: false, error: `Invalid status. Must be one of: ${validStatuses.join(', ')}` };
+    }
+
+    const updateData = {
+      status,
+      updated_at: new Date().toISOString()
+    };
+
+    if (status !== 'pending') {
+      updateData.responded_at = new Date().toISOString();
+    }
+
+    const { data, error } = await supabase
+      .from('match_requests')
+      .update(updateData)
+      .eq('id', requestId)
+      .select()
+      .single();
+
+    if (error) {
+      console.error('❌ Error updating match request status:', error);
+      return { success: false, data: null, error };
+    }
+
+    return { success: true, data };
+  } catch (err) {
+    console.error('💥 Error in updateMatchRequestStatus:', err);
+    return { success: false, error: err.message };
+  }
+};
+
 export default createMatchRequestsService;

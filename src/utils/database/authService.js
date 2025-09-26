@@ -554,4 +554,32 @@ const createAuthService = (supabaseClient) => {
   return service;
 };
 
+export const signUpUser = async (email, password, userData = {}) => {
+  try {
+    const { createClient } = await import('@supabase/supabase-js');
+    const supabaseUrl = process.env.REACT_APP_SUPABASE_URL;
+    const supabaseKey = process.env.REACT_APP_SUPABASE_ANON_KEY;
+    const supabase = createClient(supabaseUrl, supabaseKey);
+    
+    const authService = createAuthService(supabase);
+    return await authService.signUp(email, password, userData);
+  } catch (err) {
+    return { success: false, error: err.message };
+  }
+};
+
+export const signInUser = async (email, password) => {
+  try {
+    const { createClient } = await import('@supabase/supabase-js');
+    const supabaseUrl = process.env.REACT_APP_SUPABASE_URL;
+    const supabaseKey = process.env.REACT_APP_SUPABASE_ANON_KEY;
+    const supabase = createClient(supabaseUrl, supabaseKey);
+    
+    const authService = createAuthService(supabase);
+    return await authService.signIn(email, password);
+  } catch (err) {
+    return { success: false, error: err.message };
+  }
+};
+
 export default createAuthService;

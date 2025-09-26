@@ -379,4 +379,167 @@ const createCommunicationService = (supabaseClient) => {
   return service;
 };
 
+export const sendMatchRequestWithMessage = async (requestData) => {
+  try {
+    console.log('💬 Sending match request with message:', requestData);
+    
+    const { createClient } = await import('@supabase/supabase-js');
+    const supabaseUrl = process.env.REACT_APP_SUPABASE_URL;
+    const supabaseKey = process.env.REACT_APP_SUPABASE_ANON_KEY;
+    const supabase = createClient(supabaseUrl, supabaseKey);
+
+    const { data, error } = await supabase
+      .from('match_requests')
+      .insert({
+        requester_type: requestData.requester_type,
+        requester_id: requestData.requester_id,
+        recipient_type: requestData.recipient_type,
+        recipient_id: requestData.recipient_id,
+        property_id: requestData.property_id || null,
+        request_type: requestData.request_type,
+        message: requestData.message,
+        status: 'pending',
+        created_at: new Date().toISOString()
+      })
+      .select()
+      .single();
+
+    if (error) {
+      console.error('❌ Error sending match request with message:', error);
+      return { success: false, data: null, error };
+    }
+
+    return { success: true, data };
+  } catch (err) {
+    console.error('💥 Error in sendMatchRequestWithMessage:', err);
+    return { success: false, error: err.message };
+  }
+};
+
+export const getUserConversations = async (userId, limit = 50) => {
+  try {
+    console.log('💬 Fetching conversations for user:', userId);
+    
+    const { createClient } = await import('@supabase/supabase-js');
+    const supabaseUrl = process.env.REACT_APP_SUPABASE_URL;
+    const supabaseKey = process.env.REACT_APP_SUPABASE_ANON_KEY;
+    const supabase = createClient(supabaseUrl, supabaseKey);
+
+    const { data, error } = await supabase
+      .from('match_requests')
+      .select(`
+        *,
+        requester_profile:registrant_profiles!requester_id(id, first_name, last_name, email),
+        recipient_profile:registrant_profiles!recipient_id(id, first_name, last_name, email)
+      `)
+      .or(`requester_id.eq.${userId},recipient_id.eq.${userId}`)
+      .not('message', 'is', null)
+      .order('created_at', { ascending: false })
+      .limit(limit);
+
+    if (error) {
+      console.error('❌ Error fetching user conversations:', error);
+      return { success: false, data: [], error };
+    }
+
+    return { success: true, data: data || [] };
+  } catch (err) {
+    console.error('💥 Error in getUserConversations:', err);
+    return { success: false, error: err.message, data: [] };
+  }
+};
+
+export const getConversationBetweenUsers = async (userId1, userId2) => {
+  try {
+    console.log('💬 Fetching conversation between users:', userId1, userId2);
+    
+    const { createClient } = await import('@supabase/supabase-js');
+    const supabaseUrl = process.env.REACT_APP_SUPABASE_URL;
+    const supabaseKey = process.env.REACT_APP_SUPABASE_ANON_KEY;
+    const supabase = createClient(supabaseUrl, supabaseKey);
+
+    const { data, error } = await supabase
+      .from('match_requests')
+      .select(`
+        *,
+        requester_profile:registrant_profiles!requester_id(id, first_name, last_name),
+        recipient_profile:registrant_profiles!recipient_id(id, first_name, last_name)
+      `)
+      .or(`and(requester_id.eq.${userId1},recipient_id.eq.${userId2}),and(requester_id.eq.${userId2},recipient_id.eq.${userId1})`)
+      .not('message', 'is', null)
+      .order('created_at', { ascending: true });
+
+    if (error) {
+      console.error('❌ Error fetching conversation:', error);
+      return { success: false, data: [], error };
+    }
+
+    return { success: true, data: data || [] };
+  } catch (err) {
+    console.error('💥 Error in getConversationBetweenUsers:', err);
+    return { success: false, error: err.message, data: [] };
+  }
+};
+
+export const updateMatchMessage = async (matchType, matchId, messageType, message) => {
+  try {
+    console.log('💬 Updating match message:', matchType, matchId, messageType);
+    
+    const { createClient } = await import('@supabase/supabase-js');
+    const supabaseUrl = process.env.REACT_APP_SUPABASE_URL;
+    const supabaseKey = process.env.REACT_APP_SUPABASE_ANON_KEY;
+    const supabase = createClient(supabaseUrl, supabaseKey);
+
+    const tableMap = {
+      'housing': 'housing_matches',
+      'employment': 'employment_matches',
+      'peer-support': 'peer_support_matches'
+    };
+
+    const messageFieldMap = {
+      'housing': {
+        'applicant': 'applicant_message',
+        'landlord': 'landlord_message'
+      },
+      'employment': {
+        'applicant': 'applicant_message', 
+        'employer': 'employer_message'
+      },
+      'peer-support': {
+        'applicant': 'applicant_message',
+        'peer': 'peer_message'
+      }
+    };
+
+    const tableName = tableMap[matchType];
+    const messageField = messageFieldMap[matchType]?.[messageType];
+
+    if (!tableName || !messageField) {
+      return { success: false, error: `Invalid match type (${matchType}) or message type (${messageType})` };
+    }
+
+    const updateData = {
+      [messageField]: message,
+      updated_at: new Date().toISOString()
+    };
+
+    const { data, error } = await supabase
+      .from(tableName)
+      .update(updateData)
+      .eq('id', matchId)
+      .select()
+      .single();
+
+    if (error) {
+      console.error('❌ Error updating match message:', error);
+      return { success: false, data: null, error };
+    }
+
+    return { success: true, data };
+  } catch (err) {
+    console.error('💥 Error in updateMatchMessage:', err);
+    return { success: false, error: err.message };
+  }
+};
+
 export default createCommunicationService;

@@ -540,4 +540,32 @@ getStatistics: async (userId = null) => {
   };
 };
 
+export const getEmployerProfilesByUserId = async (registrantProfileId) => {
+  try {
+    console.log('💼 Fetching employer profiles for registrant profile ID:', registrantProfileId);
+    
+    // Use ES6 import instead of require
+    const { createClient } = await import('@supabase/supabase-js');
+    const supabaseUrl = process.env.REACT_APP_SUPABASE_URL;
+    const supabaseKey = process.env.REACT_APP_SUPABASE_ANON_KEY;
+    const supabase = createClient(supabaseUrl, supabaseKey);
+
+    const { data, error } = await supabase
+      .from('employer_profiles')
+      .select('*')
+      .eq('user_id', registrantProfileId)
+      .order('created_at', { ascending: false });
+
+    if (error) {
+      console.error('❌ Error fetching employer profiles:', error);
+      return { success: false, data: [], error };
+    }
+
+    return { success: true, data: data || [] };
+  } catch (err) {
+    console.error('💥 Error in getEmployerProfilesByUserId:', err);
+    return { success: false, error: err.message, data: [] };
+  }
+};
+
 export default createEmployerService;
