@@ -51,67 +51,83 @@ const usePropertySearch = (user) => {
   const searchTimeoutRef = useRef(null);
 
   // ✅ CORRECTED: Load user preferences from applicant_matching_profiles (EXACT SCHEMA ALIGNMENT)
-  const loadUserPreferences = useCallback(async () => {
-    if (!user?.id) return;
+const loadUserPreferences = useCallback(async () => {
+  if (!user?.id) {
+    console.log('⚠️ usePropertySearch: No user ID provided');
+    return;
+  }
 
-    try {
-      console.log('👤 Loading user housing preferences from applicant_matching_profiles...');
-      
-      // ✅ Get registrant_profiles.id first since applicant_matching_profiles.user_id references that
-      const { data: registrantData, error: registrantError } = await supabase
-        .from('registrant_profiles')
-        .select('id')
-        .eq('user_id', user.id)
-        .single();
+  try {
+    console.log('👤 usePropertySearch: Loading user preferences for auth user:', user.id);
+    
+    // ✅ Get registrant_profiles.id first since applicant_matching_profiles.user_id references that
+    const { data: registrantData, error: registrantError } = await supabase
+      .from('registrant_profiles')
+      .select('id')
+      .eq('user_id', user.id)
+      .single();
 
-      if (registrantError || !registrantData) {
-        console.log('ℹ️ No registrant profile found for user');
-        return;
-      }
+    console.log('📋 usePropertySearch: Registrant query result:', {
+      registrantData,
+      registrantError,
+      authUserId: user.id
+    });
 
-      // ✅ UPDATED: Query with exact schema field names
-      const { data, error } = await supabase
-        .from('applicant_matching_profiles')
-        .select(`
-          user_id,
-          primary_city,
-          primary_state,
-          budget_min,
-          budget_max,
-          housing_types_accepted,
-          preferred_bedrooms,
-          furnished_preference,
-          pets_owned,
-          pets_comfortable,
-          recovery_stage,
-          substance_free_home_required,
-          move_in_date,
-          accessibility_needed,
-          parking_required,
-          public_transit_access,
-          utilities_included_preference
-        `)
-        .eq('user_id', registrantData.id)
-        .single();
-
-      if (error) {
-        if (error.code !== 'PGRST116') { // Not "no rows returned"
-          console.error('Error loading user preferences:', error);
-        } else {
-          console.log('ℹ️ No applicant matching profile found for user');
-        }
-        return;
-      }
-
-      if (data) {
-        setUserPreferences(data);
-        console.log('✅ User preferences loaded from applicant_matching_profiles');
-      }
-    } catch (err) {
-      console.error('Error loading user preferences:', err);
+    if (registrantError || !registrantData) {
+      console.log('ℹ️ usePropertySearch: No registrant profile found for user - this is likely the problem!');
+      return;
     }
-  }, [user?.id]);
 
+    console.log('🔍 usePropertySearch: About to query applicant_matching_profiles with registrant_id:', registrantData.id);
+
+    // ✅ UPDATED: Query with exact schema field names
+    const { data, error } = await supabase
+      .from('applicant_matching_profiles')
+      .select(`
+        user_id,
+        primary_city,
+        primary_state,
+        budget_min,
+        budget_max,
+        housing_types_accepted,
+        preferred_bedrooms,
+        furnished_preference,
+        pets_owned,
+        pets_comfortable,
+        recovery_stage,
+        substance_free_home_required,
+        move_in_date,
+        accessibility_needed,
+        parking_required,
+        public_transit_access,
+        utilities_included_preference
+      `)
+      .eq('user_id', registrantData.id)
+      .single();
+
+    console.log('📊 usePropertySearch: Applicant profile query result:', {
+      data,
+      error,
+      queryUserId: registrantData.id
+    });
+
+    if (error) {
+      if (error.code !== 'PGRST116') { // Not "no rows returned"
+        console.error('❌ usePropertySearch: Error loading user preferences:', error);
+      } else {
+        console.log('ℹ️ usePropertySearch: No applicant matching profile found for user');
+      }
+      return;
+    }
+
+    if (data) {
+      setUserPreferences(data);
+      console.log('✅ usePropertySearch: User preferences loaded from applicant_matching_profiles');
+    }
+  } catch (err) {
+    console.error('💥 usePropertySearch: Exception loading user preferences:', err);
+  }
+}, [user?.id]);
   // ✅ Load saved properties from favorites table (SCHEMA ALIGNED)
   const loadSavedProperties = useCallback(async () => {
     if (!user?.id) return;
