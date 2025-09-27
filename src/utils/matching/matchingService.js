@@ -432,7 +432,7 @@ class SchemaCompliantMatchingService {
   async loadActiveProfiles(excludeUserId = null) {
     try {
       console.log('Loading active profiles with registrant data...');
-      
+      console.log('🔍 loadActiveProfiles called with excludeUserId:', excludeUserId);
       let query = supabase
         .from(this.matchingTableName)
         .select(`
@@ -449,10 +449,23 @@ class SchemaCompliantMatchingService {
       
       if (excludeUserId) {
         query = query.neq('user_id', excludeUserId);
+        if (excludeUserId) {
+  console.log('🔍 Adding exclude filter for user_id:', excludeUserId);
+  query = query.neq('user_id', excludeUserId);
+}
       }
       
       const { data, error } = await query;
-      
+      console.log('🔍 Raw database results:', {
+  error: error?.message,
+  dataLength: data?.length || 0,
+  data: data?.map(d => ({
+    user_id: d.user_id,
+    first_name: d.registrant_profiles?.first_name,
+    primary_city: d.primary_city,
+    recovery_stage: d.recovery_stage
+  }))
+});
       if (error) {
         console.error('Database error loading profiles:', error);
         throw new Error(`Database error: ${error.message}`);
@@ -460,8 +473,13 @@ class SchemaCompliantMatchingService {
       
       const transformedProfiles = data.map(profile => this.transformSchemaCompliantProfile(profile));
       
-      console.log(`Loaded ${transformedProfiles.length} active profiles`);
-      return transformedProfiles;
+console.log(`✅ Transformed ${transformedProfiles.length} profiles:`, 
+  transformedProfiles.map(p => ({ 
+    user_id: p.user_id, 
+    first_name: p.first_name,
+    primary_city: p.primary_city 
+  }))
+);
       
     } catch (err) {
       console.error('Error loading active profiles:', err);
