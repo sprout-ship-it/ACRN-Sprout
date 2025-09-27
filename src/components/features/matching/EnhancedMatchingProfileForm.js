@@ -681,9 +681,15 @@ const showNavigationFeedback = useCallback((message, type = 'warning') => {
 
        {/* ✅ FIXED: Simplified Section Navigation - No Duplicates */}
 
-{/* ✅ FIXED: Section Navigation - Using App's CSS System */}
-<div className="section-navigation">
-  <div className="nav-steps-container">
+
+{/* ✅ DASHBOARD-STYLE: Section Navigation */}
+<div className="form-section-navigation">
+  <div className="section-nav-header">
+    <h3>Complete Your Profile</h3>
+    <p>Step {currentSectionIndex + 1} of {FORM_SECTIONS.length}: {currentSection.title}</p>
+  </div>
+  
+  <nav className="section-nav-grid">
     {FORM_SECTIONS.map((section, index) => {
       const isActive = index === currentSectionIndex;
       const isCompleted = index < currentSectionIndex;
@@ -693,28 +699,31 @@ const showNavigationFeedback = useCallback((message, type = 'warning') => {
         <button
           key={`nav-${section.id}-${index}`}
           type="button"
-          className={`nav-step ${isActive ? 'active' : ''} ${isCompleted ? 'completed' : ''} ${!isAccessible ? 'disabled' : ''}`}
+          className={`section-nav-item ${isActive ? 'active' : ''} ${isCompleted ? 'completed' : ''} ${!isAccessible ? 'disabled' : ''}`}
           onClick={(e) => handleSectionClick(index, e)}
           disabled={!isAccessible || loading || isSubmitting}
           title={section.description}
         >
-          <div className="step-icon">{section.icon}</div>
-          <div className="step-info">
-            <span className="step-title">{section.title}</span>
-            <span className="step-number">{index + 1} of {FORM_SECTIONS.length}</span>
-          </div>
-          {isCompleted && <div className="completion-check">✓</div>}
+          <span className="section-nav-icon">
+            {isCompleted ? '✓' : section.icon}
+          </span>
+          <span className="section-nav-label">{section.title}</span>
+          {isActive && <span className="section-nav-current">Current</span>}
         </button>
       );
     })}
-  </div>
+  </nav>
   
-  {/* Current section indicator */}
-  <div className="current-section-info">
-    <p className="section-progress">
-      Step {currentSectionIndex + 1} of {FORM_SECTIONS.length}: {currentSection.title}
-    </p>
-    <p className="section-desc">{currentSection.description}</p>
+  <div className="section-nav-progress">
+    <div className="progress-bar">
+      <div 
+        className="progress-fill" 
+        style={{ width: `${((currentSectionIndex + 1) / FORM_SECTIONS.length) * 100}%` }}
+      />
+    </div>
+    <span className="progress-text">
+      {Math.round(((currentSectionIndex + 1) / FORM_SECTIONS.length) * 100)}% Complete
+    </span>
   </div>
 </div>
         {/* Success and Error Messages */}
