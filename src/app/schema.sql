@@ -1163,6 +1163,19 @@ CREATE POLICY "Users can view properties they own" ON properties
       WHERE rp.user_id = auth.uid()
     )
   );
+  
+-- Allow applicants to view other profiles for matching
+CREATE POLICY "Applicants can view other profiles for matching" ON applicant_matching_profiles
+  FOR SELECT USING (
+    is_active = true 
+    AND profile_completed = true 
+    AND profile_visibility = 'verified-members'
+    AND EXISTS (
+      SELECT 1 FROM applicant_matching_profiles amp2
+      JOIN registrant_profiles rp ON amp2.user_id = rp.id
+      WHERE rp.user_id = auth.uid() AND amp2.is_active = true
+    )
+  );
 
 CREATE POLICY "Users can update properties they own" ON properties
   FOR UPDATE USING (
