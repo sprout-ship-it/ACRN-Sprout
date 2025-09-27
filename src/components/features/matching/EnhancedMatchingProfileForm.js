@@ -305,33 +305,105 @@ const EnhancedMatchingProfileForm = ({ editMode = false, onComplete, onCancel })
     }
   }, [currentSectionIndex, scrollToFirstFormField]);
 
-  const handleSectionClick = useCallback((index, e) => {
-    if (e) {
-      e.preventDefault();
-      e.stopPropagation();
-    }
-    
-    // Allow free navigation in edit mode or if going backwards
-    if (editMode || index < currentSectionIndex) {
-      setCurrentSectionIndex(index);
-      scrollToFirstFormField();
-      setValidationMessage('');
-      return;
-    }
-    
-    // For forward navigation, validate current section first
-    if (index > currentSectionIndex) {
-      const validation = validateCurrentSection();
-      if (!validation.isValid) {
-        setValidationMessage(validation.message);
-        return;
-      }
-    }
-    
+const handleSectionClick = useCallback((index, e) => {
+  console.log('🖱️ Navigation clicked:', { 
+    targetIndex: index, 
+    currentIndex: currentSectionIndex, 
+    editMode, 
+    loading, 
+    isSubmitting 
+  });
+  
+  if (e) {
+    e.preventDefault();
+    e.stopPropagation();
+  }
+  
+  // Prevent navigation if form is processing
+  if (loading || isSubmitting) {
+    console.log('🚫 Navigation blocked: Form is processing');
+    return;
+  }
+  
+  // Prevent navigation to same section
+  if (index === currentSectionIndex) {
+    console.log('🚫 Navigation blocked: Already on this section');
+    return;
+  }
+  
+  // Allow free navigation in edit mode or if going backwards
+  if (editMode || index < currentSectionIndex) {
+    console.log('✅ Navigation allowed: Edit mode or backward navigation');
     setCurrentSectionIndex(index);
     scrollToFirstFormField();
     setValidationMessage('');
-  }, [editMode, currentSectionIndex, validateCurrentSection, scrollToFirstFormField]);
+    return;
+  }
+  
+  // For forward navigation, validate current section first
+  if (index > currentSectionIndex) {
+    console.log('🔍 Validating current section before forward navigation...');
+    const validation = validateCurrentSection();
+    
+    if (!validation.isValid) {
+      console.log('❌ Navigation blocked: Validation failed:', validation.message);
+      setValidationMessage(validation.message);
+      
+      // Scroll to first error after a brief delay
+      setTimeout(() => {
+        const errorElement = document.querySelector('.border-red-500, .text-red-500, .alert-error');
+        if (errorElement) {
+          errorElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }
+      }, 100);
+      return;
+    }
+    
+    console.log('✅ Validation passed, proceeding with navigation');
+  }
+  
+  // Execute navigation
+  console.log(`📍 Navigating from section ${currentSectionIndex} to section ${index}`);
+  setCurrentSectionIndex(index);
+  scrollToFirstFormField();
+  setValidationMessage('');
+  
+  // Add visual feedback for successful navigation
+  const targetSection = FORM_SECTIONS[index];
+  console.log(`🎯 Successfully navigated to: ${targetSection.title}`);
+  
+}, [currentSectionIndex, editMode, loading, isSubmitting, validateCurrentSection, scrollToFirstFormField, setValidationMessage]);
+const showNavigationFeedback = useCallback((message, type = 'warning') => {
+  // Create a temporary feedback element
+  const feedback = document.createElement('div');
+  feedback.className = `alert alert-${type}`;
+  feedback.style.cssText = `
+    position: fixed;
+    top: 20px;
+    right: 20px;
+    z-index: 1000;
+    max-width: 300px;
+    animation: slideIn 0.3s ease;
+  `;
+  feedback.innerHTML = `
+    <span class="alert-icon">${type === 'warning' ? '⚠️' : 'ℹ️'}</span>
+    ${message}
+  `;
+  
+  document.body.appendChild(feedback);
+  
+  // Remove after 3 seconds
+  setTimeout(() => {
+    if (feedback.parentNode) {
+      feedback.style.animation = 'slideOut 0.3s ease';
+      setTimeout(() => {
+        if (feedback.parentNode) {
+          feedback.parentNode.removeChild(feedback);
+        }
+      }, 300);
+    }
+  }, 3000);
+}, []);
 
   // ✅ ENHANCED: Save progress with schema field validation
   const handleSave = useCallback(async (e) => {
@@ -608,8 +680,10 @@ const EnhancedMatchingProfileForm = ({ editMode = false, onComplete, onCancel })
         />
 
        {/* ✅ FIXED: Simplified Section Navigation - No Duplicates */}
-<div className="section-navigation mb-6">
-  <div className="flex flex-wrap gap-2 justify-center">
+
+{/* ✅ FIXED: Section Navigation - Using App's CSS System */}
+<div className="section-navigation">
+  <div className="nav-steps-container">
     {FORM_SECTIONS.map((section, index) => {
       const isActive = index === currentSectionIndex;
       const isCompleted = index < currentSectionIndex;
@@ -617,36 +691,30 @@ const EnhancedMatchingProfileForm = ({ editMode = false, onComplete, onCancel })
       
       return (
         <button
-          key={`nav-${section.id}-${index}`} // Unique key to prevent duplicates
+          key={`nav-${section.id}-${index}`}
           type="button"
-          className={`
-            px-4 py-2 text-sm font-medium rounded-lg border transition-all duration-200
-            ${isActive 
-              ? 'bg-blue-600 text-white border-blue-600' 
-              : isCompleted 
-                ? 'bg-green-100 text-green-800 border-green-300 hover:bg-green-200' 
-                : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50'
-            }
-            ${!isAccessible ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}
-          `}
+          className={`nav-step ${isActive ? 'active' : ''} ${isCompleted ? 'completed' : ''} ${!isAccessible ? 'disabled' : ''}`}
           onClick={(e) => handleSectionClick(index, e)}
           disabled={!isAccessible || loading || isSubmitting}
           title={section.description}
         >
-          <span className="mr-2">{section.icon}</span>
-          <span className="hidden sm:inline">{section.title}</span>
-          <span className="sm:hidden">{index + 1}</span>
-          {isCompleted && <span className="ml-2">✓</span>}
+          <div className="step-icon">{section.icon}</div>
+          <div className="step-info">
+            <span className="step-title">{section.title}</span>
+            <span className="step-number">{index + 1} of {FORM_SECTIONS.length}</span>
+          </div>
+          {isCompleted && <div className="completion-check">✓</div>}
         </button>
       );
     })}
   </div>
   
-  {/* Current section info */}
-  <div className="text-center mt-3">
-    <p className="text-sm text-gray-600">
+  {/* Current section indicator */}
+  <div className="current-section-info">
+    <p className="section-progress">
       Step {currentSectionIndex + 1} of {FORM_SECTIONS.length}: {currentSection.title}
     </p>
+    <p className="section-desc">{currentSection.description}</p>
   </div>
 </div>
         {/* Success and Error Messages */}
