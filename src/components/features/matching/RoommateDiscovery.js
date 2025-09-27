@@ -234,19 +234,25 @@ const RoommateDiscovery = ({ onRequestMatch, onBack }) => {
           </select>
         </div>
         
-        <div className="form-group">
-          <label className="label">Age Range</label>
-          <select
-            className="input"
-            value={filters.age_range} // ✅ FIXED: Use database field name
-            onChange={(e) => handleFilterChange({ age_range: e.target.value })}
-          >
-            <option value="">Any age</option>
-            {DEFAULT_FILTERS.AGE_RANGES.map(range => (
-              <option key={range} value={range}>{range}</option>
-            ))}
-          </select>
-        </div>
+
+      <div className="form-group">
+        <label className="label">Age Range</label>
+        <select
+          className="input"
+          value={filters.age_range}
+          onChange={(e) => handleFilterChange({ age_range: e.target.value })}
+        >
+          <option value="">Any age</option>
+          {DEFAULT_FILTERS.AGE_RANGES.map(range => (
+            <option 
+              key={range.label} 
+              value={`${range.min}-${range.max}`}
+            >
+              {range.label}
+            </option>
+          ))}
+        </select>
+      </div>
 
         <div className="form-group">
           <label className="label">Location</label>
