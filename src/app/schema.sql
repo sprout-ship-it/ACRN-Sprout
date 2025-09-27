@@ -1176,7 +1176,94 @@ CREATE POLICY "Applicants can view other profiles for matching" ON applicant_mat
       WHERE rp.user_id = auth.uid() AND amp2.is_active = true
     )
   );
+  
+-- Allow users to create match requests as requester (using role-specific IDs)
+CREATE POLICY "Users can create match requests as requester" ON match_requests
+  FOR INSERT WITH CHECK (
+    (requester_type = 'applicant' AND 
+     requester_id IN (
+       SELECT amp.id FROM applicant_matching_profiles amp
+       JOIN registrant_profiles rp ON amp.user_id = rp.id
+       WHERE rp.user_id = auth.uid()
+     ))
+    OR
+    (requester_type = 'landlord' AND 
+     requester_id IN (
+       SELECT lp.id FROM landlord_profiles lp
+       JOIN registrant_profiles rp ON lp.user_id = rp.id
+       WHERE rp.user_id = auth.uid()
+     ))
+    OR
+    (requester_type = 'employer' AND 
+     requester_id IN (
+       SELECT ep.id FROM employer_profiles ep
+       JOIN registrant_profiles rp ON ep.user_id = rp.id
+       WHERE rp.user_id = auth.uid()
+     ))
+    OR
+    (requester_type = 'peer-support' AND 
+     requester_id IN (
+       SELECT psp.id FROM peer_support_profiles psp
+       JOIN registrant_profiles rp ON psp.user_id = rp.id
+       WHERE rp.user_id = auth.uid()
+     ))
+  );
 
+-- Allow users to view match requests they're involved in (using role-specific IDs)
+CREATE POLICY "Users can view their match requests" ON match_requests
+  FOR SELECT USING (
+    -- Can see requests where they are the requester
+    (requester_type = 'applicant' AND 
+     requester_id IN (
+       SELECT amp.id FROM applicant_matching_profiles amp
+       JOIN registrant_profiles rp ON amp.user_id = rp.id
+       WHERE rp.user_id = auth.uid()
+     ))
+    OR
+    (requester_type = 'landlord' AND 
+     requester_id IN (
+       SELECT lp.id FROM landlord_profiles lp
+       JOIN registrant_profiles rp ON lp.user_id = rp.id
+       WHERE rp.user_id = auth.uid()
+     ))
+    OR
+    -- Can see requests where they are the recipient
+    (recipient_type = 'applicant' AND 
+     recipient_id IN (
+       SELECT amp.id FROM applicant_matching_profiles amp
+       JOIN registrant_profiles rp ON amp.user_id = rp.id
+       WHERE rp.user_id = auth.uid()
+     ))
+    OR
+    (recipient_type = 'landlord' AND 
+     recipient_id IN (
+       SELECT lp.id FROM landlord_profiles lp
+       JOIN registrant_profiles rp ON lp.user_id = rp.id
+       WHERE rp.user_id = auth.uid()
+     ))
+  );
+
+-- Allow users to update match requests they're involved in
+CREATE POLICY "Users can update match requests they're involved in" ON match_requests
+  FOR UPDATE USING (
+    -- Same logic as SELECT policy
+    (requester_type = 'applicant' AND 
+     requester_id IN (
+       SELECT amp.id FROM applicant_matching_profiles amp
+       JOIN registrant_profiles rp ON amp.user_id = rp.id
+       WHERE rp.user_id = auth.uid()
+     ))
+    OR
+    (recipient_type = 'applicant' AND 
+     recipient_id IN (
+       SELECT amp.id FROM applicant_matching_profiles amp
+       JOIN registrant_profiles rp ON amp.user_id = rp.id
+       WHERE rp.user_id = auth.uid()
+     ))
+  );
+
+-- Grant necessary permissions (no sequence needed for UUID)
+GRANT SELECT, INSERT, UPDATE ON match_requests TO authenticated;
 CREATE POLICY "Users can update properties they own" ON properties
   FOR UPDATE USING (
     landlord_id IN (

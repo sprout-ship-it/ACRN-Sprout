@@ -430,6 +430,7 @@ transformSchemaCompliantProfile(dbProfile) {
    * SCHEMA COMPLIANT: Load all active profiles with registrant data JOIN
    */
 
+// FIXED: loadActiveProfiles method with correct JOIN syntax
 async loadActiveProfiles(excludeUserId = null) {
   try {
     console.log('Loading active profiles with registrant data...');
@@ -439,7 +440,7 @@ async loadActiveProfiles(excludeUserId = null) {
       .from(this.matchingTableName)
       .select(`
         *,
-        registrant_profiles!user_id (
+        registrant_profiles (
           first_name,
           last_name,
           email
@@ -449,7 +450,6 @@ async loadActiveProfiles(excludeUserId = null) {
       .eq('profile_completed', true)
       .order('updated_at', { ascending: false });
     
-    // FIXED: Remove duplicate filter application
     if (excludeUserId) {
       console.log('🔍 Adding exclude filter for user_id:', excludeUserId);
       query = query.neq('user_id', excludeUserId);
@@ -460,12 +460,11 @@ async loadActiveProfiles(excludeUserId = null) {
     console.log('🔍 Raw database results:', {
       error: error?.message,
       dataLength: data?.length || 0,
-      data: data?.slice(0, 3).map(d => ({ // Only show first 3 for brevity
-        user_id: d.user_id,
-        first_name: d.registrant_profiles?.first_name,
-        primary_city: d.primary_city,
-        recovery_stage: d.recovery_stage
-      }))
+      firstProfile: data?.[0] ? {
+        user_id: data[0].user_id,
+        registrant_data: data[0].registrant_profiles,
+        first_name_from_join: data[0].registrant_profiles?.first_name
+      } : null
     });
     
     if (error) {
@@ -475,20 +474,20 @@ async loadActiveProfiles(excludeUserId = null) {
     
     if (!data || data.length === 0) {
       console.log('No active profiles found');
-      return []; // Return empty array instead of undefined
+      return [];
     }
     
     const transformedProfiles = data.map(profile => this.transformSchemaCompliantProfile(profile));
     
     console.log(`✅ Transformed ${transformedProfiles.length} profiles:`, 
-      transformedProfiles.slice(0, 3).map(p => ({ // Only show first 3 for brevity
+      transformedProfiles.slice(0, 3).map(p => ({ 
         user_id: p.user_id, 
         first_name: p.first_name,
-        primary_city: p.primary_city 
+        primary_city: p.primary_city,
+        registrant_data_check: !!p.first_name && p.first_name !== 'Unknown'
       }))
     );
     
-    // CRITICAL FIX: Return the transformed profiles!
     return transformedProfiles;
     
   } catch (err) {
@@ -497,82 +496,173 @@ async loadActiveProfiles(excludeUserId = null) {
   }
 }
 
+// FIXED: loadUserProfile method with correct JOIN syntax  
+async loadUserProfile(userId) {
+  try {
+    console.log('Loading user matching profile with registrant data...');
+    
+    const { data, error } = await supabase
+      .from(this.matchingTableName)
+      .select(`
+        *,
+        registrant_profiles (
+          first_name,
+          last_name,
+          email
+        )
+      `)
+      .eq('user_id', userId)
+      .eq('is_active', true)
+      .single();
+    
+    if (error) {
+      console.error('Database error loading profile:', error);
+      throw new Error(`Database error: ${error.message}`);
+    }
+    
+    if (!data) {
+      throw new Error('No matching profile found. Please complete your profile first.');
+    }
+    
+    console.log('🔍 User profile raw data:', {
+      user_id: data.user_id,
+      registrant_data: data.registrant_profiles,
+      first_name_from_join: data.registrant_profiles?.first_name
+    });
+    
+    const transformedProfile = this.transformSchemaCompliantProfile(data);
+    
+    console.log('User profile loaded and transformed:', {
+      user_id: transformedProfile.user_id,
+      first_name: transformedProfile.first_name,
+      completion: transformedProfile.completion_percentage,
+      location: transformedProfile.primary_location,
+      recovery_stage: transformedProfile.recovery_stage
+    });
+    
+    return transformedProfile;
+    
+  } catch (err) {
+    console.error('Error loading user profile:', err);
+    throw err;
+  }
+}
+
   /**
    * SCHEMA COMPLIANT: Load excluded users using exact table names
    */
-  async loadExcludedUsers(userId) {
-    try {
-      console.log('Loading excluded users...');
-      
-      const [requestsResult, groupsResult] = await Promise.all([
-        this.loadMatchRequests(userId),
-        this.loadMatchGroups(userId)
-      ]);
-
-      const excludedUserIds = new Set();
-
-      // Exclude from match requests
-      if (requestsResult && requestsResult.length > 0) {
-        requestsResult.forEach(request => {
-          if (request.request_type === 'roommate' || request.request_type === 'housing') {
-            // SCHEMA COMPLIANT: Use correct field names from match_requests table
-            const otherUserId = request.requester_type === 'applicant' && request.requester_id === userId ? 
-                              request.recipient_id : request.requester_id;
-            
-            if (['accepted', 'matched'].includes(request.status)) {
-              excludedUserIds.add(otherUserId);
-              console.log(`Excluding user ${otherUserId} - active connection (${request.status})`);
-            }
-          }
-        });
-      }
-
-      // Exclude from active match groups
-      if (groupsResult && groupsResult.length > 0) {
-        groupsResult.forEach(group => {
-          if (['active', 'forming', 'confirmed'].includes(group.status)) {
-            // SCHEMA COMPLIANT: Use correct field names from match_groups table
-            [group.applicant_1_id, group.applicant_2_id, group.peer_support_id]
-              .filter(id => id && id !== userId)
-              .forEach(id => {
-                excludedUserIds.add(id);
-                console.log(`Excluding user ${id} - active match group member`);
-              });
-          }
-        });
-      }
-
-      console.log(`Total excluded users: ${excludedUserIds.size}`);
-      return excludedUserIds;
-
-    } catch (err) {
-      console.error('Error loading excluded users:', err);
+async loadExcludedUsers(userId) {
+  try {
+    console.log('Loading excluded users...');
+    
+    // Get the user's applicant profile ID since that's what's stored in match_requests
+    const { data: userApplicant } = await supabase
+      .from('applicant_matching_profiles')
+      .select('id, user_id')
+      .eq('user_id', userId) // userId should be registrant_profiles.id
+      .single();
+    
+    if (!userApplicant) {
+      console.warn('No applicant profile found for user:', userId);
       return new Set();
     }
+    
+    const userApplicantId = userApplicant.id;
+    console.log('User applicant profile ID:', userApplicantId);
+    
+    const [requestsResult, groupsResult] = await Promise.all([
+      this.loadMatchRequestsForApplicant(userApplicantId),
+      this.loadMatchGroups(userId) // Groups still use registrant profile IDs
+    ]);
+
+    const excludedUserIds = new Set(); // Will contain registrant_profiles.id values for consistency
+
+    // Exclude from match requests (convert back to registrant profile IDs)
+    if (requestsResult && requestsResult.length > 0) {
+      for (const request of requestsResult) {
+        if (request.request_type === 'roommate' || request.request_type === 'housing') {
+          // Get the other applicant's ID
+          const otherApplicantId = request.requester_type === 'applicant' && request.requester_id === userApplicantId ? 
+                                 request.recipient_id : request.requester_id;
+          
+          if (['accepted', 'matched'].includes(request.status)) {
+            // Convert applicant profile ID back to registrant profile ID
+            try {
+              const { data: otherApplicant } = await supabase
+                .from('applicant_matching_profiles')
+                .select('user_id')
+                .eq('id', otherApplicantId)
+                .single();
+              
+              if (otherApplicant) {
+                excludedUserIds.add(otherApplicant.user_id); // registrant_profiles.id
+                console.log(`Excluding user ${otherApplicant.user_id} - active connection (${request.status})`);
+              }
+            } catch (err) {
+              console.warn('Could not find applicant profile for ID:', otherApplicantId);
+            }
+          }
+        }
+      }
+    }
+
+    // Exclude from active match groups (these still use registrant profile IDs)
+    if (groupsResult && groupsResult.length > 0) {
+      groupsResult.forEach(group => {
+        if (['active', 'forming', 'confirmed'].includes(group.status)) {
+          [group.applicant_1_id, group.applicant_2_id, group.peer_support_id]
+            .filter(id => id && id !== userId)
+            .forEach(id => {
+              excludedUserIds.add(id);
+              console.log(`Excluding user ${id} - active match group member`);
+            });
+        }
+      });
+    }
+
+    console.log(`Total excluded users: ${excludedUserIds.size}`);
+    return excludedUserIds;
+
+  } catch (err) {
+    console.error('Error loading excluded users:', err);
+    return new Set();
   }
+}
+
 
   /**
    * SCHEMA COMPLIANT: Load match requests using exact table and field names
    */
-  async loadMatchRequests(userId) {
-    try {
-      // SCHEMA COMPLIANT: Query match_requests table with correct field names
-      const { data, error } = await supabase
-        .from(this.requestsTableName)
-        .select('*')
-        .or(`and(requester_type.eq.applicant,requester_id.eq.${userId}),and(recipient_type.eq.applicant,recipient_id.eq.${userId})`);
-      
-      if (error) {
-        console.warn('Error loading match requests:', error);
-        return [];
-      }
-      
-      return data || [];
-    } catch (err) {
-      console.warn('Error loading match requests:', err);
+/**
+ * REPLACE: Your existing loadMatchRequests method with this corrected version
+ */
+async loadMatchRequests(userId) {
+  try {
+    console.log('Loading match requests for user:', userId);
+    
+    // Get the user's applicant profile ID since that's what's stored in match_requests
+    const { data: userApplicant } = await supabase
+      .from('applicant_matching_profiles')
+      .select('id, user_id')
+      .eq('user_id', userId) // userId should be registrant_profiles.id
+      .single();
+    
+    if (!userApplicant) {
+      console.warn('No applicant profile found for user:', userId);
       return [];
     }
+    
+    const userApplicantId = userApplicant.id;
+    console.log('User applicant profile ID:', userApplicantId);
+    
+    // Use the helper method
+    return await this.loadMatchRequestsForApplicant(userApplicantId);
+    
+  } catch (err) {
+    console.warn('Error loading match requests:', err);
+    return [];
   }
+}
 
   /**
    * SCHEMA COMPLIANT: Load match groups using exact table and field names
@@ -600,29 +690,74 @@ async loadActiveProfiles(excludeUserId = null) {
   /**
    * SCHEMA COMPLIANT: Load sent requests for UI feedback
    */
-  async loadSentRequests(userId) {
-    try {
-      const requests = await this.loadMatchRequests(userId);
-      
-      const sentRequestIds = new Set(
-        requests
-          .filter(req => 
-            req.requester_type === 'applicant' &&
-            req.requester_id === userId && 
-            (req.request_type === 'housing' || req.request_type === 'roommate') &&
-            req.status === 'pending'
-          )
-          .map(req => req.recipient_id)
-      );
-      
-      console.log(`Found ${sentRequestIds.size} pending requests sent`);
-      return sentRequestIds;
-      
-    } catch (err) {
-      console.error('Error loading sent requests:', err);
+async loadSentRequests(userId) {
+  try {
+    // Get the user's applicant profile ID
+    const { data: userApplicant } = await supabase
+      .from('applicant_matching_profiles')
+      .select('id, user_id')
+      .eq('user_id', userId) // userId should be registrant_profiles.id
+      .single();
+    
+    if (!userApplicant) {
+      console.warn('No applicant profile found for user:', userId);
       return new Set();
     }
+    
+    const userApplicantId = userApplicant.id;
+    const requests = await this.loadMatchRequestsForApplicant(userApplicantId);
+    
+    const sentRequestIds = new Set();
+    
+    for (const req of requests) {
+      if (req.requester_type === 'applicant' &&
+          req.requester_id === userApplicantId && 
+          (req.request_type === 'housing' || req.request_type === 'roommate') &&
+          req.status === 'pending') {
+        
+        // Convert recipient applicant profile ID back to registrant profile ID
+        try {
+          const { data: recipientApplicant } = await supabase
+            .from('applicant_matching_profiles')
+            .select('user_id')
+            .eq('id', req.recipient_id)
+            .single();
+          
+          if (recipientApplicant) {
+            sentRequestIds.add(recipientApplicant.user_id); // registrant_profiles.id
+          }
+        } catch (err) {
+          console.warn('Could not find recipient applicant profile for ID:', req.recipient_id);
+        }
+      }
+    }
+    
+    console.log(`Found ${sentRequestIds.size} pending requests sent`);
+    return sentRequestIds;
+    
+  } catch (err) {
+    console.error('Error loading sent requests:', err);
+    return new Set();
   }
+}
+async loadMatchRequestsForApplicant(applicantProfileId) {
+  try {
+    const { data, error } = await supabase
+      .from(this.requestsTableName)
+      .select('*')
+      .or(`and(requester_type.eq.applicant,requester_id.eq.${applicantProfileId}),and(recipient_type.eq.applicant,recipient_id.eq.${applicantProfileId})`);
+    
+    if (error) {
+      console.warn('Error loading match requests for applicant:', error);
+      return [];
+    }
+    
+    return data || [];
+  } catch (err) {
+    console.warn('Error loading match requests for applicant:', err);
+    return [];
+  }
+}
 
   /**
    * SCHEMA COMPLIANT: Find compatible matches with comprehensive filtering
@@ -980,45 +1115,140 @@ applySchemaCompliantFilters(candidates, filters) {
   /**
    * SCHEMA COMPLIANT: Send match request using exact table and field names
    */
-  async sendMatchRequest(currentUserId, targetMatch) {
+/**
+ * CORRECTED: Send match request using role-specific IDs as per schema design
+ * Uses applicant_matching_profiles.id for applicant requests
+ */
+async sendMatchRequest(currentUserId, targetMatch) {
+  try {
+    console.log('Sending schema-compliant match request to:', targetMatch.first_name);
+    
+    // CRITICAL FIX: We need to get the applicant_matching_profiles.id for both sender and recipient
+    // currentUserId might be auth.uid(), registrant_profiles.id, or applicant_matching_profiles.id
+    
+    let senderApplicantId;
+    let targetApplicantId;
+    
+    // Get sender's applicant profile ID
     try {
-      console.log('Sending schema-compliant match request to:', targetMatch.first_name);
-      
-      // SCHEMA COMPLIANT: Use exact match_requests table fields
-      const requestData = {
-        requester_type: 'applicant',
-        requester_id: currentUserId,
-        recipient_type: 'applicant', 
-        recipient_id: targetMatch.user_id,
-        request_type: 'housing',
-        message: this.generateRequestMessage(targetMatch),
-        status: 'pending',
-        created_at: new Date().toISOString(),
-        updated_at: new Date().toISOString()
-      };
-      
-      const { data, error } = await supabase
-        .from(this.requestsTableName)
-        .insert(requestData)
-        .select()
+      // First, try to find applicant profile by currentUserId directly
+      let { data: senderApplicant } = await supabase
+        .from('applicant_matching_profiles')
+        .select('id, user_id')
+        .eq('id', currentUserId)
         .single();
       
-      if (error) {
-        throw new Error(error.message || 'Failed to send match request');
+      if (senderApplicant) {
+        // currentUserId was already an applicant profile ID
+        senderApplicantId = senderApplicant.id;
+        console.log('✅ currentUserId is applicant profile ID:', senderApplicantId);
+      } else {
+        // Try as registrant profile ID
+        ({ data: senderApplicant } = await supabase
+          .from('applicant_matching_profiles')
+          .select('id, user_id')
+          .eq('user_id', currentUserId)
+          .single());
+        
+        if (senderApplicant) {
+          senderApplicantId = senderApplicant.id;
+          console.log('✅ Converted registrant profile ID to applicant profile ID:', senderApplicantId);
+        } else {
+          // Try as auth user ID - need to go through registrant_profiles
+          const { data: registrant } = await supabase
+            .from('registrant_profiles')
+            .select('id')
+            .eq('user_id', currentUserId)
+            .single();
+          
+          if (registrant) {
+            ({ data: senderApplicant } = await supabase
+              .from('applicant_matching_profiles')
+              .select('id, user_id')
+              .eq('user_id', registrant.id)
+              .single());
+            
+            if (senderApplicant) {
+              senderApplicantId = senderApplicant.id;
+              console.log('✅ Converted auth user ID to applicant profile ID:', senderApplicantId);
+            }
+          }
+        }
+      }
+    } catch (err) {
+      console.error('❌ Error finding sender applicant profile:', err);
+      throw new Error('Could not find sender applicant profile');
+    }
+    
+    if (!senderApplicantId) {
+      throw new Error('Could not determine sender applicant profile ID');
+    }
+    
+    // Get target's applicant profile ID
+    // targetMatch.user_id should be registrant_profiles.id, we need applicant_matching_profiles.id
+    try {
+      const { data: targetApplicant } = await supabase
+        .from('applicant_matching_profiles')
+        .select('id, user_id')
+        .eq('user_id', targetMatch.user_id) // targetMatch.user_id is registrant_profiles.id
+        .single();
+      
+      if (!targetApplicant) {
+        throw new Error(`No applicant profile found for target user ${targetMatch.user_id}`);
       }
       
-      console.log('Schema-compliant match request sent successfully:', data);
-      
-      // Invalidate cache since sent requests have changed
-      this.invalidateUserCache(currentUserId);
-      
-      return { success: true, data };
+      targetApplicantId = targetApplicant.id;
+      console.log('✅ Found target applicant profile ID:', targetApplicantId);
       
     } catch (err) {
-      console.error('Error sending schema-compliant match request:', err);
-      return { success: false, error: err.message };
+      console.error('❌ Error finding target applicant profile:', err);
+      throw new Error('Could not find target applicant profile');
     }
+    
+    console.log('📋 Match request details (role-specific IDs):', {
+      senderApplicantId,
+      targetApplicantId,
+      targetName: targetMatch.first_name
+    });
+    
+    // SCHEMA COMPLIANT: Use role-specific IDs in match_requests
+    const requestData = {
+      requester_type: 'applicant',
+      requester_id: senderApplicantId,        // applicant_matching_profiles.id
+      recipient_type: 'applicant', 
+      recipient_id: targetApplicantId,        // applicant_matching_profiles.id
+      request_type: 'housing',
+      message: this.generateRequestMessage(targetMatch),
+      status: 'pending',
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString()
+    };
+    
+    console.log('📤 Sending match request data (with role-specific IDs):', requestData);
+    
+    const { data, error } = await supabase
+      .from(this.requestsTableName)
+      .insert(requestData)
+      .select()
+      .single();
+    
+    if (error) {
+      console.error('❌ Supabase error:', error);
+      throw new Error(error.message || 'Failed to send match request');
+    }
+    
+    console.log('✅ Schema-compliant match request sent successfully:', data);
+    
+    // Invalidate cache since sent requests have changed
+    this.invalidateUserCache(currentUserId);
+    
+    return { success: true, data };
+    
+  } catch (err) {
+    console.error('💥 Error sending schema-compliant match request:', err);
+    return { success: false, error: err.message };
   }
+}
 
   /**
    * Generate personalized request message
