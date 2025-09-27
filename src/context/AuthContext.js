@@ -170,11 +170,11 @@ export const AuthProvider = ({ children }) => {
         email,
         password,
         options: {
-          data: {
-            first_name: userData.firstName || '',
-            last_name: userData.lastName || '',
-            role: userData.role || 'applicant'
-          }
+      data: {
+        first_name: userData.first_name || '',   // ✅ FIXED
+        last_name: userData.last_name || '',     // ✅ FIXED  
+        role: userData.role || 'applicant'
+      }
         }
       })
 
