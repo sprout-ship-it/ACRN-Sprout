@@ -1,4 +1,4 @@
-// src/components/features/matching/EnhancedMatchingProfileForm.js - FULLY ALIGNED WITH NEW SCHEMA
+// src/components/features/matching/EnhancedMatchingProfileForm.js - FIXED SCROLLING VERSION
 import React, { useState, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../../context/AuthContext';
@@ -150,47 +150,105 @@ const EnhancedMatchingProfileForm = ({ editMode = false, onComplete, onCancel })
     setSuccessMessage
   } = useMatchingProfileForm();
 
-  // ✅ ENHANCED: Smart scroll to form field with better targeting
+  // ✅ FIXED: Enhanced scroll to form field with proper section scoping
   const scrollToFirstFormField = useCallback(() => {
+    console.log('🔄 Starting scroll to first form field...');
+    
     setTimeout(() => {
-      // Priority order for finding the first interactive element
+      // First, find the active section container
+      const activeSection = document.querySelector('.matching-profile-form .card');
+      if (!activeSection) {
+        console.warn('⚠️ Active section container not found');
+        return;
+      }
+
+      console.log('📍 Found active section container:', activeSection);
+
+      // Priority order for finding interactive elements within the active section
       const selectors = [
-        '.form-group input:not([disabled]):not([readonly])',
-        '.form-group select:not([disabled])',
-        '.form-group textarea:not([disabled]):not([readonly])',
-        '.form-group input[type="checkbox"]:not([disabled])',
-        '.form-group input[type="radio"]:not([disabled])',
-        '.form-group',
-        '.card'
+        // Look for required fields first (marked with red asterisk)
+        'input[required]:not([disabled]):not([readonly])',
+        'select[required]:not([disabled])',
+        'textarea[required]:not([disabled]):not([readonly])',
+        
+        // Then any interactive form elements
+        'input:not([disabled]):not([readonly]):not([type="hidden"])',
+        'select:not([disabled])',
+        'textarea:not([disabled]):not([readonly])',
+        
+        // Then checkboxes and radio buttons
+        'input[type="checkbox"]:not([disabled])',
+        'input[type="radio"]:not([disabled])',
+        
+        // Finally fallback to form groups
+        '.form-group'
       ];
       
       let targetElement = null;
+      
+      // Search within the active section only
       for (const selector of selectors) {
-        const element = document.querySelector(selector);
+        const element = activeSection.querySelector(selector);
         if (element) {
-          targetElement = element;
-          break;
+          // Make sure the element is visible
+          const rect = element.getBoundingClientRect();
+          if (rect.width > 0 && rect.height > 0) {
+            targetElement = element;
+            console.log(`🎯 Found target element: ${element.tagName}[${element.type || 'N/A'}] with selector: ${selector}`);
+            break;
+          }
         }
       }
       
+      if (!targetElement) {
+        console.warn('⚠️ No suitable target element found, falling back to section header');
+        // Fallback to section header
+        targetElement = activeSection.querySelector('h2, h3, .card-header');
+      }
+
       if (targetElement) {
-        const elementTop = targetElement.getBoundingClientRect().top + window.pageYOffset;
-        const headerOffset = 120; // Account for fixed headers/navigation
-        const offsetTop = Math.max(0, elementTop - headerOffset);
+        // Calculate scroll position
+        const elementRect = targetElement.getBoundingClientRect();
+        const absoluteTop = elementRect.top + window.pageYOffset;
         
+        // Account for fixed headers and some padding
+        const headerOffset = 120; 
+        const extraPadding = 20;
+        const scrollTop = Math.max(0, absoluteTop - headerOffset - extraPadding);
+        
+        console.log(`📏 Scroll calculation:`, {
+          elementTop: elementRect.top,
+          absoluteTop,
+          scrollTop,
+          currentScroll: window.pageYOffset
+        });
+        
+        // Smooth scroll to the element
         window.scrollTo({ 
-          top: offsetTop, 
+          top: scrollTop, 
           behavior: 'smooth' 
         });
         
         // Focus the element if it's focusable
         if (targetElement.tagName === 'INPUT' || targetElement.tagName === 'SELECT' || targetElement.tagName === 'TEXTAREA') {
-          setTimeout(() => targetElement.focus(), 300);
+          // Delay focus to ensure scroll completes
+          setTimeout(() => {
+            try {
+              targetElement.focus();
+              console.log(`🎯 Focused element: ${targetElement.tagName}[${targetElement.type || 'N/A'}]`);
+            } catch (error) {
+              console.warn('⚠️ Could not focus element:', error);
+            }
+          }, 500); // Longer delay to ensure scroll animation completes
         }
         
-        console.log(`📍 Scrolled to: ${targetElement.tagName} (${targetElement.className})`);
+        console.log(`✅ Successfully scrolled to: ${targetElement.tagName}${targetElement.className ? ' (' + targetElement.className + ')' : ''}`);
+      } else {
+        console.error('❌ No target element found for scrolling');
+        // Ultimate fallback - scroll to top of page
+        window.scrollTo({ top: 0, behavior: 'smooth' });
       }
-    }, 150); // Slightly longer delay for content rendering
+    }, 200); // Slightly longer delay to ensure DOM is fully updated
   }, []);
 
   // ✅ ENHANCED: Section validation with schema field checking
@@ -648,9 +706,6 @@ const showNavigationFeedback = useCallback((message, type = 'warning') => {
           editMode={editMode}
           label={`Section ${currentSectionIndex + 1} of ${FORM_SECTIONS.length}: ${currentSection.title}`}
         />
-
-       {/* ✅ FIXED: Simplified Section Navigation - No Duplicates */}
-
 
 {/* ✅ FIXED: Free Navigation JSX */}
 <div className={styles.formSectionNavigation}>
