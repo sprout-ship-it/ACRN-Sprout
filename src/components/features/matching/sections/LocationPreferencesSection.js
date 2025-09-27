@@ -1,4 +1,4 @@
-// src/components/features/matching/sections/LocationPreferencesSection.js - FULLY ALIGNED WITH NEW SCHEMA
+// src/components/features/matching/sections/LocationPreferencesSection.js - FULLY FIXED VERSION
 import React, { useMemo, useCallback } from 'react';
 import PropTypes from 'prop-types';
 import { housingTypeOptions } from '../constants/matchingFormConstants';
@@ -12,10 +12,10 @@ const LocationPreferencesSection = ({
   onArrayChange,
   onRangeChange,
   styles = {},
-  fieldMapping,   // Schema field mapping from parent
-  sectionId,      // Section identifier
-  isActive,       // Whether this section is currently active
-  validationMessage // Current validation message
+  fieldMapping,
+  sectionId,
+  isActive,
+  validationMessage
 }) => {
   // Enhanced state options with full state names and abbreviations
   const stateOptions = useMemo(() => [
@@ -110,19 +110,39 @@ const LocationPreferencesSection = ({
     }
   }, [onInputChange]);
 
-  // Handle ZIP code input with validation
+  // ✅ FIXED: Handle ZIP code input with improved validation - allows partial entry
   const handleZipCodeChange = useCallback((value) => {
-    // Clean input - allow only numbers and commas/spaces for separation
+    // Clean input - allow only numbers, commas, and spaces
     const cleanValue = value.replace(/[^\d,\s]/g, '');
-    const zipCodes = cleanValue.split(/[,\s]+/).filter(zip => zip.length > 0);
     
-    // Validate individual ZIP codes (5 digits each)
-    const validZips = zipCodes.filter(zip => /^\d{5}$/.test(zip));
-    
-    if (zipCodes.length === validZips.length || cleanValue === '') {
-      onInputChange('target_zip_codes', cleanValue);
-    }
+    // Allow immediate input (don't block partial ZIP codes while typing)
+    onInputChange('target_zip_codes', cleanValue);
   }, [onInputChange]);
+
+  // ✅ FIXED: Add function to validate ZIP codes for display purposes only
+  const validateZipCodes = useCallback((zipString) => {
+    if (!zipString || zipString.trim() === '') return { isValid: true, message: '' };
+    
+    const zipCodes = zipString.split(/[,\s]+/).filter(zip => zip.length > 0);
+    const invalidZips = zipCodes.filter(zip => !/^\d{5}$/.test(zip));
+    
+    if (invalidZips.length > 0) {
+      return {
+        isValid: false,
+        message: `Invalid ZIP codes: ${invalidZips.join(', ')}. ZIP codes must be exactly 5 digits.`
+      };
+    }
+    
+    return { isValid: true, message: '' };
+  }, []);
+
+  // ✅ NEW: Get computed location display (read-only)
+  const getComputedLocation = useCallback(() => {
+    if (formData.primary_city && formData.primary_state) {
+      return `${formData.primary_city}, ${formData.primary_state}`;
+    }
+    return '';
+  }, [formData.primary_city, formData.primary_state]);
 
   // Calculate minimum date for move-in (today + 1 day)
   const minMoveInDate = useMemo(() => {
@@ -222,8 +242,9 @@ const LocationPreferencesSection = ({
           </div>
         </div>
         
+        {/* ✅ FIXED: ZIP Code input with proper validation */}
         <div className="form-group">
-          <label className="label">Specific ZIP Codes</label>
+          <label className="label">Specific ZIP Codes (Optional)</label>
           <input
             className={`input ${errors.target_zip_codes ? 'border-red-500 bg-red-50' : ''}`}
             type="text"
@@ -231,25 +252,41 @@ const LocationPreferencesSection = ({
             onChange={(e) => handleZipCodeChange(e.target.value)}
             placeholder="29301, 29302, 29303"
             disabled={loading}
-            maxLength="50"
+            maxLength="100"
           />
+          
+          {/* Show validation only when user stops typing */}
+          {formData.target_zip_codes && !validateZipCodes(formData.target_zip_codes).isValid && (
+            <div className="text-orange-600 mt-1 text-sm">
+              {validateZipCodes(formData.target_zip_codes).message}
+            </div>
+          )}
+          
           {errors.target_zip_codes && (
             <div className="text-red-500 mt-1 text-sm font-medium">{errors.target_zip_codes}</div>
           )}
+          
           <div className="text-gray-500 mt-1 text-sm">
-            Optional: Specific ZIP codes, comma-separated
+            Optional: Specific ZIP codes you'd prefer, separated by commas
           </div>
+          
+          {/* Show parsed ZIP codes if valid */}
+          {formData.target_zip_codes && validateZipCodes(formData.target_zip_codes).isValid && (
+            <div className="text-green-600 mt-1 text-sm">
+              ZIP codes: {formData.target_zip_codes.split(/[,\s]+/).filter(zip => zip.length === 5).join(', ')}
+            </div>
+          )}
         </div>
       </div>
 
-      {/* Display computed location if both city and state are provided */}
-      {formData.primary_city && formData.primary_state && (
+      {/* ✅ NEW: Display computed location if both city and state are provided */}
+      {getComputedLocation() && (
         <div className="mb-4 p-3 bg-blue-50 rounded-md border border-blue-200">
           <div className="text-blue-800 font-medium">
-            Primary Search Location: {formData.primary_city}, {formData.primary_state}
+            🏠 Primary Search Location: {getComputedLocation()}
           </div>
           <div className="text-blue-600 text-sm mt-1">
-            This standardized location format improves matching accuracy with compatible roommates and available housing.
+            ✅ This computed location will be automatically saved and used for matching
           </div>
         </div>
       )}
@@ -505,7 +542,7 @@ const LocationPreferencesSection = ({
         </div>
       </div>
 
-      {/* Additional Housing Preferences - Schema Standardized Fields */}
+      {/* Additional Housing Preferences */}
       <div className="card-header">
         <h4 className="card-title">Additional Housing Features</h4>
         <p className="card-subtitle">Optional features and amenities that would enhance your living experience</p>
@@ -681,89 +718,31 @@ const LocationPreferencesSection = ({
           )}
         </div>
       )}
-
-      {/* Enhanced Budget Planning Information */}
-      <div className="alert alert-info mt-6">
-        <h4 className="mb-2">
-          <span style={{ marginRight: '8px' }}>💡</span>
-          Enhanced Budget & Location Matching
-        </h4>
-        <p className="mb-2">
-          <strong>Our improved matching system considers:</strong>
-        </p>
-        <ul style={{ marginLeft: '20px', marginBottom: '10px' }}>
-          <li><strong>Standardized Location:</strong> Primary city/state fields for precise geographic matching</li>
-          <li><strong>Budget Compatibility:</strong> Min/max range matching with financial compatibility scoring</li>
-          <li><strong>Commute Analysis:</strong> Travel time calculations to important locations</li>
-          <li><strong>Housing Type Matching:</strong> Preferences aligned with available properties</li>
-          <li><strong>Timeline Coordination:</strong> Move-in date alignment with other seekers</li>
-        </ul>
-        <div className="mt-3">
-          <a 
-            href="/help/enhanced-location-matching" 
-            target="_blank" 
-            className="text-blue-600 hover:text-blue-800 underline text-sm"
-          >
-            Learn more about our enhanced location matching →
-          </a>
-        </div>
-      </div>
-
-      {/* Location & Budget Tips */}
-      <div className="alert alert-success mt-4">
-        <h4 className="mb-2">
-          <span style={{ marginRight: '8px' }}>🎯</span>
-          Location & Budget Planning Tips
-        </h4>
-        <p className="mb-2">
-          <strong>Optimizing your housing search:</strong>
-        </p>
-        <ul style={{ marginLeft: '20px', marginBottom: '10px' }}>
-          <li><strong>Budget Reality:</strong> Include utilities, parking, renter's insurance in your budget</li>
-          <li><strong>Location Flexibility:</strong> Consider nearby cities to expand your options</li>
-          <li><strong>Commute Planning:</strong> Factor in transportation costs and time to important locations</li>
-          <li><strong>Housing Types:</strong> Be open to different housing styles that meet your core needs</li>
-          <li><strong>Timeline Buffer:</strong> Allow flexibility in move-in dates for better matches</li>
-        </ul>
-        <p className="text-sm">
-          Our standardized location and budget fields ensure more accurate matching with compatible roommates 
-          and available housing opportunities in your target area.
-        </p>
-      </div>
     </>
   );
 };
 
 LocationPreferencesSection.propTypes = {
   formData: PropTypes.shape({
-    // Schema-aligned primary location fields
-    primary_city: PropTypes.string,                     // Required - standardized
-    primary_state: PropTypes.string,                    // Required - standardized
-    target_zip_codes: PropTypes.string,                 // Optional - standardized
-    
-    // Schema-aligned budget fields  
-    budget_min: PropTypes.oneOfType([PropTypes.string, PropTypes.number]), // Required - standardized
-    budget_max: PropTypes.oneOfType([PropTypes.string, PropTypes.number]), // Required - standardized
-    
-    // Housing requirements
-    max_commute_minutes: PropTypes.oneOfType([PropTypes.string, PropTypes.number]), // Required - standardized
-    housing_types_accepted: PropTypes.arrayOf(PropTypes.string), // Required - standardized
-    move_in_date: PropTypes.string,                     // Required - standardized
-    move_in_flexibility: PropTypes.string,              // Optional - standardized
-    
-    // Housing preferences
+    primary_city: PropTypes.string,
+    primary_state: PropTypes.string,
+    target_zip_codes: PropTypes.string,
+    budget_min: PropTypes.oneOfType([PropTypes.string, PropTypes.number]),
+    budget_max: PropTypes.oneOfType([PropTypes.string, PropTypes.number]),
+    max_commute_minutes: PropTypes.oneOfType([PropTypes.string, PropTypes.number]),
+    housing_types_accepted: PropTypes.arrayOf(PropTypes.string),
+    move_in_date: PropTypes.string,
+    move_in_flexibility: PropTypes.string,
     preferred_bedrooms: PropTypes.oneOfType([PropTypes.string, PropTypes.number]),
     transportation_method: PropTypes.string,
     lease_duration: PropTypes.string,
-    location_flexibility: PropTypes.string,             // Optional - standardized
-    
-    // Additional features - standardized
-    furnished_preference: PropTypes.bool,               // Standardized
-    utilities_included_preference: PropTypes.bool,      // Standardized
-    accessibility_needed: PropTypes.bool,               // Standardized
-    parking_required: PropTypes.bool,                   // Standardized
-    public_transit_access: PropTypes.bool,              // Standardized
-    pets_allowed: PropTypes.bool                        // Standardized for this section
+    location_flexibility: PropTypes.string,
+    furnished_preference: PropTypes.bool,
+    utilities_included_preference: PropTypes.bool,
+    accessibility_needed: PropTypes.bool,
+    parking_required: PropTypes.bool,
+    public_transit_access: PropTypes.bool,
+    pets_allowed: PropTypes.bool
   }).isRequired,
   errors: PropTypes.object.isRequired,
   loading: PropTypes.bool.isRequired,
@@ -775,11 +754,11 @@ LocationPreferencesSection.propTypes = {
   onInputChange: PropTypes.func.isRequired,
   onArrayChange: PropTypes.func.isRequired,
   onRangeChange: PropTypes.func.isRequired,
-  styles: PropTypes.object,                           // CSS module styles
-  fieldMapping: PropTypes.object,                     // Schema field mapping
-  sectionId: PropTypes.string,                        // Section identifier
-  isActive: PropTypes.bool,                           // Whether section is active
-  validationMessage: PropTypes.string                 // Current validation message
+  styles: PropTypes.object,
+  fieldMapping: PropTypes.object,
+  sectionId: PropTypes.string,
+  isActive: PropTypes.bool,
+  validationMessage: PropTypes.string
 };
 
 LocationPreferencesSection.defaultProps = {

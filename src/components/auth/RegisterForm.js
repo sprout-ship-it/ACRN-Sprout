@@ -3,6 +3,7 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import LoadingSpinner from '../ui/LoadingSpinner';
+import landingStyles from '../../pages/Landing.module.css';
 import '../../styles/global.css';
 
 const RegisterForm = ({ onBackToLanding, preSelectedRole }) => {
@@ -287,58 +288,116 @@ const RegisterForm = ({ onBackToLanding, preSelectedRole }) => {
               </div>
             </div>
             
-            <div className="form-group">
-              <label className="label">Select Your Role(s)</label>
-              <p style={{ fontSize: '0.9rem', color: 'var(--gray-600)', marginBottom: '15px' }}>
-                Choose the role(s) that best describe how you'll use the platform. You can select multiple roles:
-              </p>
-              {preSelectedRole && (
-                <p style={{ 
-                  fontSize: '0.9rem', 
-                  color: 'var(--secondary-teal)', 
-                  marginBottom: '15px',
-                  fontWeight: 600
-                }}>
-                  ✓ Pre-selected based on your choice from the homepage
-                </p>
-              )}
-              <div className="grid-auto">
-                {roles.map(role => (
-                  <div
-                    key={role.id}
-                    className={`role-card ${role.className} ${selectedRoles.includes(role.id) ? 'selected' : ''}`}
-                    onClick={() => !loading && toggleRole(role.id)}
-                    style={{
-                      opacity: loading ? 0.6 : 1,
-                      cursor: loading ? 'not-allowed' : 'pointer',
-                      position: 'relative'
-                    }}
-                  >
-                    <h4 className="role-title">{role.label}</h4>
-                    <p className="role-description">{role.description}</p>
-                    {selectedRoles.includes(role.id) && (
-                      <div style={{
-                        position: 'absolute',
-                        top: '10px',
-                        right: '10px',
-                        background: 'var(--secondary-teal)',
-                        color: 'white',
-                        borderRadius: '50%',
-                        width: '24px',
-                        height: '24px',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        fontSize: '14px',
-                        fontWeight: 'bold'
-                      }}>
-                        ✓
-                      </div>
-                    )}
+       <div className="form-group">
+        <label className="label">Select Your Role(s)</label>
+        <p style={{ fontSize: '0.9rem', color: 'var(--gray-600)', marginBottom: '15px' }}>
+          Choose the role(s) that best describe how you'll use the platform. You can select multiple roles:
+        </p>
+        {preSelectedRole && (
+          <p style={{ 
+            fontSize: '0.9rem', 
+            color: 'var(--secondary-teal)', 
+            marginBottom: '15px',
+            fontWeight: 600
+          }}>
+            ✓ Pre-selected based on your choice from the homepage
+          </p>
+        )}
+        
+        {/* ✅ UPDATED: Use Landing page styling with enhanced selected state */}
+        <div className={landingStyles.roleGrid}>
+          {roles.map(role => {
+            const isSelected = selectedRoles.includes(role.id);
+            
+            // Get the appropriate role card class
+            let roleCardClass = landingStyles.roleCard;
+            if (role.id === 'applicant') roleCardClass += ` ${landingStyles.roleCardHousingSeeker}`;
+            if (role.id === 'peer-support') roleCardClass += ` ${landingStyles.roleCardPeerSupport}`;
+            if (role.id === 'landlord') roleCardClass += ` ${landingStyles.roleCardPropertyOwner}`;
+            if (role.id === 'employer') roleCardClass += ` ${landingStyles.roleCardEmployer}`;
+            
+            // Enhanced styling for selected state
+            const selectedStyle = isSelected ? {
+              transform: 'translateY(-6px)',
+              boxShadow: '0 12px 30px rgba(0, 0, 0, 0.18)',
+              borderWidth: '3px',
+              ...(role.id === 'applicant' && {
+                borderColor: 'var(--primary-purple)',
+                background: 'linear-gradient(135deg, rgba(160, 32, 240, 0.25) 0%, rgba(160, 32, 240, 0.1) 100%)'
+              }),
+              ...(role.id === 'peer-support' && {
+                borderColor: 'var(--secondary-teal)',
+                background: 'linear-gradient(135deg, rgba(32, 178, 170, 0.25) 0%, rgba(32, 178, 170, 0.1) 100%)'
+              }),
+              ...(role.id === 'landlord' && {
+                borderColor: 'var(--gold-dark)',
+                background: 'linear-gradient(135deg, rgba(255, 215, 0, 0.25) 0%, rgba(255, 215, 0, 0.1) 100%)'
+              }),
+              ...(role.id === 'employer' && {
+                borderColor: 'var(--coral)',
+                background: 'linear-gradient(135deg, rgba(255, 111, 97, 0.25) 0%, rgba(255, 111, 97, 0.1) 100%)'
+              })
+            } : {};
+            
+            return (
+              <div
+                key={role.id}
+                className={roleCardClass}
+                onClick={() => !loading && toggleRole(role.id)}
+                style={{
+                  opacity: loading ? 0.6 : 1,
+                  cursor: loading ? 'not-allowed' : 'pointer',
+                  position: 'relative',
+                  transition: 'all 0.3s ease',
+                  ...selectedStyle
+                }}
+              >
+                {/* Role Icon */}
+                <div className={landingStyles.roleIcon}>
+                  {role.id === 'applicant' && '🏠'}
+                  {role.id === 'peer-support' && '🤝'}
+                  {role.id === 'landlord' && '🏢'}
+                  {role.id === 'employer' && '💼'}
+                </div>
+                
+                {/* Role Title */}
+                <h4 className={landingStyles.roleTitle}>{role.label}</h4>
+                
+                {/* Role Description */}
+                <p className={landingStyles.roleDescription}>{role.description}</p>
+                
+                {/* Click Hint */}
+                <div className={landingStyles.roleClickHint}>
+                  {isSelected ? 'Selected ✓' : 'Click to select →'}
+                </div>
+                
+                {/* Selection Checkmark */}
+                {isSelected && (
+                  <div style={{
+                    position: 'absolute',
+                    top: '15px',
+                    right: '15px',
+                    background: 'var(--secondary-teal)',
+                    color: 'white',
+                    borderRadius: '50%',
+                    width: '32px',
+                    height: '32px',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    fontSize: '18px',
+                    fontWeight: 'bold',
+                    boxShadow: '0 4px 12px rgba(32, 178, 170, 0.4)',
+                    animation: 'pulse 0.5s ease-in-out'
+                  }}>
+                    ✓
                   </div>
-                ))}
+                )}
               </div>
-            </div>
+            );
+          })}
+        </div>
+      </div>
             
             <div className="button-grid">
               {onBackToLanding && (

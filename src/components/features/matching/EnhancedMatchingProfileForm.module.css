@@ -290,3 +290,45 @@
     color: var(--dark-text-secondary, #b0b0b0);
   }
 }
+/* Add this to your EnhancedMatchingProfileForm.module.css or global CSS */
+
+/* Ensure navigation only appears once */
+.section-navigation {
+  position: relative;
+  z-index: 10;
+}
+
+/* Reset any duplicate navigation elements */
+.section-navigation + .section-navigation {
+  display: none !important;
+}
+
+/* Prevent navigation from being duplicated by other components */
+.navigation:not(.section-navigation) {
+  display: none;
+}
+
+/* Clean navigation styling */
+.section-navigation .nav-button {
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  overflow: hidden;
+  max-width: 200px;
+}
+
+/* Mobile responsive navigation */
+@media (max-width: 768px) {
+  .section-navigation .nav-button {
+    padding: 8px 12px;
+    font-size: 12px;
+    max-width: 120px;
+  }
+  
+  .section-navigation .nav-button .hidden {
+    display: none !important;
+  }
+  
+  .section-navigation .nav-button .sm\\:hidden {
+    display: inline !important;
+  }
+}
