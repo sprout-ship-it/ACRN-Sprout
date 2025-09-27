@@ -40,15 +40,23 @@ export const useMatching = () => {
    * SCHEMA COMPLIANT: Load user's matching profile
    * Uses registrant_profiles.id (not auth.users.id)
    */
-  const loadUserProfile = useCallback(async () => {
-    if (!profile?.id) {
-      setError('No registrant profile found. Please complete account setup.');
-      return null;
-    }
+  
+const loadUserProfile = useCallback(async () => {
+  if (!profile?.id) {
+    console.log('⚠️ useMatching: No registrant profile found:', { 
+      profile, 
+      user: user?.id,
+      profileId: profile?.id,
+      userIsAuthenticated: !!user
+    })
+    setError('No registrant profile found. Please complete account setup.');
+    return null;
+  }
 
-    try {
-      setError(null);
-      console.log('🔍 Loading schema-compliant user matching profile...');
+  try {
+    setError(null);
+    console.log('🔍 useMatching: Loading with registrant_profile.id:', profile.id)
+    console.log('🔍 Loading schema-compliant user matching profile...');
       
       // SCHEMA COMPLIANT: Pass registrant_profiles.id to matching service
       const userMatchingProfile = await schemaCompliantMatchingService.loadUserProfile(profile.id);

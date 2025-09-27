@@ -75,7 +75,42 @@ export const AuthProvider = ({ children }) => {
         }
       }
     }
+const loadUserProfile = async (authUserId) => {
+  console.log('👤 AuthProvider: Loading profile for auth user:', authUserId)
+  
+  try {
+    const { data, error } = await supabase
+      .from('registrant_profiles')
+      .select('*')
+      .eq('user_id', authUserId)
+      .single()
 
+    if (error) {
+      if (error.code === 'PGRST116') {
+        console.log('ℹ️ AuthProvider: No profile found (may still be creating via trigger)')
+        setProfile(null)
+        return
+      }
+      console.error('❌ AuthProvider: Profile query error:', error.message)
+      throw error
+    }
+
+    if (data) {
+      console.log('✅ AuthProvider: Profile loaded successfully:', {
+        registrant_id: data.id,  // ← This should be different from auth.users.id
+        auth_user_id: authUserId  // ← This is auth.users.id
+      })
+      setProfile(data)
+      setError(null)
+    } else {
+      console.log('ℹ️ AuthProvider: No profile data returned')
+      setProfile(null)
+    }
+  } catch (err) {
+    console.error('💥 AuthProvider: Profile loading failed:', err.message)
+    throw err
+  }
+}
     // Set up auth state listener
     console.log('🔐 AuthProvider: Setting up auth state listener...')
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
