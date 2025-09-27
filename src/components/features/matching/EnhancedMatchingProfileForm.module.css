@@ -1,7 +1,7 @@
 /* EnhancedMatchingProfileForm.module.css - Component-specific styles */
 
 /* ==================== DASHBOARD-STYLE SECTION NAVIGATION ==================== */
-.form-section-navigation {
+.formSectionNavigation {
   margin-bottom: var(--spacing-xl);
   background: white;
   border-radius: 12px;
@@ -10,32 +10,32 @@
   border: 2px solid var(--border-beige);
 }
 
-.section-nav-header {
+.sectionNavHeader {
   text-align: center;
   margin-bottom: 16px;
 }
 
-.section-nav-header h3 {
+.sectionNavHeader h3 {
   font-size: 1.2rem;
   font-weight: 600;
   color: var(--primary-purple);
   margin: 0 0 4px 0;
 }
 
-.section-nav-header p {
+.sectionNavHeader p {
   font-size: 0.9rem;
   color: var(--gray-600);
   margin: 0;
 }
 
-.section-nav-grid {
+.sectionNavGrid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
   gap: 8px;
   margin-bottom: 16px;
 }
 
-.section-nav-item {
+.sectionNavItem {
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -51,44 +51,44 @@
   position: relative;
 }
 
-.section-nav-item:hover:not(.disabled) {
+.sectionNavItem:hover:not(.disabled) {
   transform: translateY(-2px);
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
   background: #f3f4f6;
 }
 
-.section-nav-item.active {
+.sectionNavItem.active {
   background: var(--primary-purple);
   color: white;
   border-color: var(--primary-purple);
   box-shadow: 0 4px 15px rgba(160, 32, 240, 0.3);
 }
 
-.section-nav-item.completed:not(.active) {
+.sectionNavItem.completed:not(.active) {
   background: var(--secondary-teal);
   color: white;
   border-color: var(--secondary-teal);
 }
 
-.section-nav-item.disabled {
+.sectionNavItem.disabled {
   opacity: 0.5;
   cursor: not-allowed;
   background: #e5e7eb;
 }
 
-.section-nav-item.disabled:hover {
+.sectionNavItem.disabled:hover {
   transform: none;
   box-shadow: none;
   background: #e5e7eb;
 }
 
-.section-nav-icon {
+.sectionNavIcon {
   font-size: 1.5rem;
   margin-bottom: 4px;
   display: block;
 }
 
-.section-nav-label {
+.sectionNavLabel {
   font-size: 0.75rem;
   font-weight: 600;
   text-align: center;
@@ -96,7 +96,7 @@
   display: block;
 }
 
-.section-nav-current {
+.sectionNavCurrent {
   position: absolute;
   top: 4px;
   right: 4px;
@@ -107,7 +107,7 @@
   font-weight: 600;
 }
 
-.section-nav-progress {
+.sectionNavProgress {
   display: flex;
   align-items: center;
   gap: 12px;
@@ -117,7 +117,7 @@
   border: 1px solid var(--border-beige);
 }
 
-.section-nav-progress .progress-bar {
+.sectionNavProgress .progress-bar {
   flex: 1;
   height: 6px;
   background: var(--border-beige);
@@ -125,14 +125,14 @@
   overflow: hidden;
 }
 
-.section-nav-progress .progress-fill {
+.sectionNavProgress .progress-fill {
   height: 100%;
   background: linear-gradient(135deg, var(--primary-purple), var(--secondary-purple));
   transition: width 0.5s ease;
   border-radius: 3px;
 }
 
-.section-nav-progress .progress-text {
+.sectionNavProgress .progress-text {
   font-size: 0.8rem;
   font-weight: 600;
   color: var(--primary-purple);

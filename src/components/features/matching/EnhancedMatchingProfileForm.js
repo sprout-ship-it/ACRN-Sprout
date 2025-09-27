@@ -331,48 +331,18 @@ const handleSectionClick = useCallback((index, e) => {
     return;
   }
   
-  // Allow free navigation in edit mode or if going backwards
-  if (editMode || index < currentSectionIndex) {
-    console.log('✅ Navigation allowed: Edit mode or backward navigation');
-    setCurrentSectionIndex(index);
-    scrollToFirstFormField();
-    setValidationMessage('');
-    return;
-  }
-  
-  // For forward navigation, validate current section first
-  if (index > currentSectionIndex) {
-    console.log('🔍 Validating current section before forward navigation...');
-    const validation = validateCurrentSection();
-    
-    if (!validation.isValid) {
-      console.log('❌ Navigation blocked: Validation failed:', validation.message);
-      setValidationMessage(validation.message);
-      
-      // Scroll to first error after a brief delay
-      setTimeout(() => {
-        const errorElement = document.querySelector('.border-red-500, .text-red-500, .alert-error');
-        if (errorElement) {
-          errorElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
-        }
-      }, 100);
-      return;
-    }
-    
-    console.log('✅ Validation passed, proceeding with navigation');
-  }
-  
-  // Execute navigation
+  // ✅ SIMPLIFIED: Allow free navigation to any section at any time
   console.log(`📍 Navigating from section ${currentSectionIndex} to section ${index}`);
   setCurrentSectionIndex(index);
   scrollToFirstFormField();
-  setValidationMessage('');
+  setValidationMessage(''); // Clear any validation messages when navigating
   
   // Add visual feedback for successful navigation
   const targetSection = FORM_SECTIONS[index];
   console.log(`🎯 Successfully navigated to: ${targetSection.title}`);
   
-}, [currentSectionIndex, editMode, loading, isSubmitting, validateCurrentSection, scrollToFirstFormField, setValidationMessage]);
+}, [currentSectionIndex, loading, isSubmitting, scrollToFirstFormField, setValidationMessage]);
+
 const showNavigationFeedback = useCallback((message, type = 'warning') => {
   // Create a temporary feedback element
   const feedback = document.createElement('div');
@@ -682,7 +652,7 @@ const showNavigationFeedback = useCallback((message, type = 'warning') => {
        {/* ✅ FIXED: Simplified Section Navigation - No Duplicates */}
 
 
-{/* ✅ FIXED: Dashboard-Style Section Navigation with CSS Module Classes */}
+{/* ✅ FIXED: Free Navigation JSX */}
 <div className={styles.formSectionNavigation}>
   <div className={styles.sectionNavHeader}>
     <h3>Complete Your Profile</h3>
@@ -693,15 +663,14 @@ const showNavigationFeedback = useCallback((message, type = 'warning') => {
     {FORM_SECTIONS.map((section, index) => {
       const isActive = index === currentSectionIndex;
       const isCompleted = index < currentSectionIndex;
-      const isAccessible = editMode || index <= currentSectionIndex;
       
       return (
         <button
           key={`nav-${section.id}-${index}`}
           type="button"
-          className={`${styles.sectionNavItem} ${isActive ? styles.active : ''} ${isCompleted ? styles.completed : ''} ${!isAccessible ? styles.disabled : ''}`}
+          className={`${styles.sectionNavItem} ${isActive ? styles.active : ''} ${isCompleted ? styles.completed : ''}`}
           onClick={(e) => handleSectionClick(index, e)}
-          disabled={!isAccessible || loading || isSubmitting}
+          disabled={loading || isSubmitting}
           title={section.description}
         >
           <span className={styles.sectionNavIcon}>
