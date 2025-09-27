@@ -1,7 +1,10 @@
-// src/pages/Dashboard.js - SCHEMA COMPLIANT VERSION (FIXED ROLES)
+// src/pages/Dashboard.js - FIXED: Add missing supabase client import and usage
 import React, { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../hooks/useAuth'
+
+// ✅ ADDED: Import authenticated supabase client
+import { supabase } from '../utils/supabase'
 
 // ✅ UPDATED: Import individual schema-compliant services
 import { getMatchingProfile } from '../utils/database/matchingProfilesService'
@@ -69,8 +72,8 @@ const Dashboard = () => {
 
         if (hasRole('applicant')) {
           try {
-            // ✅ SCHEMA COMPLIANT: Use profile.id and correct service
-            const result = await getMatchingProfile(profile.id)
+            // ✅ FIXED: Pass supabase client as second parameter
+            const result = await getMatchingProfile(profile.id, supabase)
             
             if (result.success && result.data && isMounted) {
               const applicantProfile = result.data
@@ -104,7 +107,7 @@ const Dashboard = () => {
         // ✅ FIXED: Only check for 'peer-support' role (schema compliant)
         else if (hasRole('peer-support')) {
           try {
-            // ✅ SCHEMA COMPLIANT: Use profile.id and correct service
+            // ✅ FIXED: Pass supabase client (though this service might not need it)
             const result = await getPeerSupportProfileByUserId(profile.id)
             
             if (result.success && result.data && isMounted) {
@@ -136,7 +139,7 @@ const Dashboard = () => {
 
         else if (hasRole('employer')) {
           try {
-            // ✅ SCHEMA COMPLIANT: Use profile.id and correct service
+            // ✅ FIXED: Pass supabase client (though this service might not need it)
             const result = await getEmployerProfilesByUserId(profile.id)
             
             if (result.success && result.data && result.data.length > 0 && isMounted) {
@@ -191,7 +194,7 @@ const Dashboard = () => {
     }
   }, [user, profile, hasRole, authLoading])
 
-  // ✅ SCHEMA COMPLIANT: Dashboard cards with proper role checking
+  // Rest of the component remains the same...
   const getDashboardCards = () => {
     const cards = []
     
@@ -237,7 +240,6 @@ const Dashboard = () => {
       )
     }
     
-    // ✅ FIXED: Only check for 'peer-support' role (schema compliant)
     if (hasRole('peer-support')) {
       cards.push(
         { 
@@ -354,11 +356,10 @@ const Dashboard = () => {
       )
     }
 
-    // ✅ SCHEMA COMPLIANT: Use exact role names and display proper labels
     const roleLabels = profile?.roles?.map(role => {
       switch(role) {
         case 'applicant': return 'Housing Seeker'
-        case 'peer-support': return 'Peer Specialist'  // ✅ FIXED: Only use 'peer-support'
+        case 'peer-support': return 'Peer Specialist'
         case 'landlord': return 'Property Owner'
         case 'employer': return 'Recovery-Friendly Employer'
         default: return role.charAt(0).toUpperCase() + role.slice(1)
@@ -402,7 +403,6 @@ const Dashboard = () => {
     <div>      
       {getRoleSpecificWelcome()}
       
-      {/* Dashboard Cards - Using CSS modules */}
       <div className="card">
         <h3 className="card-title">Your Dashboard</h3>
         <div className="grid-auto">
@@ -428,7 +428,6 @@ const Dashboard = () => {
         </div>
       </div>
       
-      {/* ✅ SCHEMA COMPLIANT: Multi-Role Access Summary with correct role handling */}
       {profile?.roles?.length > 1 && (
         <div className={`card ${styles.multiRoleSection}`}>
           <h3 className="card-title">Your Multi-Role Access</h3>
@@ -440,14 +439,14 @@ const Dashboard = () => {
               <div key={role} className={styles.roleAccessCard}>
                 <div className={styles.roleAccessTitle}>
                   {role === 'applicant' && 'Housing Seeker'}
-                  {role === 'peer-support' && 'Peer Specialist'}  {/* ✅ FIXED: Only use 'peer-support' */}
+                  {role === 'peer-support' && 'Peer Specialist'}
                   {role === 'landlord' && 'Property Owner'}
                   {role === 'employer' && 'Employer'}
                   {' Access:'}
                 </div>
                 <div className={styles.roleAccessDescription}>
                   {role === 'applicant' && 'Find roommates, browse properties, connect with peer support, find employment'}
-                  {role === 'peer-support' && 'Offer peer support, manage clients, provide services'}  {/* ✅ FIXED */}
+                  {role === 'peer-support' && 'Offer peer support, manage clients, provide services'}
                   {role === 'landlord' && 'List properties, review applications, manage rentals'}
                   {role === 'employer' && 'Post jobs, review applications, manage company profiles'}
                 </div>
