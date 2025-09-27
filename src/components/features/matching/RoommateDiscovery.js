@@ -14,7 +14,7 @@ import '../../../styles/main.css';
 import styles from './RoommateDiscovery.module.css';
 
 const RoommateDiscovery = ({ onRequestMatch, onBack }) => {
-  const { user, hasRole } = useAuth();
+  const { user, profile, hasRole } = useAuth();
 
   // State management
   const [matches, setMatches] = useState([]);
@@ -38,10 +38,10 @@ const RoommateDiscovery = ({ onRequestMatch, onBack }) => {
 
   // Load matches when component mounts or filters change
   useEffect(() => {
-    if (user?.id) {
+    if (user?.id && profile?.id) {
       findMatches();
     }
-  }, [user?.id, filters]);
+  }, [profile?.id, filters]);
 
   /**
    * ✅ SCHEMA ALIGNED: Construct user location from primary_city and primary_state
@@ -62,7 +62,7 @@ const RoommateDiscovery = ({ onRequestMatch, onBack }) => {
    * Find roommate matches using the matching service
    */
   const findMatches = useCallback(async () => {
-    if (!user?.id) {
+    if (!user?.id || !profile?.id) {
       setError('No authenticated user found');
       return;
     }
@@ -83,7 +83,7 @@ const RoommateDiscovery = ({ onRequestMatch, onBack }) => {
         hideRequestsSent: filters.hideRequestsSent
       };
       
-      const result = await matchingService.findMatches(user.id, dbFilters);
+      const result = await matchingService.findMatches(profile.id, dbFilters);
       
       setMatches(result.matches);
       setUserProfile(result.userProfile);
@@ -133,7 +133,7 @@ const RoommateDiscovery = ({ onRequestMatch, onBack }) => {
       // ✅ SCHEMA ALIGNED: Ensure we're using the correct user identification
       const matchUserId = match.user_id || match.id; // Handle different ID structures
       
-      const result = await matchingService.sendMatchRequest(user.id, {
+      const result = await matchingService.sendMatchRequest(profile.id, {
         ...match,
         user_id: matchUserId
       });
@@ -169,7 +169,7 @@ const RoommateDiscovery = ({ onRequestMatch, onBack }) => {
       console.error('💥 Error sending match request:', err);
       alert('Failed to send match request. Please try again.');
     }
-  }, [user?.id, onRequestMatch, filters.hideRequestsSent, findMatches]);
+  }, [profile?.id, onRequestMatch, filters.hideRequestsSent, findMatches]);
 
   /**
    * ✅ SCHEMA ALIGNED: Handle using user's location constructed from primary_city/primary_state
