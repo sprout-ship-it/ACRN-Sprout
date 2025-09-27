@@ -3,6 +3,9 @@ import React, { useEffect, useState } from 'react'
 import { Routes, Route, Navigate, useNavigate, useLocation } from 'react-router-dom'
 import { useAuth } from '../hooks/useAuth';
 
+// ✅ UPDATED: Import authenticated supabase client
+import { supabase } from '../utils/supabase';
+
 // ✅ UPDATED: Import individual schema-compliant services instead of db object
 import { getMatchingProfile } from '../utils/database/matchingProfilesService';
 import { getPeerSupportProfileByUserId } from '../utils/database/peerSupportService';
@@ -81,7 +84,7 @@ const MainApp = () => {
           console.log('Checking applicant comprehensive profile...')
           
           // ✅ SCHEMA COMPLIANT: Use profile.id (registrant_profiles.id) instead of user.id
-          const result = await getMatchingProfile(profile.id)
+          const result = await getMatchingProfile(profile.id, supabase)
           
           if (result.success && result.data) {
             const applicantProfile = result.data;

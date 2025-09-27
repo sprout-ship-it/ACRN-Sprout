@@ -632,16 +632,15 @@ const createMatchingProfilesService = (supabaseClient) => {
   };
   };
 
-export const getMatchingProfile = async (registrantProfileId) => {
+export const getMatchingProfile = async (registrantProfileId, supabaseClient) => {
   try {
     console.log('🔍 Fetching matching profile for registrant profile ID:', registrantProfileId);
     
-    const { createClient } = require('@supabase/supabase-js');
-    const supabaseUrl = process.env.REACT_APP_SUPABASE_URL;
-    const supabaseKey = process.env.REACT_APP_SUPABASE_ANON_KEY;
-    const supabase = createClient(supabaseUrl, supabaseKey);
+    if (!supabaseClient) {
+      throw new Error('Authenticated Supabase client is required');
+    }
 
-    const { data, error } = await supabase
+    const { data, error } = await supabaseClient
       .from('applicant_matching_profiles')
       .select('*')
       .eq('user_id', registrantProfileId)
