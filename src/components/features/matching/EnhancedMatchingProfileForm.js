@@ -682,14 +682,14 @@ const showNavigationFeedback = useCallback((message, type = 'warning') => {
        {/* ✅ FIXED: Simplified Section Navigation - No Duplicates */}
 
 
-{/* ✅ DASHBOARD-STYLE: Section Navigation */}
-<div className="form-section-navigation">
-  <div className="section-nav-header">
+{/* ✅ FIXED: Dashboard-Style Section Navigation with CSS Module Classes */}
+<div className={styles.formSectionNavigation}>
+  <div className={styles.sectionNavHeader}>
     <h3>Complete Your Profile</h3>
     <p>Step {currentSectionIndex + 1} of {FORM_SECTIONS.length}: {currentSection.title}</p>
   </div>
   
-  <nav className="section-nav-grid">
+  <nav className={styles.sectionNavGrid}>
     {FORM_SECTIONS.map((section, index) => {
       const isActive = index === currentSectionIndex;
       const isCompleted = index < currentSectionIndex;
@@ -699,22 +699,22 @@ const showNavigationFeedback = useCallback((message, type = 'warning') => {
         <button
           key={`nav-${section.id}-${index}`}
           type="button"
-          className={`section-nav-item ${isActive ? 'active' : ''} ${isCompleted ? 'completed' : ''} ${!isAccessible ? 'disabled' : ''}`}
+          className={`${styles.sectionNavItem} ${isActive ? styles.active : ''} ${isCompleted ? styles.completed : ''} ${!isAccessible ? styles.disabled : ''}`}
           onClick={(e) => handleSectionClick(index, e)}
           disabled={!isAccessible || loading || isSubmitting}
           title={section.description}
         >
-          <span className="section-nav-icon">
+          <span className={styles.sectionNavIcon}>
             {isCompleted ? '✓' : section.icon}
           </span>
-          <span className="section-nav-label">{section.title}</span>
-          {isActive && <span className="section-nav-current">Current</span>}
+          <span className={styles.sectionNavLabel}>{section.title}</span>
+          {isActive && <span className={styles.sectionNavCurrent}>Current</span>}
         </button>
       );
     })}
   </nav>
   
-  <div className="section-nav-progress">
+  <div className={styles.sectionNavProgress}>
     <div className="progress-bar">
       <div 
         className="progress-fill" 

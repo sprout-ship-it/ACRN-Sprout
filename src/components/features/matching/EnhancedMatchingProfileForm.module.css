@@ -248,6 +248,7 @@
   background: var(--border-beige);
   border-radius: 3px;
   outline: none;
+  appearance: none;
   -webkit-appearance: none;
   cursor: pointer;
 }
