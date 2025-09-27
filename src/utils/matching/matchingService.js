@@ -647,7 +647,16 @@ console.log(`✅ Transformed ${transformedProfiles.length} profiles:`,
 
       // Get active profiles
       let candidates = await this.loadActiveProfiles(userId);
-      
+      console.log('🔍 Debug candidates structure:', candidates.map(c => ({
+  user_id: c.user_id,
+  first_name: c.first_name,
+  recovery_methods_type: typeof c.recovery_methods,
+  recovery_methods_isArray: Array.isArray(c.recovery_methods),
+  recovery_methods_value: c.recovery_methods,
+  primary_issues_type: typeof c.primary_issues,
+  primary_issues_isArray: Array.isArray(c.primary_issues),
+  primary_issues_value: c.primary_issues
+})));
       console.log(`Found ${candidates.length} active candidate profiles`);
 
       if (candidates.length === 0) {
@@ -658,21 +667,6 @@ console.log(`✅ Transformed ${transformedProfiles.length} profiles:`,
           sentRequestsCount: sentRequests.size,
           algorithmVersion: '2.0_schema_compliant'
         };
-        // Get active profiles
-let candidates = await this.loadActiveProfiles(userId);
-
-console.log('🔍 Debug candidates structure:', candidates.map(c => ({
-  user_id: c.user_id,
-  first_name: c.first_name,
-  recovery_methods_type: typeof c.recovery_methods,
-  recovery_methods_isArray: Array.isArray(c.recovery_methods),
-  recovery_methods_value: c.recovery_methods,
-  primary_issues_type: typeof c.primary_issues,
-  primary_issues_isArray: Array.isArray(c.primary_issues),
-  primary_issues_value: c.primary_issues
-})));
-
-console.log(`Found ${candidates.length} active candidate profiles`);
       }
 
       // Apply exclusion filters
