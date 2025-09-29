@@ -93,6 +93,8 @@ const MatchDetailsModal = ({
   match,
   onClose,
   onRequestMatch,
+  customActions,
+  customActions,
   isRequestSent,
   isAlreadyMatched,
   usePortal = true,
@@ -744,24 +746,58 @@ const MatchDetailsModal = ({
 
         {/* Modal Footer */}
         <div className={styles.footer}>
-          <button className="btn btn-outline" onClick={handleClose}>
-            Close
-          </button>
-          
-          <button
-            className={`btn btn-primary ${
-              isRequestSent || isAlreadyMatched ? 'btn-disabled' : ''
-            }`}
-            onClick={() => {
-              onRequestMatch(match);
-              handleClose();
-            }}
-            disabled={isRequestSent || isAlreadyMatched}
-          >
-            {isRequestSent ? 'Request Sent' :
-             isAlreadyMatched ? 'Already Connected' :
-             'Send Match Request'}
-          </button>
+          {customActions ? (
+            // Custom actions for special cases (like incoming requests)
+            <>
+              <button
+                className="btn btn-outline"
+                onClick={() => {
+                  if (customActions.onDecline) {
+                    customActions.onDecline();
+                  } else {
+                    handleClose();
+                  }
+                }}
+              >
+                {customActions.declineLabel || 'Close'}
+              </button>
+              <button
+                className="btn btn-success"
+                onClick={() => {
+                  if (customActions.onAccept) {
+                    customActions.onAccept();
+                  } else {
+                    onRequestMatch(match);
+                    handleClose();
+                  }
+                }}
+              >
+                {customActions.acceptLabel || 'Accept Connection'}
+              </button>
+            </>
+          ) : (
+            // Default actions for normal match discovery
+            <>
+              <button className="btn btn-outline" onClick={handleClose}>
+                Close
+              </button>
+              
+              <button
+                className={`btn btn-primary ${
+                  isRequestSent || isAlreadyMatched ? 'btn-disabled' : ''
+                }`}
+                onClick={() => {
+                  onRequestMatch(match);
+                  handleClose();
+                }}
+                disabled={isRequestSent || isAlreadyMatched}
+              >
+                {isRequestSent ? 'Request Sent' :
+                 isAlreadyMatched ? 'Already Connected' :
+                 'Send Match Request'}
+              </button>
+            </>
+          )}
         </div>
       </div>
     </div>
@@ -825,6 +861,12 @@ MatchDetailsModal.propTypes = {
   }),
   onClose: PropTypes.func.isRequired,
   onRequestMatch: PropTypes.func.isRequired,
+  customActions: PropTypes.shape({  // ✅ ADD THIS
+    acceptLabel: PropTypes.string,
+    declineLabel: PropTypes.string,
+    onAccept: PropTypes.func,
+    onDecline: PropTypes.func
+  }),
   isRequestSent: PropTypes.bool,
   isAlreadyMatched: PropTypes.bool,
   usePortal: PropTypes.bool,

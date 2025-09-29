@@ -35,7 +35,7 @@ const MatchRequests = () => {
   /**
    * Get registrant profile ID from auth user ID (for queries)
    */
-    useEffect(() => {
+  useEffect(() => {
     const loadUserRegistrantId = async () => {
       if (user?.id) {
         try {
@@ -61,252 +61,255 @@ const MatchRequests = () => {
   };
 
   /**
-   * ✅ SCHEMA ALIGNED: Load match requests using correct field names and relationships
+   * ✅ NEW: Load full match details for a specific request
+   * This shows the same detailed view that the requester saw
    */
-/**
- * ✅ NEW: Load full match details for a specific request
- * This shows the same detailed view that the requester saw
- */
-const loadFullMatchDetails = async (request) => {
-  setLoadingMatchDetails(true);
-  
-  try {
-    console.log('🔍 Loading full match details for request:', request.id);
+  const loadFullMatchDetails = async (request) => {
+    setLoadingMatchDetails(true);
     
-    // Determine if this is a roommate request (applicant-to-applicant)
-    if (request.request_type === 'roommate' || 
-        (request.requester_type === 'applicant' && request.recipient_type === 'applicant')) {
+    try {
+      console.log('🔍 Loading full match details for request:', request.id);
       
-      // Get the requester's full applicant profile
-      const { data: requesterProfile, error: requesterError } = await supabase
+      // Determine if this is a roommate request (applicant-to-applicant)
+      if (request.request_type === 'roommate' || 
+          (request.requester_type === 'applicant' && request.recipient_type === 'applicant')) {
+        
+        // Get the requester's full applicant profile
+        const { data: requesterProfile, error: requesterError } = await supabase
+          .from('applicant_matching_profiles')
+          .select(`
+            *,
+            registrant_profiles(*)
+          `)
+          .eq('id', request.requester_id)
+          .single();
+        
+        if (requesterError) throw requesterError;
+        
+        // Get the recipient's profile (current user) for compatibility calculation
+        const { data: recipientProfile, error: recipientError } = await supabase
+          .from('applicant_matching_profiles')
+          .select('*')
+          .eq('user_id', userRegistrantId)
+          .single();
+        
+        if (recipientError) throw recipientError;
+        
+        // Calculate compatibility score (simplified version)
+        const compatibilityScore = calculateCompatibilityScore(requesterProfile, recipientProfile);
+        
+        // Format the match data in the same structure as RoommateDiscovery
+        const matchData = {
+          user_id: requesterProfile.user_id,
+          id: requesterProfile.id,
+          first_name: requesterProfile.registrant_profiles?.first_name || 'Unknown',
+          last_name: requesterProfile.registrant_profiles?.last_name || '',
+          email: requesterProfile.registrant_profiles?.email,
+          
+          // Core matching criteria
+          primary_city: requesterProfile.primary_city,
+          primary_state: requesterProfile.primary_state,
+          primary_location: requesterProfile.primary_location,
+          budget_min: requesterProfile.budget_min,
+          budget_max: requesterProfile.budget_max,
+          preferred_roommate_gender: requesterProfile.preferred_roommate_gender,
+          recovery_stage: requesterProfile.recovery_stage,
+          recovery_methods: requesterProfile.recovery_methods,
+          primary_issues: requesterProfile.primary_issues,
+          spiritual_affiliation: requesterProfile.spiritual_affiliation,
+          
+          // Lifestyle preferences
+          social_level: requesterProfile.social_level,
+          cleanliness_level: requesterProfile.cleanliness_level,
+          noise_tolerance: requesterProfile.noise_tolerance,
+          work_schedule: requesterProfile.work_schedule,
+          bedtime_preference: requesterProfile.bedtime_preference,
+          smoking_status: requesterProfile.smoking_status,
+          pets_owned: requesterProfile.pets_owned,
+          
+          // Profile content
+          about_me: requesterProfile.about_me,
+          looking_for: requesterProfile.looking_for,
+          interests: requesterProfile.interests,
+          move_in_date: requesterProfile.move_in_date,
+          
+          // Compatibility metadata
+          compatibility_score: compatibilityScore,
+          isRequestReceived: true, // Special flag for received requests
+          originalRequest: request   // Keep reference to original request
+        };
+        
+        setDetailedMatchData(matchData);
+        setShowMatchDetails(true);
+        
+        console.log('✅ Loaded detailed match data:', matchData);
+        
+      } else {
+        // Handle other request types (employment, peer-support, housing)
+        throw new Error('Detailed view for this connection type is not yet implemented');
+      }
+      
+    } catch (error) {
+      console.error('💥 Error loading match details:', error);
+      alert('Failed to load detailed match information. Please try again.');
+    } finally {
+      setLoadingMatchDetails(false);
+    }
+  };
+
+  /**
+   * ✅ NEW: Simplified compatibility calculation
+   * This is a basic version - you may want to import your full matching algorithm
+   */
+  const calculateCompatibilityScore = (profile1, profile2) => {
+    let score = 0;
+    let factors = 0;
+    
+    // Location compatibility
+    if (profile1.primary_city === profile2.primary_city && 
+        profile1.primary_state === profile2.primary_state) {
+      score += 20;
+    }
+    factors++;
+    
+    // Budget compatibility
+    const budgetOverlap = Math.min(profile1.budget_max, profile2.budget_max) - 
+                         Math.max(profile1.budget_min, profile2.budget_min);
+    if (budgetOverlap > 0) {
+      score += 15;
+    }
+    factors++;
+    
+    // Recovery stage compatibility
+    if (profile1.recovery_stage === profile2.recovery_stage) {
+      score += 15;
+    }
+    factors++;
+    
+    // Lifestyle compatibility (social, cleanliness, noise)
+    const lifestyleDiff = Math.abs(profile1.social_level - profile2.social_level) +
+                         Math.abs(profile1.cleanliness_level - profile2.cleanliness_level) +
+                         Math.abs(profile1.noise_tolerance - profile2.noise_tolerance);
+    
+    if (lifestyleDiff <= 3) score += 20;
+    else if (lifestyleDiff <= 6) score += 10;
+    factors++;
+    
+    // Spiritual affiliation compatibility
+    if (profile1.spiritual_affiliation === profile2.spiritual_affiliation) {
+      score += 10;
+    }
+    factors++;
+    
+    // Gender preference compatibility
+    if (profile1.preferred_roommate_gender === 'any' || 
+        profile2.preferred_roommate_gender === 'any' ||
+        profile1.preferred_roommate_gender === profile2.gender_identity) {
+      score += 20;
+    }
+    factors++;
+    
+    return Math.round(score);
+  };
+
+  /**
+   * ✅ FIXED: Load match requests with manual profile enrichment
+   */
+  const loadRequests = async () => {
+    if (!user) return;
+
+    try {
+      setLoading(true);
+      
+      // Get current user's registrant profile ID
+      const userRegistrantId = await getRegistrantProfileId(user.id);
+      
+      // Get user's applicant profile ID (since match_requests uses applicant_matching_profiles.id)
+      const { data: userApplicant } = await supabase
         .from('applicant_matching_profiles')
-        .select(`
-          *,
-          registrant_profiles(*)
-        `)
-        .eq('id', request.requester_id)
-        .single();
-      
-      if (requesterError) throw requesterError;
-      
-      // Get the recipient's profile (current user) for compatibility calculation
-      const { data: recipientProfile, error: recipientError } = await supabase
-        .from('applicant_matching_profiles')
-        .select('*')
+        .select('id, user_id')
         .eq('user_id', userRegistrantId)
         .single();
       
-      if (recipientError) throw recipientError;
+      if (!userApplicant) {
+        console.log('No applicant profile found');
+        setRequests([]);
+        return;
+      }
       
-      // Calculate compatibility score (simplified version)
-      const compatibilityScore = calculateCompatibilityScore(requesterProfile, recipientProfile);
+      const userApplicantId = userApplicant.id;
       
-      // Format the match data in the same structure as RoommateDiscovery
-      const matchData = {
-        user_id: requesterProfile.user_id,
-        id: requesterProfile.id,
-        first_name: requesterProfile.registrant_profiles?.first_name || 'Unknown',
-        last_name: requesterProfile.registrant_profiles?.last_name || '',
-        email: requesterProfile.registrant_profiles?.email,
-        
-        // Core matching criteria
-        primary_city: requesterProfile.primary_city,
-        primary_state: requesterProfile.primary_state,
-        primary_location: requesterProfile.primary_location,
-        budget_min: requesterProfile.budget_min,
-        budget_max: requesterProfile.budget_max,
-        preferred_roommate_gender: requesterProfile.preferred_roommate_gender,
-        recovery_stage: requesterProfile.recovery_stage,
-        recovery_methods: requesterProfile.recovery_methods,
-        primary_issues: requesterProfile.primary_issues,
-        spiritual_affiliation: requesterProfile.spiritual_affiliation,
-        
-        // Lifestyle preferences
-        social_level: requesterProfile.social_level,
-        cleanliness_level: requesterProfile.cleanliness_level,
-        noise_tolerance: requesterProfile.noise_tolerance,
-        work_schedule: requesterProfile.work_schedule,
-        bedtime_preference: requesterProfile.bedtime_preference,
-        smoking_status: requesterProfile.smoking_status,
-        pets_owned: requesterProfile.pets_owned,
-        
-        // Profile content
-        about_me: requesterProfile.about_me,
-        looking_for: requesterProfile.looking_for,
-        interests: requesterProfile.interests,
-        move_in_date: requesterProfile.move_in_date,
-        
-        // Compatibility metadata
-        compatibility_score: compatibilityScore,
-        isRequestReceived: true, // Special flag for received requests
-        originalRequest: request   // Keep reference to original request
-      };
+      // Load match requests WITHOUT automatic JOINs (they don't work with polymorphic relationships)
+      const { data: rawRequests, error } = await supabase
+        .from('match_requests')
+        .select('*')
+        .or(`requester_id.eq.${userApplicantId},recipient_id.eq.${userApplicantId}`);
       
-      setDetailedMatchData(matchData);
-      setShowMatchDetails(true);
+      if (error) throw error;
       
-      console.log('✅ Loaded detailed match data:', matchData);
+      if (!rawRequests || rawRequests.length === 0) {
+        setRequests([]);
+        return;
+      }
       
-    } else {
-      // Handle other request types (employment, peer-support, housing)
-      throw new Error('Detailed view for this connection type is not yet implemented');
-    }
-    
-  } catch (error) {
-    console.error('💥 Error loading match details:', error);
-    alert('Failed to load detailed match information. Please try again.');
-  } finally {
-    setLoadingMatchDetails(false);
-  }
-};
-const calculateCompatibilityScore = (profile1, profile2) => {
-  let score = 0;
-  let factors = 0;
-  
-  // Location compatibility
-  if (profile1.primary_city === profile2.primary_city && 
-      profile1.primary_state === profile2.primary_state) {
-    score += 20;
-  }
-  factors++;
-  
-  // Budget compatibility
-  const budgetOverlap = Math.min(profile1.budget_max, profile2.budget_max) - 
-                       Math.max(profile1.budget_min, profile2.budget_min);
-  if (budgetOverlap > 0) {
-    score += 15;
-  }
-  factors++;
-  
-  // Recovery stage compatibility
-  if (profile1.recovery_stage === profile2.recovery_stage) {
-    score += 15;
-  }
-  factors++;
-  
-  // Lifestyle compatibility (social, cleanliness, noise)
-  const lifestyleDiff = Math.abs(profile1.social_level - profile2.social_level) +
-                       Math.abs(profile1.cleanliness_level - profile2.cleanliness_level) +
-                       Math.abs(profile1.noise_tolerance - profile2.noise_tolerance);
-  
-  if (lifestyleDiff <= 3) score += 20;
-  else if (lifestyleDiff <= 6) score += 10;
-  factors++;
-  
-  // Spiritual affiliation compatibility
-  if (profile1.spiritual_affiliation === profile2.spiritual_affiliation) {
-    score += 10;
-  }
-  factors++;
-  
-  // Gender preference compatibility
-  if (profile1.preferred_roommate_gender === 'any' || 
-      profile2.preferred_roommate_gender === 'any' ||
-      profile1.preferred_roommate_gender === profile2.gender_identity) {
-    score += 20;
-  }
-  factors++;
-  
-  return Math.round(score);
-};
-  /**
- * ✅ FIXED: Load match requests with manual profile enrichment
- */
-const loadRequests = async () => {
-  if (!user) return;
-
-  try {
-    setLoading(true);
-    
-    // Get current user's registrant profile ID
-    const userRegistrantId = await getRegistrantProfileId(user.id);
-    
-    // Get user's applicant profile ID (since match_requests uses applicant_matching_profiles.id)
-    const { data: userApplicant } = await supabase
-      .from('applicant_matching_profiles')
-      .select('id, user_id')
-      .eq('user_id', userRegistrantId)
-      .single();
-    
-    if (!userApplicant) {
-      console.log('No applicant profile found');
-      setRequests([]);
-      return;
-    }
-    
-    const userApplicantId = userApplicant.id;
-    
-    // Load match requests WITHOUT automatic JOINs (they don't work with polymorphic relationships)
-    const { data: rawRequests, error } = await supabase
-      .from('match_requests')
-      .select('*')
-      .or(`requester_id.eq.${userApplicantId},recipient_id.eq.${userApplicantId}`);
-    
-    if (error) throw error;
-    
-    if (!rawRequests || rawRequests.length === 0) {
-      setRequests([]);
-      return;
-    }
-    
-    console.log(`📋 Loaded ${rawRequests.length} raw match requests`);
-    
-    // Manually enrich each request with profile data
-    const enrichedRequests = await Promise.all(
-      rawRequests.map(async (request) => {
-        try {
-          // For roommate/applicant requests, get applicant profiles
-          if (request.requester_type === 'applicant') {
-            const { data: requesterApplicant } = await supabase
-              .from('applicant_matching_profiles')
-              .select('id, user_id, registrant_profiles(first_name, last_name, email)')
-              .eq('id', request.requester_id)
-              .single();
+      console.log(`📋 Loaded ${rawRequests.length} raw match requests`);
+      
+      // Manually enrich each request with profile data
+      const enrichedRequests = await Promise.all(
+        rawRequests.map(async (request) => {
+          try {
+            // For roommate/applicant requests, get applicant profiles
+            if (request.requester_type === 'applicant') {
+              const { data: requesterApplicant } = await supabase
+                .from('applicant_matching_profiles')
+                .select('id, user_id, registrant_profiles(first_name, last_name, email)')
+                .eq('id', request.requester_id)
+                .single();
+              
+              const { data: recipientApplicant } = await supabase
+                .from('applicant_matching_profiles')
+                .select('id, user_id, registrant_profiles(first_name, last_name, email)')
+                .eq('id', request.recipient_id)
+                .single();
+              
+              return {
+                ...request,
+                requester_profile: {
+                  id: requesterApplicant?.id,
+                  user_id: requesterApplicant?.user_id,
+                  first_name: requesterApplicant?.registrant_profiles?.first_name,
+                  last_name: requesterApplicant?.registrant_profiles?.last_name,
+                  email: requesterApplicant?.registrant_profiles?.email
+                },
+                recipient_profile: {
+                  id: recipientApplicant?.id,
+                  user_id: recipientApplicant?.user_id,
+                  first_name: recipientApplicant?.registrant_profiles?.first_name,
+                  last_name: recipientApplicant?.registrant_profiles?.last_name,
+                  email: recipientApplicant?.registrant_profiles?.email
+                }
+              };
+            }
             
-            const { data: recipientApplicant } = await supabase
-              .from('applicant_matching_profiles')
-              .select('id, user_id, registrant_profiles(first_name, last_name, email)')
-              .eq('id', request.recipient_id)
-              .single();
+            // Add handling for other types (landlord, employer, peer-support) if needed
+            return request;
             
-            return {
-              ...request,
-              requester_profile: {
-                id: requesterApplicant?.id,
-                user_id: requesterApplicant?.user_id,
-                first_name: requesterApplicant?.registrant_profiles?.first_name,
-                last_name: requesterApplicant?.registrant_profiles?.last_name,
-                email: requesterApplicant?.registrant_profiles?.email
-              },
-              recipient_profile: {
-                id: recipientApplicant?.id,
-                user_id: recipientApplicant?.user_id,
-                first_name: recipientApplicant?.registrant_profiles?.first_name,
-                last_name: recipientApplicant?.registrant_profiles?.last_name,
-                email: recipientApplicant?.registrant_profiles?.email
-              }
-            };
+          } catch (err) {
+            console.error('Error enriching request:', err);
+            return request; // Return without enrichment if there's an error
           }
-          
-          // Add handling for other types (landlord, employer, peer-support) if needed
-          return request;
-          
-        } catch (err) {
-          console.error('Error enriching request:', err);
-          return request; // Return without enrichment if there's an error
-        }
-      })
-    );
-    
-    setRequests(enrichedRequests);
-    console.log('✅ Loaded match requests with enriched profile data:', enrichedRequests);
-    
-  } catch (error) {
-    console.error('Error loading connections:', error);
-  } finally {
-    setLoading(false);
-  }
-};
+        })
+      );
+      
+      setRequests(enrichedRequests);
+      console.log('✅ Loaded match requests with enriched profile data:', enrichedRequests);
+      
+    } catch (error) {
+      console.error('Error loading connections:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   // Load match requests
   useEffect(() => {
@@ -314,66 +317,57 @@ const loadRequests = async () => {
   }, [user]);
   
   /**
-   * ✅ SCHEMA ALIGNED: Filter requests based on active tab using correct user identification
+   * ✅ FIXED: Filter requests using enriched profile data instead of raw IDs
    */
-/**
- * ✅ FIXED: Filter requests using enriched profile data instead of raw IDs
- */
-const getFilteredRequests = () => {
-  if (!user || !userRegistrantId || requests.length === 0) return [];
-  
-  switch (activeTab) {
-    case 'active-connections':
-      return requests.filter(r => r.status === 'accepted' || r.status === 'matched');
-    case 'awaiting-response':
-      return requests.filter(r => 
-        r.status === 'pending' && 
-        r.recipient_profile?.user_id === userRegistrantId
-      );
-    case 'sent-requests':
-      return requests.filter(r => 
-        r.status === 'pending' && 
-        r.requester_profile?.user_id === userRegistrantId
-      );
-    case 'connection-history':
-      return requests.filter(r => ['rejected', 'withdrawn', 'cancelled'].includes(r.status));
-    default:
-      return requests;
-  }
-};
+  const getFilteredRequests = () => {
+    if (!user || !userRegistrantId || requests.length === 0) return [];
+    
+    switch (activeTab) {
+      case 'active-connections':
+        return requests.filter(r => r.status === 'accepted' || r.status === 'matched');
+      case 'awaiting-response':
+        return requests.filter(r => 
+          r.status === 'pending' && 
+          r.recipient_profile?.user_id === userRegistrantId
+        );
+      case 'sent-requests':
+        return requests.filter(r => 
+          r.status === 'pending' && 
+          r.requester_profile?.user_id === userRegistrantId
+        );
+      case 'connection-history':
+        return requests.filter(r => ['rejected', 'withdrawn', 'cancelled'].includes(r.status));
+      default:
+        return requests;
+    }
+  };
   
   /**
-   * ✅ SCHEMA ALIGNED: Get tab counts using correct field names
+   * ✅ FIXED: Get tab counts using enriched profile data
    */
-/**
- * ✅ FIXED: Get tab counts using enriched profile data
- */
-/**
- * FIXED: Get tab counts - Now synchronous using stored userRegistrantId
- */
-const getTabCounts = () => {
-  if (!user || !userRegistrantId || requests.length === 0) {
+  const getTabCounts = () => {
+    if (!user || !userRegistrantId || requests.length === 0) {
+      return {
+        activeConnections: 0,
+        awaitingResponse: 0,
+        sentRequests: 0,
+        connectionHistory: 0
+      };
+    }
+    
     return {
-      activeConnections: 0,
-      awaitingResponse: 0,
-      sentRequests: 0,
-      connectionHistory: 0
+      activeConnections: requests.filter(r => r.status === 'accepted' || r.status === 'matched').length,
+      awaitingResponse: requests.filter(r => 
+        r.status === 'pending' && 
+        r.recipient_profile?.user_id === userRegistrantId
+      ).length,
+      sentRequests: requests.filter(r => 
+        r.status === 'pending' && 
+        r.requester_profile?.user_id === userRegistrantId
+      ).length,
+      connectionHistory: requests.filter(r => ['rejected', 'withdrawn', 'cancelled'].includes(r.status)).length
     };
-  }
-  
-  return {
-    activeConnections: requests.filter(r => r.status === 'accepted' || r.status === 'matched').length,
-    awaitingResponse: requests.filter(r => 
-      r.status === 'pending' && 
-      r.recipient_profile?.user_id === userRegistrantId
-    ).length,
-    sentRequests: requests.filter(r => 
-      r.status === 'pending' && 
-      r.requester_profile?.user_id === userRegistrantId
-    ).length,
-    connectionHistory: requests.filter(r => ['rejected', 'withdrawn', 'cancelled'].includes(r.status)).length
   };
-};
   
   // Get connection type display name
   const getConnectionType = (request) => {
@@ -441,7 +435,7 @@ const getTabCounts = () => {
       console.log('📋 Approving connection request:', {
         requestId,
         requester: request.requester_id,
-        recipient: request.recipient_id, // ✅ FIXED: Use recipient_id
+        recipient: request.recipient_id,
         requestType: request.request_type
       });
 
@@ -450,7 +444,7 @@ const getTabCounts = () => {
         const { error: updateError } = await supabase
           .from('match_requests')
           .update({
-            status: 'accepted', // ✅ FIXED: Use 'accepted' instead of 'matched'
+            status: 'accepted',
             responded_at: new Date().toISOString()
           })
           .eq('id', requestId);
@@ -534,7 +528,7 @@ const getTabCounts = () => {
       const { data: recipientProfile, error: recipientError } = await supabase
         .from('registrant_profiles')
         .select('id, roles')
-        .eq('id', request.recipient_id) // ✅ FIXED: Use recipient_id
+        .eq('id', request.recipient_id)
         .single();
 
       if (requesterError || recipientError) {
@@ -574,7 +568,7 @@ const getTabCounts = () => {
           return {
             ...baseData,
             applicant_1_id: requesterRoles.includes('applicant') ? request.requester_id : request.recipient_id,
-            property_id: request.property_id // ✅ FIXED: Reference property_id from schema
+            property_id: request.property_id
           };
         }
       }
@@ -607,15 +601,15 @@ const getTabCounts = () => {
       
       // Get the other user's registrant profile ID
       const otherRegistrantId = formerMatch.requester_id === userRegistrantId ? 
-        formerMatch.recipient_id : formerMatch.requester_id; // ✅ FIXED: Use recipient_id
+        formerMatch.recipient_id : formerMatch.requester_id;
       
       setRequestSendingStates(prev => new Set([...prev, otherRegistrantId]));
       
       // ✅ SCHEMA ALIGNED: Create reconnection request with schema field names
       const requestData = {
-        requester_type: 'applicant', // ✅ ADDED: Schema requires type fields
+        requester_type: 'applicant',
         requester_id: userRegistrantId,
-        recipient_type: 'applicant', // ✅ ADDED: Schema requires type fields
+        recipient_type: 'applicant',
         recipient_id: otherRegistrantId,
         request_type: formerMatch.request_type,
         message: `I'd like to reconnect with you as a ${getConnectionType(formerMatch)}.`,
@@ -814,7 +808,7 @@ const getTabCounts = () => {
       
       // Determine the other person's registrant profile ID
       const otherRegistrantId = request.requester_id === userRegistrantId ? 
-        request.recipient_id : request.requester_id; // ✅ FIXED: Use recipient_id
+        request.recipient_id : request.requester_id;
       
       console.log('🔍 Fetching contact info for registrant:', otherRegistrantId);
       
@@ -953,127 +947,96 @@ const getTabCounts = () => {
   /**
    * ✅ SCHEMA ALIGNED: Render action buttons using correct user identification
    */
-const renderActionButtons = (request) => {
-  if (!userRegistrantId) return null;
-  
-  const isReceived = request.recipient_profile?.user_id === userRegistrantId;
-  const isSent = request.requester_profile?.user_id === userRegistrantId;
-  const { status } = request;
-  
-  if (status === 'pending' && isReceived) {
-    return (
-      <div className="grid-2">
-        <button
-          className="btn btn-secondary btn-sm"
-          onClick={() => handleApprove(request.id)}
-          disabled={actionLoading}
-        >
-          Accept
-        </button>
-        
-        <button
-          className="btn btn-outline btn-sm"
-          onClick={() => handleReject(request)}
-          disabled={actionLoading}
-        >
-          Decline
-        </button>
-      </div>
-    );
-  }
-  
-  if (status === 'pending' && isSent) {
-    return (
-      <div>
-        <button
-          className="btn btn-outline btn-sm"
-          onClick={() => handleCancelSentRequest(request.id)}
-          disabled={actionLoading}
-        >
-          Cancel Request
-        </button>
-      </div>
-    );
-  }
-  
-  if (status === 'accepted') {
-    return (
-      <div className="grid-2">
-        <button
-          className="btn btn-primary btn-sm"
-          onClick={() => handleViewContactInfo(request)}
-        >
-          View Contact Info
-        </button>
-        
-        <button
-          className="btn btn-outline btn-sm"
-          onClick={() => handleUnmatch(request.id)}
-          disabled={actionLoading}
-        >
-          End Connection
-        </button>
-      </div>
-    );
-  }
-  
-  if (status === 'withdrawn') {
-    const otherUserId = request.requester_profile?.user_id === userRegistrantId ? 
-      request.recipient_profile?.user_id : request.requester_profile?.user_id;
+  const renderActionButtons = (request) => {
+    if (!userRegistrantId) return null;
     
-    const isRequestSent = sentReconnectionRequests.has(otherUserId);
-    const isSending = requestSendingStates.has(otherUserId);
+    const isReceived = request.recipient_profile?.user_id === userRegistrantId;
+    const isSent = request.requester_profile?.user_id === userRegistrantId;
+    const { status } = request;
     
-    return (
-      <div>
-        <button
-          className={`btn btn-sm ${isRequestSent ? styles.btnSuccess : 'btn-outline'}`}
-          onClick={() => handleRequestReconnection(request)}
-          disabled={actionLoading || isRequestSent || isSending}
-        >
-          {isSending ? 'Sending...' : isRequestSent ? 'Request Sent' : 'Request Reconnection'}
-        </button>
-        {isRequestSent && (
-          <div className={`text-sm mt-1 ${styles.textSuccess}`}>
-            Reconnection request sent successfully!
-          </div>
-        )}
-      </div>
-    );
-  }
-  
-  return null;
-};
-
-  /**
-   * ✅ SCHEMA ALIGNED: Get other person's name using schema relationships
-   */
-  const getOtherPersonName = async (request) => {
-    try {
-      const userRegistrantId = await getRegistrantProfileId(user.id);
+    if (status === 'pending' && isReceived) {
+      return (
+        <div className="grid-2">
+          <button
+            className="btn btn-secondary btn-sm"
+            onClick={() => handleApprove(request.id)}
+            disabled={actionLoading}
+          >
+            Accept
+          </button>
+          
+          <button
+            className="btn btn-outline btn-sm"
+            onClick={() => handleReject(request)}
+            disabled={actionLoading}
+          >
+            Decline
+          </button>
+        </div>
+      );
+    }
+    
+    if (status === 'pending' && isSent) {
+      return (
+        <div>
+          <button
+            className="btn btn-outline btn-sm"
+            onClick={() => handleCancelSentRequest(request.id)}
+            disabled={actionLoading}
+          >
+            Cancel Request
+          </button>
+        </div>
+      );
+    }
+    
+    if (status === 'accepted') {
+      return (
+        <div className="grid-2">
+          <button
+            className="btn btn-primary btn-sm"
+            onClick={() => handleViewContactInfo(request)}
+          >
+            View Contact Info
+          </button>
+          
+          <button
+            className="btn btn-outline btn-sm"
+            onClick={() => handleUnmatch(request.id)}
+            disabled={actionLoading}
+          >
+            End Connection
+          </button>
+        </div>
+      );
+    }
+    
+    if (status === 'withdrawn') {
+      const otherUserId = request.requester_profile?.user_id === userRegistrantId ? 
+        request.recipient_profile?.user_id : request.requester_profile?.user_id;
       
-      if (request.requester_id === userRegistrantId) {
-        return request.recipient_profile?.first_name || 'Unknown User';
-      } else {
-        return request.requester_profile?.first_name || 'Unknown User';
-      }
-    } catch (error) {
-      console.error('Error getting other person name:', error);
-      return 'Unknown User';
+      const isRequestSent = sentReconnectionRequests.has(otherUserId);
+      const isSending = requestSendingStates.has(otherUserId);
+      
+      return (
+        <div>
+          <button
+            className={`btn btn-sm ${isRequestSent ? styles.btnSuccess : 'btn-outline'}`}
+            onClick={() => handleRequestReconnection(request)}
+            disabled={actionLoading || isRequestSent || isSending}
+          >
+            {isSending ? 'Sending...' : isRequestSent ? 'Request Sent' : 'Request Reconnection'}
+          </button>
+          {isRequestSent && (
+            <div className={`text-sm mt-1 ${styles.textSuccess}`}>
+              Reconnection request sent successfully!
+            </div>
+          )}
+        </div>
+      );
     }
-  };
-
-  /**
-   * ✅ SCHEMA ALIGNED: Get request direction using correct field names
-   */
-  const getRequestDirection = async (request) => {
-    try {
-      const userRegistrantId = await getRegistrantProfileId(user.id);
-      return request.requester_id === userRegistrantId ? 'sent' : 'received';
-    } catch (error) {
-      console.error('Error getting request direction:', error);
-      return 'unknown';
-    }
+    
+    return null;
   };
 
   // Get card className with status styling
@@ -1089,32 +1052,11 @@ const renderActionButtons = (request) => {
   };
 
   /**
-   * Component state management
-   */
-  const [filteredRequests, setFilteredRequests] = useState([]);
-  const [tabCounts, setTabCounts] = useState({
-    activeConnections: 0,
-    awaitingResponse: 0,
-    sentRequests: 0,
-    connectionHistory: 0
-  });
-
-  // Update filtered requests and tab counts when requests or active tab changes
-  useEffect(() => {
-    const updateData = async () => {
-      const filtered = await getFilteredRequests();
-      const counts = await getTabCounts();
-      setFilteredRequests(filtered);
-      setTabCounts(counts);
-    };
-    
-    updateData();
-  }, [requests, activeTab]);
-
-  /**
-   * Render pending requests (both incoming and outgoing)
+   * ✅ ENHANCED: Render pending requests with "View Potential Match Details" button
    */
   const renderPendingRequests = (isSentRequests = false) => {
+    const filteredRequests = getFilteredRequests();
+    
     if (filteredRequests.length === 0) {
       const emptyMessage = isSentRequests 
         ? "You haven't sent any pending requests."
@@ -1176,34 +1118,47 @@ const renderActionButtons = (request) => {
               )}
               
               {/* ✅ ENHANCED: Action buttons with detailed view option */}
-{!isSentRequests && request.status === 'pending' && (
-  <div className="grid-3">
-    {/* ✅ NEW: View Potential Match Details button */}
-    <button
-      className="btn btn-outline btn-sm"
-      onClick={() => loadFullMatchDetails(request)}
-      disabled={loadingMatchDetails}
-    >
-      {loadingMatchDetails ? 'Loading...' : 'View Match Details'}
-    </button>
-    
-    <button
-      className="btn btn-secondary btn-sm"
-      onClick={() => handleApprove(request.id)}
-      disabled={actionLoading}
-    >
-      Accept
-    </button>
-    
-    <button
-      className="btn btn-outline btn-sm"
-      onClick={() => handleReject(request)}
-      disabled={actionLoading}
-    >
-      Decline
-    </button>
-  </div>
-)}
+              {!isSentRequests && request.status === 'pending' && (
+                <div className="grid-3">
+                  {/* ✅ NEW: View Potential Match Details button */}
+                  <button
+                    className="btn btn-outline btn-sm"
+                    onClick={() => loadFullMatchDetails(request)}
+                    disabled={loadingMatchDetails}
+                  >
+                    {loadingMatchDetails ? 'Loading...' : 'View Match Details'}
+                  </button>
+                  
+                  <button
+                    className="btn btn-secondary btn-sm"
+                    onClick={() => handleApprove(request.id)}
+                    disabled={actionLoading}
+                  >
+                    Accept
+                  </button>
+                  
+                  <button
+                    className="btn btn-outline btn-sm"
+                    onClick={() => handleReject(request)}
+                    disabled={actionLoading}
+                  >
+                    Decline
+                  </button>
+                </div>
+              )}
+              
+              {/* Original action buttons for sent requests */}
+              {isSentRequests && request.status === 'pending' && (
+                <div>
+                  <button
+                    className="btn btn-outline btn-sm"
+                    onClick={() => handleCancelSentRequest(request.id)}
+                    disabled={actionLoading}
+                  >
+                    Cancel Request
+                  </button>
+                </div>
+              )}
             </div>
           </div>
         ))}
@@ -1211,22 +1166,12 @@ const renderActionButtons = (request) => {
     );
   };
 
-{/* Original action buttons for sent requests */}
-{isSentRequests && request.status === 'pending' && (
-  <div>
-    <button
-      className="btn btn-outline btn-sm"
-      onClick={() => handleCancelSentRequest(request.id)}
-      disabled={actionLoading}
-    >
-      Cancel Request
-    </button>
-  </div>
-)}
   /**
    * Render Active Matches organized by type
    */
   const renderActiveMatches = () => {
+    const filteredRequests = getFilteredRequests();
+    
     if (filteredRequests.length === 0) {
       return (
         <div className="empty-state">
@@ -1306,120 +1251,155 @@ const renderActionButtons = (request) => {
       </div>
     );
   }
+
+  const filteredRequests = getFilteredRequests();
+  const tabCounts = getTabCounts();
   
   return (
-    <div className="content">
-      {/* Header */}
-      <div className="text-center mb-5">
-        <h1 className="welcome-title">Connections</h1>
-        <p className="welcome-text">
-          Manage your connection requests and active connections
-        </p>
-      </div>
-      
-      {/* Navigation Tabs */}
-      <div className="navigation mb-5">
-        <ul className="nav-list">
-          <li className="nav-item">
-            <button
-              className={`nav-button ${activeTab === 'active-connections' ? 'active' : ''}`}
-              onClick={() => setActiveTab('active-connections')}
-            >
-              <span className="nav-icon">⚡</span>
-              Active Connections ({tabCounts.activeConnections})
-            </button>
-          </li>
-          
-          <li className="nav-item">
-            <button
-              className={`nav-button ${activeTab === 'awaiting-response' ? 'active' : ''}`}
-              onClick={() => setActiveTab('awaiting-response')}
-            >
-              <span className="nav-icon">📥</span>
-              Requests Awaiting Response ({tabCounts.awaitingResponse})
-            </button>
-          </li>
-          
-          <li className="nav-item">
-            <button
-              className={`nav-button ${activeTab === 'sent-requests' ? 'active' : ''}`}
-              onClick={() => setActiveTab('sent-requests')}
-            >
-              <span className="nav-icon">📤</span>
-              Sent Requests ({tabCounts.sentRequests})
-            </button>
-          </li>
-          
-          <li className="nav-item">
-            <button
-              className={`nav-button ${activeTab === 'connection-history' ? 'active' : ''}`}
-              onClick={() => setActiveTab('connection-history')}
-            >
-              <span className="nav-icon">📋</span>
-              History ({tabCounts.connectionHistory})
-            </button>
-          </li>
-        </ul>
-      </div>
-      
-      {/* Content based on active tab */}
-      {activeTab === 'active-connections' && renderActiveMatches()}
-      {activeTab === 'awaiting-response' && renderPendingRequests(false)}
-      {activeTab === 'sent-requests' && renderPendingRequests(true)}
-      {activeTab === 'connection-history' && (
-        filteredRequests.length === 0 ? (
-          <div className="empty-state">
-            <div className="empty-state-icon">📋</div>
-            <h3 className="empty-state-title">No Connection History</h3>
-            <p>Your past connections and rejected requests will appear here.</p>
-          </div>
-        ) : (
-          filteredRequests.map(request => (
-            <div key={request.id} className={getCardClassName(request)}>
-              <div className="card-header">
-                <div>
-                  <div className="card-title">
-                    {request.requester_profile?.first_name || request.recipient_profile?.first_name || 'Unknown User'}
-                  </div>
-                  <div className="card-subtitle">
-                    {getConnectionType(request)} on{' '}
-                    {new Date(request.created_at).toLocaleDateString()}
-                  </div>
-                </div>
-                {renderStatusBadge(request.status)}
-              </div>
-              
-              <div>
-                <div className="grid-auto mb-4">
+    <>
+      <div className="content">
+        {/* Header */}
+        <div className="text-center mb-5">
+          <h1 className="welcome-title">Connections</h1>
+          <p className="welcome-text">
+            Manage your connection requests and active connections
+          </p>
+        </div>
+        
+        {/* Navigation Tabs */}
+        <div className="navigation mb-5">
+          <ul className="nav-list">
+            <li className="nav-item">
+              <button
+                className={`nav-button ${activeTab === 'active-connections' ? 'active' : ''}`}
+                onClick={() => setActiveTab('active-connections')}
+              >
+                <span className="nav-icon">⚡</span>
+                Active Connections ({tabCounts.activeConnections})
+              </button>
+            </li>
+            
+            <li className="nav-item">
+              <button
+                className={`nav-button ${activeTab === 'awaiting-response' ? 'active' : ''}`}
+                onClick={() => setActiveTab('awaiting-response')}
+              >
+                <span className="nav-icon">📥</span>
+                Requests Awaiting Response ({tabCounts.awaitingResponse})
+              </button>
+            </li>
+            
+            <li className="nav-item">
+              <button
+                className={`nav-button ${activeTab === 'sent-requests' ? 'active' : ''}`}
+                onClick={() => setActiveTab('sent-requests')}
+              >
+                <span className="nav-icon">📤</span>
+                Sent Requests ({tabCounts.sentRequests})
+              </button>
+            </li>
+            
+            <li className="nav-item">
+              <button
+                className={`nav-button ${activeTab === 'connection-history' ? 'active' : ''}`}
+                onClick={() => setActiveTab('connection-history')}
+              >
+                <span className="nav-icon">📋</span>
+                History ({tabCounts.connectionHistory})
+              </button>
+            </li>
+          </ul>
+        </div>
+        
+        {/* Content based on active tab */}
+        {activeTab === 'active-connections' && renderActiveMatches()}
+        {activeTab === 'awaiting-response' && renderPendingRequests(false)}
+        {activeTab === 'sent-requests' && renderPendingRequests(true)}
+        {activeTab === 'connection-history' && (
+          filteredRequests.length === 0 ? (
+            <div className="empty-state">
+              <div className="empty-state-icon">📋</div>
+              <h3 className="empty-state-title">No Connection History</h3>
+              <p>Your past connections and rejected requests will appear here.</p>
+            </div>
+          ) : (
+            filteredRequests.map(request => (
+              <div key={request.id} className={getCardClassName(request)}>
+                <div className="card-header">
                   <div>
-                    <span className="label">Connection Type</span>
-                    <span className="text-gray-800">
-                      {getConnectionType(request)}
-                    </span>
-                  </div>
-                  
-                  <div>
-                    <span className="label">Status</span>
-                    <span className="text-gray-800">
-                      {request.status.charAt(0).toUpperCase() + request.status.slice(1)}
-                    </span>
-                  </div>
-                </div>
-                
-                {request.message && (
-                  <div className="mb-4">
-                    <div className="label mb-2">Message</div>
-                    <div className="alert alert-info">
-                      {request.message}
+                    <div className="card-title">
+                      {request.requester_profile?.first_name || request.recipient_profile?.first_name || 'Unknown User'}
+                    </div>
+                    <div className="card-subtitle">
+                      {getConnectionType(request)} on{' '}
+                      {new Date(request.created_at).toLocaleDateString()}
                     </div>
                   </div>
-                )}
+                  {renderStatusBadge(request.status)}
+                </div>
                 
-                {renderActionButtons(request)}
+                <div>
+                  <div className="grid-auto mb-4">
+                    <div>
+                      <span className="label">Connection Type</span>
+                      <span className="text-gray-800">
+                        {getConnectionType(request)}
+                      </span>
+                    </div>
+                    
+                    <div>
+                      <span className="label">Status</span>
+                      <span className="text-gray-800">
+                        {request.status.charAt(0).toUpperCase() + request.status.slice(1)}
+                      </span>
+                    </div>
+                  </div>
+                  
+                  {request.message && (
+                    <div className="mb-4">
+                      <div className="label mb-2">Message</div>
+                      <div className="alert alert-info">
+                        {request.message}
+                      </div>
+                    </div>
+                  )}
+                  
+                  {renderActionButtons(request)}
+                </div>
               </div>
-            </div>
-          ))
-        )
+            ))
+          )
+        )}
+      </div>
+      
+      {/* ✅ NEW: Match Details Modal */}
+      {showMatchDetails && detailedMatchData && (
+        <MatchDetailsModal
+          match={detailedMatchData}
+          onClose={() => {
+            setShowMatchDetails(false);
+            setDetailedMatchData(null);
+          }}
+          onRequestMatch={() => {}}
+          customActions={{
+            acceptLabel: "Accept Connection",
+            declineLabel: "Decline Connection", 
+            onAccept: () => {
+              setShowMatchDetails(false);
+              setDetailedMatchData(null);
+              handleApprove(detailedMatchData.originalRequest.id);
+            },
+            onDecline: () => {
+              setShowMatchDetails(false);
+              setDetailedMatchData(null);
+              handleReject(detailedMatchData.originalRequest);
+            }
+          }}
+          isRequestSent={false}
+          isAlreadyMatched={false}
+          isRequestReceived={true}
+          usePortal={true}
+        />
       )}
       
       {/* Reject Modal */}
@@ -1577,36 +1557,7 @@ const renderActionButtons = (request) => {
           </div>
         </div>
       )}
-      {/* ✅ NEW: Match Details Modal */}
-      {showMatchDetails && detailedMatchData && (
-        <MatchDetailsModal
-          match={detailedMatchData}
-          onClose={() => {
-            setShowMatchDetails(false);
-            setDetailedMatchData(null);
-          }}
-          onRequestMatch={() => {}}
-          customActions={{
-            acceptLabel: "Accept Connection",
-            declineLabel: "Decline Connection", 
-            onAccept: () => {
-              setShowMatchDetails(false);
-              setDetailedMatchData(null);
-              handleApprove(detailedMatchData.originalRequest.id);
-            },
-            onDecline: () => {
-              setShowMatchDetails(false);
-              setDetailedMatchData(null);
-              handleReject(detailedMatchData.originalRequest);
-            }
-          }}
-          isRequestSent={false}
-          isAlreadyMatched={false}
-          isRequestReceived={true}
-          usePortal={true}
-        />
-      )}
-    </div>
+    </>
   );
 };
 
