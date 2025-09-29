@@ -43,48 +43,104 @@ const MatchRequests = () => {
   /**
    * ✅ SCHEMA ALIGNED: Load match requests using correct field names and relationships
    */
-  const loadRequests = async () => {
-    if (!user) return;
+/**
+ * ✅ FIXED: Load match requests with manual profile enrichment
+ */
+const loadRequests = async () => {
+  if (!user) return;
 
-    try {
-      setLoading(true);
-      
-      // Get current user's registrant profile ID
-      const userRegistrantId = await getRegistrantProfileId(user.id);
-      
-      // ✅ SCHEMA ALIGNED: Query using schema field names
-      const { data, error } = await supabase
-        .from('match_requests')
-        .select(`
-          *,
-          requester_profile:requester_id(
-            id,
-            user_id,
-            first_name,
-            last_name,
-            email
-          ),
-          recipient_profile:recipient_id(
-            id,
-            user_id,
-            first_name,
-            last_name,
-            email
-          )
-        `)
-        .or(`requester_id.eq.${userRegistrantId},recipient_id.eq.${userRegistrantId}`);
-      
-      if (error) throw error;
-      
-      setRequests(data || []);
-      console.log('✅ Loaded match requests with schema-aligned data:', data);
-      
-    } catch (error) {
-      console.error('Error loading connections:', error);
-    } finally {
-      setLoading(false);
+  try {
+    setLoading(true);
+    
+    // Get current user's registrant profile ID
+    const userRegistrantId = await getRegistrantProfileId(user.id);
+    
+    // Get user's applicant profile ID (since match_requests uses applicant_matching_profiles.id)
+    const { data: userApplicant } = await supabase
+      .from('applicant_matching_profiles')
+      .select('id, user_id')
+      .eq('user_id', userRegistrantId)
+      .single();
+    
+    if (!userApplicant) {
+      console.log('No applicant profile found');
+      setRequests([]);
+      return;
     }
-  };
+    
+    const userApplicantId = userApplicant.id;
+    
+    // Load match requests WITHOUT automatic JOINs (they don't work with polymorphic relationships)
+    const { data: rawRequests, error } = await supabase
+      .from('match_requests')
+      .select('*')
+      .or(`requester_id.eq.${userApplicantId},recipient_id.eq.${userApplicantId}`);
+    
+    if (error) throw error;
+    
+    if (!rawRequests || rawRequests.length === 0) {
+      setRequests([]);
+      return;
+    }
+    
+    console.log(`📋 Loaded ${rawRequests.length} raw match requests`);
+    
+    // Manually enrich each request with profile data
+    const enrichedRequests = await Promise.all(
+      rawRequests.map(async (request) => {
+        try {
+          // For roommate/applicant requests, get applicant profiles
+          if (request.requester_type === 'applicant') {
+            const { data: requesterApplicant } = await supabase
+              .from('applicant_matching_profiles')
+              .select('id, user_id, registrant_profiles(first_name, last_name, email)')
+              .eq('id', request.requester_id)
+              .single();
+            
+            const { data: recipientApplicant } = await supabase
+              .from('applicant_matching_profiles')
+              .select('id, user_id, registrant_profiles(first_name, last_name, email)')
+              .eq('id', request.recipient_id)
+              .single();
+            
+            return {
+              ...request,
+              requester_profile: {
+                id: requesterApplicant?.id,
+                user_id: requesterApplicant?.user_id,
+                first_name: requesterApplicant?.registrant_profiles?.first_name,
+                last_name: requesterApplicant?.registrant_profiles?.last_name,
+                email: requesterApplicant?.registrant_profiles?.email
+              },
+              recipient_profile: {
+                id: recipientApplicant?.id,
+                user_id: recipientApplicant?.user_id,
+                first_name: recipientApplicant?.registrant_profiles?.first_name,
+                last_name: recipientApplicant?.registrant_profiles?.last_name,
+                email: recipientApplicant?.registrant_profiles?.email
+              }
+            };
+          }
+          
+          // Add handling for other types (landlord, employer, peer-support) if needed
+          return request;
+          
+        } catch (err) {
+          console.error('Error enriching request:', err);
+          return request; // Return without enrichment if there's an error
+        }
+      })
+    );
+    
+    setRequests(enrichedRequests);
+    console.log('✅ Loaded match requests with enriched profile data:', enrichedRequests);
+    
+  } catch (error) {
+    console.error('Error loading connections:', error);
+  } finally {
+    setLoading(false);
+  }
+};
 
   // Load match requests
   useEffect(() => {
