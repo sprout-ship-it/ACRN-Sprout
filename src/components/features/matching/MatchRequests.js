@@ -12,6 +12,7 @@ const MatchRequests = () => {
   const { user, profile, hasRole } = useAuth();
   
   // Start with Active Connections as default tab
+  const [userRegistrantId, setUserRegistrantId] = useState(null);
   const [activeTab, setActiveTab] = useState('active-connections');
   const [requests, setRequests] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -29,6 +30,20 @@ const MatchRequests = () => {
   /**
    * Get registrant profile ID from auth user ID (for queries)
    */
+    useEffect(() => {
+    const loadUserRegistrantId = async () => {
+      if (user?.id) {
+        try {
+          const id = await getRegistrantProfileId(user.id);
+          setUserRegistrantId(id);
+        } catch (err) {
+          console.error('Error loading registrant ID:', err);
+        }
+      }
+    };
+    loadUserRegistrantId();
+  }, [user?.id]);
+  
   const getRegistrantProfileId = async (authUserId) => {
     const { data, error } = await supabase
       .from('registrant_profiles')
@@ -153,35 +168,26 @@ const loadRequests = async () => {
 /**
  * ✅ FIXED: Filter requests using enriched profile data instead of raw IDs
  */
-const getFilteredRequests = async () => {
-  if (!user || requests.length === 0) return [];
+const getFilteredRequests = () => {
+  if (!user || !userRegistrantId || requests.length === 0) return [];
   
-  try {
-    const userRegistrantId = await getRegistrantProfileId(user.id);
-    
-    switch (activeTab) {
-      case 'active-connections':
-        return requests.filter(r => r.status === 'accepted' || r.status === 'matched');
-      case 'awaiting-response':
-        // ✅ FIXED: Compare using enriched profile data, not raw recipient_id
-        return requests.filter(r => 
-          r.status === 'pending' && 
-          r.recipient_profile?.user_id === userRegistrantId
-        );
-      case 'sent-requests':
-        // ✅ FIXED: Compare using enriched profile data, not raw requester_id
-        return requests.filter(r => 
-          r.status === 'pending' && 
-          r.requester_profile?.user_id === userRegistrantId
-        );
-      case 'connection-history':
-        return requests.filter(r => ['rejected', 'withdrawn', 'cancelled'].includes(r.status));
-      default:
-        return requests;
-    }
-  } catch (error) {
-    console.error('Error filtering requests:', error);
-    return [];
+  switch (activeTab) {
+    case 'active-connections':
+      return requests.filter(r => r.status === 'accepted' || r.status === 'matched');
+    case 'awaiting-response':
+      return requests.filter(r => 
+        r.status === 'pending' && 
+        r.recipient_profile?.user_id === userRegistrantId
+      );
+    case 'sent-requests':
+      return requests.filter(r => 
+        r.status === 'pending' && 
+        r.requester_profile?.user_id === userRegistrantId
+      );
+    case 'connection-history':
+      return requests.filter(r => ['rejected', 'withdrawn', 'cancelled'].includes(r.status));
+    default:
+      return requests;
   }
 };
   
@@ -191,8 +197,11 @@ const getFilteredRequests = async () => {
 /**
  * ✅ FIXED: Get tab counts using enriched profile data
  */
-const getTabCounts = async () => {
-  if (!user || requests.length === 0) {
+/**
+ * FIXED: Get tab counts - Now synchronous using stored userRegistrantId
+ */
+const getTabCounts = () => {
+  if (!user || !userRegistrantId || requests.length === 0) {
     return {
       activeConnections: 0,
       awaitingResponse: 0,
@@ -201,25 +210,18 @@ const getTabCounts = async () => {
     };
   }
   
-  try {
-    const userRegistrantId = await getRegistrantProfileId(user.id);
-    
-    return {
-      activeConnections: requests.filter(r => r.status === 'accepted' || r.status === 'matched').length,
-      awaitingResponse: requests.filter(r => 
-        r.status === 'pending' && 
-        r.recipient_profile?.user_id === userRegistrantId
-      ).length,
-      sentRequests: requests.filter(r => 
-        r.status === 'pending' && 
-        r.requester_profile?.user_id === userRegistrantId
-      ).length,
-      connectionHistory: requests.filter(r => ['rejected', 'withdrawn', 'cancelled'].includes(r.status)).length
-    };
-  } catch (error) {
-    console.error('Error calculating tab counts:', error);
-    return { activeConnections: 0, awaitingResponse: 0, sentRequests: 0, connectionHistory: 0 };
-  }
+  return {
+    activeConnections: requests.filter(r => r.status === 'accepted' || r.status === 'matched').length,
+    awaitingResponse: requests.filter(r => 
+      r.status === 'pending' && 
+      r.recipient_profile?.user_id === userRegistrantId
+    ).length,
+    sentRequests: requests.filter(r => 
+      r.status === 'pending' && 
+      r.requester_profile?.user_id === userRegistrantId
+    ).length,
+    connectionHistory: requests.filter(r => ['rejected', 'withdrawn', 'cancelled'].includes(r.status)).length
+  };
 };
   
   // Get connection type display name
@@ -800,101 +802,97 @@ const getTabCounts = async () => {
   /**
    * ✅ SCHEMA ALIGNED: Render action buttons using correct user identification
    */
-  const renderActionButtons = async (request) => {
-    try {
-      const userRegistrantId = await getRegistrantProfileId(user.id);
-      const isReceived = request.recipient_id === userRegistrantId; // ✅ FIXED: Use recipient_id
-      const isSent = request.requester_id === userRegistrantId;
-      const { status } = request;
-      
-      if (status === 'pending' && isReceived) {
-        return (
-          <div className="grid-2">
-            <button
-              className="btn btn-secondary btn-sm"
-              onClick={() => handleApprove(request.id)}
-              disabled={actionLoading}
-            >
-              Accept
-            </button>
-            
-            <button
-              className="btn btn-outline btn-sm"
-              onClick={() => handleReject(request)}
-              disabled={actionLoading}
-            >
-              Decline
-            </button>
-          </div>
-        );
-      }
-      
-      if (status === 'pending' && isSent) {
-        return (
-          <div>
-            <button
-              className="btn btn-outline btn-sm"
-              onClick={() => handleCancelSentRequest(request.id)}
-              disabled={actionLoading}
-            >
-              Cancel Request
-            </button>
-          </div>
-        );
-      }
-      
-      if (status === 'accepted') {
-        return (
-          <div className="grid-2">
-            <button
-              className="btn btn-primary btn-sm"
-              onClick={() => handleViewContactInfo(request)}
-            >
-              View Contact Info
-            </button>
-            
-            <button
-              className="btn btn-outline btn-sm"
-              onClick={() => handleUnmatch(request.id)}
-              disabled={actionLoading}
-            >
-              End Connection
-            </button>
-          </div>
-        );
-      }
-      
-      if (status === 'withdrawn') {
-        const otherRegistrantId = request.requester_id === userRegistrantId ? 
-          request.recipient_id : request.requester_id;
+const renderActionButtons = (request) => {
+  if (!userRegistrantId) return null;
+  
+  const isReceived = request.recipient_profile?.user_id === userRegistrantId;
+  const isSent = request.requester_profile?.user_id === userRegistrantId;
+  const { status } = request;
+  
+  if (status === 'pending' && isReceived) {
+    return (
+      <div className="grid-2">
+        <button
+          className="btn btn-secondary btn-sm"
+          onClick={() => handleApprove(request.id)}
+          disabled={actionLoading}
+        >
+          Accept
+        </button>
         
-        const isRequestSent = sentReconnectionRequests.has(otherRegistrantId);
-        const isSending = requestSendingStates.has(otherRegistrantId);
+        <button
+          className="btn btn-outline btn-sm"
+          onClick={() => handleReject(request)}
+          disabled={actionLoading}
+        >
+          Decline
+        </button>
+      </div>
+    );
+  }
+  
+  if (status === 'pending' && isSent) {
+    return (
+      <div>
+        <button
+          className="btn btn-outline btn-sm"
+          onClick={() => handleCancelSentRequest(request.id)}
+          disabled={actionLoading}
+        >
+          Cancel Request
+        </button>
+      </div>
+    );
+  }
+  
+  if (status === 'accepted') {
+    return (
+      <div className="grid-2">
+        <button
+          className="btn btn-primary btn-sm"
+          onClick={() => handleViewContactInfo(request)}
+        >
+          View Contact Info
+        </button>
         
-        return (
-          <div>
-            <button
-              className={`btn btn-sm ${isRequestSent ? styles.btnSuccess : 'btn-outline'}`}
-              onClick={() => handleRequestReconnection(request)}
-              disabled={actionLoading || isRequestSent || isSending}
-            >
-              {isSending ? 'Sending...' : isRequestSent ? 'Request Sent' : 'Request Reconnection'}
-            </button>
-            {isRequestSent && (
-              <div className={`text-sm mt-1 ${styles.textSuccess}`}>
-                Reconnection request sent successfully!
-              </div>
-            )}
+        <button
+          className="btn btn-outline btn-sm"
+          onClick={() => handleUnmatch(request.id)}
+          disabled={actionLoading}
+        >
+          End Connection
+        </button>
+      </div>
+    );
+  }
+  
+  if (status === 'withdrawn') {
+    const otherUserId = request.requester_profile?.user_id === userRegistrantId ? 
+      request.recipient_profile?.user_id : request.requester_profile?.user_id;
+    
+    const isRequestSent = sentReconnectionRequests.has(otherUserId);
+    const isSending = requestSendingStates.has(otherUserId);
+    
+    return (
+      <div>
+        <button
+          className={`btn btn-sm ${isRequestSent ? styles.btnSuccess : 'btn-outline'}`}
+          onClick={() => handleRequestReconnection(request)}
+          disabled={actionLoading || isRequestSent || isSending}
+        >
+          {isSending ? 'Sending...' : isRequestSent ? 'Request Sent' : 'Request Reconnection'}
+        </button>
+        {isRequestSent && (
+          <div className={`text-sm mt-1 ${styles.textSuccess}`}>
+            Reconnection request sent successfully!
           </div>
-        );
-      }
-      
-      return null;
-    } catch (error) {
-      console.error('Error rendering action buttons:', error);
-      return null;
-    }
-  };
+        )}
+      </div>
+    );
+  }
+  
+  return null;
+};
 
   /**
    * ✅ SCHEMA ALIGNED: Get other person's name using schema relationships
