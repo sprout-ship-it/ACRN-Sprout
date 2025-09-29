@@ -3,6 +3,8 @@ import React, { useState, useEffect } from 'react';
 import { useAuth } from '../../../context/AuthContext';
 import { supabase } from '../../../utils/supabase';
 import LoadingSpinner from '../../ui/LoadingSpinner';
+import MatchCard from './components/MatchCard';
+import MatchDetailsModal from './components/MatchDetailsModal';
 
 // Import CSS foundation and component module
 import '../../../styles/main.css';
@@ -22,6 +24,9 @@ const MatchRequests = () => {
   const [rejectReason, setRejectReason] = useState('');
   const [showContactModal, setShowContactModal] = useState(false);
   const [contactInfo, setContactInfo] = useState(null);
+  const [showMatchDetails, setShowMatchDetails] = useState(false);
+  const [detailedMatchData, setDetailedMatchData] = useState(null);
+  const [loadingMatchDetails, setLoadingMatchDetails] = useState(false);
   
   // Track sent reconnection requests for UI feedback
   const [sentReconnectionRequests, setSentReconnectionRequests] = useState(new Set());
@@ -59,6 +64,152 @@ const MatchRequests = () => {
    * ✅ SCHEMA ALIGNED: Load match requests using correct field names and relationships
    */
 /**
+ * ✅ NEW: Load full match details for a specific request
+ * This shows the same detailed view that the requester saw
+ */
+const loadFullMatchDetails = async (request) => {
+  setLoadingMatchDetails(true);
+  
+  try {
+    console.log('🔍 Loading full match details for request:', request.id);
+    
+    // Determine if this is a roommate request (applicant-to-applicant)
+    if (request.request_type === 'roommate' || 
+        (request.requester_type === 'applicant' && request.recipient_type === 'applicant')) {
+      
+      // Get the requester's full applicant profile
+      const { data: requesterProfile, error: requesterError } = await supabase
+        .from('applicant_matching_profiles')
+        .select(`
+          *,
+          registrant_profiles(*)
+        `)
+        .eq('id', request.requester_id)
+        .single();
+      
+      if (requesterError) throw requesterError;
+      
+      // Get the recipient's profile (current user) for compatibility calculation
+      const { data: recipientProfile, error: recipientError } = await supabase
+        .from('applicant_matching_profiles')
+        .select('*')
+        .eq('user_id', userRegistrantId)
+        .single();
+      
+      if (recipientError) throw recipientError;
+      
+      // Calculate compatibility score (simplified version)
+      const compatibilityScore = calculateCompatibilityScore(requesterProfile, recipientProfile);
+      
+      // Format the match data in the same structure as RoommateDiscovery
+      const matchData = {
+        user_id: requesterProfile.user_id,
+        id: requesterProfile.id,
+        first_name: requesterProfile.registrant_profiles?.first_name || 'Unknown',
+        last_name: requesterProfile.registrant_profiles?.last_name || '',
+        email: requesterProfile.registrant_profiles?.email,
+        
+        // Core matching criteria
+        primary_city: requesterProfile.primary_city,
+        primary_state: requesterProfile.primary_state,
+        primary_location: requesterProfile.primary_location,
+        budget_min: requesterProfile.budget_min,
+        budget_max: requesterProfile.budget_max,
+        preferred_roommate_gender: requesterProfile.preferred_roommate_gender,
+        recovery_stage: requesterProfile.recovery_stage,
+        recovery_methods: requesterProfile.recovery_methods,
+        primary_issues: requesterProfile.primary_issues,
+        spiritual_affiliation: requesterProfile.spiritual_affiliation,
+        
+        // Lifestyle preferences
+        social_level: requesterProfile.social_level,
+        cleanliness_level: requesterProfile.cleanliness_level,
+        noise_tolerance: requesterProfile.noise_tolerance,
+        work_schedule: requesterProfile.work_schedule,
+        bedtime_preference: requesterProfile.bedtime_preference,
+        smoking_status: requesterProfile.smoking_status,
+        pets_owned: requesterProfile.pets_owned,
+        
+        // Profile content
+        about_me: requesterProfile.about_me,
+        looking_for: requesterProfile.looking_for,
+        interests: requesterProfile.interests,
+        move_in_date: requesterProfile.move_in_date,
+        
+        // Compatibility metadata
+        compatibility_score: compatibilityScore,
+        isRequestReceived: true, // Special flag for received requests
+        originalRequest: request   // Keep reference to original request
+      };
+      
+      setDetailedMatchData(matchData);
+      setShowMatchDetails(true);
+      
+      console.log('✅ Loaded detailed match data:', matchData);
+      
+    } else {
+      // Handle other request types (employment, peer-support, housing)
+      throw new Error('Detailed view for this connection type is not yet implemented');
+    }
+    
+  } catch (error) {
+    console.error('💥 Error loading match details:', error);
+    alert('Failed to load detailed match information. Please try again.');
+  } finally {
+    setLoadingMatchDetails(false);
+  }
+};
+const calculateCompatibilityScore = (profile1, profile2) => {
+  let score = 0;
+  let factors = 0;
+  
+  // Location compatibility
+  if (profile1.primary_city === profile2.primary_city && 
+      profile1.primary_state === profile2.primary_state) {
+    score += 20;
+  }
+  factors++;
+  
+  // Budget compatibility
+  const budgetOverlap = Math.min(profile1.budget_max, profile2.budget_max) - 
+                       Math.max(profile1.budget_min, profile2.budget_min);
+  if (budgetOverlap > 0) {
+    score += 15;
+  }
+  factors++;
+  
+  // Recovery stage compatibility
+  if (profile1.recovery_stage === profile2.recovery_stage) {
+    score += 15;
+  }
+  factors++;
+  
+  // Lifestyle compatibility (social, cleanliness, noise)
+  const lifestyleDiff = Math.abs(profile1.social_level - profile2.social_level) +
+                       Math.abs(profile1.cleanliness_level - profile2.cleanliness_level) +
+                       Math.abs(profile1.noise_tolerance - profile2.noise_tolerance);
+  
+  if (lifestyleDiff <= 3) score += 20;
+  else if (lifestyleDiff <= 6) score += 10;
+  factors++;
+  
+  // Spiritual affiliation compatibility
+  if (profile1.spiritual_affiliation === profile2.spiritual_affiliation) {
+    score += 10;
+  }
+  factors++;
+  
+  // Gender preference compatibility
+  if (profile1.preferred_roommate_gender === 'any' || 
+      profile2.preferred_roommate_gender === 'any' ||
+      profile1.preferred_roommate_gender === profile2.gender_identity) {
+    score += 20;
+  }
+  factors++;
+  
+  return Math.round(score);
+};
+  /**
  * ✅ FIXED: Load match requests with manual profile enrichment
  */
 const loadRequests = async () => {
@@ -1024,7 +1175,35 @@ const renderActionButtons = (request) => {
                 </div>
               )}
               
-              {renderActionButtons(request)}
+              {/* ✅ ENHANCED: Action buttons with detailed view option */}
+{!isSentRequests && request.status === 'pending' && (
+  <div className="grid-3">
+    {/* ✅ NEW: View Potential Match Details button */}
+    <button
+      className="btn btn-outline btn-sm"
+      onClick={() => loadFullMatchDetails(request)}
+      disabled={loadingMatchDetails}
+    >
+      {loadingMatchDetails ? 'Loading...' : 'View Match Details'}
+    </button>
+    
+    <button
+      className="btn btn-secondary btn-sm"
+      onClick={() => handleApprove(request.id)}
+      disabled={actionLoading}
+    >
+      Accept
+    </button>
+    
+    <button
+      className="btn btn-outline btn-sm"
+      onClick={() => handleReject(request)}
+      disabled={actionLoading}
+    >
+      Decline
+    </button>
+  </div>
+)}
             </div>
           </div>
         ))}
@@ -1032,6 +1211,18 @@ const renderActionButtons = (request) => {
     );
   };
 
+{/* Original action buttons for sent requests */}
+{isSentRequests && request.status === 'pending' && (
+  <div>
+    <button
+      className="btn btn-outline btn-sm"
+      onClick={() => handleCancelSentRequest(request.id)}
+      disabled={actionLoading}
+    >
+      Cancel Request
+    </button>
+  </div>
+)}
   /**
    * Render Active Matches organized by type
    */
@@ -1385,6 +1576,35 @@ const renderActionButtons = (request) => {
             </div>
           </div>
         </div>
+      )}
+      {/* ✅ NEW: Match Details Modal */}
+      {showMatchDetails && detailedMatchData && (
+        <MatchDetailsModal
+          match={detailedMatchData}
+          onClose={() => {
+            setShowMatchDetails(false);
+            setDetailedMatchData(null);
+          }}
+          onRequestMatch={() => {}}
+          customActions={{
+            acceptLabel: "Accept Connection",
+            declineLabel: "Decline Connection", 
+            onAccept: () => {
+              setShowMatchDetails(false);
+              setDetailedMatchData(null);
+              handleApprove(detailedMatchData.originalRequest.id);
+            },
+            onDecline: () => {
+              setShowMatchDetails(false);
+              setDetailedMatchData(null);
+              handleReject(detailedMatchData.originalRequest);
+            }
+          }}
+          isRequestSent={false}
+          isAlreadyMatched={false}
+          isRequestReceived={true}
+          usePortal={true}
+        />
       )}
     </div>
   );
