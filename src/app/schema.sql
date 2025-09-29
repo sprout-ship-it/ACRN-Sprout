@@ -101,6 +101,25 @@ CREATE TRIGGER trigger_create_registrant_profile
 -- Grant necessary permissions
 GRANT USAGE ON SCHEMA auth TO postgres, anon, authenticated, service_role;
 GRANT SELECT ON auth.users TO postgres, anon, authenticated, service_role;
+
+-- ============================================================================
+-- SECURITY DEFINER FUNCTION (Prevents RLS recursion on registrant_profiles)
+-- ============================================================================
+CREATE OR REPLACE FUNCTION can_view_applicant_profile(profile_id UUID)
+RETURNS BOOLEAN
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+BEGIN
+  RETURN EXISTS (
+    SELECT 1 FROM applicant_matching_profiles
+    WHERE user_id = profile_id
+      AND is_active = true
+      AND profile_completed = true
+  );
+END;
+$$;
 -- ============================================================================
 -- APPLICANT MATCHING PROFILES (Complete Implementation - NO CHANGES)
 -- ============================================================================
@@ -1347,7 +1366,12 @@ CREATE POLICY "Users can view match groups they're part of" ON match_groups
       WHERE rp.user_id = auth.uid()
     )
   );
-
+-- Safe policy for viewing other applicants (uses security definer function)
+CREATE POLICY "Applicants can view other applicants for matching" ON registrant_profiles
+  FOR SELECT USING (
+    auth.uid() = user_id 
+    OR can_view_applicant_profile(id)
+  );
 -- Add other RLS policies for remaining tables (employment_matches, peer_support_matches, etc.)
 -- These would be similar to the existing ones since those tables don't reference properties
 
