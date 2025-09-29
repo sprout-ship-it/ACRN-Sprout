@@ -44,9 +44,10 @@ class SchemaCompliantMatchingService {
   /**
    * Get cache key for a user's matches
    */
-  getCacheKey(userId, filters) {
-    return `schema_compliant_matches_${userId}_${JSON.stringify(filters)}`;
-  }
+getCacheKey(userId, filters) {
+  const version = 'v2'; // Increment this whenever schema changes
+  return `schema_compliant_matches_${version}_${userId}_${JSON.stringify(filters)}`;
+}
 
   /**
    * Check if cached results are still valid
