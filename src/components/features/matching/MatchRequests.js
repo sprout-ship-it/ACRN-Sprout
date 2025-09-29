@@ -150,57 +150,77 @@ const loadRequests = async () => {
   /**
    * ✅ SCHEMA ALIGNED: Filter requests based on active tab using correct user identification
    */
-  const getFilteredRequests = async () => {
-    if (!user || requests.length === 0) return [];
+/**
+ * ✅ FIXED: Filter requests using enriched profile data instead of raw IDs
+ */
+const getFilteredRequests = async () => {
+  if (!user || requests.length === 0) return [];
+  
+  try {
+    const userRegistrantId = await getRegistrantProfileId(user.id);
     
-    try {
-      const userRegistrantId = await getRegistrantProfileId(user.id);
-      
-      switch (activeTab) {
-        case 'active-connections':
-          return requests.filter(r => r.status === 'accepted' || r.status === 'matched');
-        case 'awaiting-response':
-          return requests.filter(r => r.status === 'pending' && r.recipient_id === userRegistrantId);
-        case 'sent-requests':
-          return requests.filter(r => r.status === 'pending' && r.requester_id === userRegistrantId);
-        case 'connection-history':
-          return requests.filter(r => ['rejected', 'withdrawn', 'cancelled'].includes(r.status));
-        default:
-          return requests;
-      }
-    } catch (error) {
-      console.error('Error filtering requests:', error);
-      return [];
+    switch (activeTab) {
+      case 'active-connections':
+        return requests.filter(r => r.status === 'accepted' || r.status === 'matched');
+      case 'awaiting-response':
+        // ✅ FIXED: Compare using enriched profile data, not raw recipient_id
+        return requests.filter(r => 
+          r.status === 'pending' && 
+          r.recipient_profile?.user_id === userRegistrantId
+        );
+      case 'sent-requests':
+        // ✅ FIXED: Compare using enriched profile data, not raw requester_id
+        return requests.filter(r => 
+          r.status === 'pending' && 
+          r.requester_profile?.user_id === userRegistrantId
+        );
+      case 'connection-history':
+        return requests.filter(r => ['rejected', 'withdrawn', 'cancelled'].includes(r.status));
+      default:
+        return requests;
     }
-  };
+  } catch (error) {
+    console.error('Error filtering requests:', error);
+    return [];
+  }
+};
   
   /**
    * ✅ SCHEMA ALIGNED: Get tab counts using correct field names
    */
-  const getTabCounts = async () => {
-    if (!user || requests.length === 0) {
-      return {
-        activeConnections: 0,
-        awaitingResponse: 0,
-        sentRequests: 0,
-        connectionHistory: 0
-      };
-    }
+/**
+ * ✅ FIXED: Get tab counts using enriched profile data
+ */
+const getTabCounts = async () => {
+  if (!user || requests.length === 0) {
+    return {
+      activeConnections: 0,
+      awaitingResponse: 0,
+      sentRequests: 0,
+      connectionHistory: 0
+    };
+  }
+  
+  try {
+    const userRegistrantId = await getRegistrantProfileId(user.id);
     
-    try {
-      const userRegistrantId = await getRegistrantProfileId(user.id);
-      
-      return {
-        activeConnections: requests.filter(r => r.status === 'accepted' || r.status === 'matched').length,
-        awaitingResponse: requests.filter(r => r.status === 'pending' && r.recipient_id === userRegistrantId).length,
-        sentRequests: requests.filter(r => r.status === 'pending' && r.requester_id === userRegistrantId).length,
-        connectionHistory: requests.filter(r => ['rejected', 'withdrawn', 'cancelled'].includes(r.status)).length
-      };
-    } catch (error) {
-      console.error('Error calculating tab counts:', error);
-      return { activeConnections: 0, awaitingResponse: 0, sentRequests: 0, connectionHistory: 0 };
-    }
-  };
+    return {
+      activeConnections: requests.filter(r => r.status === 'accepted' || r.status === 'matched').length,
+      awaitingResponse: requests.filter(r => 
+        r.status === 'pending' && 
+        r.recipient_profile?.user_id === userRegistrantId
+      ).length,
+      sentRequests: requests.filter(r => 
+        r.status === 'pending' && 
+        r.requester_profile?.user_id === userRegistrantId
+      ).length,
+      connectionHistory: requests.filter(r => ['rejected', 'withdrawn', 'cancelled'].includes(r.status)).length
+    };
+  } catch (error) {
+    console.error('Error calculating tab counts:', error);
+    return { activeConnections: 0, awaitingResponse: 0, sentRequests: 0, connectionHistory: 0 };
+  }
+};
   
   // Get connection type display name
   const getConnectionType = (request) => {
