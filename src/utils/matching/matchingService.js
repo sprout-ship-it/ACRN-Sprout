@@ -184,119 +184,294 @@ class SchemaCompliantMatchingService {
     };
   }
 
-  /**
-   * SCHEMA COMPLIANT: Load user profile with JOIN to get registrant data
-   * Uses exact schema table and field names
-   */
-  async loadUserProfile(userId) {
-    try {
-      console.log('Loading user matching profile with registrant data...');
-      
-      // SCHEMA COMPLIANT: JOIN applicant_matching_profiles with registrant_profiles
-      const { data, error } = await supabase
-        .from(this.matchingTableName)
-        .select(`
-          *,
-          registrant_profiles!user_id (
-            first_name,
-            last_name,
-            email
-          )
-        `)
-        .eq('user_id', userId)
-        .eq('is_active', true)
-        .single();
-      
-      if (error) {
-        console.error('Database error loading profile:', error);
-        throw new Error(`Database error: ${error.message}`);
-      }
-      
-      if (!data) {
-        throw new Error('No matching profile found. Please complete your profile first.');
-      }
-      
-      // SCHEMA COMPLIANT: Transform using exact schema fields
-      const transformedProfile = this.transformSchemaCompliantProfile(data);
-      
-      console.log('User profile loaded and transformed:', {
-        user_id: transformedProfile.user_id,
-        completion: transformedProfile.completion_percentage,
-        location: transformedProfile.primary_location,
-        recovery_stage: transformedProfile.recovery_stage
-      });
-      
-      return transformedProfile;
-      
-    } catch (err) {
-      console.error('Error loading user profile:', err);
-      throw err;
-    }
-  }
-
 
 transformSchemaCompliantProfile(dbProfile) {
-  // DEBUGGING: Check the JOIN data
-  console.log('🔍 DEBUG - Raw dbProfile:', {
-    id: dbProfile.id,
-    user_id: dbProfile.user_id,
-    registrant_profiles: dbProfile.registrant_profiles,
-    hasRegistrantData: !!dbProfile.registrant_profiles,
-    registrantKeys: dbProfile.registrant_profiles ? Object.keys(dbProfile.registrant_profiles) : null
-  });
+  try {
+    // DEBUGGING: Check the JOIN data
+    console.log('🔍 DEBUG - Raw dbProfile:', {
+      id: dbProfile.id,
+      user_id: dbProfile.user_id,
+      registrant_profiles: dbProfile.registrant_profiles,
+      hasRegistrantData: !!dbProfile.registrant_profiles,
+      registrantKeys: dbProfile.registrant_profiles ? Object.keys(dbProfile.registrant_profiles) : null
+    });
 
-  const registrantData = dbProfile.registrant_profiles;
-  
-  // DEBUGGING: Check registrant data extraction
-  console.log('🔍 DEBUG - Registrant data:', {
-    registrantData,
-    first_name: registrantData?.first_name,
-    last_name: registrantData?.last_name,
-    email: registrantData?.email
-  });
-  
-  const age = calculateAge(dbProfile.date_of_birth);
-  
-  const result = {
-    // CORE IDENTIFIERS (from applicant_matching_profiles)
-    id: dbProfile.id,
-    user_id: dbProfile.user_id,
+    const registrantData = dbProfile.registrant_profiles;
     
-    // REGISTRANT DATA (from JOIN) - Add more debugging
-    first_name: registrantData?.first_name || 'Unknown',
-    last_name: registrantData?.last_name || 'User',
-    email: registrantData?.email || '',
+    // DEBUGGING: Check registrant data extraction
+    console.log('🔍 DEBUG - Registrant data:', {
+      registrantData,
+      first_name: registrantData?.first_name,
+      last_name: registrantData?.last_name,
+      email: registrantData?.email
+    });
     
-    // ... rest of your existing transformation
-  };
-  
-  // DEBUGGING: Check final result
-  console.log('🔍 DEBUG - Transformed profile:', {
-    id: result.id,
-    user_id: result.user_id,
-    first_name: result.first_name,
-    last_name: result.last_name,
-    email: result.email
-  });
-  
-  return result;
+    // Calculate age safely
+    const age = dbProfile.date_of_birth ? calculateAge(dbProfile.date_of_birth) : null;
+    
+    const result = {
+      // CORE IDENTIFIERS (from applicant_matching_profiles)
+      id: dbProfile.id,
+      user_id: dbProfile.user_id,
+      
+      // REGISTRANT DATA (from JOIN) - with fallbacks
+      first_name: registrantData?.first_name || 'Unknown',
+      last_name: registrantData?.last_name || 'User',
+      email: registrantData?.email || '',
+      
+      // CALCULATED FIELDS
+      age: age,
+      
+      // PERSONAL IDENTITY & DEMOGRAPHICS
+      primary_phone: dbProfile.primary_phone,
+      date_of_birth: dbProfile.date_of_birth,
+      gender_identity: dbProfile.gender_identity,
+      biological_sex: dbProfile.biological_sex,
+      preferred_roommate_gender: dbProfile.preferred_roommate_gender,
+      gender_inclusive: dbProfile.gender_inclusive,
+      
+      // LOCATION & GEOGRAPHY
+      primary_city: dbProfile.primary_city,
+      primary_state: dbProfile.primary_state,
+      primary_location: dbProfile.primary_location,
+      current_address: dbProfile.current_address,
+      current_city: dbProfile.current_city,
+      current_state: dbProfile.current_state,
+      current_zip_code: dbProfile.current_zip_code,
+      target_zip_codes: dbProfile.target_zip_codes,
+      search_radius_miles: dbProfile.search_radius_miles,
+      location_flexibility: dbProfile.location_flexibility,
+      max_commute_minutes: dbProfile.max_commute_minutes,
+      transportation_method: dbProfile.transportation_method,
+      
+      // BUDGET & FINANCIAL
+      budget_min: dbProfile.budget_min,
+      budget_max: dbProfile.budget_max,
+      housing_assistance: dbProfile.housing_assistance,
+      has_section8: dbProfile.has_section8,
+      
+      // RECOVERY & WELLNESS
+      recovery_stage: dbProfile.recovery_stage,
+      time_in_recovery: dbProfile.time_in_recovery,
+      sobriety_date: dbProfile.sobriety_date,
+      primary_substance: dbProfile.primary_substance,
+      recovery_methods: dbProfile.recovery_methods || [],
+      program_types: dbProfile.program_types || [],
+      treatment_history: dbProfile.treatment_history,
+      support_meetings: dbProfile.support_meetings,
+      sponsor_mentor: dbProfile.sponsor_mentor,
+      primary_issues: dbProfile.primary_issues || [],
+      spiritual_affiliation: dbProfile.spiritual_affiliation,
+      want_recovery_support: dbProfile.want_recovery_support,
+      comfortable_discussing_recovery: dbProfile.comfortable_discussing_recovery,
+      attend_meetings_together: dbProfile.attend_meetings_together,
+      substance_free_home_required: dbProfile.substance_free_home_required,
+      recovery_goal_timeframe: dbProfile.recovery_goal_timeframe,
+      recovery_context: dbProfile.recovery_context,
+      
+      // LIFESTYLE & LIVING PREFERENCES
+      social_level: dbProfile.social_level,
+      cleanliness_level: dbProfile.cleanliness_level,
+      noise_tolerance: dbProfile.noise_tolerance,
+      work_schedule: dbProfile.work_schedule,
+      work_from_home_frequency: dbProfile.work_from_home_frequency,
+      bedtime_preference: dbProfile.bedtime_preference,
+      early_riser: dbProfile.early_riser,
+      night_owl: dbProfile.night_owl,
+      guests_policy: dbProfile.guests_policy,
+      social_activities_at_home: dbProfile.social_activities_at_home,
+      overnight_guests_ok: dbProfile.overnight_guests_ok,
+      cooking_enthusiast: dbProfile.cooking_enthusiast,
+      cooking_frequency: dbProfile.cooking_frequency,
+      exercise_at_home: dbProfile.exercise_at_home,
+      plays_instruments: dbProfile.plays_instruments,
+      tv_streaming_regular: dbProfile.tv_streaming_regular,
+      
+      // HOUSEHOLD MANAGEMENT & COMMUNICATION
+      chore_sharing_style: dbProfile.chore_sharing_style,
+      chore_sharing_preference: dbProfile.chore_sharing_preference,
+      shared_groceries: dbProfile.shared_groceries,
+      communication_style: dbProfile.communication_style,
+      conflict_resolution_style: dbProfile.conflict_resolution_style,
+      preferred_support_structure: dbProfile.preferred_support_structure,
+      
+      // PETS & SMOKING
+      pets_owned: dbProfile.pets_owned,
+      pets_comfortable: dbProfile.pets_comfortable,
+      pet_preference: dbProfile.pet_preference,
+      smoking_status: dbProfile.smoking_status,
+      smoking_preference: dbProfile.smoking_preference,
+      
+      // HOUSING SPECIFICATIONS
+      housing_types_accepted: dbProfile.housing_types_accepted || [],
+      preferred_bedrooms: dbProfile.preferred_bedrooms,
+      furnished_preference: dbProfile.furnished_preference,
+      utilities_included_preference: dbProfile.utilities_included_preference,
+      accessibility_needed: dbProfile.accessibility_needed,
+      parking_required: dbProfile.parking_required,
+      public_transit_access: dbProfile.public_transit_access,
+      
+      // TIMING & AVAILABILITY
+      move_in_date: dbProfile.move_in_date,
+      move_in_flexibility: dbProfile.move_in_flexibility,
+      lease_duration: dbProfile.lease_duration,
+      relocation_timeline: dbProfile.relocation_timeline,
+      
+      // GOALS & ASPIRATIONS
+      short_term_goals: dbProfile.short_term_goals,
+      long_term_vision: dbProfile.long_term_vision,
+      interests: dbProfile.interests || [],
+      additional_interests: dbProfile.additional_interests,
+      shared_activities_interest: dbProfile.shared_activities_interest,
+      important_qualities: dbProfile.important_qualities || [],
+      deal_breakers: dbProfile.deal_breakers || [],
+      
+      // PROFILE CONTENT & STATUS
+      about_me: dbProfile.about_me,
+      looking_for: dbProfile.looking_for,
+      additional_info: dbProfile.additional_info,
+      special_needs: dbProfile.special_needs,
+      is_active: dbProfile.is_active,
+      profile_completed: dbProfile.profile_completed,
+      profile_visibility: dbProfile.profile_visibility,
+      
+      // EMERGENCY CONTACT
+      emergency_contact_name: dbProfile.emergency_contact_name,
+      emergency_contact_phone: dbProfile.emergency_contact_phone,
+      emergency_contact_relationship: dbProfile.emergency_contact_relationship,
+      
+      // ROOMMATE PREFERENCES
+      age_range_min: dbProfile.age_range_min,
+      age_range_max: dbProfile.age_range_max,
+      age_flexibility: dbProfile.age_flexibility,
+      prefer_recovery_experience: dbProfile.prefer_recovery_experience,
+      supportive_of_recovery: dbProfile.supportive_of_recovery,
+      respect_privacy: dbProfile.respect_privacy,
+      social_interaction_level: dbProfile.social_interaction_level,
+      similar_schedules: dbProfile.similar_schedules,
+      shared_chores: dbProfile.shared_chores,
+      financially_stable: dbProfile.financially_stable,
+      respectful_guests: dbProfile.respectful_guests,
+      lgbtq_friendly: dbProfile.lgbtq_friendly,
+      culturally_sensitive: dbProfile.culturally_sensitive,
+      
+      // DEAL BREAKERS
+      deal_breaker_substance_use: dbProfile.deal_breaker_substance_use,
+      deal_breaker_loudness: dbProfile.deal_breaker_loudness,
+      deal_breaker_uncleanliness: dbProfile.deal_breaker_uncleanliness,
+      deal_breaker_financial_issues: dbProfile.deal_breaker_financial_issues,
+      deal_breaker_pets: dbProfile.deal_breaker_pets,
+      deal_breaker_smoking: dbProfile.deal_breaker_smoking,
+      
+      // COMPATIBILITY PREFERENCES
+      overnight_guests_preference: dbProfile.overnight_guests_preference,
+      shared_transportation: dbProfile.shared_transportation,
+      recovery_accountability: dbProfile.recovery_accountability,
+      shared_recovery_activities: dbProfile.shared_recovery_activities,
+      mentorship_interest: dbProfile.mentorship_interest,
+      recovery_community: dbProfile.recovery_community,
+      
+      // ALGORITHM METADATA & SCORING
+      completion_percentage: dbProfile.completion_percentage,
+      profile_quality_score: dbProfile.profile_quality_score,
+      last_updated_section: dbProfile.last_updated_section,
+      compatibility_scores: dbProfile.compatibility_scores,
+      search_preferences: dbProfile.search_preferences,
+      matching_weights: dbProfile.matching_weights,
+      
+      // TIMESTAMPS
+      created_at: dbProfile.created_at,
+      updated_at: dbProfile.updated_at
+    };
+    
+    // DEBUGGING: Check final result
+    console.log('🔍 DEBUG - Transformed profile:', {
+      id: result.id,
+      user_id: result.user_id,
+      first_name: result.first_name,
+      last_name: result.last_name,
+      email: result.email,
+      age: result.age,
+      primary_location: result.primary_location,
+      recovery_stage: result.recovery_stage
+    });
+    
+    return result;
+    
+  } catch (error) {
+    console.error('❌ Error transforming profile:', error);
+    console.error('Raw dbProfile that caused error:', dbProfile);
+    
+    // Return minimal profile to prevent complete failure
+    return {
+      id: dbProfile.id,
+      user_id: dbProfile.user_id,
+      first_name: 'Unknown',
+      last_name: 'User',
+      email: '',
+      age: null,
+      primary_location: dbProfile.primary_location || 'Unknown',
+      recovery_stage: dbProfile.recovery_stage || 'Unknown',
+      // Include essential fields with safe defaults
+      budget_min: dbProfile.budget_min || 0,
+      budget_max: dbProfile.budget_max || 0,
+      recovery_methods: dbProfile.recovery_methods || [],
+      primary_issues: dbProfile.primary_issues || [],
+      interests: dbProfile.interests || [],
+      about_me: dbProfile.about_me || '',
+      looking_for: dbProfile.looking_for || '',
+      is_active: dbProfile.is_active || false,
+      profile_completed: dbProfile.profile_completed || false
+    };
+  }
 }
 
-  /**
-   * SCHEMA COMPLIANT: Load all active profiles with registrant data JOIN
-   */
 
+async testJoinRelationship() {
+  try {
+    console.log('=== TESTING JOIN RELATIONSHIP ===');
+    
+    // Test: Get one applicant profile with JOIN
+    const { data, error } = await supabase
+      .from('applicant_matching_profiles')
+      .select(`
+        id,
+        user_id,
+        primary_city,
+        registrant_profiles!user_id (
+          first_name,
+          last_name,
+          email
+        )
+      `)
+      .eq('is_active', true)
+      .eq('profile_completed', true)
+      .limit(1)
+      .single();
+    
+    console.log('Test result:', {
+      error: error?.message,
+      hasData: !!data,
+      registrant_profiles: data?.registrant_profiles,
+      first_name: data?.registrant_profiles?.first_name
+    });
+    
+    return data;
+  } catch (error) {
+    console.error('Test failed:', error);
+  }
+}
 // FIXED: loadActiveProfiles method with correct JOIN syntax
 async loadActiveProfiles(excludeUserId = null) {
   try {
-    console.log('Loading active profiles with registrant data...');
-    console.log('🔍 loadActiveProfiles called with excludeUserId:', excludeUserId);
+    console.log('🔍 Loading active profiles with registrant data...');
+    console.log('🔍 excludeUserId:', excludeUserId);
     
     let query = supabase
       .from(this.matchingTableName)
       .select(`
         *,
-        registrant_profiles (
+        registrant_profiles!user_id (
           first_name,
           last_name,
           email
@@ -324,30 +499,52 @@ async loadActiveProfiles(excludeUserId = null) {
     });
     
     if (error) {
-      console.error('Database error loading profiles:', error);
+      console.error('❌ Database error loading active profiles:', error);
       throw new Error(`Database error: ${error.message}`);
     }
     
     if (!data || data.length === 0) {
-      console.log('No active profiles found');
+      console.log('ℹ️ No active profiles found');
       return [];
     }
     
-    const transformedProfiles = data.map(profile => this.transformSchemaCompliantProfile(profile));
+    console.log(`📋 Processing ${data.length} raw profiles...`);
     
-    console.log(`✅ Transformed ${transformedProfiles.length} profiles:`, 
-      transformedProfiles.slice(0, 3).map(p => ({ 
-        user_id: p.user_id, 
-        first_name: p.first_name,
-        primary_city: p.primary_city,
-        registrant_data_check: !!p.first_name && p.first_name !== 'Unknown'
-      }))
-    );
+    const transformedProfiles = [];
+    
+    for (let i = 0; i < data.length; i++) {
+      const profile = data[i];
+      try {
+        console.log(`🔄 Transforming profile ${i + 1}/${data.length}: user_id ${profile.user_id}`);
+        const transformed = this.transformSchemaCompliantProfile(profile);
+        transformedProfiles.push(transformed);
+        console.log(`✅ Successfully transformed: ${transformed.first_name} ${transformed.last_name}`);
+      } catch (transformError) {
+        console.error(`❌ Failed to transform profile ${profile.user_id}:`, transformError);
+        // Continue processing other profiles instead of failing completely
+      }
+    }
+    
+    console.log(`✅ Successfully transformed ${transformedProfiles.length}/${data.length} profiles`);
+    
+    // Log sample of transformed profiles for verification
+    if (transformedProfiles.length > 0) {
+      console.log('📊 Sample transformed profiles:', 
+        transformedProfiles.slice(0, 3).map(p => ({ 
+          user_id: p.user_id, 
+          first_name: p.first_name,
+          last_name: p.last_name,
+          primary_location: p.primary_location,
+          recovery_stage: p.recovery_stage,
+          registrant_data_valid: !!(p.first_name && p.first_name !== 'Unknown')
+        }))
+      );
+    }
     
     return transformedProfiles;
     
   } catch (err) {
-    console.error('Error loading active profiles:', err);
+    console.error('💥 Error in loadActiveProfiles:', err);
     throw err;
   }
 }
@@ -355,13 +552,13 @@ async loadActiveProfiles(excludeUserId = null) {
 // FIXED: loadUserProfile method with correct JOIN syntax  
 async loadUserProfile(userId) {
   try {
-    console.log('Loading user matching profile with registrant data...');
+    console.log('🔍 Loading user matching profile with registrant data for userId:', userId);
     
     const { data, error } = await supabase
       .from(this.matchingTableName)
       .select(`
         *,
-        registrant_profiles (
+        registrant_profiles!user_id (
           first_name,
           last_name,
           email
@@ -372,15 +569,17 @@ async loadUserProfile(userId) {
       .single();
     
     if (error) {
-      console.error('Database error loading profile:', error);
+      console.error('❌ Database error loading user profile:', error);
       throw new Error(`Database error: ${error.message}`);
     }
     
     if (!data) {
+      console.error('❌ No matching profile found for userId:', userId);
       throw new Error('No matching profile found. Please complete your profile first.');
     }
     
-    console.log('🔍 User profile raw data:', {
+    console.log('✅ Raw user profile loaded:', {
+      id: data.id,
       user_id: data.user_id,
       registrant_data: data.registrant_profiles,
       first_name_from_join: data.registrant_profiles?.first_name
@@ -388,7 +587,7 @@ async loadUserProfile(userId) {
     
     const transformedProfile = this.transformSchemaCompliantProfile(data);
     
-    console.log('User profile loaded and transformed:', {
+    console.log('✅ User profile transformed successfully:', {
       user_id: transformedProfile.user_id,
       first_name: transformedProfile.first_name,
       completion: transformedProfile.completion_percentage,
@@ -399,7 +598,7 @@ async loadUserProfile(userId) {
     return transformedProfile;
     
   } catch (err) {
-    console.error('Error loading user profile:', err);
+    console.error('💥 Error in loadUserProfile:', err);
     throw err;
   }
 }
