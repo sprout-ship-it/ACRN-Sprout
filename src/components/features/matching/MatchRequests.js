@@ -731,129 +731,141 @@ const determineMatchGroupStructure = async (request) => {
   /**
    * ✅ SCHEMA ALIGNED: Enhanced contact info retrieval using schema relationships
    */
-  const handleViewContactInfo = async (request) => {
-    try {
-      const userRegistrantId = await getRegistrantProfileId(user.id);
-      
-      // Determine the other person's registrant profile ID
-      const otherRegistrantId = request.requester_id === userRegistrantId ? 
+// REPLACE the handleViewContactInfo function with this corrected version:
+
+/**
+ * ✅ FIXED: Enhanced contact info retrieval using correct ID relationships
+ */
+const handleViewContactInfo = async (request) => {
+  try {
+    const userRegistrantId = await getRegistrantProfileId(user.id);
+    
+    // ✅ FIXED: Determine which applicant profile ID we need to look up
+    // request.requester_id and request.recipient_id are applicant_matching_profiles.id values
+    let otherApplicantId;
+    
+    // Get current user's applicant profile ID for comparison
+    const { data: currentUserApplicant } = await supabase
+      .from('applicant_matching_profiles')
+      .select('id')
+      .eq('user_id', userRegistrantId)
+      .single();
+    
+    if (currentUserApplicant) {
+      // Determine which applicant profile is the "other" person
+      otherApplicantId = request.requester_id === currentUserApplicant.id ? 
         request.recipient_id : request.requester_id;
-      
-      console.log('🔍 Fetching contact info for registrant:', otherRegistrantId);
-      
-      // Get basic profile info from registrant_profiles
-      const { data: otherProfile, error: profileError } = await supabase
-        .from('registrant_profiles')
-        .select('*')
-        .eq('id', otherRegistrantId)
-        .single();
-      
-      if (profileError || !otherProfile) {
-        throw new Error('Could not load user profile');
-      }
-      
-      // Initialize contact info with basic profile data
-      let contactInfo = {
-        name: `${otherProfile.first_name || 'User'} ${otherProfile.last_name || ''}`.trim(),
-        email: otherProfile.email || 'Not provided',
-        phone: 'Not provided',
-        connectionType: getConnectionType(request)
-      };
-      
-      // Get detailed contact info based on connection type and user roles
-      const userRoles = otherProfile.roles || [];
-      
-      if (request.request_type === 'employment' && userRoles.includes('employer')) {
-        // Get employer profile info
-        try {
-          const { data: employerProfile } = await supabase
-            .from('employer_profiles')
-            .select('primary_phone, contact_email, contact_person, business_type, industry')
-            .eq('user_id', otherRegistrantId)
-            .single();
-            
-          if (employerProfile) {
-            contactInfo.phone = employerProfile.primary_phone || contactInfo.phone;
-            contactInfo.email = employerProfile.contact_email || contactInfo.email;
-            contactInfo.contactPerson = employerProfile.contact_person;
-            contactInfo.companyType = employerProfile.business_type;
-            contactInfo.industry = employerProfile.industry;
-          }
-        } catch (err) {
-          console.warn('Could not load employer profile:', err);
-        }
-      } else if (userRoles.includes('applicant')) {
-        // ✅ SCHEMA ALIGNED: Get applicant matching profile data
-        try {
-          const { data: applicantData } = await supabase
-            .from('applicant_matching_profiles')
-            .select('primary_phone, emergency_contact_name, emergency_contact_phone')
-            .eq('user_id', otherRegistrantId)
-            .single();
-          
-          if (applicantData) {
-            console.log('✅ Found applicant matching profile data:', applicantData);
-            contactInfo.phone = applicantData.primary_phone || contactInfo.phone;
-            
-            if (applicantData.emergency_contact_name) {
-              contactInfo.emergencyContact = {
-                name: applicantData.emergency_contact_name,
-                phone: applicantData.emergency_contact_phone
-              };
-            }
-          }
-        } catch (err) {
-          console.warn('Could not load applicant matching profile data:', err);
-        }
-      }
-      
-      // For peer support specialists
-      if (request.request_type === 'peer-support' && userRoles.includes('peer-support')) {
-        try {
-          const { data: peerProfile } = await supabase
-            .from('peer_support_profiles')
-            .select('primary_phone, professional_title, years_experience')
-            .eq('user_id', otherRegistrantId)
-            .single();
-            
-          if (peerProfile) {
-            contactInfo.phone = peerProfile.primary_phone || contactInfo.phone;
-            contactInfo.professionalTitle = peerProfile.professional_title;
-            contactInfo.experience = peerProfile.years_experience;
-          }
-        } catch (err) {
-          console.warn('Could not load peer profile:', err);
-        }
-      }
-      
-      // For landlords
-      if (request.request_type === 'housing' && userRoles.includes('landlord')) {
-        try {
-          const { data: landlordProfile } = await supabase
-            .from('landlord_profiles')
-            .select('primary_phone, contact_email, contact_person')
-            .eq('user_id', otherRegistrantId)
-            .single();
-            
-          if (landlordProfile) {
-            contactInfo.phone = landlordProfile.primary_phone || contactInfo.phone;
-            contactInfo.email = landlordProfile.contact_email || contactInfo.email;
-            contactInfo.contactPerson = landlordProfile.contact_person;
-          }
-        } catch (err) {
-          console.warn('Could not load landlord profile:', err);
-        }
-      }
-      
-      console.log('✅ Contact info prepared:', contactInfo);
-      setContactInfo(contactInfo);
-      setShowContactModal(true);
-      
-    } catch (error) {
-      console.error('💥 Error viewing contact info:', error);
-      alert(`Error: ${error.message || 'Could not load contact information. Please try again.'}`);
+    } else {
+      // Fallback: assume current user is recipient
+      otherApplicantId = request.requester_id;
     }
-  };
+    
+    console.log('🔍 Fetching contact info for applicant profile:', otherApplicantId);
+    
+    // ✅ FIXED: Query applicant profile with registrant profile JOIN
+    const { data: applicantWithRegistrant, error: profileError } = await supabase
+      .from('applicant_matching_profiles')
+      .select(`
+        *,
+        registrant_profiles(*)
+      `)
+      .eq('id', otherApplicantId)
+      .single();
+    
+    if (profileError || !applicantWithRegistrant) {
+      console.error('Profile query error:', profileError);
+      throw new Error('Could not load user profile');
+    }
+    
+    const otherProfile = applicantWithRegistrant.registrant_profiles;
+    const applicantData = applicantWithRegistrant;
+    
+    console.log('✅ Successfully loaded contact profile');
+    
+    // Initialize contact info with basic profile data
+    let contactInfo = {
+      name: `${otherProfile.first_name || 'User'} ${otherProfile.last_name || ''}`.trim(),
+      email: otherProfile.email || 'Not provided',
+      phone: applicantData.primary_phone || 'Not provided', // ✅ Get phone from applicant profile
+      connectionType: getConnectionType(request)
+    };
+    
+    // ✅ Add emergency contact if available
+    if (applicantData.emergency_contact_name) {
+      contactInfo.emergencyContact = {
+        name: applicantData.emergency_contact_name,
+        phone: applicantData.emergency_contact_phone
+      };
+    }
+    
+    // ✅ For different connection types, add specific info
+    const userRoles = otherProfile.roles || [];
+    
+    if (request.request_type === 'employment' && userRoles.includes('employer')) {
+      try {
+        const { data: employerProfile } = await supabase
+          .from('employer_profiles')
+          .select('primary_phone, contact_email, contact_person, business_type, industry')
+          .eq('user_id', otherProfile.id) // ✅ Use registrant profile ID here
+          .single();
+          
+        if (employerProfile) {
+          contactInfo.phone = employerProfile.primary_phone || contactInfo.phone;
+          contactInfo.email = employerProfile.contact_email || contactInfo.email;
+          contactInfo.contactPerson = employerProfile.contact_person;
+          contactInfo.companyType = employerProfile.business_type;
+          contactInfo.industry = employerProfile.industry;
+        }
+      } catch (err) {
+        console.warn('Could not load employer profile:', err);
+      }
+    }
+    
+    if (request.request_type === 'peer-support' && userRoles.includes('peer-support')) {
+      try {
+        const { data: peerProfile } = await supabase
+          .from('peer_support_profiles')
+          .select('primary_phone, professional_title, years_experience')
+          .eq('user_id', otherProfile.id) // ✅ Use registrant profile ID here
+          .single();
+          
+        if (peerProfile) {
+          contactInfo.phone = peerProfile.primary_phone || contactInfo.phone;
+          contactInfo.professionalTitle = peerProfile.professional_title;
+          contactInfo.experience = peerProfile.years_experience;
+        }
+      } catch (err) {
+        console.warn('Could not load peer profile:', err);
+      }
+    }
+    
+    if (request.request_type === 'housing' && userRoles.includes('landlord')) {
+      try {
+        const { data: landlordProfile } = await supabase
+          .from('landlord_profiles')
+          .select('primary_phone, contact_email, contact_person')
+          .eq('user_id', otherProfile.id) // ✅ Use registrant profile ID here
+          .single();
+          
+        if (landlordProfile) {
+          contactInfo.phone = landlordProfile.primary_phone || contactInfo.phone;
+          contactInfo.email = landlordProfile.contact_email || contactInfo.email;
+          contactInfo.contactPerson = landlordProfile.contact_person;
+        }
+      } catch (err) {
+        console.warn('Could not load landlord profile:', err);
+      }
+    }
+    
+    console.log('✅ Contact info prepared:', contactInfo);
+    setContactInfo(contactInfo);
+    setShowContactModal(true);
+    
+  } catch (error) {
+    console.error('💥 Error viewing contact info:', error);
+    alert(`Error: ${error.message || 'Could not load contact information. Please try again.'}`);
+  }
+};
     
   // Render status badge
   const renderStatusBadge = (status) => {

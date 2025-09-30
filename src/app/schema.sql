@@ -1130,6 +1130,7 @@ ALTER TABLE peer_support_matches ENABLE ROW LEVEL SECURITY;
 ALTER TABLE match_groups ENABLE ROW LEVEL SECURITY;
 ALTER TABLE match_requests ENABLE ROW LEVEL SECURITY;
 ALTER TABLE favorites ENABLE ROW LEVEL SECURITY;
+ALTER TABLE match_groups ALTER COLUMN property_id DROP NOT NULL;
 
 -- Registrant Profiles: Users can only access their own profile
 CREATE POLICY "Users can view their own registrant profile" ON registrant_profiles
@@ -1371,6 +1372,20 @@ CREATE POLICY "Applicants can view other applicants for matching" ON registrant_
   FOR SELECT USING (
     auth.uid() = user_id 
     OR can_view_applicant_profile(id)
+  );
+  -- Add INSERT policy for match_groups
+CREATE POLICY "Users can create match groups they're part of" ON match_groups
+  FOR INSERT WITH CHECK (
+    applicant_1_id IN (
+      SELECT amp.id FROM applicant_matching_profiles amp
+      JOIN registrant_profiles rp ON amp.user_id = rp.id
+      WHERE rp.user_id = auth.uid()
+    )
+    OR applicant_2_id IN (
+      SELECT amp.id FROM applicant_matching_profiles amp
+      JOIN registrant_profiles rp ON amp.user_id = rp.id
+      WHERE rp.user_id = auth.uid()
+    )
   );
 -- Add other RLS policies for remaining tables (employment_matches, peer_support_matches, etc.)
 -- These would be similar to the existing ones since those tables don't reference properties
