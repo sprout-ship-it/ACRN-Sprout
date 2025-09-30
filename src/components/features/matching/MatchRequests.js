@@ -379,56 +379,31 @@ const generateGreenFlags = (profile) => {
     }
   };
   
-  /**
-   * ✅ SCHEMA ALIGNED: Handle approval using schema field names and correct match group creation
-   */
-  const handleApprove = async (requestId) => {
-    setActionLoading(true);
-    
-    try {
-      const request = requests.find(r => r.id === requestId);
-      if (!request) {
-        throw new Error('Request not found');
-      }
+/**
+ * ✅ ENHANCED: Handle approval with better debugging
+ */
+const handleApprove = async (requestId) => {
+  setActionLoading(true);
+  
+  try {
+    const request = requests.find(r => r.id === requestId);
+    if (!request) {
+      throw new Error('Request not found');
+    }
 
-      console.log('📋 Approving connection request:', {
-        requestId,
-        requester: request.requester_id,
-        recipient: request.recipient_id,
-        requestType: request.request_type
-      });
+    console.log('📋 Approving connection request:', {
+      requestId,
+      requester: request.requester_id,
+      recipient: request.recipient_id,
+      requestType: request.request_type
+    });
 
-      // ✅ SCHEMA ALIGNED: For employment connections, just approve the request
-      if (request.request_type === 'employment') {
-        const { error: updateError } = await supabase
-          .from('match_requests')
-          .update({
-            status: 'accepted',
-            responded_at: new Date().toISOString()
-          })
-          .eq('id', requestId);
-        
-        if (updateError) throw updateError;
-
-        console.log('✅ Employment connection approved');
-        
-        // Update local state
-        setRequests(prev => prev.map(req => 
-          req.id === requestId ? { 
-            ...req, 
-            status: 'accepted',
-            responded_at: new Date().toISOString()
-          } : req
-        ));
-        
-        alert('Employment connection approved! You can now exchange contact information.');
-        return;
-      }
-
-      // ✅ SCHEMA ALIGNED: For other connection types, create match group
+    // ✅ For roommate requests, create match group (simplified approach)
+    if (request.request_type === 'roommate' || request.request_type === 'peer-support') {
       console.log('🏠 Creating match group for connection...');
 
       const matchGroupData = await determineMatchGroupStructure(request);
+      console.log('📋 Match group data to create:', matchGroupData);
 
       // Create the match group
       const { data: matchGroup, error: groupError } = await supabase
@@ -436,120 +411,115 @@ const generateGreenFlags = (profile) => {
         .insert(matchGroupData)
         .select();
 
-      if (groupError) throw groupError;
+      if (groupError) {
+        console.error('💥 Match group creation error:', groupError);
+        throw groupError;
+      }
 
       console.log('✅ Match group created:', matchGroup);
-
-      // Update match request to accepted status with group reference
-      const { error: matchedError } = await supabase
-        .from('match_requests')
-        .update({
-          status: 'accepted',
-          responded_at: new Date().toISOString()
-        })
-        .eq('id', requestId);
-
-      if (matchedError) throw matchedError;
-
-      console.log('✅ Connection request approved with match group');
-
-      // Update local state
-      setRequests(prev => prev.map(req => 
-        req.id === requestId ? { 
-          ...req, 
-          status: 'accepted',
-          responded_at: new Date().toISOString()
-        } : req
-      ));
-      
-      alert('Connection approved successfully!');
-      
-    } catch (error) {
-      console.error('💥 Error approving request:', error);
-      alert(`Failed to approve request: ${error.message}`);
-    } finally {
-      setActionLoading(false);
     }
-  };
 
-  /**
-   * ✅ SCHEMA ALIGNED: Determine match group structure using schema relationships
-   */
-  const determineMatchGroupStructure = async (request) => {
-    try {
-      // Get profile information for both users
-      const { data: requesterProfile, error: requesterError } = await supabase
-        .from('registrant_profiles')
-        .select('id, roles')
-        .eq('id', request.requester_id)
-        .single();
+    // Update match request to accepted status
+    const { error: matchedError } = await supabase
+      .from('match_requests')
+      .update({
+        status: 'accepted',
+        responded_at: new Date().toISOString()
+      })
+      .eq('id', requestId);
 
-      const { data: recipientProfile, error: recipientError } = await supabase
-        .from('registrant_profiles')
-        .select('id, roles')
-        .eq('id', request.recipient_id)
-        .single();
+    if (matchedError) {
+      console.error('💥 Match request update error:', matchedError);
+      throw matchedError;
+    }
 
-      if (requesterError || recipientError) {
-        console.error('Error loading profiles:', { requesterError, recipientError });
-      }
+    console.log('✅ Connection request approved with match group');
 
-      const requesterRoles = requesterProfile?.roles || [];
-      const recipientRoles = recipientProfile?.roles || [];
+    // Update local state
+    setRequests(prev => prev.map(req => 
+      req.id === requestId ? { 
+        ...req, 
+        status: 'accepted',
+        responded_at: new Date().toISOString()
+      } : req
+    ));
+    
+    // Close modal if open
+    setShowMatchDetails(false);
+    setDetailedMatchData(null);
+    
+    alert('Connection approved successfully!');
+    
+  } catch (error) {
+    console.error('💥 Error approving request:', error);
+    alert(`Failed to approve request: ${error.message}`);
+  } finally {
+    setActionLoading(false);
+  }
+};
 
-      const baseData = {
-        status: 'forming',
-        created_at: new Date().toISOString()
+const determineMatchGroupStructure = async (request) => {
+  try {
+    console.log('🏗️ Creating match group structure for request:', request.request_type);
+    
+    const baseData = {
+      status: 'forming',
+      created_at: new Date().toISOString()
+    };
+
+    // ✅ SIMPLIFIED: For roommate requests, we know both are applicants
+    // No need to look up registrant_profiles - just use the applicant IDs directly
+    if (request.request_type === 'roommate' || request.requester_type === 'applicant') {
+      console.log('🏠 Creating roommate match group');
+      return {
+        ...baseData,
+        applicant_1_id: request.requester_id, // These are already applicant_matching_profiles.id
+        applicant_2_id: request.recipient_id  // These are already applicant_matching_profiles.id
       };
+    }
 
-      // ✅ SCHEMA ALIGNED: Create match group based on request type and roles
-      if (request.request_type === 'peer-support') {
-        if (requesterRoles.includes('applicant') && recipientRoles.includes('peer-support')) {
-          return {
-            ...baseData,
-            applicant_1_id: request.requester_id,
-            peer_support_id: request.recipient_id
-          };
-        }
-        
-        if (requesterRoles.includes('peer-support') && recipientRoles.includes('applicant')) {
-          return {
-            ...baseData,
-            applicant_1_id: request.recipient_id,
-            peer_support_id: request.requester_id
-          };
-        }
-      }
-
-      if (request.request_type === 'housing') {
-        // ✅ SCHEMA ALIGNED: Housing matches now reference properties.id
-        if (request.property_id) {
-          return {
-            ...baseData,
-            applicant_1_id: requesterRoles.includes('applicant') ? request.requester_id : request.recipient_id,
-            property_id: request.property_id
-          };
-        }
-      }
-
-      // Default to roommate setup (both are applicants)
+    // ✅ For other types, handle based on request type without complex role lookup
+    if (request.request_type === 'peer-support') {
+      console.log('🤝 Creating peer support match group');
+      // Assume requester is applicant, recipient is peer support
       return {
         ...baseData,
         applicant_1_id: request.requester_id,
-        applicant_2_id: request.recipient_id
-      };
-
-    } catch (error) {
-      console.error('Error determining match group structure:', error);
-      // Safe fallback
-      return {
-        status: 'forming',
-        applicant_1_id: request.requester_id,
-        applicant_2_id: request.recipient_id,
-        created_at: new Date().toISOString()
+        peer_support_id: request.recipient_id
       };
     }
-  };
+
+    if (request.request_type === 'housing') {
+      console.log('🏡 Creating housing match group');
+      // Use property_id if available
+      if (request.property_id) {
+        return {
+          ...baseData,
+          applicant_1_id: request.requester_id,
+          property_id: request.property_id
+        };
+      }
+    }
+
+    // Default fallback for roommate setup
+    console.log('🔄 Using default roommate structure');
+    return {
+      ...baseData,
+      applicant_1_id: request.requester_id,
+      applicant_2_id: request.recipient_id
+    };
+
+  } catch (error) {
+    console.error('Error determining match group structure:', error);
+    // Safe fallback
+    return {
+      status: 'forming',
+      applicant_1_id: request.requester_id,
+      applicant_2_id: request.recipient_id,
+      created_at: new Date().toISOString()
+    };
+  }
+};
 
   /**
    * ✅ SCHEMA ALIGNED: Handle reconnection request using correct field names
