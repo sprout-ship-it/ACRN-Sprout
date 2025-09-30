@@ -167,7 +167,18 @@ useEffect(() => {
     setShowTypeSelector(true);
     setShowForm(false);
   };
-
+useEffect(() => {
+  // Auto-focus first field when form opens
+  if (showForm && !editingProperty) {
+    setTimeout(() => {
+      const firstInput = document.querySelector('input[name="property_name"]');
+      if (firstInput) {
+        firstInput.focus();
+        firstInput.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      }
+    }, 100);
+  }
+}, [showForm, editingProperty]);
   // ✅ NEW: Handler for property type selection
   const handlePropertyTypeSelection = (type) => {
     setPropertyFormType(type);
@@ -559,17 +570,33 @@ const handleSubmit = async (e) => {
   };
 
   // Section navigation (recovery housing only)
-  const nextSection = () => {
-    if (currentSection < formSections.length - 1) {
-      setCurrentSection(currentSection + 1);
-    }
-  };
+const nextSection = () => {
+  if (currentSection < formSections.length - 1) {
+    setCurrentSection(currentSection + 1);
+    
+    // Auto-scroll to top of modal when changing sections
+    setTimeout(() => {
+      const modalContent = document.querySelector(`.${styles.modalContent}`);
+      if (modalContent) {
+        modalContent.scrollTop = 0;
+      }
+    }, 50);
+  }
+};
 
-  const prevSection = () => {
-    if (currentSection > 0) {
-      setCurrentSection(currentSection - 1);
-    }
-  };
+const prevSection = () => {
+  if (currentSection > 0) {
+    setCurrentSection(currentSection - 1);
+    
+    // Auto-scroll to top of modal when changing sections
+    setTimeout(() => {
+      const modalContent = document.querySelector(`.${styles.modalContent}`);
+      if (modalContent) {
+        modalContent.scrollTop = 0;
+      }
+    }, 50);
+  }
+};
 
   const goToSection = (index) => {
     setCurrentSection(index);
@@ -706,20 +733,31 @@ const handleSubmit = async (e) => {
                 // ✅ EXISTING: Complex form with sections for recovery housing
                 <>
                   {/* ✅ UPDATED: Section Navigation using CSS module */}
-                  <nav className={styles.sectionNav}>
-                    {formSections.map((section, index) => (
-                      <button
-                        key={section.id}
-                        type="button"
-                        className={`${styles.sectionNavBtn} ${index === currentSection ? styles.active : ''}`}
-                        onClick={() => goToSection(index)}
-                        disabled={loading}
-                      >
-                        <span className={styles.sectionIcon}>{section.icon}</span>
-                        <span className={styles.sectionTitle}>{section.title}</span>
-                      </button>
-                    ))}
-                  </nav>
+<nav className={styles.sectionNav}>
+  <div className={styles.progressBar}>
+    <div 
+      className={styles.progressFill} 
+      style={{ width: `${((currentSection + 1) / formSections.length) * 100}%` }}
+    />
+  </div>
+  
+  {formSections.map((section, index) => (
+    <button
+      key={section.id}
+      type="button"
+      className={`${styles.sectionNavBtn} ${index === currentSection ? styles.active : ''} ${index < currentSection ? styles.completed : ''}`}
+      onClick={() => goToSection(index)}
+      disabled={loading}
+    >
+      <span className={styles.sectionNumber}>{index + 1}</span>
+      <div className={styles.sectionInfo}>
+        <span className={styles.sectionIcon}>{section.icon}</span>
+        <span className={styles.sectionTitle}>{section.title}</span>
+      </div>
+      {index < currentSection && <span className={styles.checkMark}>✓</span>}
+    </button>
+  ))}
+</nav>
                   
                   {/* Current Section */}
                   <CurrentSectionComponent
@@ -734,60 +772,61 @@ const handleSubmit = async (e) => {
               )}
               
               {/* ✅ UPDATED: Action buttons using CSS module */}
-              <div className={styles.formActions}>
-                <button
-                  type="button"
-                  className={`${styles.actionButton} ${styles.actionOutline}`}
-                  onClick={() => setShowForm(false)}
-                  disabled={loading}
-                >
-                  Cancel
-                </button>
-                
-                {propertyFormType === 'recovery_housing' && (
-                  <>
-                    {currentSection > 0 && (
-                      <button
-                        type="button"
-                        className={`${styles.actionButton} ${styles.actionSecondary}`}
-                        onClick={prevSection}
-                        disabled={loading}
-                      >
-                        Previous
-                      </button>
-                    )}
-                    
-                    {currentSection < formSections.length - 1 ? (
-                      <button
-                        type="button"
-                        className={`${styles.actionButton} ${styles.actionPrimary}`}
-                        onClick={nextSection}
-                        disabled={loading}
-                      >
-                        Next
-                      </button>
-                    ) : (
-                      <button
-                        type="submit"
-                        className={`${styles.actionButton} ${styles.actionPrimary}`}
-                        disabled={loading}
-                      >
-                        {loading ? 'Saving...' : (editingProperty ? 'Update Property' : 'Add Property')}
-                      </button>
-                    )}
-                  </>
-                )}
-                
-                {propertyFormType === 'general_rental' && (
-                  <button
-                    type="submit"
-                    className={`${styles.actionButton} ${styles.actionPrimary}`}
-                    disabled={loading}
-                  >
-                    {loading ? 'Saving...' : (editingProperty ? 'Update Property' : 'Add Property')}
-                  </button>
-                )}
-              </div>
+<div className={styles.formActions}>
+  <button
+    type="button"
+    className={`${styles.actionButton} ${styles.actionOutline}`}
+    onClick={() => setShowForm(false)}
+    disabled={loading}
+  >
+    Cancel
+  </button>
+  
+  {propertyFormType === 'recovery_housing' && (
+    <>
+      {currentSection > 0 && (
+        <button
+          type="button"
+          className={`${styles.actionButton} ${styles.actionSecondary}`}
+          onClick={prevSection}
+          disabled={loading}
+        >
+          ← Previous
+        </button>
+      )}
+      
+      {/* ✅ FIXED: Show proper button based on section */}
+      {currentSection < formSections.length - 1 ? (
+        <button
+          type="button"  /* ✅ CRITICAL: type="button" prevents form submission */
+          className={`${styles.actionButton} ${styles.actionPrimary}`}
+          onClick={nextSection}
+          disabled={loading}
+        >
+          Next →
+        </button>
+      ) : (
+        <button
+          type="submit"  /* ✅ CRITICAL: type="submit" on final section only */
+          className={`${styles.actionButton} ${styles.actionPrimary}`}
+          disabled={loading}
+        >
+          {loading ? 'Saving...' : (editingProperty ? 'Update Property' : 'Create Property')}
+        </button>
+      )}
+    </>
+  )}
+  
+  {propertyFormType === 'general_rental' && (
+    <button
+      type="submit"
+      className={`${styles.actionButton} ${styles.actionPrimary}`}
+      disabled={loading}
+    >
+      {loading ? 'Saving...' : (editingProperty ? 'Update Property' : 'Create Property')}
+    </button>
+  )}
+</div>
             </form>
           </div>
         </div>

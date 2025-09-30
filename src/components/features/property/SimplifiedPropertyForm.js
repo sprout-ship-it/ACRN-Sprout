@@ -277,70 +277,68 @@ const SimplifiedPropertyForm = ({
       </div>
 
       {/* Property Features */}
-      <div className={styles.sectionCard}>
-        <h4 className={styles.sectionCardTitle}>Property Features</h4>
-        
-        <div className={styles.checkboxGrid}>
-          <div className={styles.checkboxGroup}>
-            <div className={styles.checkboxItem}>
-              <input
-                type="checkbox"
-                className={styles.checkboxInput}
-                name="furnished"
-                checked={formData.furnished || false}
-                onChange={onInputChange}
-                disabled={loading}
-              />
-              <span className={styles.checkboxText}>Furnished</span>
-            </div>
-            
-            <div className={styles.checkboxItem}>
-              <input
-                type="checkbox"
-                className={styles.checkboxInput}
-                name="pets_allowed"
-                checked={formData.pets_allowed || false}
-                onChange={onInputChange}
-                disabled={loading}
-              />
-              <span className={styles.checkboxText}>Pets Allowed</span>
-            </div>
-          </div>
-          
-          <div className={styles.checkboxGroup}>
-            <div className={styles.checkboxItem}>
-              <input
-                type="checkbox"
-                className={styles.checkboxInput}
-                name="smoking_allowed"
-                checked={formData.smoking_allowed || false}
-                onChange={onInputChange}
-                disabled={loading}
-              />
-              <span className={styles.checkboxText}>Smoking Allowed</span>
-            </div>
-          </div>
-        </div>
+<div className={styles.checkboxGrid}>
+  <div className={styles.checkboxGroup}>
+    <label className={styles.checkboxLabel}>
+      <input
+        type="checkbox"
+        className={styles.checkboxInput}
+        name="furnished"
+        checked={formData.furnished || false}
+        onChange={onInputChange}
+        disabled={loading}
+      />
+      <span className={styles.checkboxText}>Furnished</span>
+    </label>
+    
+    <label className={styles.checkboxLabel}>
+      <input
+        type="checkbox"
+        className={styles.checkboxInput}
+        name="pets_allowed"
+        checked={formData.pets_allowed || false}
+        onChange={onInputChange}
+        disabled={loading}
+      />
+      <span className={styles.checkboxText}>Pets Allowed</span>
+    </label>
+  </div>
+  
+  <div className={styles.checkboxGroup}>
+    <label className={styles.checkboxLabel}>
+      <input
+        type="checkbox"
+        className={styles.checkboxInput}
+        name="smoking_allowed"
+        checked={formData.smoking_allowed || false}
+        onChange={onInputChange}
+        disabled={loading}
+      />
+      <span className={styles.checkboxText}>Smoking Allowed</span>
+    </label>
+  </div>
+</div>
 
-        {/* Amenities */}
-        <div className={styles.formGroup}>
-          <label className={styles.formLabel}>Amenities</label>
-          <div className={styles.amenitiesGrid}>
-            {basicAmenities.map(amenity => (
-              <div key={amenity.value} className={styles.amenityItem}>
-                <input
-                  type="checkbox"
-                  className={styles.amenityInput}
-                  checked={formData.amenities?.includes(amenity.value) || false}
-                  onChange={(e) => onArrayChange('amenities', amenity.value, e.target.checked)}
-                  disabled={loading}
-                />
-                <span className={styles.amenityText}>{amenity.label}</span>
-              </div>
-            ))}
-          </div>
-        </div>
+{/* Amenities */}
+<div className={styles.formGroup}>
+  <label className={styles.formLabel}>Amenities</label>
+  <div className={styles.amenitiesGrid}>
+    {basicAmenities.map(amenity => (
+      <div key={amenity.value} className={styles.amenityItem}>
+        <label className={styles.amenityLabel}>
+          <input
+            type="checkbox"
+            className={styles.amenityInput}
+            checked={formData.amenities?.includes(amenity.value) || false}
+            onChange={(e) => onArrayChange('amenities', amenity.value, e.target.checked)}
+            disabled={loading}
+          />
+          <span className={styles.amenityText}>{amenity.label}</span>
+        </label>
       </div>
+    ))}
+  </div>
+</div>
 
       {/* Additional Information */}
       <div className={styles.sectionCard}>
