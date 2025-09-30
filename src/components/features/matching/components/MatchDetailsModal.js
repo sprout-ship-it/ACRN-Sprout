@@ -94,7 +94,6 @@ const MatchDetailsModal = ({
   onClose,
   onRequestMatch,
   customActions,
-  customActions,
   isRequestSent,
   isAlreadyMatched,
   usePortal = true,
