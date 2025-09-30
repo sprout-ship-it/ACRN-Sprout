@@ -31,7 +31,7 @@ const PropertyManagement = () => {
   const [propertyFormType, setPropertyFormType] = useState(null); // 'general_rental' or 'recovery_housing'
   const [showTypeSelector, setShowTypeSelector] = useState(false);
 
-  // ✅ CORRECTED: Enhanced form data structure with schema-compliant fields
+  // ✅ CORRECTED: Enhanced form data structure with separate room and bed fields
   const [formData, setFormData] = useState({
     // Basic Info
     property_name: '',
@@ -44,8 +44,9 @@ const PropertyManagement = () => {
     contact_email: '',
     description: '',
     
-    // Financial & Housing
-    total_beds: '',
+    // Financial & Housing - Updated with proper bed/room distinction
+    bedrooms: '', // ✅ NEW: Number of actual rooms
+    total_beds: '', // ✅ UPDATED: Total bed capacity across all rooms
     available_beds: '',
     bathrooms: '',
     rent_amount: '',
@@ -205,7 +206,8 @@ useEffect(() => {
         phone: '', 
         contact_email: '', 
         description: '', 
-        total_beds: '',
+        bedrooms: '', // ✅ NEW: Number of rooms
+        total_beds: '', // ✅ UPDATED: Total bed capacity  
         bathrooms: '1', 
         rent_amount: '', 
         security_deposit: '', 
@@ -216,10 +218,13 @@ useEffect(() => {
         amenities: []
       });
     } else {
-      // Keep existing complex form defaults
+      // Keep existing complex form defaults with updated bed/room fields
       setFormData({
         property_name: '', property_type: 'sober_living_level_1', address: '', city: '', state: '', 
-        zip_code: '', phone: '', contact_email: '', description: '', total_beds: '', available_beds: '', 
+        zip_code: '', phone: '', contact_email: '', description: '', 
+        bedrooms: '', // ✅ NEW: Number of rooms
+        total_beds: '', // ✅ UPDATED: Total bed capacity
+        available_beds: '', 
         bathrooms: '', rent_amount: '', security_deposit: '', application_fee: '', weekly_rate: '',
         utilities_included: [], furnished: false, meals_included: false, linens_provided: false,
         accepted_subsidies: [], required_programs: [], min_sobriety_time: '', treatment_completion_required: '',
@@ -262,14 +267,14 @@ useEffect(() => {
     }
   };
 
-  // ✅ UPDATED: Form validation with type-specific requirements and debugging
+  // ✅ UPDATED: Form validation with proper bed/room field validation
   const validateForm = () => {
     const newErrors = {};
     
     // Base required fields for both types
     const baseRequiredFields = [
       'property_name', 'property_type', 'address', 'city', 
-      'state', 'zip_code', 'phone', 'total_beds', 'rent_amount'
+      'state', 'zip_code', 'phone', 'bedrooms', 'total_beds', 'rent_amount'
     ];
     
     // Check required fields
@@ -282,6 +287,14 @@ useEffect(() => {
     });
 
     // Validate numeric fields - only if they have values and are required
+    if (formData.bedrooms) {
+      const bedrooms = parseInt(formData.bedrooms);
+      if (isNaN(bedrooms) || bedrooms <= 0) {
+        newErrors.bedrooms = 'Must be a positive number';
+        console.log(`Validation error - Invalid bedrooms:`, formData.bedrooms);
+      }
+    }
+
     if (formData.total_beds) {
       const totalBeds = parseInt(formData.total_beds);
       if (isNaN(totalBeds) || totalBeds <= 0) {
@@ -298,13 +311,22 @@ useEffect(() => {
       }
     }
 
-    // Validate available beds doesn't exceed total beds (recovery housing only)
+    // ✅ UPDATED: Validate available beds doesn't exceed total beds (recovery housing only)
     if (propertyFormType === 'recovery_housing' && formData.available_beds && formData.total_beds) {
       const availableBeds = parseInt(formData.available_beds);
       const totalBeds = parseInt(formData.total_beds);
       if (!isNaN(availableBeds) && !isNaN(totalBeds) && availableBeds > totalBeds) {
-        newErrors.available_beds = 'Cannot exceed total bedrooms';
+        newErrors.available_beds = 'Available beds cannot exceed total beds';
         console.log(`Validation error - Available beds exceed total:`, availableBeds, '>', totalBeds);
+      }
+    }
+
+    // ✅ NEW: Optional validation to warn if total beds is much higher than rooms (not an error, just a warning)
+    if (formData.bedrooms && formData.total_beds) {
+      const bedrooms = parseInt(formData.bedrooms);
+      const totalBeds = parseInt(formData.total_beds);
+      if (!isNaN(bedrooms) && !isNaN(totalBeds) && totalBeds > bedrooms * 6) {
+        console.log(`Info - High bed density: ${totalBeds} beds in ${bedrooms} rooms (${Math.round(totalBeds/bedrooms)} beds per room)`);
       }
     }
 
@@ -336,15 +358,15 @@ const handleSubmit = async (e) => {
   if (!isValid) {
     console.log('Form validation failed, errors found:', Object.keys(errors));
     
-    // ✅ FIXED: Only navigate to error section for recovery housing AND only if we're not already on the last section
-    if (propertyFormType === 'recovery_housing' && currentSection < formSections.length - 1) {
+    // ✅ FIXED: Navigate to error section for recovery housing regardless of current section
+    if (propertyFormType === 'recovery_housing') {
       const errorFields = Object.keys(errors);
       if (errorFields.length > 0) {
         const fieldSectionMap = {
           // Section 0: Basic Info
           property_name: 0, property_type: 0, address: 0, city: 0, state: 0, zip_code: 0, phone: 0, contact_email: 0, description: 0,
-          // Section 1: Financial
-          total_beds: 1, available_beds: 1, bathrooms: 1, rent_amount: 1, security_deposit: 1, application_fee: 1, weekly_rate: 1,
+          // Section 1: Financial - Updated with proper bed/room fields
+          bedrooms: 1, total_beds: 1, available_beds: 1, bathrooms: 1, rent_amount: 1, security_deposit: 1, application_fee: 1, weekly_rate: 1,
           // Section 2: Recovery 
           required_programs: 2, min_sobriety_time: 2, treatment_completion_required: 2, house_rules: 2, gender_restrictions: 2, age_restrictions: 2,
           // Section 3: Amenities
@@ -405,7 +427,8 @@ const handleSubmit = async (e) => {
           phone: formData.phone,
           contact_email: formData.contact_email || null,
           description: formData.description || null,
-          bedrooms: parseInt(formData.total_beds) || 0,
+          bedrooms: parseInt(formData.bedrooms) || 0, // ✅ UPDATED: Actual number of rooms
+          total_beds: parseInt(formData.total_beds) || 0, // ✅ NEW: Total bed capacity
           bathrooms: parseFloat(formData.bathrooms) || 1,
           monthly_rent: parseInt(formData.rent_amount),
           security_deposit: formData.security_deposit ? parseInt(formData.security_deposit) : null,
@@ -418,7 +441,7 @@ const handleSubmit = async (e) => {
           is_recovery_housing: false
         }
       : {
-          // Recovery housing data mapping
+          // Recovery housing data mapping with all three bed/room fields
           landlord_id: landlordProfileId,
           title: formData.property_name,
           property_type: formData.property_type,
@@ -429,9 +452,10 @@ const handleSubmit = async (e) => {
           phone: formData.phone,
           contact_email: formData.contact_email || null,
           description: formData.description || null,
-          bedrooms: parseInt(formData.total_beds) || 0,
+          bedrooms: parseInt(formData.bedrooms) || 0, // ✅ UPDATED: Actual number of rooms
+          total_beds: parseInt(formData.total_beds) || 0, // ✅ NEW: Total bed capacity
+          available_beds: parseInt(formData.available_beds) || 0, // ✅ KEEP: Currently vacant beds
           bathrooms: parseFloat(formData.bathrooms) || 1,
-          available_beds: parseInt(formData.available_beds) || 0,
           monthly_rent: parseInt(formData.rent_amount),
           security_deposit: formData.security_deposit ? parseInt(formData.security_deposit) : null,
           application_fee: formData.application_fee ? parseInt(formData.application_fee) : 0,
@@ -505,7 +529,10 @@ const handleSubmit = async (e) => {
   const resetForm = () => {
     setFormData({
       property_name: '', property_type: 'sober_living_level_1', address: '', city: '', state: '', 
-      zip_code: '', phone: '', contact_email: '', description: '', total_beds: '', available_beds: '', 
+      zip_code: '', phone: '', contact_email: '', description: '', 
+      bedrooms: '', // ✅ NEW: Number of rooms
+      total_beds: '', // ✅ UPDATED: Total bed capacity
+      available_beds: '', 
       bathrooms: '', rent_amount: '', security_deposit: '', application_fee: '', weekly_rate: '',
       utilities_included: [], // ✅ CORRECTED: Array instead of boolean
       furnished: false, meals_included: false, linens_provided: false,
@@ -536,7 +563,7 @@ const handleSubmit = async (e) => {
     setPropertyFormType(isRecoveryHousing ? 'recovery_housing' : 'general_rental');
 
     if (isRecoveryHousing) {
-      // Load full recovery housing data
+      // Load full recovery housing data with all three bed/room fields
       setFormData({
         property_name: property.title || '',
         property_type: property.property_type || 'sober_living_level_1',
@@ -547,7 +574,8 @@ const handleSubmit = async (e) => {
         phone: property.phone || '',
         contact_email: property.contact_email || '',
         description: property.description || '',
-        total_beds: property.bedrooms?.toString() || '',
+        bedrooms: property.bedrooms?.toString() || '', // ✅ UPDATED: Actual number of rooms
+        total_beds: property.total_beds?.toString() || '', // ✅ NEW: Total bed capacity
         available_beds: property.available_beds?.toString() || '',
         bathrooms: property.bathrooms?.toString() || '',
         rent_amount: property.monthly_rent?.toString() || '',
@@ -590,7 +618,7 @@ const handleSubmit = async (e) => {
         amenities: property.amenities || []
       });
     } else {
-      // Load simplified general rental data
+      // Load simplified general rental data with bed/room distinction
       setFormData({
         property_name: property.title || '',
         property_type: property.property_type || 'apartment',
@@ -601,7 +629,8 @@ const handleSubmit = async (e) => {
         phone: property.phone || '',
         contact_email: property.contact_email || '',
         description: property.description || '',
-        total_beds: property.bedrooms?.toString() || '',
+        bedrooms: property.bedrooms?.toString() || '', // ✅ UPDATED: Actual number of rooms
+        total_beds: property.total_beds?.toString() || property.bedrooms?.toString() || '', // ✅ NEW: Fallback to bedrooms if total_beds missing
         bathrooms: property.bathrooms?.toString() || '1',
         rent_amount: property.monthly_rent?.toString() || '',
         security_deposit: property.security_deposit?.toString() || '',
@@ -767,8 +796,12 @@ const prevSection = () => {
                   <span className={styles.propertyDetailValue}>${property.monthly_rent}/mo</span>
                 </div>
                 <div className={styles.propertyDetail}>
-                  <span className={styles.propertyDetailLabel}>Beds:</span>
+                  <span className={styles.propertyDetailLabel}>Rooms:</span>
                   <span className={styles.propertyDetailValue}>{property.bedrooms || 'Studio'}</span>
+                </div>
+                <div className={styles.propertyDetail}>
+                  <span className={styles.propertyDetailLabel}>Beds:</span>
+                  <span className={styles.propertyDetailValue}>{property.total_beds || property.bedrooms || 'Studio'}</span>
                 </div>
                 {property.is_recovery_housing && (
                   <div className={styles.propertyDetail}>

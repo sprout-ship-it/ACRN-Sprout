@@ -1734,6 +1734,24 @@ CREATE POLICY "Users can delete their own employer favorites" ON employer_favori
     )
   );
 
+ALTER TABLE properties 
+ADD COLUMN total_beds INTEGER;
+
+-- Add comment to clarify the distinction
+COMMENT ON COLUMN properties.bedrooms IS 'Number of actual rooms/bedrooms in the property';
+COMMENT ON COLUMN properties.total_beds IS 'Total number of beds across all rooms (can exceed bedroom count)';
+COMMENT ON COLUMN properties.available_beds IS 'Number of currently vacant/available beds';
+
+-- Add check constraint to ensure available_beds doesn't exceed total_beds
+ALTER TABLE properties 
+ADD CONSTRAINT check_available_beds_valid 
+CHECK (available_beds IS NULL OR total_beds IS NULL OR available_beds <= total_beds);
+
+-- Update any existing properties where total_beds should match current bedrooms
+-- (You may want to adjust this based on your existing data)
+UPDATE properties 
+SET total_beds = bedrooms 
+WHERE total_beds IS NULL AND bedrooms IS NOT NULL;
 -- ============================================================================
 -- SECTION 9: PERMISSIONS AND GRANTS
 -- ============================================================================
