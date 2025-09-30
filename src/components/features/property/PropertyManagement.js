@@ -1,4 +1,4 @@
-// src/components/dashboard/PropertyManagement.js - UPDATED WITH CSS MODULE
+// src/components/dashboard/PropertyManagement.js - UPDATED WITH FIXES
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../../../context/AuthContext';
 import { supabase } from '../../../utils/supabase';
@@ -99,9 +99,9 @@ const PropertyManagement = () => {
   // Form sections for navigation (recovery housing only)
   const formSections = [
     { id: 'basic', title: 'Basic Info', component: PropertyBasicInfoSection, icon: '🏠' },
-    { id: 'financial', title: 'Financial & Housing', component: PropertyFinancialSection, icon: '💰' },
-    { id: 'recovery', title: 'Recovery & Rules', component: PropertyRecoverySection, icon: '🌱' },
-    { id: 'amenities', title: 'Amenities & Services', component: PropertyAmenitiesSection, icon: '⭐' }
+    { id: 'financial', title: 'Financial', component: PropertyFinancialSection, icon: '💰' },
+    { id: 'recovery', title: 'Recovery', component: PropertyRecoverySection, icon: '🌱' },
+    { id: 'amenities', title: 'Amenities', component: PropertyAmenitiesSection, icon: '⭐' }
   ];
 
 useEffect(() => {
@@ -167,18 +167,25 @@ useEffect(() => {
     setShowTypeSelector(true);
     setShowForm(false);
   };
+
 useEffect(() => {
-  // Auto-focus first field when form opens
+  // Auto-focus first field when form opens - improved centering
   if (showForm && !editingProperty) {
     setTimeout(() => {
       const firstInput = document.querySelector('input[name="property_name"]');
       if (firstInput) {
         firstInput.focus();
-        firstInput.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        // ✅ IMPROVED: Center the field in the viewport
+        firstInput.scrollIntoView({ 
+          behavior: 'smooth', 
+          block: 'center',
+          inline: 'nearest'
+        });
       }
     }, 100);
   }
 }, [showForm, editingProperty]);
+
   // ✅ NEW: Handler for property type selection
   const handlePropertyTypeSelection = (type) => {
     setPropertyFormType(type);
@@ -300,23 +307,40 @@ const handleSubmit = async (e) => {
   }
   
   if (!validateForm()) {
-    // Scroll to first error section (recovery housing only)
+    // ✅ FIXED: Only navigate to error section if we're in multi-section mode AND have errors
     if (propertyFormType === 'recovery_housing') {
       const errorFields = Object.keys(errors);
       if (errorFields.length > 0) {
         const fieldSectionMap = {
-          property_name: 0, property_type: 0, address: 0, city: 0, state: 0, zip_code: 0, phone: 0,
-          total_beds: 1, rent_amount: 1, security_deposit: 1,
-          required_programs: 2, house_rules: 2, gender_restrictions: 2,
-          amenities: 3, accessibility_features: 3
+          property_name: 0, property_type: 0, address: 0, city: 0, state: 0, zip_code: 0, phone: 0, contact_email: 0, description: 0,
+          total_beds: 1, available_beds: 1, bathrooms: 1, rent_amount: 1, security_deposit: 1, application_fee: 1, weekly_rate: 1,
+          required_programs: 2, min_sobriety_time: 2, treatment_completion_required: 2, house_rules: 2, gender_restrictions: 2, age_restrictions: 2,
+          amenities: 3, accessibility_features: 3, neighborhood_features: 3
         };
         
         const firstErrorField = errorFields[0];
-        const sectionIndex = fieldSectionMap[firstErrorField] || 0;
-        setCurrentSection(sectionIndex);
+        const sectionIndex = fieldSectionMap[firstErrorField];
+        
+        // ✅ FIXED: Only set section if it's different from current, and ensure we don't go backwards unnecessarily
+        if (typeof sectionIndex === 'number' && sectionIndex !== currentSection) {
+          setCurrentSection(sectionIndex);
+          
+          // ✅ IMPROVED: Scroll to center the first error field
+          setTimeout(() => {
+            const errorField = document.querySelector(`[name="${firstErrorField}"]`);
+            if (errorField) {
+              errorField.scrollIntoView({ 
+                behavior: 'smooth', 
+                block: 'center',
+                inline: 'nearest'
+              });
+              errorField.focus();
+            }
+          }, 100);
+        }
       }
     }
-    return;
+    return; // ✅ CRITICAL: Return here so form doesn't proceed with submission
   }
 
   setLoading(true);
@@ -569,18 +593,31 @@ const handleSubmit = async (e) => {
     }
   };
 
-  // Section navigation (recovery housing only)
+  // ✅ IMPROVED: Section navigation with better centering
 const nextSection = () => {
   if (currentSection < formSections.length - 1) {
     setCurrentSection(currentSection + 1);
     
-    // Auto-scroll to top of modal when changing sections
+    // ✅ IMPROVED: Center the content instead of scrolling to top
     setTimeout(() => {
       const modalContent = document.querySelector(`.${styles.modalContent}`);
-      if (modalContent) {
-        modalContent.scrollTop = 0;
+      const firstInput = modalContent?.querySelector('input, select, textarea');
+      
+      if (firstInput) {
+        firstInput.scrollIntoView({ 
+          behavior: 'smooth', 
+          block: 'center',
+          inline: 'nearest'
+        });
+      } else if (modalContent) {
+        // Fallback: scroll to a centered position in the modal
+        const centerPosition = modalContent.scrollHeight * 0.3;
+        modalContent.scrollTo({ 
+          top: centerPosition, 
+          behavior: 'smooth' 
+        });
       }
-    }, 50);
+    }, 100);
   }
 };
 
@@ -588,18 +625,45 @@ const prevSection = () => {
   if (currentSection > 0) {
     setCurrentSection(currentSection - 1);
     
-    // Auto-scroll to top of modal when changing sections
+    // ✅ IMPROVED: Center the content instead of scrolling to top
     setTimeout(() => {
       const modalContent = document.querySelector(`.${styles.modalContent}`);
-      if (modalContent) {
-        modalContent.scrollTop = 0;
+      const firstInput = modalContent?.querySelector('input, select, textarea');
+      
+      if (firstInput) {
+        firstInput.scrollIntoView({ 
+          behavior: 'smooth', 
+          block: 'center',
+          inline: 'nearest'
+        });
+      } else if (modalContent) {
+        // Fallback: scroll to a centered position in the modal
+        const centerPosition = modalContent.scrollHeight * 0.3;
+        modalContent.scrollTo({ 
+          top: centerPosition, 
+          behavior: 'smooth' 
+        });
       }
-    }, 50);
+    }, 100);
   }
 };
 
   const goToSection = (index) => {
     setCurrentSection(index);
+    
+    // ✅ IMPROVED: Auto-center when jumping to section
+    setTimeout(() => {
+      const modalContent = document.querySelector(`.${styles.modalContent}`);
+      const firstInput = modalContent?.querySelector('input, select, textarea');
+      
+      if (firstInput) {
+        firstInput.scrollIntoView({ 
+          behavior: 'smooth', 
+          block: 'center',
+          inline: 'nearest'
+        });
+      }
+    }, 100);
   };
 
   const CurrentSectionComponent = formSections[currentSection]?.component;
@@ -732,7 +796,7 @@ const prevSection = () => {
               ) : (
                 // ✅ EXISTING: Complex form with sections for recovery housing
                 <>
-                  {/* ✅ UPDATED: Section Navigation using CSS module */}
+                  {/* ✅ UPDATED: Compact Section Navigation */}
 <nav className={styles.sectionNav}>
   <div className={styles.progressBar}>
     <div 
@@ -741,22 +805,24 @@ const prevSection = () => {
     />
   </div>
   
-  {formSections.map((section, index) => (
-    <button
-      key={section.id}
-      type="button"
-      className={`${styles.sectionNavBtn} ${index === currentSection ? styles.active : ''} ${index < currentSection ? styles.completed : ''}`}
-      onClick={() => goToSection(index)}
-      disabled={loading}
-    >
-      <span className={styles.sectionNumber}>{index + 1}</span>
-      <div className={styles.sectionInfo}>
-        <span className={styles.sectionIcon}>{section.icon}</span>
-        <span className={styles.sectionTitle}>{section.title}</span>
-      </div>
-      {index < currentSection && <span className={styles.checkMark}>✓</span>}
-    </button>
-  ))}
+  <div className={styles.sectionNavContainer}>
+    {formSections.map((section, index) => (
+      <button
+        key={section.id}
+        type="button"
+        className={`${styles.sectionNavBtn} ${index === currentSection ? styles.active : ''} ${index < currentSection ? styles.completed : ''}`}
+        onClick={() => goToSection(index)}
+        disabled={loading}
+      >
+        <span className={styles.sectionNumber}>{index + 1}</span>
+        <div className={styles.sectionInfo}>
+          <span className={styles.sectionIcon}>{section.icon}</span>
+          <span className={styles.sectionTitle}>{section.title}</span>
+        </div>
+        {index < currentSection && <span className={styles.checkMark}>✓</span>}
+      </button>
+    ))}
+  </div>
 </nav>
                   
                   {/* Current Section */}

@@ -1,4 +1,4 @@
-/* PropertyManagement.module.css - Component-specific styles */
+/* PropertyManagement.module.css - Component-specific styles - FIXED */
 
 /* ==================== HEADER SECTION ==================== */
 .headerSection {
@@ -242,29 +242,51 @@
   color: var(--gray-800);
 }
 
-/* ==================== SECTION NAVIGATION ==================== */
+/* ==================== COMPACT SECTION NAVIGATION ==================== */
 .sectionNav {
-  display: flex;
-  gap: var(--spacing-lg);
+  margin-bottom: var(--spacing-lg);
   border-bottom: 1px solid var(--border-beige);
-  padding-bottom: var(--spacing-lg);
-  margin-bottom: var(--spacing-xxl);
-  overflow-x: auto;
+  padding-bottom: var(--spacing-md);
+}
+
+.progressBar {
+  width: 100%;
+  height: 3px;
+  background: var(--border-beige);
+  border-radius: 2px;
+  margin-bottom: var(--spacing-md);
+  overflow: hidden;
+}
+
+.progressFill {
+  height: 100%;
+  background: linear-gradient(90deg, var(--primary-purple), var(--secondary-teal));
+  transition: width 0.3s ease;
+  border-radius: 2px;
+}
+
+.sectionNavContainer {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: var(--spacing-sm);
+  width: 100%;
 }
 
 .sectionNavBtn {
-display: flex;
-align-items: center; 
-  gap: var(--spacing-sm);
-  padding: var(--spacing-lg);
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: var(--spacing-xs);
+  padding: var(--spacing-md) var(--spacing-sm);
   border: 1px solid var(--border-beige);
   border-radius: var(--radius-md);
   background: white;
   cursor: pointer;
   transition: var(--transition-normal);
-  flex: 1;
-  min-width: 140px;
-  white-space: nowrap;
+  text-align: center;
+  min-height: 70px;
 }
 
 .sectionNavBtn:hover:not(:disabled) {
@@ -283,9 +305,24 @@ align-items: center;
   opacity: 0.6;
   cursor: not-allowed;
 }
+
 .sectionNavBtn.completed {
   border-color: var(--secondary-teal);
   background: rgba(32, 178, 170, 0.05);
+}
+
+.sectionNumber {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: var(--gray-200);
+  color: var(--gray-600);
+  font-size: 0.75rem;
+  font-weight: 600;
+  flex-shrink: 0;
 }
 
 .sectionNavBtn.active .sectionNumber {
@@ -298,16 +335,44 @@ align-items: center;
   color: white;
 }
 
+.sectionInfo {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+}
+
 .sectionIcon {
-  font-size: 1.5rem;
-  margin-bottom: var(--spacing-xs);
+  font-size: 1rem;
+  line-height: 1;
 }
 
 .sectionTitle {
-  font-size: 0.9rem;
+  font-size: 0.75rem;
   font-weight: 600;
   text-align: center;
   line-height: 1.2;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 100%;
+}
+
+.checkMark {
+  position: absolute;
+  top: -2px;
+  right: -2px;
+  background: var(--secondary-teal);
+  color: white;
+  border-radius: 50%;
+  width: 14px;
+  height: 14px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.6rem;
+  font-weight: bold;
+  border: 2px solid white;
 }
 
 /* ==================== FORM ACTIONS ==================== */
@@ -389,6 +454,63 @@ align-items: center;
   display: inline-block;
 }
 
+/* ==================== FORM CONTENT CONTAINMENT ==================== */
+.checkboxColumns {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: var(--spacing-sm);
+  margin-top: var(--spacing-md);
+  max-width: 100%;
+  overflow: hidden;
+}
+
+.checkboxColumnsCompact {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: var(--spacing-xs);
+  margin-top: var(--spacing-md);
+  max-width: 100%;
+  overflow: hidden;
+}
+
+.checkboxLabel {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--spacing-sm);
+  padding: var(--spacing-sm) var(--spacing-md);
+  border-radius: var(--radius-md);
+  cursor: pointer;
+  transition: var(--transition-normal);
+  border: 1px solid transparent;
+  background: rgba(0, 0, 0, 0.02);
+  word-break: break-word;
+  max-width: 100%;
+}
+
+.checkboxLabel:hover {
+  background: rgba(160, 32, 240, 0.05);
+  border-color: var(--primary-purple);
+}
+
+.helpText {
+  font-size: 0.8rem;
+  color: var(--gray-500);
+  margin-top: 4px;
+  line-height: 1.3;
+  word-break: break-word;
+}
+
+.helpTextLarge {
+  font-size: 0.9rem;
+  color: var(--gray-600);
+  margin-bottom: var(--spacing-md);
+  padding: var(--spacing-sm) var(--spacing-md);
+  background: rgba(0, 0, 0, 0.02);
+  border-radius: var(--radius-md);
+  border-left: 3px solid var(--primary-purple);
+  word-break: break-word;
+}
+
 /* ==================== RESPONSIVE DESIGN ==================== */
 @media (max-width: 768px) {
   .headerSection {
@@ -432,29 +554,47 @@ align-items: center;
   .modalContent {
     margin: 10px;
     max-width: calc(100vw - 20px);
+    padding: var(--spacing-lg);
   }
 
   .modalContentLarge {
     max-width: calc(100vw - 20px);
   }
 
-  .sectionNav {
-    flex-wrap: wrap;
-    gap: var(--spacing-sm);
+  /* ✅ IMPROVED: Compact mobile navigation */
+  .sectionNavContainer {
+    grid-template-columns: repeat(2, 1fr);
+    gap: var(--spacing-xs);
   }
 
   .sectionNavBtn {
-    flex: 1 1 calc(50% - var(--spacing-xs));
-    min-width: 120px;
-    padding: var(--spacing-md);
+    padding: var(--spacing-sm);
+    min-height: 60px;
   }
 
   .sectionIcon {
-    font-size: 1.2rem;
+    font-size: 0.9rem;
   }
 
   .sectionTitle {
-    font-size: 0.8rem;
+    font-size: 0.7rem;
+  }
+
+  .sectionNumber {
+    width: 18px;
+    height: 18px;
+    font-size: 0.7rem;
+  }
+
+  .checkMark {
+    width: 12px;
+    height: 12px;
+    font-size: 0.55rem;
+  }
+
+  .checkboxColumns,
+  .checkboxColumnsCompact {
+    grid-template-columns: 1fr;
   }
 
   .formActions {
@@ -472,13 +612,7 @@ align-items: center;
     font-size: 1.75rem;
   }
 }
-@media (max-width: 768px) {
-  /* Add to your existing mobile styles: */
-  .checkboxColumns,
-  .checkboxColumnsCompact {
-    grid-template-columns: 1fr;
-  }
-}
+
 @media (max-width: 480px) {
   .headerSection {
     padding: var(--spacing-lg);
@@ -505,16 +639,32 @@ align-items: center;
   }
 
   .modalContent {
-    padding: var(--spacing-lg);
+    padding: var(--spacing-md);
   }
 
   .modalTitle {
     font-size: 1.25rem;
   }
 
+  /* ✅ ULTRA-COMPACT: Mobile navigation for very small screens */
   .sectionNavBtn {
-    padding: var(--spacing-sm);
-    min-width: 100px;
+    padding: var(--spacing-xs);
+    min-height: 50px;
+    gap: 2px;
+  }
+
+  .sectionIcon {
+    font-size: 0.8rem;
+  }
+
+  .sectionTitle {
+    font-size: 0.65rem;
+  }
+
+  .sectionNumber {
+    width: 16px;
+    height: 16px;
+    font-size: 0.65rem;
   }
 
   .actionButton {
@@ -543,105 +693,30 @@ align-items: center;
 .sectionNavBtn:last-child {
   margin-right: 0;
 }
-/* ==================== ENHANCED SECTION NAVIGATION ==================== */
-.progressBar {
-  width: 100%;
-  height: 4px;
-  background: var(--border-beige);
-  border-radius: 2px;
-  margin-bottom: var(--spacing-lg);
-  overflow: hidden;
+
+/* ==================== CONTENT OVERFLOW PREVENTION ==================== */
+* {
+  box-sizing: border-box;
 }
 
-.progressFill {
-  height: 100%;
-  background: linear-gradient(90deg, var(--primary-purple), var(--secondary-teal));
-  transition: width 0.3s ease;
-  border-radius: 2px;
+.modalContent * {
+  max-width: 100%;
 }
 
-.sectionNumber {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 24px;
-  height: 24px;
-  border-radius: 50%;
-  background: var(--gray-200);
-  color: var(--gray-600);
-  font-size: 0.8rem;
-  font-weight: 600;
-  flex-shrink: 0;
+/* Ensure form sections don't overflow */
+.modalContent form > div {
+  max-width: 100%;
+  overflow-x: hidden;
 }
 
-.sectionInfo {
-  display: flex;
-  flex-direction: column;
-  align-items: flex-start;
-  flex: 1;
+/* Ensure long text content wraps properly */
+input, textarea, select {
+  max-width: 100%;
+  word-break: break-word;
 }
 
-.checkMark {
-  position: absolute;
-  top: -4px;
-  right: -4px;
-  background: var(--secondary-teal);
-  color: white;
-  border-radius: 50%;
-  width: 18px;
-  height: 18px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 0.7rem;
-  font-weight: bold;
-}
-
-/* ==================== IMPROVED FORM LAYOUTS ==================== */
-.checkboxColumns {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-  gap: var(--spacing-md);
-  margin-top: var(--spacing-md);
-}
-
-.checkboxColumnsCompact {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-  gap: var(--spacing-sm);
-  margin-top: var(--spacing-md);
-}
-
-.checkboxLabel {
-  display: flex;
-  align-items: flex-start;
-  gap: var(--spacing-sm);
-  padding: var(--spacing-sm) var(--spacing-md);
-  border-radius: var(--radius-md);
-  cursor: pointer;
-  transition: var(--transition-normal);
-  border: 1px solid transparent;
-  background: rgba(0, 0, 0, 0.02);
-}
-
-.checkboxLabel:hover {
-  background: rgba(160, 32, 240, 0.05);
-  border-color: var(--primary-purple);
-}
-
-.helpText {
-  font-size: 0.8rem;
-  color: var(--gray-500);
-  margin-top: 4px;
-  line-height: 1.3;
-}
-
-.helpTextLarge {
-  font-size: 0.9rem;
-  color: var(--gray-600);
-  margin-bottom: var(--spacing-md);
-  padding: var(--spacing-sm) var(--spacing-md);
-  background: rgba(0, 0, 0, 0.02);
-  border-radius: var(--radius-md);
-  border-left: 3px solid var(--primary-purple);
+/* Prevent horizontal scrolling in modal */
+.modalContent {
+  overflow-x: hidden;
+  overflow-y: auto;
 }
