@@ -22,6 +22,7 @@ import Settings from '../components/ui/Settings';
 // Form Components
 import EnhancedMatchingProfileForm from '../components/features/matching/EnhancedMatchingProfileForm'
 import PeerSupportProfileForm from '../components/features/peer-support/PeerSupportProfileForm'
+import LandlordProfileForm from '../components/features/property/LandlordProfileForm'
 
 // Dashboard Components  
 import Dashboard from './Dashboard'
@@ -63,7 +64,44 @@ const MainApp = () => {
     hasComprehensiveProfile: false,
     loading: true
   })
+const checkLandlordProfile = async (profileId) => {
+  try {
+    const { data, error } = await supabase
+      .from('landlord_profiles')
+      .select('id, profile_completed, primary_phone, business_type')
+      .eq('user_id', profileId)
+      .single();
 
+    if (error && error.code !== 'PGRST116') { // PGRST116 = not found
+      throw error;
+    }
+
+    if (data) {
+      // Check if landlord profile is complete
+      const isComplete = !!(
+        data.primary_phone && 
+        data.business_type && 
+        data.profile_completed
+      );
+      
+      console.log('Landlord profile check:', { 
+        hasProfile: !!data,
+        hasPhone: !!data.primary_phone,
+        hasBusinessType: !!data.business_type,
+        isCompleted: !!data.profile_completed,
+        overallComplete: isComplete
+      });
+      
+      return isComplete;
+    } else {
+      console.log('No landlord profile found');
+      return false;
+    }
+  } catch (error) {
+    console.error('Error checking landlord profile:', error);
+    return false;
+  }
+};
   // ✅ SCHEMA COMPLIANT: Check profile completion using correct ID relationships
   useEffect(() => {
     const checkProfileCompletion = async () => {
@@ -150,18 +188,12 @@ const MainApp = () => {
           }
         }
         
-        else if (hasRole('landlord')) {
-          console.log('Checking landlord profile...')
-          
-          // ✅ SCHEMA COMPLIANT: For landlords, basic contact info from registrant_profiles is sufficient
-          // They can optionally have a matching profile for personal preferences
-          hasCompleteProfile = !!(profile?.first_name && profile?.last_name && profile?.email);
-          
-          console.log('Landlord profile check:', { 
-            hasBasicInfo: !!(profile?.first_name && profile?.last_name && profile?.email),
-            overallComplete: hasCompleteProfile
-          })
-        }
+else if (hasRole('landlord')) {
+  console.log('Checking landlord profile...')
+  
+  // ✅ UPDATED: Actually check for landlord_profiles record, not just basic info
+  hasCompleteProfile = await checkLandlordProfile(profile.id);
+}
 
         else if (hasRole('employer')) {
           console.log('Checking employer comprehensive profile...')
@@ -316,11 +348,27 @@ const MainApp = () => {
     }
     
     // For LANDLORDS - they have basic info from registrant_profiles, proceed to dashboard
-    else if (hasRole('landlord')) {
-      console.log('Landlord has sufficient basic info, proceeding to dashboard')
-      setProfileSetup(prev => ({ ...prev, hasComprehensiveProfile: true }))
-      return null // Will re-render with updated state
-    }
+else if (hasRole('landlord')) {
+  console.log('Redirecting landlord to create landlord profile')
+  return (
+    <div className="app-background" style={{ minHeight: '100vh', padding: '20px 0' }}>
+      <div className="container">
+        <Header />
+        <div className="content">
+          <div style={{ maxWidth: '900px', margin: '0 auto' }}>
+            <div className="alert alert-info mb-4">
+              <h4>Complete Your Landlord Profile</h4>
+              <p>Please complete your landlord profile to start listing properties and connecting with potential tenants.</p>
+            </div>
+            <LandlordProfileForm 
+              onComplete={() => setProfileSetup(prev => ({ ...prev, hasComprehensiveProfile: true }))}
+            />
+          </div>
+        </div>
+      </div>
+    </div>
+  )
+}
     
     // Fallback for unknown roles
     else {
@@ -382,13 +430,26 @@ const MainApp = () => {
               </>
             )}
             
-            {/* Landlord Routes */}
-            {hasRole('landlord') && (
-              <>
-                <Route path="/properties" element={<PropertyManagement />} />
-                <Route path="/tenants" element={<MatchRequests />} />
-              </>
-            )}
+{/* Landlord Routes */}
+{hasRole('landlord') && (
+  <>
+    <Route path="/profile/landlord" element={
+      <div style={{ maxWidth: '900px', margin: '0 auto' }}>
+        <LandlordProfileForm 
+          editMode={true}
+          onComplete={() => {
+            setProfileSetup(prev => ({ ...prev, hasComprehensiveProfile: true }));
+            navigate('/app');
+          }}
+          onCancel={() => navigate('/app')}
+        />
+      </div>
+    } />
+    
+    <Route path="/properties" element={<PropertyManagement />} />
+    <Route path="/tenants" element={<MatchRequests />} />
+  </>
+)}
 
             {/* Employer Routes */}
             {hasRole('employer') && (
