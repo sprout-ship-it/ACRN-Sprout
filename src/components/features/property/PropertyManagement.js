@@ -262,7 +262,7 @@ useEffect(() => {
     }
   };
 
-  // ✅ UPDATED: Form validation with type-specific requirements
+  // ✅ UPDATED: Form validation with type-specific requirements and debugging
   const validateForm = () => {
     const newErrors = {};
     
@@ -272,26 +272,48 @@ useEffect(() => {
       'state', 'zip_code', 'phone', 'total_beds', 'rent_amount'
     ];
     
+    // Check required fields
     baseRequiredFields.forEach(field => {
-      if (!formData[field] || formData[field].toString().trim() === '') {
+      const value = formData[field];
+      if (!value || value.toString().trim() === '') {
         newErrors[field] = 'This field is required';
+        console.log(`Validation error - Required field missing: ${field}`, value);
       }
     });
 
-    // Validate numeric fields
-    if (formData.total_beds && (isNaN(formData.total_beds) || formData.total_beds <= 0)) {
-      newErrors.total_beds = 'Must be a positive number';
+    // Validate numeric fields - only if they have values and are required
+    if (formData.total_beds) {
+      const totalBeds = parseInt(formData.total_beds);
+      if (isNaN(totalBeds) || totalBeds <= 0) {
+        newErrors.total_beds = 'Must be a positive number';
+        console.log(`Validation error - Invalid total_beds:`, formData.total_beds);
+      }
     }
     
-    if (formData.rent_amount && (isNaN(formData.rent_amount) || formData.rent_amount <= 0)) {
-      newErrors.rent_amount = 'Must be a positive amount';
+    if (formData.rent_amount) {
+      const rentAmount = parseInt(formData.rent_amount);
+      if (isNaN(rentAmount) || rentAmount <= 0) {
+        newErrors.rent_amount = 'Must be a positive amount';
+        console.log(`Validation error - Invalid rent_amount:`, formData.rent_amount);
+      }
     }
 
     // Validate available beds doesn't exceed total beds (recovery housing only)
-    if (propertyFormType === 'recovery_housing' && formData.available_beds && formData.total_beds && 
-        parseInt(formData.available_beds) > parseInt(formData.total_beds)) {
-      newErrors.available_beds = 'Cannot exceed total bedrooms';
+    if (propertyFormType === 'recovery_housing' && formData.available_beds && formData.total_beds) {
+      const availableBeds = parseInt(formData.available_beds);
+      const totalBeds = parseInt(formData.total_beds);
+      if (!isNaN(availableBeds) && !isNaN(totalBeds) && availableBeds > totalBeds) {
+        newErrors.available_beds = 'Cannot exceed total bedrooms';
+        console.log(`Validation error - Available beds exceed total:`, availableBeds, '>', totalBeds);
+      }
     }
+
+    console.log('Form validation result:', {
+      formType: propertyFormType,
+      errorCount: Object.keys(newErrors).length,
+      errors: newErrors,
+      formData: formData
+    });
 
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
@@ -299,6 +321,7 @@ useEffect(() => {
 
 const handleSubmit = async (e) => {
   e.preventDefault();
+  console.log('Form submit triggered', { propertyFormType, currentSection, editingProperty });
   
   // ✅ ADD: Validate landlord profile ID is available
   if (!landlordProfileId) {
@@ -306,26 +329,43 @@ const handleSubmit = async (e) => {
     return;
   }
   
-  if (!validateForm()) {
-    // ✅ FIXED: Only navigate to error section if we're in multi-section mode AND have errors
-    if (propertyFormType === 'recovery_housing') {
+  // ✅ IMPROVED: Better validation with debugging
+  const isValid = validateForm();
+  console.log('Validation result:', isValid, 'Errors:', errors);
+  
+  if (!isValid) {
+    console.log('Form validation failed, errors found:', Object.keys(errors));
+    
+    // ✅ FIXED: Only navigate to error section for recovery housing AND only if we're not already on the last section
+    if (propertyFormType === 'recovery_housing' && currentSection < formSections.length - 1) {
       const errorFields = Object.keys(errors);
       if (errorFields.length > 0) {
         const fieldSectionMap = {
+          // Section 0: Basic Info
           property_name: 0, property_type: 0, address: 0, city: 0, state: 0, zip_code: 0, phone: 0, contact_email: 0, description: 0,
+          // Section 1: Financial
           total_beds: 1, available_beds: 1, bathrooms: 1, rent_amount: 1, security_deposit: 1, application_fee: 1, weekly_rate: 1,
+          // Section 2: Recovery 
           required_programs: 2, min_sobriety_time: 2, treatment_completion_required: 2, house_rules: 2, gender_restrictions: 2, age_restrictions: 2,
+          // Section 3: Amenities
           amenities: 3, accessibility_features: 3, neighborhood_features: 3
         };
         
         const firstErrorField = errorFields[0];
-        const sectionIndex = fieldSectionMap[firstErrorField];
+        const targetSection = fieldSectionMap[firstErrorField];
         
-        // ✅ FIXED: Only set section if it's different from current, and ensure we don't go backwards unnecessarily
-        if (typeof sectionIndex === 'number' && sectionIndex !== currentSection) {
-          setCurrentSection(sectionIndex);
+        console.log('Navigating to error section:', {
+          firstErrorField,
+          targetSection,
+          currentSection,
+          willNavigate: typeof targetSection === 'number' && targetSection !== currentSection
+        });
+        
+        // Only navigate if it's a different section
+        if (typeof targetSection === 'number' && targetSection !== currentSection) {
+          setCurrentSection(targetSection);
           
-          // ✅ IMPROVED: Scroll to center the first error field
+          // Scroll to the error field
           setTimeout(() => {
             const errorField = document.querySelector(`[name="${firstErrorField}"]`);
             if (errorField) {
@@ -340,16 +380,22 @@ const handleSubmit = async (e) => {
         }
       }
     }
-    return; // ✅ CRITICAL: Return here so form doesn't proceed with submission
+    
+    // ✅ CRITICAL: Always return here when validation fails
+    console.log('Returning early due to validation failure');
+    return;
   }
 
+  // ✅ If we get here, validation passed - proceed with submission
+  console.log('Validation passed, proceeding with form submission');
   setLoading(true);
+  
   try {
     // ✅ NEW: Create different property data objects based on type
     const propertyData = propertyFormType === 'general_rental'
       ? {
           // Simplified property data mapping
-          landlord_id: landlordProfileId, // ✅ FIXED: use landlordProfileId
+          landlord_id: landlordProfileId,
           title: formData.property_name,
           property_type: formData.property_type,
           address: formData.address,
@@ -369,11 +415,11 @@ const handleSubmit = async (e) => {
           smoking_allowed: formData.smoking_allowed,
           amenities: formData.amenities,
           status: 'available',
-          is_recovery_housing: false // Add this flag to distinguish property types
+          is_recovery_housing: false
         }
       : {
-          // ✅ CORRECTED: Map form data to database structure with proper types (recovery housing)
-          landlord_id: landlordProfileId, // ✅ FIXED: use landlordProfileId
+          // Recovery housing data mapping
+          landlord_id: landlordProfileId,
           title: formData.property_name,
           property_type: formData.property_type,
           address: formData.address,
@@ -383,23 +429,17 @@ const handleSubmit = async (e) => {
           phone: formData.phone,
           contact_email: formData.contact_email || null,
           description: formData.description || null,
-          
-          // ✅ CORRECTED: Match your existing schema
           bedrooms: parseInt(formData.total_beds) || 0,
           bathrooms: parseFloat(formData.bathrooms) || 1,
           available_beds: parseInt(formData.available_beds) || 0,
-          monthly_rent: parseInt(formData.rent_amount), // Your schema uses integer
+          monthly_rent: parseInt(formData.rent_amount),
           security_deposit: formData.security_deposit ? parseInt(formData.security_deposit) : null,
-          application_fee: formData.application_fee ? parseInt(formData.application_fee) : 0, // Your schema has default 0
+          application_fee: formData.application_fee ? parseInt(formData.application_fee) : 0,
           weekly_rate: formData.weekly_rate ? parseInt(formData.weekly_rate) : null,
-          
-          // ✅ CORRECTED: utilities_included as array
           utilities_included: formData.utilities_included || [],
           furnished: formData.furnished,
           pets_allowed: formData.pets_allowed,
           smoking_allowed: formData.smoking_allowed,
-          
-          // ✅ NEW: All the new fields from migration
           accepted_subsidies: formData.accepted_subsidies,
           required_programs: formData.required_programs,
           min_sobriety_time: formData.min_sobriety_time || null,
@@ -425,32 +465,38 @@ const handleSubmit = async (e) => {
           linens_provided: formData.linens_provided,
           status: formData.property_status || 'available',
           additional_notes: formData.additional_notes || null,
-          
-          // ✅ KEEP: Your existing amenities field (already array)
           amenities: formData.amenities,
           is_recovery_housing: true
         };
 
+    console.log('Submitting property data:', propertyData);
+
     let result;
     if (editingProperty) {
+      console.log('Updating existing property:', editingProperty.id);
       result = await supabase
         .from('properties')
         .update(propertyData)
         .eq('id', editingProperty.id);
     } else {
+      console.log('Creating new property');
       result = await supabase
         .from('properties')
         .insert([propertyData]);
     }
 
-    if (result.error) throw result.error;
+    if (result.error) {
+      console.error('Supabase error:', result.error);
+      throw result.error;
+    }
 
+    console.log('Property saved successfully:', result);
     await fetchProperties();
     resetForm();
     alert(editingProperty ? 'Property updated successfully!' : 'Property added successfully!');
   } catch (error) {
     console.error('Error saving property:', error);
-    alert('Error saving property. Please try again.');
+    alert('Error saving property: ' + error.message);
   } finally {
     setLoading(false);
   }
