@@ -343,7 +343,17 @@ useEffect(() => {
 
 const handleSubmit = async (e) => {
   e.preventDefault();
-  console.log('Form submit triggered', { propertyFormType, currentSection, editingProperty });
+  console.log('🚨 FORM SUBMIT TRIGGERED:', { 
+    propertyFormType, 
+    currentSection, 
+    editingProperty,
+    event: e,
+    eventType: e.type,
+    target: e.target,
+    submitter: e.submitter
+  });
+  
+  // ✅ ADD: Validate landlord profile ID is available
   
   // ✅ ADD: Validate landlord profile ID is available
   if (!landlordProfileId) {
@@ -668,10 +678,18 @@ const handleSubmit = async (e) => {
     }
   };
 
-  // ✅ IMPROVED: Section navigation with better centering
+  // ✅ IMPROVED: Section navigation with better debugging
 const nextSection = () => {
+  console.log('nextSection called:', {
+    currentSection,
+    formSectionsLength: formSections.length,
+    willNavigateToSection: currentSection + 1
+  });
+  
   if (currentSection < formSections.length - 1) {
-    setCurrentSection(currentSection + 1);
+    const nextSectionIndex = currentSection + 1;
+    console.log('Navigating to section:', nextSectionIndex);
+    setCurrentSection(nextSectionIndex);
     
     // ✅ IMPROVED: Center the content instead of scrolling to top
     setTimeout(() => {
@@ -693,6 +711,8 @@ const nextSection = () => {
         });
       }
     }, 100);
+  } else {
+    console.log('nextSection called but already on last section - this should not happen');
   }
 };
 
@@ -724,6 +744,7 @@ const prevSection = () => {
 };
 
   const goToSection = (index) => {
+    // ✅ PREVENT any accidental form submission during navigation
     setCurrentSection(index);
     
     // ✅ IMPROVED: Auto-center when jumping to section
@@ -940,25 +961,40 @@ const prevSection = () => {
         </button>
       )}
       
-      {/* ✅ FIXED: Show proper button based on section */}
-      {currentSection < formSections.length - 1 ? (
-        <button
-          type="button"  /* ✅ CRITICAL: type="button" prevents form submission */
-          className={`${styles.actionButton} ${styles.actionPrimary}`}
-          onClick={nextSection}
-          disabled={loading}
-        >
-          Next →
-        </button>
-      ) : (
-        <button
-          type="submit"  /* ✅ CRITICAL: type="submit" on final section only */
-          className={`${styles.actionButton} ${styles.actionPrimary}`}
-          disabled={loading}
-        >
-          {loading ? 'Saving...' : (editingProperty ? 'Update Property' : 'Create Property')}
-        </button>
-      )}
+      {/* ✅ FIXED: Added debugging and better logic for final section detection */}
+      {(() => {
+        const isLastSection = currentSection >= formSections.length - 1;
+        console.log('Button logic:', {
+          currentSection,
+          formSectionsLength: formSections.length,
+          isLastSection,
+          shouldShowNext: !isLastSection
+        });
+        
+        return isLastSection ? (
+          <button
+            type="submit"  /* ✅ CRITICAL: type="submit" on final section only */
+            className={`${styles.actionButton} ${styles.actionPrimary}`}
+            disabled={loading}
+          >
+            {loading ? 'Saving...' : (editingProperty ? 'Update Property' : 'Create Property')}
+          </button>
+        ) : (
+          <button
+            type="button"  /* ✅ CRITICAL: type="button" prevents form submission */
+            className={`${styles.actionButton} ${styles.actionPrimary}`}
+            onClick={(e) => {
+              console.log('Next button clicked:', { currentSection, target: e.target });
+              e.preventDefault(); // ✅ EXTRA SAFETY: Prevent any default behavior
+              e.stopPropagation(); // ✅ EXTRA SAFETY: Stop event bubbling
+              nextSection();
+            }}
+            disabled={loading}
+          >
+            Next → (Section {currentSection + 1} of {formSections.length})
+          </button>
+        );
+      })()}
     </>
   )}
   

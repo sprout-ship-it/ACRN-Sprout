@@ -1741,6 +1741,15 @@ ADD COLUMN total_beds INTEGER;
 COMMENT ON COLUMN properties.bedrooms IS 'Number of actual rooms/bedrooms in the property';
 COMMENT ON COLUMN properties.total_beds IS 'Total number of beds across all rooms (can exceed bedroom count)';
 COMMENT ON COLUMN properties.available_beds IS 'Number of currently vacant/available beds';
+-- Remove any legacy constraint that incorrectly limits available_beds to bedrooms
+-- (This is needed because sober living homes can have multiple beds per room)
+ALTER TABLE properties 
+DROP CONSTRAINT IF EXISTS valid_available_beds;
+
+-- Add the correct constraint that ensures available_beds doesn't exceed total_beds
+ALTER TABLE properties 
+ADD CONSTRAINT check_available_beds_valid 
+CHECK (available_beds IS NULL OR total_beds IS NULL OR available_beds <= total_beds);
 
 -- Add check constraint to ensure available_beds doesn't exceed total_beds
 ALTER TABLE properties 
