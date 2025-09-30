@@ -18,13 +18,14 @@ import '../../../styles/main.css';
 import styles from './PropertyManagement.module.css';
 
 const PropertyManagement = () => {
-  const { user } = useAuth();
+  const { user, profile } = useAuth();
   const [loading, setLoading] = useState(false);
   const [properties, setProperties] = useState([]);
   const [showForm, setShowForm] = useState(false);
   const [editingProperty, setEditingProperty] = useState(null);
   const [currentSection, setCurrentSection] = useState(0);
   const [errors, setErrors] = useState({});
+  const [landlordProfileId, setLandlordProfileId] = useState(null);
 
   // ✅ NEW: Bifurcation state variables
   const [propertyFormType, setPropertyFormType] = useState(null); // 'general_rental' or 'recovery_housing'
@@ -103,24 +104,62 @@ const PropertyManagement = () => {
     { id: 'amenities', title: 'Amenities & Services', component: PropertyAmenitiesSection, icon: '⭐' }
   ];
 
-  useEffect(() => {
-    fetchProperties();
-  }, []);
+useEffect(() => {
+  fetchProperties();
+}, []);
 
-  const fetchProperties = async () => {
+const fetchProperties = async () => {
+  if (!landlordProfileId) return; // Wait for landlord profile ID
+  
+  try {
+    const { data, error } = await supabase
+      .from('properties')
+      .select('*')
+      .eq('landlord_id', landlordProfileId) // ✅ Fixed: use landlordProfileId
+      .order('created_at', { ascending: false });
+
+    if (error) throw error;
+    setProperties(data || []);
+  } catch (error) {
+    console.error('Error fetching properties:', error);
+  }
+};
+
+// ✅ ADD this new useEffect right after the above:
+useEffect(() => {
+  const fetchLandlordProfileId = async () => {
+    if (!user?.id) return;
+    
     try {
       const { data, error } = await supabase
-        .from('properties')
-        .select('*')
-        .eq('landlord_id', user.id)
-        .order('created_at', { ascending: false });
+        .from('landlord_profiles')
+        .select('id')
+        .eq('user_id', profile?.id)
+        .single();
 
-      if (error) throw error;
-      setProperties(data || []);
+      if (error) {
+        console.error('Error fetching landlord profile ID:', error);
+        return;
+      }
+
+      if (data) {
+        setLandlordProfileId(data.id);
+        console.log('Landlord profile ID found:', data.id);
+      }
     } catch (error) {
-      console.error('Error fetching properties:', error);
+      console.error('Error in fetchLandlordProfileId:', error);
     }
   };
+
+  fetchLandlordProfileId();
+}, [user?.id, profile?.id]);
+
+// ✅ ADD this useEffect to re-fetch properties when landlordProfileId is available:
+useEffect(() => {
+  if (landlordProfileId) {
+    fetchProperties();
+  }
+}, [landlordProfileId]);
 
   // ✅ MODIFIED: New "Add Property" button handler
   const handleAddProperty = () => {
@@ -240,142 +279,147 @@ const PropertyManagement = () => {
     return Object.keys(newErrors).length === 0;
   };
 
-  // ✅ UPDATED: Handle submit with different property data based on type
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    
-    if (!validateForm()) {
-      // Scroll to first error section (recovery housing only)
-      if (propertyFormType === 'recovery_housing') {
-        const errorFields = Object.keys(errors);
-        if (errorFields.length > 0) {
-          const fieldSectionMap = {
-            property_name: 0, property_type: 0, address: 0, city: 0, state: 0, zip_code: 0, phone: 0,
-            total_beds: 1, rent_amount: 1, security_deposit: 1,
-            required_programs: 2, house_rules: 2, gender_restrictions: 2,
-            amenities: 3, accessibility_features: 3
-          };
-          
-          const firstErrorField = errorFields[0];
-          const sectionIndex = fieldSectionMap[firstErrorField] || 0;
-          setCurrentSection(sectionIndex);
+const handleSubmit = async (e) => {
+  e.preventDefault();
+  
+  // ✅ ADD: Validate landlord profile ID is available
+  if (!landlordProfileId) {
+    alert('Unable to create property. Please ensure your landlord profile is complete.');
+    return;
+  }
+  
+  if (!validateForm()) {
+    // Scroll to first error section (recovery housing only)
+    if (propertyFormType === 'recovery_housing') {
+      const errorFields = Object.keys(errors);
+      if (errorFields.length > 0) {
+        const fieldSectionMap = {
+          property_name: 0, property_type: 0, address: 0, city: 0, state: 0, zip_code: 0, phone: 0,
+          total_beds: 1, rent_amount: 1, security_deposit: 1,
+          required_programs: 2, house_rules: 2, gender_restrictions: 2,
+          amenities: 3, accessibility_features: 3
+        };
+        
+        const firstErrorField = errorFields[0];
+        const sectionIndex = fieldSectionMap[firstErrorField] || 0;
+        setCurrentSection(sectionIndex);
+      }
+    }
+    return;
+  }
+
+  setLoading(true);
+  try {
+    // ✅ NEW: Create different property data objects based on type
+    const propertyData = propertyFormType === 'general_rental'
+      ? {
+          // Simplified property data mapping
+          landlord_id: landlordProfileId, // ✅ FIXED: use landlordProfileId
+          title: formData.property_name,
+          property_type: formData.property_type,
+          address: formData.address,
+          city: formData.city,
+          state: formData.state,
+          zip_code: formData.zip_code,
+          phone: formData.phone,
+          contact_email: formData.contact_email || null,
+          description: formData.description || null,
+          bedrooms: parseInt(formData.total_beds) || 0,
+          bathrooms: parseFloat(formData.bathrooms) || 1,
+          monthly_rent: parseInt(formData.rent_amount),
+          security_deposit: formData.security_deposit ? parseInt(formData.security_deposit) : null,
+          application_fee: formData.application_fee ? parseInt(formData.application_fee) : 0,
+          furnished: formData.furnished,
+          pets_allowed: formData.pets_allowed,
+          smoking_allowed: formData.smoking_allowed,
+          amenities: formData.amenities,
+          status: 'available',
+          is_recovery_housing: false // Add this flag to distinguish property types
         }
-      }
-      return;
+      : {
+          // ✅ CORRECTED: Map form data to database structure with proper types (recovery housing)
+          landlord_id: landlordProfileId, // ✅ FIXED: use landlordProfileId
+          title: formData.property_name,
+          property_type: formData.property_type,
+          address: formData.address,
+          city: formData.city,
+          state: formData.state,
+          zip_code: formData.zip_code,
+          phone: formData.phone,
+          contact_email: formData.contact_email || null,
+          description: formData.description || null,
+          
+          // ✅ CORRECTED: Match your existing schema
+          bedrooms: parseInt(formData.total_beds) || 0,
+          bathrooms: parseFloat(formData.bathrooms) || 1,
+          available_beds: parseInt(formData.available_beds) || 0,
+          monthly_rent: parseInt(formData.rent_amount), // Your schema uses integer
+          security_deposit: formData.security_deposit ? parseInt(formData.security_deposit) : null,
+          application_fee: formData.application_fee ? parseInt(formData.application_fee) : 0, // Your schema has default 0
+          weekly_rate: formData.weekly_rate ? parseInt(formData.weekly_rate) : null,
+          
+          // ✅ CORRECTED: utilities_included as array
+          utilities_included: formData.utilities_included || [],
+          furnished: formData.furnished,
+          pets_allowed: formData.pets_allowed,
+          smoking_allowed: formData.smoking_allowed,
+          
+          // ✅ NEW: All the new fields from migration
+          accepted_subsidies: formData.accepted_subsidies,
+          required_programs: formData.required_programs,
+          min_sobriety_time: formData.min_sobriety_time || null,
+          treatment_completion_required: formData.treatment_completion_required || null,
+          house_rules: formData.house_rules,
+          additional_house_rules: formData.additional_house_rules || null,
+          gender_restrictions: formData.gender_restrictions,
+          age_restrictions: formData.age_restrictions || null,
+          criminal_background_ok: formData.criminal_background_ok,
+          sex_offender_restrictions: formData.sex_offender_restrictions,
+          accessibility_features: formData.accessibility_features,
+          neighborhood_features: formData.neighborhood_features,
+          case_management: formData.case_management,
+          counseling_services: formData.counseling_services,
+          job_training: formData.job_training,
+          medical_services: formData.medical_services,
+          transportation_services: formData.transportation_services,
+          life_skills_training: formData.life_skills_training,
+          license_number: formData.license_number || null,
+          accreditation: formData.accreditation || null,
+          accepting_applications: formData.accepting_applications,
+          meals_included: formData.meals_included,
+          linens_provided: formData.linens_provided,
+          status: formData.property_status || 'available',
+          additional_notes: formData.additional_notes || null,
+          
+          // ✅ KEEP: Your existing amenities field (already array)
+          amenities: formData.amenities,
+          is_recovery_housing: true
+        };
+
+    let result;
+    if (editingProperty) {
+      result = await supabase
+        .from('properties')
+        .update(propertyData)
+        .eq('id', editingProperty.id);
+    } else {
+      result = await supabase
+        .from('properties')
+        .insert([propertyData]);
     }
 
-    setLoading(true);
-    try {
-      // ✅ NEW: Create different property data objects based on type
-      const propertyData = propertyFormType === 'general_rental'
-        ? {
-            // Simplified property data mapping
-            landlord_id: user.id,
-            title: formData.property_name,
-            property_type: formData.property_type,
-            address: formData.address,
-            city: formData.city,
-            state: formData.state,
-            zip_code: formData.zip_code,
-            phone: formData.phone,
-            contact_email: formData.contact_email || null,
-            description: formData.description || null,
-            bedrooms: parseInt(formData.total_beds) || 0,
-            bathrooms: parseFloat(formData.bathrooms) || 1,
-            monthly_rent: parseInt(formData.rent_amount),
-            security_deposit: formData.security_deposit ? parseInt(formData.security_deposit) : null,
-            application_fee: formData.application_fee ? parseInt(formData.application_fee) : 0,
-            furnished: formData.furnished,
-            pets_allowed: formData.pets_allowed,
-            smoking_allowed: formData.smoking_allowed,
-            amenities: formData.amenities,
-            status: 'available',
-            is_recovery_housing: false // Add this flag to distinguish property types
-          }
-        : {
-            // ✅ CORRECTED: Map form data to database structure with proper types (recovery housing)
-            landlord_id: user.id,
-            title: formData.property_name,
-            property_type: formData.property_type,
-            address: formData.address,
-            city: formData.city,
-            state: formData.state,
-            zip_code: formData.zip_code,
-            phone: formData.phone,
-            contact_email: formData.contact_email || null,
-            description: formData.description || null,
-            
-            // ✅ CORRECTED: Match your existing schema
-            bedrooms: parseInt(formData.total_beds) || 0,
-            bathrooms: parseFloat(formData.bathrooms) || 1,
-            available_beds: parseInt(formData.available_beds) || 0,
-            monthly_rent: parseInt(formData.rent_amount), // Your schema uses integer
-            security_deposit: formData.security_deposit ? parseInt(formData.security_deposit) : null,
-            application_fee: formData.application_fee ? parseInt(formData.application_fee) : 0, // Your schema has default 0
-            weekly_rate: formData.weekly_rate ? parseInt(formData.weekly_rate) : null,
-            
-            // ✅ CORRECTED: utilities_included as array
-            utilities_included: formData.utilities_included || [],
-            furnished: formData.furnished,
-            pets_allowed: formData.pets_allowed,
-            smoking_allowed: formData.smoking_allowed,
-            
-            // ✅ NEW: All the new fields from migration
-            accepted_subsidies: formData.accepted_subsidies,
-            required_programs: formData.required_programs,
-            min_sobriety_time: formData.min_sobriety_time || null,
-            treatment_completion_required: formData.treatment_completion_required || null,
-            house_rules: formData.house_rules,
-            additional_house_rules: formData.additional_house_rules || null,
-            gender_restrictions: formData.gender_restrictions,
-            age_restrictions: formData.age_restrictions || null,
-            criminal_background_ok: formData.criminal_background_ok,
-            sex_offender_restrictions: formData.sex_offender_restrictions,
-            accessibility_features: formData.accessibility_features,
-            neighborhood_features: formData.neighborhood_features,
-            case_management: formData.case_management,
-            counseling_services: formData.counseling_services,
-            job_training: formData.job_training,
-            medical_services: formData.medical_services,
-            transportation_services: formData.transportation_services,
-            life_skills_training: formData.life_skills_training,
-            license_number: formData.license_number || null,
-            accreditation: formData.accreditation || null,
-            accepting_applications: formData.accepting_applications,
-            meals_included: formData.meals_included,
-            linens_provided: formData.linens_provided,
-            status: formData.property_status || 'available',
-            additional_notes: formData.additional_notes || null,
-            
-            // ✅ KEEP: Your existing amenities field (already array)
-            amenities: formData.amenities,
-            is_recovery_housing: true
-          };
+    if (result.error) throw result.error;
 
-      let result;
-      if (editingProperty) {
-        result = await supabase
-          .from('properties')
-          .update(propertyData)
-          .eq('id', editingProperty.id);
-      } else {
-        result = await supabase
-          .from('properties')
-          .insert([propertyData]);
-      }
-
-      if (result.error) throw result.error;
-
-      await fetchProperties();
-      resetForm();
-      alert(editingProperty ? 'Property updated successfully!' : 'Property added successfully!');
-    } catch (error) {
-      console.error('Error saving property:', error);
-      alert('Error saving property. Please try again.');
-    } finally {
-      setLoading(false);
-    }
-  };
+    await fetchProperties();
+    resetForm();
+    alert(editingProperty ? 'Property updated successfully!' : 'Property added successfully!');
+  } catch (error) {
+    console.error('Error saving property:', error);
+    alert('Error saving property. Please try again.');
+  } finally {
+    setLoading(false);
+  }
+};
 
   const resetForm = () => {
     setFormData({
