@@ -5,7 +5,6 @@ import { supabase } from '../../../utils/supabase';
 import LoadingSpinner from '../../ui/LoadingSpinner';
 import MatchCard from './components/MatchCard';
 import MatchDetailsModal from './components/MatchDetailsModal';
-import matchingService from '../../../utils/matching/matchingService';
 
 // Import CSS foundation and component module
 import '../../../styles/main.css';
@@ -61,14 +60,6 @@ const MatchRequests = () => {
     return data.id;
   };
 
-  /**
-   * ✅ NEW: Load full match details for a specific request
-   * This shows the same detailed view that the requester saw
-   */
-/**
- * ✅ FIXED: Load full match details using the real matching service
- * This shows the same detailed view that the requester saw with correct scores
- */
 const loadFullMatchDetails = async (request) => {
   setLoadingMatchDetails(true);
   
@@ -79,80 +70,55 @@ const loadFullMatchDetails = async (request) => {
     if (request.request_type === 'roommate' || 
         (request.requester_type === 'applicant' && request.recipient_type === 'applicant')) {
       
-      // Get the requester's ID (the person who sent the request)
-      const requesterId = request.requester_id;
-      
-      // Get current user's profile for matching context
-      const { data: recipientProfile, error: recipientError } = await supabase
+      // Get the requester's full applicant profile with all data
+      const { data: requesterProfile, error: requesterError } = await supabase
         .from('applicant_matching_profiles')
-        .select('id, user_id')
-        .eq('user_id', userRegistrantId)
+        .select(`
+          *,
+          registrant_profiles(*)
+        `)
+        .eq('id', request.requester_id)
         .single();
       
-      if (recipientError) throw recipientError;
+      if (requesterError) throw requesterError;
       
-      console.log('🎯 Using real matching service to get compatibility data...');
+      console.log('✅ Loaded requester profile:', requesterProfile);
       
-      // ✅ USE THE REAL MATCHING SERVICE instead of simplified calculation
-      const matchResult = await matchingService.findMatches(recipientProfile.id, {
-        // Use minimal filters to get the specific user
-        minScore: 0,
-        hideAlreadyMatched: false,
-        hideRequestsSent: false
-      });
-      
-      // Find the specific requester in the results
-      let matchData = null;
-      if (matchResult.matches && matchResult.matches.length > 0) {
-        matchData = matchResult.matches.find(match => 
-          match.id === requesterId || match.user_id === requesterId
-        );
-      }
-      
-      // If not found in matches, get basic profile data and use simplified compatibility
-      if (!matchData) {
-        console.log('⚠️ User not found in matching results, getting basic profile...');
+      // Format the match data for the modal
+      const matchData = {
+        // Basic identification
+        user_id: requesterProfile.user_id,
+        id: requesterProfile.id,
+        first_name: requesterProfile.registrant_profiles?.first_name || 'Unknown',
+        last_name: requesterProfile.registrant_profiles?.last_name || '',
+        email: requesterProfile.registrant_profiles?.email,
         
-        const { data: requesterProfile, error: requesterError } = await supabase
-          .from('applicant_matching_profiles')
-          .select(`
-            *,
-            registrant_profiles(*)
-          `)
-          .eq('id', requesterId)
-          .single();
+        // Copy ALL profile fields so the modal has complete data
+        ...requesterProfile,
         
-        if (requesterError) throw requesterError;
+        // Override/ensure critical fields are set
+        primary_city: requesterProfile.primary_city,
+        primary_state: requesterProfile.primary_state,
+        primary_location: requesterProfile.primary_location || 
+          (requesterProfile.primary_city && requesterProfile.primary_state ? 
+           `${requesterProfile.primary_city}, ${requesterProfile.primary_state}` : null),
         
-        // Create basic match data structure
-        matchData = {
-          user_id: requesterProfile.user_id,
-          id: requesterProfile.id,
-          first_name: requesterProfile.registrant_profiles?.first_name || 'Unknown',
-          last_name: requesterProfile.registrant_profiles?.last_name || '',
-          email: requesterProfile.registrant_profiles?.email,
-          
-          // Copy all profile fields
-          ...requesterProfile,
-          
-          // Use a basic compatibility score since full matching failed
-          compatibility_score: 75, // Default reasonable score
-          isRequestReceived: true,
-          originalRequest: request
-        };
-      } else {
-        // ✅ USE THE REAL MATCH DATA with proper scoring
-        console.log('✅ Found real match data with score:', matchData.compatibility_score);
+        // ✅ NO COMPATIBILITY SCORE - avoid conflicts with original request
+        // compatibility_score: undefined, // Don't set this
         
-        // Ensure we have the original request reference
-        matchData.isRequestReceived = true;
-        matchData.originalRequest = request;
-      }
+        // Add some basic flags for display (optional)
+        greenFlags: generateGreenFlags(requesterProfile),
+        redFlags: [], // Keep empty for now
+        
+        // Special flags for the modal
+        isRequestReceived: true,
+        originalRequest: request
+      };
       
       setDetailedMatchData(matchData);
       setShowMatchDetails(true);
       
-      console.log('✅ Loaded match data with real compatibility score:', matchData.compatibility_score);
+      console.log('✅ Loaded detailed match data (no score conflicts)');
       
     } else {
       // Handle other request types (employment, peer-support, housing)
@@ -166,6 +132,44 @@ const loadFullMatchDetails = async (request) => {
     setLoadingMatchDetails(false);
   }
 };
+
+/**
+ * ✅ Generate basic green flags for display (no score needed)
+ */
+const generateGreenFlags = (profile) => {
+  const flags = [];
+  
+  if (profile.recovery_stage) {
+    flags.push(`Currently in ${profile.recovery_stage.replace(/-/g, ' ')} recovery`);
+  }
+  
+  if (profile.substance_free_home_required) {
+    flags.push('Committed to substance-free living');
+  }
+  
+  if (profile.recovery_methods && profile.recovery_methods.length > 0) {
+    flags.push(`Active in recovery with ${profile.recovery_methods.length} method${profile.recovery_methods.length > 1 ? 's' : ''}`);
+  }
+  
+  if (profile.about_me && profile.about_me.length > 100) {
+    flags.push('Detailed profile with thoughtful communication');
+  }
+  
+  if (profile.interests && profile.interests.length > 3) {
+    flags.push('Many interests and hobbies');
+  }
+  
+  if (profile.spiritual_affiliation && profile.spiritual_affiliation !== 'none') {
+    flags.push('Has spiritual/religious practices');
+  }
+  
+  if (profile.work_schedule) {
+    flags.push('Stable work/life schedule');
+  }
+  
+  return flags;
+};
+
 
   /**
    * ✅ FIXED: Load match requests with manual profile enrichment
