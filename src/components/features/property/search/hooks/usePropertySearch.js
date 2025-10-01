@@ -170,7 +170,15 @@ const usePropertySearch = (user) => {
     setLoading(true);
     try {
       console.log('🔍 Searching properties with type:', searchType, 'Page:', currentPage);
-      
+       useEffect(() => {
+    loadUserPreferences();
+    loadSavedProperties();
+  }, [loadUserPreferences, loadSavedProperties]);
+
+  // ✅ Perform initial search when component mounts
+  useEffect(() => {
+    performSearch(true);
+  }, []); // Only run once on mount 
       let query = supabase
         .from('properties')
         .select('*', { count: 'exact' })
