@@ -15,17 +15,17 @@ const SavedProperties = () => {
   const [properties, setProperties] = useState([]);
   const [error, setError] = useState(null);
 
-  // ✅ Get saved properties functionality (pass both user and profile)
+  // ✅ Get saved properties functionality (only pass user)
   const {
     savedProperties,
     loading: savingLoading,
     toggleSaveProperty,
     isPropertySaved
-  } = useSavedProperties(user, profile);
+  } = useSavedProperties(user);
 
   // ✅ Fetch full property details for saved properties
   const fetchSavedPropertyDetails = async () => {
-    if (!user?.id || !profile?.id || savedProperties.size === 0) {
+    if (!user?.id || savedProperties.size === 0) {
       setProperties([]);
       setLoading(false);
       return;
@@ -60,7 +60,7 @@ const SavedProperties = () => {
   // ✅ Load saved property details when savedProperties changes
   useEffect(() => {
     fetchSavedPropertyDetails();
-  }, [savedProperties, user?.id, profile?.id]);
+  }, [savedProperties, user?.id]);
 
   // ✅ Enhanced contact landlord with profile lookup
   const handleContactLandlord = async (property) => {
