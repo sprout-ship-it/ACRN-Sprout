@@ -1,8 +1,8 @@
-// src/components/features/property/search/PropertyCard.js - UPDATED WITH CSS MODULE
+// src/components/features/property/search/PropertyCard.js - ENHANCED WITH FAVORITES UX
 import React from 'react';
 import PropTypes from 'prop-types';
 
-// ✅ UPDATED: Import CSS module
+// ✅ Import CSS module
 import styles from './PropertyCard.module.css';
 
 const PropertyCard = ({
@@ -15,17 +15,27 @@ const PropertyCard = ({
   const isSaved = savedProperties.has(property.id);
 
   return (
-    <div className={`card ${styles.propertyCard}`}>
-      {/* ✅ UPDATED: Property Image Placeholder with CSS module */}
+    <div className={`card ${styles.propertyCard} ${isSaved ? styles.favorited : ''}`}>
+      {/* ✅ UPDATED: Enhanced Property Image Placeholder with favorited indicator */}
       <div className={styles.propertyImagePlaceholder}>
         <div className={styles.propertyIcon}>
           {property.is_recovery_housing ? '🏡' : '🏠'}
         </div>
+        {isSaved && (
+          <div className={styles.favoriteBadge}>
+            <span className={styles.favoriteIcon}>❤️</span>
+          </div>
+        )}
       </div>
       
       <div className={styles.propertyDetails}>
-        {/* ✅ UPDATED: Property Badges with CSS module */}
+        {/* ✅ UPDATED: Property Badges with favorited styling */}
         <div className={`${styles.propertyBadges} mb-2`}>
+          {isSaved && (
+            <span className={`badge ${styles.badgeFavorited}`}>
+              ❤️ Favorited
+            </span>
+          )}
           {property.is_recovery_housing && (
             <span className="badge badge-warning">
               Recovery Housing
@@ -46,25 +56,31 @@ const PropertyCard = ({
               Subsidies OK
             </span>
           )}
-          {isSaved && (
-            <span className="badge badge-warning">
-              Saved
+          {/* ✅ NEW: Availability indicator for recovery housing */}
+          {property.is_recovery_housing && property.available_beds > 0 && (
+            <span className="badge badge-success">
+              {property.available_beds} Bed{property.available_beds !== 1 ? 's' : ''} Available
             </span>
           )}
         </div>
         
-        {/* ✅ UPDATED: Property Title & Location with CSS module */}
-        <h4 className={styles.propertyTitle}>{property.title}</h4>
+        {/* ✅ Property Title & Location */}
+        <h4 className={`${styles.propertyTitle} ${isSaved ? styles.favoritedTitle : ''}`}>
+          {property.title}
+        </h4>
         <p className={styles.propertyAddress}>
           {property.address}, {property.city}, {property.state} {property.zip_code}
         </p>
         
-        {/* ✅ UPDATED: Property Price with CSS module */}
+        {/* ✅ Property Price */}
         <p className={styles.propertyPrice}>
           ${property.monthly_rent}/month
+          {property.is_recovery_housing && property.weekly_rate && (
+            <span className={styles.weeklyRate}> • ${property.weekly_rate}/week</span>
+          )}
         </p>
         
-        {/* ✅ UPDATED: Property Specs with CSS module */}
+        {/* ✅ Property Specs */}
         <div className={styles.propertySpecs}>
           {property.bedrooms || 'Studio'} bed • {property.bathrooms} bath
           {property.property_type && (
@@ -72,7 +88,7 @@ const PropertyCard = ({
           )}
         </div>
 
-        {/* ✅ UPDATED: Amenities Preview with CSS module */}
+        {/* ✅ Amenities Preview */}
         {property.amenities && property.amenities.length > 0 && (
           <div className={styles.propertyAmenities}>
             <small>{property.amenities.slice(0, 3).join(' • ')}</small>
@@ -82,19 +98,22 @@ const PropertyCard = ({
           </div>
         )}
 
-        {/* ✅ UPDATED: Recovery Housing Details with CSS module */}
+        {/* ✅ Recovery Housing Details */}
         {property.is_recovery_housing && (
           <div className={styles.recoveryDetails}>
             <small>
               <strong>Recovery Support:</strong>
               {property.case_management && ' Case Management'}
               {property.counseling_services && ' • Counseling'}
+              {property.job_training && ' • Job Training'}
+              {property.medical_services && ' • Medical Services'}
+              {property.meals_included && ' • Meals Included'}
               {property.required_programs && property.required_programs.length > 0 && ' • Program Requirements'}
             </small>
           </div>
         )}
 
-        {/* ✅ UPDATED: Action Buttons with CSS module */}
+        {/* ✅ UPDATED: Action Buttons with enhanced favorite styling */}
         <div className={styles.propertyActions}>
           <div className={styles.primaryActions}>
             <button
@@ -105,15 +124,25 @@ const PropertyCard = ({
             </button>
             
             <button
-              className="btn btn-outline btn-sm"
+              className={`btn btn-sm ${isSaved ? styles.btnSaved : 'btn-outline'}`}
               onClick={() => onSaveProperty(property)}
               disabled={isSaved}
             >
-              {isSaved ? 'Saved' : 'Save Property'}
+              {isSaved ? (
+                <>
+                  <span className={styles.savedIcon}>❤️</span>
+                  Saved
+                </>
+              ) : (
+                <>
+                  <span className={styles.saveIcon}>🤍</span>
+                  Save Property
+                </>
+              )}
             </button>
           </div>
 
-          {/* ✅ UPDATED: Housing Inquiry Option for Registered Landlords with CSS module */}
+          {/* ✅ Housing Inquiry Option for Registered Landlords */}
           {property.landlord_id && (
             <div className={styles.secondaryActions}>
               <button
@@ -125,6 +154,15 @@ const PropertyCard = ({
             </div>
           )}
         </div>
+
+        {/* ✅ NEW: Favorited Footer Message */}
+        {isSaved && (
+          <div className={styles.favoritedFooter}>
+            <small className={styles.favoritedMessage}>
+              ❤️ You've saved this property to your favorites
+            </small>
+          </div>
+        )}
       </div>
     </div>
   );
@@ -139,8 +177,10 @@ PropertyCard.propTypes = {
     state: PropTypes.string.isRequired,
     zip_code: PropTypes.string,
     monthly_rent: PropTypes.oneOfType([PropTypes.string, PropTypes.number]).isRequired,
+    weekly_rate: PropTypes.oneOfType([PropTypes.string, PropTypes.number]),
     bedrooms: PropTypes.oneOfType([PropTypes.string, PropTypes.number]),
     bathrooms: PropTypes.oneOfType([PropTypes.string, PropTypes.number]),
+    available_beds: PropTypes.oneOfType([PropTypes.string, PropTypes.number]),
     property_type: PropTypes.string,
     is_recovery_housing: PropTypes.bool,
     furnished: PropTypes.bool,
@@ -149,6 +189,9 @@ PropertyCard.propTypes = {
     amenities: PropTypes.array,
     case_management: PropTypes.bool,
     counseling_services: PropTypes.bool,
+    job_training: PropTypes.bool,
+    medical_services: PropTypes.bool,
+    meals_included: PropTypes.bool,
     required_programs: PropTypes.array,
     landlord_id: PropTypes.string
   }).isRequired,

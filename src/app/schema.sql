@@ -474,6 +474,27 @@ CREATE TABLE properties (
   featured BOOLEAN DEFAULT FALSE,
   views_count INTEGER DEFAULT 0,
   inquiries_count INTEGER DEFAULT 0,
+
+  -- Proper policy if properties should be public
+CREATE POLICY "Properties are publicly readable" ON properties
+FOR SELECT USING (true);
+
+-- Or if they should only be readable by their owners:
+CREATE POLICY "Users can read their own properties" ON properties
+FOR SELECT USING (
+  landlord_id IN (
+    SELECT id FROM landlord_profiles 
+    WHERE user_id = auth.uid()
+  )
+);
+-- Allow users to save their own favorites
+CREATE POLICY "Users can insert their own favorites" ON favorites
+FOR INSERT WITH CHECK (
+  favoriting_user_id IN (
+    SELECT id FROM registrant_profiles 
+    WHERE user_id = auth.uid()
+  )
+);
   
   -- ============================================================================
   -- CONSTRAINTS
