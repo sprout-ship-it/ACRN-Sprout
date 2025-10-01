@@ -19,12 +19,12 @@ import '../../../styles/main.css';
 import styles from './PropertySearch.module.css';
 
 const PropertySearch = () => {
-  const { user } = useAuth();
+  const { user, profile } = useAuth();
   
   // ✅ Advanced filters toggle state
   const [showAdvancedFilters, setShowAdvancedFilters] = useState(false);
 
-  // ✅ NEW: Get saved properties functionality
+  // ✅ NEW: Get saved properties functionality (pass both user and profile)
   const {
     savedProperties,
     loading: savingLoading,
@@ -32,7 +32,7 @@ const PropertySearch = () => {
     unsaveProperty,
     toggleSaveProperty,
     isPropertySaved
-  } = useSavedProperties(user);
+  } = useSavedProperties(user, profile);
 
   // ✅ Get all search state and handlers from updated custom hook
   const {

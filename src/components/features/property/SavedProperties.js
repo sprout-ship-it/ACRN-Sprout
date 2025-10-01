@@ -10,22 +10,22 @@ import '../../../styles/main.css';
 import styles from './SavedProperties.module.css';
 
 const SavedProperties = () => {
-  const { user } = useAuth();
+  const { user, profile } = useAuth();
   const [loading, setLoading] = useState(true);
   const [properties, setProperties] = useState([]);
   const [error, setError] = useState(null);
 
-  // ✅ Get saved properties functionality
+  // ✅ Get saved properties functionality (pass both user and profile)
   const {
     savedProperties,
     loading: savingLoading,
     toggleSaveProperty,
     isPropertySaved
-  } = useSavedProperties(user);
+  } = useSavedProperties(user, profile);
 
   // ✅ Fetch full property details for saved properties
   const fetchSavedPropertyDetails = async () => {
-    if (!user?.id || savedProperties.size === 0) {
+    if (!user?.id || !profile?.id || savedProperties.size === 0) {
       setProperties([]);
       setLoading(false);
       return;
@@ -60,7 +60,7 @@ const SavedProperties = () => {
   // ✅ Load saved property details when savedProperties changes
   useEffect(() => {
     fetchSavedPropertyDetails();
-  }, [savedProperties, user?.id]);
+  }, [savedProperties, user?.id, profile?.id]);
 
   // ✅ Enhanced contact landlord with profile lookup
   const handleContactLandlord = async (property) => {
@@ -236,7 +236,7 @@ I'd love to discuss availability, the application process, and next steps. Thank
           <p>Start exploring and save properties you're interested in to see them here.</p>
           
           <div className={styles.emptyStateActions}>
-            <a href="/search" className="btn btn-primary">
+            <a href="/app/property-search" className="btn btn-primary">
               <span className={styles.btnIcon}>🔍</span>
               Search Properties
             </a>
@@ -258,7 +258,7 @@ I'd love to discuss availability, the application process, and next steps. Thank
         </div>
         
         <div className={styles.headerActions}>
-          <a href="/search" className="btn btn-outline">
+          <a href="/app/property-search" className="btn btn-outline">
             <span className={styles.btnIcon}>🔍</span>
             Search More Properties
           </a>
