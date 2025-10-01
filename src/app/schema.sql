@@ -353,7 +353,7 @@ CREATE TABLE landlord_profiles (
 );
 
 -- ============================================================================
--- PROPERTIES TABLE (All property-specific information)
+-- PROPERTIES TABLE (Updated with Enhanced Property Types)
 -- ============================================================================
 
 CREATE TABLE properties (
@@ -391,6 +391,7 @@ CREATE TABLE properties (
   -- PHYSICAL PROPERTY DETAILS
   -- ============================================================================
   bedrooms INTEGER NOT NULL DEFAULT 0,
+  total_beds INTEGER DEFAULT 0,
   available_beds INTEGER DEFAULT 0,
   bathrooms DECIMAL(3,1) DEFAULT 1.0,
   square_footage INTEGER,
@@ -411,6 +412,12 @@ CREATE TABLE properties (
   
   -- Financial Assistance
   accepted_subsidies TEXT[],
+  
+  -- ============================================================================
+  -- AVAILABILITY & LEASE TERMS
+  -- ============================================================================
+  available_date DATE,
+  lease_duration VARCHAR(50),
   
   -- ============================================================================
   -- RECOVERY-SPECIFIC FIELDS
@@ -457,10 +464,6 @@ CREATE TABLE properties (
   status VARCHAR(50) DEFAULT 'available',
   accepting_applications BOOLEAN DEFAULT TRUE,
   
-  -- Move-in Information
-  available_date DATE,
-  lease_duration VARCHAR(50),
-  
   -- ============================================================================
   -- ADDITIONAL INFORMATION
   -- ============================================================================
@@ -476,13 +479,40 @@ CREATE TABLE properties (
   -- CONSTRAINTS
   -- ============================================================================
   CONSTRAINT valid_bedrooms CHECK (bedrooms >= 0),
-  CONSTRAINT valid_available_beds CHECK (available_beds >= 0 AND available_beds <= bedrooms),
+  CONSTRAINT valid_total_beds CHECK (total_beds >= 0),
+  CONSTRAINT valid_available_beds CHECK (available_beds >= 0 AND (total_beds IS NULL OR available_beds <= total_beds)),
   CONSTRAINT valid_bathrooms CHECK (bathrooms >= 0.5),
   CONSTRAINT valid_rent CHECK (monthly_rent > 0),
   CONSTRAINT valid_status CHECK (status IN ('available', 'waitlist', 'full', 'temporarily_closed', 'under_renovation')),
+  
+  -- ✅ UPDATED: Enhanced property type constraint with all new types
   CONSTRAINT valid_property_type CHECK (
-    (is_recovery_housing = FALSE AND property_type IN ('apartment', 'house', 'townhouse', 'condo', 'duplex', 'studio')) OR
-    (is_recovery_housing = TRUE AND property_type IN ('sober_living_level_1', 'sober_living_level_2', 'sober_living_level_3', 'halfway_house', 'recovery_residence', 'transitional_housing'))
+    (is_recovery_housing = FALSE AND property_type IN (
+      'apartment', 
+      'house', 
+      'townhouse', 
+      'condo', 
+      'duplex', 
+      'triplex',
+      'studio', 
+      'loft', 
+      'single_room', 
+      'shared_room', 
+      'basement_apartment', 
+      'garage_apartment', 
+      'tiny_home', 
+      'manufactured_home'
+    )) OR
+    (is_recovery_housing = TRUE AND property_type IN (
+      'sober_living_level_1', 
+      'sober_living_level_2', 
+      'sober_living_level_3', 
+      'halfway_house', 
+      'recovery_residence', 
+      'transitional_housing',
+      'supportive_housing',
+      'therapeutic_community'
+    ))
   )
 );
 
