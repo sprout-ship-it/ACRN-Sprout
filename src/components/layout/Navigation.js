@@ -96,6 +96,14 @@ const Navigation = () => {
           className: 'nav-property-owner'
         },
         { 
+          id: 'saved-properties', 
+          label: 'Saved Properties', 
+          icon: '❤️',
+          path: '/app/saved-properties',
+          description: 'View and manage your favorited housing properties',
+          className: 'nav-property-owner'
+        },
+        { 
           id: 'find-peer-support', 
           label: 'Find Support', 
           icon: '👥',

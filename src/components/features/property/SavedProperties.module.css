@@ -1,0 +1,218 @@
+/* src/components/features/property/SavedProperties.module.css */
+
+/* ✅ Header Section */
+.headerSection {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 24px;
+  padding: 24px 0;
+}
+
+.headerContent {
+  flex: 1;
+}
+
+.headerTitle {
+  font-size: 32px;
+  font-weight: 700;
+  color: #2c3e50;
+  margin: 0 0 8px 0;
+  line-height: 1.2;
+}
+
+.headerSubtitle {
+  font-size: 16px;
+  color: #6c757d;
+  margin: 0;
+  line-height: 1.4;
+}
+
+.headerActions {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+}
+
+/* ✅ Loading States */
+.loadingContainer {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 80px 20px;
+  text-align: center;
+}
+
+.loadingSpinner {
+  width: 40px;
+  height: 40px;
+  border: 4px solid #f3f4f6;
+  border-top: 4px solid #007bff;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+  margin-bottom: 16px;
+}
+
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+.loadingText {
+  font-size: 16px;
+  color: #6c757d;
+  margin: 0;
+}
+
+/* ✅ Error States */
+.errorContainer {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 60px 20px;
+  text-align: center;
+}
+
+.errorIcon {
+  font-size: 48px;
+  margin-bottom: 16px;
+}
+
+.errorTitle {
+  font-size: 24px;
+  font-weight: 600;
+  color: #dc3545;
+  margin: 0 0 12px 0;
+}
+
+.errorMessage {
+  font-size: 16px;
+  color: #6c757d;
+  margin: 0 0 24px 0;
+  max-width: 400px;
+}
+
+/* ✅ Empty State Actions */
+.emptyStateActions {
+  display: flex;
+  gap: 12px;
+  justify-content: center;
+  margin-top: 24px;
+}
+
+/* ✅ Properties Grid */
+.propertiesGrid {
+  margin-bottom: 32px;
+}
+
+/* ✅ Tips Section */
+.tipsSection {
+  padding: 24px;
+}
+
+.tipsTitle {
+  font-size: 20px;
+  font-weight: 600;
+  color: #2c3e50;
+  margin: 0 0 20px 0;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.tipsGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 20px;
+}
+
+.tipItem {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 16px;
+  background: #f8f9fa;
+  border-radius: 8px;
+  border: 1px solid #e9ecef;
+}
+
+.tipIcon {
+  font-size: 20px;
+  flex-shrink: 0;
+  margin-top: 2px;
+}
+
+.tipContent {
+  flex: 1;
+  font-size: 14px;
+  line-height: 1.5;
+  color: #495057;
+}
+
+.tipContent strong {
+  color: #2c3e50;
+  font-weight: 600;
+}
+
+/* ✅ Button Icons */
+.btnIcon {
+  margin-right: 6px;
+  font-size: 14px;
+}
+
+/* ✅ Responsive Design */
+@media (max-width: 768px) {
+  .headerSection {
+    flex-direction: column;
+    gap: 16px;
+    align-items: stretch;
+  }
+  
+  .headerTitle {
+    font-size: 28px;
+  }
+  
+  .headerActions {
+    justify-content: flex-start;
+  }
+  
+  .tipsGrid {
+    grid-template-columns: 1fr;
+    gap: 16px;
+  }
+  
+  .tipItem {
+    padding: 12px;
+  }
+  
+  .loadingContainer,
+  .errorContainer {
+    padding: 60px 16px;
+  }
+}
+
+@media (max-width: 480px) {
+  .headerTitle {
+    font-size: 24px;
+  }
+  
+  .headerSubtitle {
+    font-size: 14px;
+  }
+  
+  .tipsTitle {
+    font-size: 18px;
+  }
+  
+  .emptyStateActions {
+    flex-direction: column;
+    align-items: center;
+  }
+  
+  .emptyStateActions .btn {
+    width: 100%;
+    max-width: 280px;
+  }
+}

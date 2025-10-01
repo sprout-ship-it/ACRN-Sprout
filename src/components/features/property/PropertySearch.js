@@ -1,4 +1,4 @@
-// src/components/features/property/PropertySearch.js - FINAL VERSION WITH AUTO-SCROLL
+// src/components/features/property/PropertySearch.js - UPDATED WITH PROPER FAVORITES
 import React, { useState } from 'react';
 import { useAuth } from '../../../hooks/useAuth';
 import { supabase } from '../../../utils/supabase';
@@ -11,6 +11,9 @@ import PropertyAdvancedFilters from './search/PropertyAdvancedFilters';
 import PropertySearchResults from './search/PropertySearchResults';
 import usePropertySearch from './search/hooks/usePropertySearch';
 
+// ✅ NEW: Import saved properties hook
+import useSavedProperties from '../../../hooks/useSavedProperties';
+
 // ✅ Import CSS foundation and component module
 import '../../../styles/main.css';
 import styles from './PropertySearch.module.css';
@@ -20,6 +23,16 @@ const PropertySearch = () => {
   
   // ✅ Advanced filters toggle state
   const [showAdvancedFilters, setShowAdvancedFilters] = useState(false);
+
+  // ✅ NEW: Get saved properties functionality
+  const {
+    savedProperties,
+    loading: savingLoading,
+    saveProperty,
+    unsaveProperty,
+    toggleSaveProperty,
+    isPropertySaved
+  } = useSavedProperties(user);
 
   // ✅ Get all search state and handlers from updated custom hook
   const {
@@ -32,7 +45,6 @@ const PropertySearch = () => {
     showPagination,
     searchType,
     userPreferences,
-    savedProperties,
 
     // Updated filter states
     sharedFilters,
@@ -46,7 +58,6 @@ const PropertySearch = () => {
     handleArrayFilterChange,
     handleSearchTypeChange,
     handlePageChange,
-    handleSaveProperty,
     
     // Utility functions
     applyUserPreferences,
@@ -162,11 +173,29 @@ I'd love to discuss availability and the application process. Thank you!`,
     }
   };
 
-  // ✅ Handle save property with user feedback
-  const handleSavePropertyWithFeedback = (property) => {
-    const success = handleSaveProperty(property);
-    if (success) {
-      alert(`Property "${property.title}" saved to your favorites!`);
+  // ✅ NEW: Handle save property with proper feedback and error handling
+  const handleSavePropertyWithFeedback = async (property) => {
+    if (savingLoading) {
+      return; // Prevent multiple clicks
+    }
+
+    const wasAlreadySaved = isPropertySaved(property.id);
+    
+    try {
+      const success = await toggleSaveProperty(property);
+      
+      if (success) {
+        if (wasAlreadySaved) {
+          alert(`Property "${property.title}" removed from your favorites!`);
+        } else {
+          alert(`Property "${property.title}" saved to your favorites!`);
+        }
+      } else {
+        alert('Unable to update favorites. Please try again.');
+      }
+    } catch (err) {
+      console.error('Error handling save property:', err);
+      alert('An error occurred while updating favorites. Please try again.');
     }
   };
 
@@ -227,7 +256,7 @@ I'd love to discuss availability and the application process. Thank you!`,
         />
       </div>
 
-      {/* ✅ UPDATED: Search Results with data attribute for auto-scroll */}
+      {/* ✅ UPDATED: Search Results with proper saved properties data */}
       <div data-results-section className={styles.resultsSection}>
         <PropertySearchResults
           loading={loading}

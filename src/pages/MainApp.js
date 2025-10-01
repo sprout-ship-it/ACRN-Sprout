@@ -37,6 +37,7 @@ import PeerSupportHub from '../components/features/peer-support/PeerSupportHub'
 
 // Search Components
 import PropertySearch from '../components/features/property/PropertySearch';
+import SavedProperties from '../components/features/property/SavedProperties';
 
 // Candidate Management placeholder
 const CandidateManagement = () => (
@@ -409,6 +410,7 @@ else if (hasRole('landlord')) {
                 <Route path="/find-employers" element={<EmployerFinder />} />
                 <Route path="/match-requests" element={<MatchRequests />} />
                 <Route path="/property-search" element={<PropertySearch />} />
+                <Route path="/saved-properties" element={<SavedProperties />} />
               </>
             )}
 

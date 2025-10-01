@@ -1,5 +1,5 @@
-// src/components/features/property/search/PropertyCard.js - ENHANCED WITH FAVORITES UX
-import React from 'react';
+// src/components/features/property/search/PropertyCard.js - ENHANCED WITH PROPER FAVORITES
+import React, { useState } from 'react';
 import PropTypes from 'prop-types';
 
 // ✅ Import CSS module
@@ -12,7 +12,22 @@ const PropertyCard = ({
   onSaveProperty,
   onSendHousingInquiry
 }) => {
+  const [saving, setSaving] = useState(false);
   const isSaved = savedProperties.has(property.id);
+
+  // ✅ Handle save with loading state
+  const handleSaveClick = async () => {
+    if (saving) return; // Prevent double clicks
+    
+    setSaving(true);
+    try {
+      await onSaveProperty(property);
+    } catch (err) {
+      console.error('Error saving property:', err);
+    } finally {
+      setSaving(false);
+    }
+  };
 
   return (
     <div className={`card ${styles.propertyCard} ${isSaved ? styles.favorited : ''}`}>
@@ -113,7 +128,7 @@ const PropertyCard = ({
           </div>
         )}
 
-        {/* ✅ UPDATED: Action Buttons with enhanced favorite styling */}
+        {/* ✅ UPDATED: Action Buttons with enhanced favorite styling and loading state */}
         <div className={styles.propertyActions}>
           <div className={styles.primaryActions}>
             <button
@@ -124,11 +139,16 @@ const PropertyCard = ({
             </button>
             
             <button
-              className={`btn btn-sm ${isSaved ? styles.btnSaved : 'btn-outline'}`}
-              onClick={() => onSaveProperty(property)}
-              disabled={isSaved}
+              className={`btn btn-sm ${isSaved ? styles.btnSaved : 'btn-outline'} ${saving ? styles.btnLoading : ''}`}
+              onClick={handleSaveClick}
+              disabled={saving}
             >
-              {isSaved ? (
+              {saving ? (
+                <>
+                  <span className={styles.loadingSpinner}></span>
+                  {isSaved ? 'Removing...' : 'Saving...'}
+                </>
+              ) : isSaved ? (
                 <>
                   <span className={styles.savedIcon}>❤️</span>
                   Saved

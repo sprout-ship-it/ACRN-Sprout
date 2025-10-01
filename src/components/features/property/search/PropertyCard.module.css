@@ -4,11 +4,23 @@
 .propertyCard {
   transition: var(--transition-normal);
   cursor: default;
+  position: relative;
 }
 
 .propertyCard:hover {
   transform: translateY(-2px);
   box-shadow: var(--shadow-lg);
+}
+
+/* ==================== ENHANCED FAVORITED CARD STYLING ==================== */
+.favorited {
+  border: 2px solid var(--success-color, #28a745);
+  background: linear-gradient(135deg, #f8fff9 0%, #ffffff 100%);
+  box-shadow: 0 4px 12px rgba(40, 167, 69, 0.15);
+}
+
+.favoritedTitle {
+  color: var(--success-dark, #155724);
 }
 
 /* ==================== PROPERTY IMAGE PLACEHOLDER ==================== */
@@ -18,11 +30,27 @@
   padding: 60px 20px;
   margin-bottom: var(--spacing-lg);
   border-radius: var(--radius-md);
+  position: relative;
 }
 
 .propertyIcon {
   font-size: 3rem;
   color: var(--primary-purple);
+}
+
+/* ==================== FAVORITE BADGE IN IMAGE AREA ==================== */
+.favoriteBadge {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  background: rgba(255, 255, 255, 0.95);
+  padding: 4px 8px;
+  border-radius: 16px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.favoriteIcon {
+  font-size: 14px;
 }
 
 /* ==================== PROPERTY DETAILS CONTAINER ==================== */
@@ -36,6 +64,13 @@
   flex-wrap: wrap;
   gap: 0.5rem;
   margin-bottom: var(--spacing-sm);
+}
+
+/* ==================== BADGE STYLING FOR FAVORITED PROPERTIES ==================== */
+.badgeFavorited {
+  background-color: var(--success-color, #28a745) !important;
+  color: white !important;
+  font-weight: 600;
 }
 
 /* ==================== PROPERTY INFORMATION ==================== */
@@ -59,6 +94,12 @@
   font-weight: 600;
   color: var(--secondary-teal);
   margin: 0 0 var(--spacing-sm) 0;
+}
+
+.weeklyRate {
+  font-size: 0.8rem;
+  color: var(--gray-600);
+  font-weight: 400;
 }
 
 .propertySpecs {
@@ -105,6 +146,73 @@
 
 .fullWidth {
   width: 100%;
+}
+
+/* ==================== ENHANCED SAVE BUTTON STATES ==================== */
+.btnSaved {
+  background-color: var(--success-color, #28a745) !important;
+  border-color: var(--success-color, #28a745) !important;
+  color: white !important;
+}
+
+.btnSaved:hover {
+  background-color: var(--success-dark, #218838) !important;
+  border-color: var(--success-darker, #1e7e34) !important;
+}
+
+.btnLoading {
+  opacity: 0.7;
+  pointer-events: none;
+}
+
+/* ==================== LOADING SPINNER FOR SAVE BUTTON ==================== */
+.loadingSpinner {
+  display: inline-block;
+  width: 12px;
+  height: 12px;
+  border: 2px solid #f3f3f3;
+  border-top: 2px solid currentColor;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+  margin-right: 4px;
+}
+
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+/* ==================== SAVE ICON STATES ==================== */
+.savedIcon,
+.saveIcon {
+  margin-right: 4px;
+  font-size: 14px;
+}
+
+.savedIcon {
+  color: #fff;
+}
+
+.saveIcon {
+  color: var(--gray-500, #6c757d);
+}
+
+/* ==================== ENHANCED FAVORITED FOOTER ==================== */
+.favoritedFooter {
+  margin-top: 12px;
+  padding: 8px 12px;
+  background: rgba(40, 167, 69, 0.1);
+  border-radius: var(--radius-sm);
+  border: 1px solid rgba(40, 167, 69, 0.2);
+}
+
+.favoritedMessage {
+  color: var(--success-dark, #155724);
+  font-weight: 500;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 0.85rem;
 }
 
 /* ==================== BADGE SPACING ADJUSTMENTS ==================== */
@@ -179,6 +287,10 @@
   .recoveryDetails {
     font-size: 0.8rem;
   }
+
+  .favoritedMessage {
+    font-size: 0.8rem;
+  }
 }
 
 /* ==================== ACCESSIBILITY AND FOCUS STATES ==================== */
@@ -212,7 +324,6 @@
 }
 
 .propertyCard {
-  position: relative;
   overflow: hidden;
 }
 
