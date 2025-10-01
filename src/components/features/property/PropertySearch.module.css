@@ -1,4 +1,4 @@
-/* PropertySearch.module.css - Component-specific styles */
+/* PropertySearch.module.css - Updated for New Search Strategy with Design System */
 
 /* ==================== MAIN CONTAINER ==================== */
 .searchContainer {
@@ -13,7 +13,7 @@
 
 .headerTitle {
   font-family: var(--font-serif);
-  font-size: 2rem;
+  font-size: 2.5rem;
   color: var(--primary-purple);
   margin-bottom: var(--spacing-sm);
   font-weight: 700;
@@ -22,204 +22,35 @@
 
 .headerSubtitle {
   color: var(--gray-600);
-  font-size: 1rem;
+  font-size: 1.25rem;
   line-height: 1.6;
   margin: 0;
-  max-width: 600px;
+  max-width: 800px;
   margin-left: auto;
   margin-right: auto;
 }
 
-/* ==================== SEARCH MODE TOGGLE CARD ==================== */
-.searchModeCard {
+/* ==================== PROPERTY TYPE SELECTION SECTION ==================== */
+.typeSelectionSection {
+  margin-bottom: var(--spacing-xl);
+}
+
+.typeSelectionSection .card {
   background: white;
   border-radius: var(--radius-xl);
   padding: var(--spacing-xl);
   border: 2px solid var(--border-beige);
   box-shadow: var(--shadow-md);
-  margin-bottom: var(--spacing-lg);
   transition: var(--transition-normal);
+  position: relative;
+  overflow: hidden;
 }
 
-.searchModeCard:hover {
+.typeSelectionSection .card:hover {
   box-shadow: var(--shadow-lg);
 }
 
-.searchModeTitle {
-  font-size: 1.25rem;
-  color: var(--primary-purple);
-  margin-bottom: var(--spacing-lg);
-  font-weight: 600;
-  font-family: var(--font-serif);
-}
-
-.searchModeNavigation {
-  background: white;
-  border-bottom: none;
-  padding: 0;
-}
-
-.searchModeNavList {
-  display: flex;
-  list-style: none;
-  margin: 0;
-  padding: 0;
-  overflow-x: auto;
-  border-radius: var(--radius-lg);
-  background: var(--bg-light-cream);
-  padding: 4px;
-}
-
-.searchModeNavItem {
-  flex: 1 1 auto;
-  min-width: 150px;
-}
-
-.searchModeNavButton {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: var(--spacing-sm);
-  width: 100%;
-  padding: var(--spacing-md) var(--spacing-lg);
-  background: none;
-  border: none;
-  cursor: pointer;
-  font-size: 0.95rem;
-  font-weight: 600;
-  color: var(--gray-600);
-  transition: var(--transition-normal);
-  border-radius: var(--radius-md);
-  white-space: nowrap;
-}
-
-.searchModeNavButton:hover {
-  color: var(--primary-purple);
-  background: rgba(160, 32, 240, 0.05);
-}
-
-.searchModeNavButton.active {
-  color: white;
-  background: var(--primary-purple);
-  box-shadow: 0 2px 8px rgba(160, 32, 240, 0.3);
-}
-
-.navIcon {
-  font-size: 1.2rem;
-}
-
-.searchModeDescription {
-  color: var(--gray-600);
-  margin-top: var(--spacing-md);
-  font-size: 0.9rem;
-  line-height: 1.5;
-  text-align: left;
-}
-
-/* ==================== FILTERS SECTIONS ==================== */
-.filtersSection {
-  margin-bottom: var(--spacing-lg);
-}
-
-/* ==================== RESPONSIVE DESIGN ==================== */
-@media (max-width: 768px) {
-  .headerTitle {
-    font-size: 1.75rem;
-  }
-
-  .headerSubtitle {
-    font-size: 0.9rem;
-  }
-
-  .searchModeCard {
-    padding: var(--spacing-lg);
-    margin-bottom: var(--spacing-md);
-  }
-
-  .searchModeTitle {
-    font-size: 1.125rem;
-  }
-
-  .searchModeNavList {
-    flex-direction: column;
-    padding: var(--spacing-xs);
-  }
-
-  .searchModeNavItem {
-    min-width: unset;
-    width: 100%;
-  }
-
-  .searchModeNavButton {
-    padding: var(--spacing-sm) var(--spacing-md);
-    font-size: 0.9rem;
-    justify-content: flex-start;
-  }
-
-  .navIcon {
-    font-size: 1.1rem;
-  }
-
-  .searchModeDescription {
-    font-size: 0.85rem;
-    text-align: center;
-  }
-}
-
-@media (max-width: 480px) {
-  .headerTitle {
-    font-size: 1.5rem;
-  }
-
-  .headerSubtitle {
-    font-size: 0.85rem;
-  }
-
-  .searchModeCard {
-    padding: var(--spacing-md);
-  }
-
-  .searchModeTitle {
-    font-size: 1rem;
-  }
-
-  .searchModeNavButton {
-    padding: var(--spacing-xs) var(--spacing-sm);
-    font-size: 0.85rem;
-  }
-
-  .navIcon {
-    font-size: 1rem;
-  }
-
-  .filtersSection {
-    margin-bottom: var(--spacing-md);
-  }
-}
-
-/* ==================== ACCESSIBILITY AND FOCUS STATES ==================== */
-.searchModeNavButton:focus-visible {
-  outline: 2px solid var(--primary-purple);
-  outline-offset: 2px;
-}
-
-.searchModeNavButton:focus {
-  box-shadow: 0 0 0 3px rgba(160, 32, 240, 0.1);
-}
-
-/* ==================== SPECIAL STATES ==================== */
-.searchModeNavButton:disabled {
-  opacity: 0.6;
-  cursor: not-allowed;
-}
-
-.searchModeNavButton:disabled:hover {
-  color: var(--gray-600);
-  background: none;
-}
-
-/* ==================== ENHANCED VISUAL EFFECTS ==================== */
-.searchModeCard::before {
+.typeSelectionSection .card::before {
   content: '';
   position: absolute;
   top: 0;
@@ -232,39 +63,474 @@
   pointer-events: none;
 }
 
-.searchModeCard {
-  position: relative;
-  overflow: hidden;
-}
-
-.searchModeCard:hover::before {
+.typeSelectionSection .card:hover::before {
   left: 100%;
 }
 
-.searchModeCard > * {
+.typeSelectionSection .card > * {
   position: relative;
   z-index: 2;
 }
 
-/* ==================== LOADING STATES ==================== */
-.searchModeNavButton.loading {
-  opacity: 0.7;
-  pointer-events: none;
+/* ==================== FILTERS SECTIONS ==================== */
+.filtersSection {
+  margin-bottom: var(--spacing-lg);
 }
 
-.searchModeNavButton.loading::after {
+.filtersSection .card {
+  background: white;
+  border-radius: var(--radius-xl);
+  border: 2px solid var(--border-beige);
+  box-shadow: var(--shadow-md);
+  transition: var(--transition-normal);
+}
+
+.filtersSection .card:hover {
+  box-shadow: var(--shadow-lg);
+}
+
+.filtersSection .card-header {
+  padding: var(--spacing-lg);
+  border-bottom: 1px solid var(--border-beige);
+}
+
+.filtersSection .card-title {
+  font-family: var(--font-serif);
+  font-size: 1.25rem;
+  color: var(--primary-purple);
+  margin-bottom: var(--spacing-xs);
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-sm);
+}
+
+.filtersSection .card-subtitle {
+  color: var(--gray-600);
+  font-size: 0.9rem;
+  line-height: 1.5;
+  margin: 0;
+}
+
+/* ==================== SEARCH HELP SECTION ==================== */
+.searchHelpSection {
+  margin-top: var(--spacing-xl);
+  margin-bottom: var(--spacing-lg);
+}
+
+.helpContent {
+  padding: var(--spacing-xl);
+}
+
+.helpTitle {
+  font-family: var(--font-serif);
+  font-size: 1.25rem;
+  font-weight: 600;
+  color: var(--primary-purple);
+  margin-bottom: var(--spacing-lg);
+  text-align: center;
+}
+
+.helpGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  gap: var(--spacing-lg);
+}
+
+.helpItem {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--spacing-md);
+  padding: var(--spacing-lg);
+  background: var(--bg-light-cream);
+  border-radius: var(--radius-lg);
+  border: 1px solid var(--border-beige);
+  transition: var(--transition-normal);
+  position: relative;
+  overflow: hidden;
+}
+
+.helpItem:hover {
+  box-shadow: var(--shadow-md);
+  transform: translateY(-2px);
+}
+
+.helpItem::before {
   content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 4px;
+  height: 100%;
+  background: var(--primary-purple);
+  opacity: 0;
+  transition: opacity 0.3s ease;
+}
+
+.helpItem:hover::before {
+  opacity: 1;
+}
+
+.helpIcon {
+  font-size: 1.5rem;
+  flex-shrink: 0;
+  margin-top: 0.125rem;
+}
+
+.helpText {
+  flex: 1;
+  color: var(--gray-600);
+  line-height: 1.5;
+  font-size: 0.95rem;
+}
+
+.helpText strong {
+  color: var(--primary-purple);
+  font-weight: 600;
+}
+
+/* ==================== FORM ELEMENTS STYLING ==================== */
+.filtersSection .input,
+.filtersSection .select {
+  border: 2px solid var(--border-beige);
+  border-radius: var(--radius-md);
+  padding: var(--spacing-sm) var(--spacing-md);
+  font-size: 0.95rem;
+  transition: var(--transition-normal);
+  background: white;
+}
+
+.filtersSection .input:focus,
+.filtersSection .select:focus {
+  outline: none;
+  border-color: var(--primary-purple);
+  box-shadow: 0 0 0 3px rgba(160, 32, 240, 0.1);
+}
+
+.filtersSection .input:hover,
+.filtersSection .select:hover {
+  border-color: var(--primary-purple);
+}
+
+.filtersSection .label {
+  color: var(--primary-purple);
+  font-weight: 600;
+  font-size: 0.9rem;
+  margin-bottom: var(--spacing-xs);
+  display: block;
+}
+
+/* ==================== BUTTON STYLING ==================== */
+.filtersSection .btn {
+  padding: var(--spacing-sm) var(--spacing-lg);
+  border-radius: var(--radius-md);
+  font-weight: 600;
+  font-size: 0.95rem;
+  transition: var(--transition-normal);
+  display: inline-flex;
+  align-items: center;
+  gap: var(--spacing-sm);
+  cursor: pointer;
+  border: 2px solid transparent;
+}
+
+.filtersSection .btn-primary {
+  background: var(--primary-purple);
+  color: white;
+  border-color: var(--primary-purple);
+}
+
+.filtersSection .btn-primary:hover {
+  background: rgba(160, 32, 240, 0.9);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(160, 32, 240, 0.3);
+}
+
+.filtersSection .btn-outline {
+  background: white;
+  color: var(--primary-purple);
+  border-color: var(--primary-purple);
+}
+
+.filtersSection .btn-outline:hover {
+  background: var(--primary-purple);
+  color: white;
+  transform: translateY(-1px);
+}
+
+.filtersSection .btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+  transform: none;
+}
+
+.filtersSection .btn:disabled:hover {
+  transform: none;
+  box-shadow: none;
+}
+
+/* ==================== CHECKBOX AND INTERACTIVE ELEMENTS ==================== */
+.filtersSection .checkbox-item {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-sm);
+  padding: var(--spacing-sm) var(--spacing-md);
+  border: 2px solid var(--border-beige);
+  border-radius: var(--radius-md);
+  cursor: pointer;
+  transition: var(--transition-normal);
+  background: white;
+  font-size: 0.9rem;
+}
+
+.filtersSection .checkbox-item:hover {
+  border-color: var(--primary-purple);
+  background: rgba(160, 32, 240, 0.05);
+}
+
+.filtersSection .checkbox-item.selected {
+  border-color: var(--primary-purple);
+  background: rgba(160, 32, 240, 0.1);
+  box-shadow: 0 2px 8px rgba(160, 32, 240, 0.15);
+}
+
+.filtersSection .checkbox-item input[type="checkbox"] {
+  margin: 0;
+  accent-color: var(--primary-purple);
+}
+
+.filtersSection .checkbox-text {
+  color: var(--text-primary);
+  font-weight: 500;
+}
+
+/* ==================== GRID LAYOUTS ==================== */
+.filtersSection .grid-auto {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: var(--spacing-md);
+}
+
+.filtersSection .form-group {
+  margin-bottom: var(--spacing-lg);
+}
+
+/* ==================== LOADING STATES ==================== */
+.loadingSpinner {
   display: inline-block;
+  width: 16px;
+  height: 16px;
+  border: 2px solid var(--border-beige);
+  border-radius: 50%;
+  border-top-color: var(--primary-purple);
+  animation: spin 1s ease-in-out infinite;
+}
+
+.loadingSpinner.small {
   width: 12px;
   height: 12px;
-  border: 2px solid currentColor;
-  border-top: 2px solid transparent;
-  border-radius: 50%;
-  animation: spin 1s linear infinite;
-  margin-left: var(--spacing-xs);
+  border-width: 1.5px;
+}
+
+.loadingSpinner.large {
+  width: 24px;
+  height: 24px;
+  border-width: 3px;
 }
 
 @keyframes spin {
-  0% { transform: rotate(0deg); }
-  100% { transform: rotate(360deg); }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* ==================== RESPONSIVE DESIGN ==================== */
+@media (max-width: 1024px) {
+  .headerTitle {
+    font-size: 2rem;
+  }
+
+  .headerSubtitle {
+    font-size: 1.125rem;
+  }
+
+  .typeSelectionSection {
+    margin-bottom: var(--spacing-lg);
+  }
+
+  .helpGrid {
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+    gap: var(--spacing-md);
+  }
+}
+
+@media (max-width: 768px) {
+  .headerSection {
+    margin-bottom: var(--spacing-lg);
+  }
+
+  .headerTitle {
+    font-size: 1.75rem;
+  }
+
+  .headerSubtitle {
+    font-size: 1rem;
+  }
+
+  .filtersSection {
+    margin-bottom: var(--spacing-md);
+  }
+
+  .filtersSection .card {
+    border-radius: var(--radius-lg);
+  }
+
+  .filtersSection .card-header {
+    padding: var(--spacing-md);
+  }
+
+  .filtersSection .card-title {
+    font-size: 1.125rem;
+  }
+
+  .searchHelpSection {
+    margin-top: var(--spacing-lg);
+  }
+
+  .helpContent {
+    padding: var(--spacing-lg);
+  }
+
+  .helpGrid {
+    grid-template-columns: 1fr;
+  }
+
+  .helpItem {
+    padding: var(--spacing-md);
+  }
+
+  .helpIcon {
+    font-size: 1.25rem;
+  }
+}
+
+@media (max-width: 480px) {
+  .headerTitle {
+    font-size: 1.5rem;
+    margin-bottom: var(--spacing-xs);
+  }
+
+  .headerSubtitle {
+    font-size: 0.9rem;
+  }
+
+  .typeSelectionSection .card,
+  .filtersSection .card {
+    border-radius: var(--radius-md);
+    border-width: 1px;
+  }
+
+  .helpContent {
+    padding: var(--spacing-md);
+  }
+
+  .helpTitle {
+    font-size: 1.125rem;
+    margin-bottom: var(--spacing-md);
+  }
+
+  .helpItem {
+    flex-direction: column;
+    text-align: center;
+    gap: var(--spacing-sm);
+  }
+
+  .helpIcon {
+    align-self: center;
+  }
+
+  .filtersSection .btn {
+    width: 100%;
+    justify-content: center;
+  }
+
+  .filtersSection .checkbox-item {
+    padding: var(--spacing-xs) var(--spacing-sm);
+    font-size: 0.85rem;
+  }
+}
+
+/* ==================== ACCESSIBILITY AND FOCUS STATES ==================== */
+.filtersSection *:focus-visible {
+  outline: 2px solid var(--primary-purple);
+  outline-offset: 2px;
+}
+
+.filtersSection .btn:focus {
+  box-shadow: 0 0 0 3px rgba(160, 32, 240, 0.1);
+}
+
+.helpItem:focus-visible {
+  outline: 2px solid var(--primary-purple);
+  outline-offset: 2px;
+}
+
+/* ==================== ENHANCED VISUAL EFFECTS ==================== */
+.filtersSection .card {
+  position: relative;
+  overflow: hidden;
+}
+
+.filtersSection .card::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(90deg, transparent, rgba(160, 32, 240, 0.02), transparent);
+  transition: left 0.6s ease;
+  z-index: 1;
+  pointer-events: none;
+}
+
+.filtersSection .card:hover::before {
+  left: 100%;
+}
+
+.filtersSection .card > * {
+  position: relative;
+  z-index: 2;
+}
+
+/* ==================== SPECIAL UTILITY CLASSES ==================== */
+.mb-4 { margin-bottom: var(--spacing-lg); }
+.mb-2 { margin-bottom: var(--spacing-sm); }
+.mt-2 { margin-top: var(--spacing-sm); }
+.text-center { text-align: center; }
+
+/* ==================== BADGE STYLES ==================== */
+.badge {
+  display: inline-block;
+  padding: 0.25rem 0.75rem;
+  border-radius: var(--radius-sm);
+  font-size: 0.75rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.badge-success {
+  background: rgba(34, 197, 94, 0.1);
+  color: rgb(21, 128, 61);
+}
+
+.badge-warning {
+  background: rgba(245, 158, 11, 0.1);
+  color: rgb(146, 64, 14);
+}
+
+.badge-info {
+  background: rgba(59, 130, 246, 0.1);
+  color: rgb(29, 78, 216);
 }

@@ -1,0 +1,272 @@
+/* PropertySharedFilters.module.css */
+
+.sharedFiltersContainer {
+  margin-bottom: 2rem;
+}
+
+.filterHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.sectionIcon {
+  margin-right: 0.5rem;
+}
+
+.btnIcon {
+  margin-right: 0.5rem;
+  font-size: 0.875rem;
+}
+
+.filterSection {
+  padding: 1.5rem;
+}
+
+.locationGrid {
+  display: grid;
+  grid-template-columns: 2fr 1fr;
+  gap: 1rem;
+  margin-bottom: 1.5rem;
+}
+
+.financialGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 1rem;
+  margin-bottom: 1.5rem;
+}
+
+.inputHint {
+  font-size: 0.875rem;
+  color: var(--text-secondary);
+  margin-top: 0.25rem;
+}
+
+.subsidiesSection {
+  margin-top: 1.5rem;
+}
+
+.subsidiesGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+  gap: 0.75rem;
+  margin-top: 1rem;
+}
+
+.subsidyItem {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.75rem;
+  border: 1px solid var(--border-light);
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  background: white;
+}
+
+.subsidyItem:hover {
+  border-color: var(--primary);
+  background: var(--primary-light);
+}
+
+.subsidyItem.selected {
+  border-color: var(--primary);
+  background: var(--primary-light);
+  box-shadow: 0 2px 8px rgba(var(--primary-rgb), 0.15);
+}
+
+.subsidyItem input[type="checkbox"] {
+  margin: 0;
+  accent-color: var(--primary);
+}
+
+.subsidyText {
+  font-size: 0.875rem;
+  color: var(--text-primary);
+  font-weight: 500;
+}
+
+.basicFeaturesGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 1rem;
+  margin-bottom: 1.5rem;
+}
+
+.utilitiesSection {
+  margin-top: 1.5rem;
+}
+
+.utilitiesGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 0.75rem;
+  margin-top: 1rem;
+}
+
+.utilityItem {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.5rem 0.75rem;
+  border: 1px solid var(--border-light);
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  background: white;
+  font-size: 0.875rem;
+}
+
+.utilityItem:hover {
+  border-color: var(--primary);
+  background: var(--primary-light);
+}
+
+.utilityItem.selected {
+  border-color: var(--primary);
+  background: var(--primary-light);
+  box-shadow: 0 2px 8px rgba(var(--primary-rgb), 0.15);
+}
+
+.utilityItem input[type="checkbox"] {
+  margin: 0;
+  accent-color: var(--primary);
+}
+
+.utilityText {
+  color: var(--text-primary);
+  font-weight: 500;
+}
+
+.searchActionsSection {
+  padding: 1.5rem;
+  background: var(--gray-50);
+  border-radius: 8px;
+}
+
+.searchSummary {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 2rem;
+}
+
+.summaryContent {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  flex: 1;
+}
+
+.summaryIcon {
+  font-size: 1.25rem;
+  color: var(--primary);
+}
+
+.summaryText {
+  color: var(--text-primary);
+}
+
+.actionButtons {
+  display: flex;
+  gap: 1rem;
+  align-items: center;
+}
+
+.loadingSpinner {
+  display: inline-block;
+  width: 16px;
+  height: 16px;
+  border: 2px solid var(--border-light);
+  border-radius: 50%;
+  border-top-color: var(--primary);
+  animation: spin 1s ease-in-out infinite;
+}
+
+.loadingSpinner.small {
+  width: 12px;
+  height: 12px;
+  border-width: 1.5px;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* Responsive Design */
+@media (max-width: 1024px) {
+  .locationGrid {
+    grid-template-columns: 1fr;
+  }
+  
+  .financialGrid {
+    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  }
+  
+  .subsidiesGrid {
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  }
+}
+
+@media (max-width: 768px) {
+  .filterHeader {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 1rem;
+  }
+  
+  .filterSection {
+    padding: 1rem;
+  }
+  
+  .financialGrid {
+    grid-template-columns: 1fr;
+  }
+  
+  .basicFeaturesGrid {
+    grid-template-columns: 1fr;
+  }
+  
+  .subsidiesGrid {
+    grid-template-columns: 1fr;
+  }
+  
+  .utilitiesGrid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+  
+  .searchSummary {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 1rem;
+  }
+  
+  .summaryContent {
+    justify-content: center;
+    text-align: center;
+  }
+  
+  .actionButtons {
+    justify-content: center;
+  }
+}
+
+@media (max-width: 480px) {
+  .utilitiesGrid {
+    grid-template-columns: 1fr;
+  }
+  
+  .actionButtons {
+    flex-direction: column;
+    width: 100%;
+  }
+  
+  .actionButtons button {
+    width: 100%;
+  }
+}

@@ -1,0 +1,289 @@
+/* PropertyTypeSelection.module.css */
+
+.propertyTypeSelection {
+  margin-bottom: 2rem;
+}
+
+.selectionHeader {
+  text-align: center;
+  margin-bottom: 2rem;
+}
+
+.selectionTitle {
+  font-size: 1.875rem;
+  font-weight: 700;
+  color: var(--text-primary);
+  margin-bottom: 0.5rem;
+}
+
+.selectionSubtitle {
+  font-size: 1.125rem;
+  color: var(--text-secondary);
+  max-width: 600px;
+  margin: 0 auto;
+}
+
+.typeOptionsGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+  gap: 1.5rem;
+  margin-bottom: 2rem;
+}
+
+.typeOption {
+  position: relative;
+  background: white;
+  border: 2px solid var(--border-light);
+  border-radius: 12px;
+  padding: 1.5rem;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  display: flex;
+  flex-direction: column;
+  min-height: 280px;
+}
+
+.typeOption:hover {
+  border-color: var(--primary);
+  box-shadow: 0 8px 25px rgba(0, 0, 0, 0.1);
+  transform: translateY(-2px);
+}
+
+.typeOption.selected {
+  border-color: var(--primary);
+  background: var(--primary-light);
+  box-shadow: 0 8px 25px rgba(var(--primary-rgb), 0.15);
+}
+
+.typeOption.disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+  pointer-events: none;
+}
+
+.selectionIndicator {
+  position: absolute;
+  top: 1rem;
+  right: 1rem;
+}
+
+.selectionIndicator input[type="radio"] {
+  width: 20px;
+  height: 20px;
+  accent-color: var(--primary);
+}
+
+.optionContent {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+}
+
+.optionHeader {
+  display: flex;
+  align-items: flex-start;
+  gap: 1rem;
+  margin-bottom: 1rem;
+}
+
+.optionIcon {
+  font-size: 2.5rem;
+  flex-shrink: 0;
+}
+
+.optionTitleSection {
+  flex: 1;
+}
+
+.optionTitle {
+  font-size: 1.25rem;
+  font-weight: 600;
+  color: var(--text-primary);
+  margin-bottom: 0.5rem;
+}
+
+.optionBadge {
+  display: inline-block;
+  padding: 0.25rem 0.75rem;
+  border-radius: 20px;
+  font-size: 0.75rem;
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.optionBadge.success {
+  background: var(--success-light);
+  color: var(--success-dark);
+}
+
+.optionBadge.secondary {
+  background: var(--gray-100);
+  color: var(--gray-700);
+}
+
+.optionBadge.primary {
+  background: var(--primary-light);
+  color: var(--primary-dark);
+}
+
+.optionDescription {
+  color: var(--text-secondary);
+  margin-bottom: 1.5rem;
+  line-height: 1.5;
+  flex: 1;
+}
+
+.optionFeatures {
+  list-style: none;
+  padding: 0;
+  margin: 0 0 1.5rem 0;
+}
+
+.featureItem {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-bottom: 0.5rem;
+  font-size: 0.875rem;
+  color: var(--text-secondary);
+}
+
+.featureIcon {
+  color: var(--success);
+  font-weight: 600;
+  flex-shrink: 0;
+}
+
+.optionAction {
+  margin-top: auto;
+  text-align: center;
+}
+
+.selectedText {
+  color: var(--primary);
+  font-weight: 600;
+  font-size: 0.875rem;
+}
+
+.selectText {
+  color: var(--text-secondary);
+  font-size: 0.875rem;
+}
+
+.selectionSummary {
+  background: var(--primary-light);
+  border: 1px solid var(--primary);
+  border-radius: 8px;
+  padding: 1rem;
+  margin-bottom: 2rem;
+}
+
+.summaryContent {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.summaryIcon {
+  font-size: 1.25rem;
+}
+
+.summaryText {
+  flex: 1;
+  color: var(--text-primary);
+}
+
+.expandSearchBtn {
+  background: white;
+  border: 1px solid var(--primary);
+  color: var(--primary);
+  padding: 0.5rem 1rem;
+  border-radius: 6px;
+  font-size: 0.875rem;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.expandSearchBtn:hover {
+  background: var(--primary);
+  color: white;
+}
+
+.expandIcon {
+  font-size: 0.875rem;
+}
+
+.searchContextHelp {
+  background: var(--gray-50);
+  border-radius: 8px;
+  padding: 1.5rem;
+}
+
+.helpItem {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.75rem;
+  margin-bottom: 1rem;
+}
+
+.helpItem:last-child {
+  margin-bottom: 0;
+}
+
+.helpIcon {
+  font-size: 1.25rem;
+  flex-shrink: 0;
+  margin-top: 0.125rem;
+}
+
+.helpText {
+  color: var(--text-secondary);
+  line-height: 1.5;
+}
+
+.helpText strong {
+  color: var(--text-primary);
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+  .typeOptionsGrid {
+    grid-template-columns: 1fr;
+    gap: 1rem;
+  }
+  
+  .typeOption {
+    padding: 1rem;
+    min-height: auto;
+  }
+  
+  .optionHeader {
+    gap: 0.75rem;
+  }
+  
+  .optionIcon {
+    font-size: 2rem;
+  }
+  
+  .optionTitle {
+    font-size: 1.125rem;
+  }
+  
+  .summaryContent {
+    flex-direction: column;
+    text-align: center;
+  }
+  
+  .selectionTitle {
+    font-size: 1.5rem;
+  }
+  
+  .selectionSubtitle {
+    font-size: 1rem;
+  }
+}
