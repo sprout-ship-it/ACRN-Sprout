@@ -20,7 +20,12 @@ import styles from './PropertySearch.module.css';
 
 const PropertySearch = () => {
   const { user, profile } = useAuth();
-  
+  // Add this near the top of your PropertySearch component, right after the useAuth line:
+console.log('DEBUG - User and Profile info:', {
+  userId: user?.id,
+  profileId: profile?.id,
+  profileObject: profile
+});
   // ✅ Advanced filters toggle state
   const [showAdvancedFilters, setShowAdvancedFilters] = useState(false);
 
