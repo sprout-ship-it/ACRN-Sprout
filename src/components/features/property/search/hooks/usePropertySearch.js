@@ -170,15 +170,70 @@ const usePropertySearch = (user) => {
     setLoading(true);
     try {
       console.log('🔍 Searching properties with type:', searchType, 'Page:', currentPage);
-       useEffect(() => {
-    loadUserPreferences();
-    loadSavedProperties();
-  }, [loadUserPreferences, loadSavedProperties]);
+     // Temporary debug helper - add this to your search hook to diagnose the issue
 
-  // ✅ Perform initial search when component mounts
-  useEffect(() => {
-    performSearch(true);
-  }, []); // Only run once on mount 
+// ✅ ADD THIS TEMPORARY DEBUG CODE to your performSearch function 
+// (right before the actual query execution)
+
+console.log('🔧 DEBUG: Search parameters:', {
+  searchType,
+  sharedFilters: {
+    location: sharedFilters.location,
+    state: sharedFilters.state,
+    zipCode: sharedFilters.zipCode,
+    maxRent: sharedFilters.maxRent,
+    minBedrooms: sharedFilters.minBedrooms
+  },
+  appliedFilters: {
+    statusFilter: 'available',
+    acceptingApplications: true,
+    isRecoveryHousingFilter: searchType === 'general_only' ? false : 
+                            searchType === 'recovery_only' ? true : 'no filter'
+  }
+});
+
+// ✅ ALSO ADD THIS: Check what's actually in your database
+const debugQuery = await supabase
+  .from('properties')
+  .select('id, title, state, status, accepting_applications, is_recovery_housing')
+  .limit(10);
+
+console.log('🔧 DEBUG: Sample properties in database:', debugQuery.data);
+
+// ✅ AND THIS: Test without any filters
+const noFiltersQuery = await supabase
+  .from('properties')
+  .select('*', { count: 'exact' });
+
+console.log('🔧 DEBUG: Total properties in database (no filters):', {
+  count: noFiltersQuery.count,
+  sample: noFiltersQuery.data?.slice(0, 3)
+});
+
+// ✅ AND THIS: Test with just the basic filters
+const basicFiltersQuery = await supabase
+  .from('properties')
+  .select('*', { count: 'exact' })
+  .eq('status', 'available')
+  .eq('accepting_applications', true);
+
+console.log('🔧 DEBUG: Properties with status=available and accepting_applications=true:', {
+  count: basicFiltersQuery.count,
+  sample: basicFiltersQuery.data?.slice(0, 3)
+});
+
+// ✅ AND THIS: Test state filtering specifically
+if (sharedFilters.state) {
+  const stateFilterQuery = await supabase
+    .from('properties')
+    .select('*', { count: 'exact' })
+    .eq('state', sharedFilters.state);
+
+  console.log(`🔧 DEBUG: Properties with state='${sharedFilters.state}':`, {
+    count: stateFilterQuery.count,
+    sample: stateFilterQuery.data?.slice(0, 3)
+  });
+} 
       let query = supabase
         .from('properties')
         .select('*', { count: 'exact' })
