@@ -1,9 +1,9 @@
-// src/components/features/property/search/hooks/usePropertySearch.js - UPDATED FOR NEW SEARCH STRATEGY
+// src/components/features/property/search/hooks/usePropertySearch.js - UPDATED FOR NEW FIELDS
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { supabase } from '../../../../../utils/supabase';
 
 const usePropertySearch = (user) => {
-  // ✅ UPDATED: Search state management with new search types
+  // ✅ Search state management
   const [loading, setLoading] = useState(false);
   const [properties, setProperties] = useState([]);
   const [totalResults, setTotalResults] = useState(0);
@@ -12,10 +12,11 @@ const usePropertySearch = (user) => {
   const [userPreferences, setUserPreferences] = useState(null);
   const [savedProperties, setSavedProperties] = useState(new Set());
 
-  // ✅ UPDATED: Reorganized filter state to match new components
+  // ✅ UPDATED: Shared filter state with new zipCode field
   const [sharedFilters, setSharedFilters] = useState({
     location: '',
     state: '',
+    zipCode: '', // NEW: Added zipCode field
     maxRent: '',
     minBedrooms: '',
     availableDate: '',
@@ -26,9 +27,10 @@ const usePropertySearch = (user) => {
     utilitiesIncluded: []
   });
 
+  // ✅ UPDATED: Recovery filters with hasOpenBed instead of minAvailableBeds
   const [recoveryFilters, setRecoveryFilters] = useState({
     // Recovery Housing Details
-    minAvailableBeds: '',
+    hasOpenBed: false, // UPDATED: Changed from minAvailableBeds to hasOpenBed
     maxWeeklyRate: '',
     
     // Recovery Services & Features
@@ -159,7 +161,7 @@ const usePropertySearch = (user) => {
     }
   }, [user?.id]);
 
-  // ✅ UPDATED: Property search with new search type logic
+  // ✅ UPDATED: Property search with new fields and fixed syntax
   const performSearch = useCallback(async (resetPage = true) => {
     if (resetPage) {
       setCurrentPage(1);
@@ -169,39 +171,42 @@ const usePropertySearch = (user) => {
     try {
       console.log('🔍 Searching properties with type:', searchType, 'Page:', currentPage);
       
-      // ✅ UPDATED: Build query based on search type
       let query = supabase
         .from('properties')
         .select('*', { count: 'exact' })
         .eq('status', 'available')
         .eq('accepting_applications', true);
 
-      // ✅ UPDATED: Apply search type filtering
+      // ✅ Apply search type filtering
       if (searchType === 'general_only') {
         query = query.eq('is_recovery_housing', false);
       } else if (searchType === 'recovery_only') {
         query = query.eq('is_recovery_housing', true);
       }
-      // For 'all_housing', we don't filter by is_recovery_housing
 
       // ✅ SHARED FILTERS: Apply to all search types
       
-      // Location filtering
+      // ✅ FIXED: Location filtering with proper Supabase syntax
       if (sharedFilters.location.trim()) {
         const searchLocation = sharedFilters.location.trim();
         const locationParts = searchLocation.split(',').map(part => part.trim());
         
         if (locationParts.length === 2) {
           const [city, state] = locationParts;
-          query = query.or(`city.ilike.%${city}%,state.ilike.%${state}%,address.ilike.%${searchLocation}%`);
+          query = query.or(`city.ilike.*${city}*,state.ilike.*${state}*,address.ilike.*${searchLocation}*`);
         } else {
-          query = query.or(`city.ilike.%${searchLocation}%,state.ilike.%${searchLocation}%,address.ilike.%${searchLocation}%`);
+          query = query.or(`city.ilike.*${searchLocation}*,state.ilike.*${searchLocation}*,address.ilike.*${searchLocation}*`);
         }
       }
 
       // Basic shared filters
       if (sharedFilters.state) {
         query = query.eq('state', sharedFilters.state);
+      }
+
+      // ✅ NEW: ZIP code filtering
+      if (sharedFilters.zipCode) {
+        query = query.eq('zip_code', sharedFilters.zipCode);
       }
 
       if (sharedFilters.maxRent) {
@@ -242,9 +247,9 @@ const usePropertySearch = (user) => {
       // ✅ RECOVERY FILTERS: Only apply if searching recovery housing
       if (searchType === 'all_housing' || searchType === 'recovery_only') {
         
-        // Recovery housing details
-        if (recoveryFilters.minAvailableBeds) {
-          query = query.gte('available_beds', parseInt(recoveryFilters.minAvailableBeds));
+        // ✅ UPDATED: Has open bed filtering (simplified from minAvailableBeds)
+        if (recoveryFilters.hasOpenBed) {
+          query = query.gt('available_beds', 0);
         }
 
         if (recoveryFilters.maxWeeklyRate) {
@@ -266,22 +271,7 @@ const usePropertySearch = (user) => {
 
         // Recovery program requirements
         if (recoveryFilters.sobrietyTime) {
-          // For sobriety filtering, we want properties that accept people with AT LEAST this much sobriety
-          // So if user has 90 days, show properties requiring 90 days or less
-          const sobrietyDays = {
-            '0_days': 0,
-            '30_days': 30,
-            '60_days': 60, 
-            '90_days': 90,
-            '6_months': 180,
-            '1_year': 365,
-            '2_years': 730
-          };
-          
-          if (sobrietyDays[recoveryFilters.sobrietyTime] !== undefined) {
-            // This is complex - for now, we'll match exact requirements
-            query = query.eq('min_sobriety_time', recoveryFilters.sobrietyTime);
-          }
+          query = query.eq('min_sobriety_time', recoveryFilters.sobrietyTime);
         }
 
         if (recoveryFilters.treatmentCompletion) {
@@ -366,18 +356,15 @@ const usePropertySearch = (user) => {
       
       query = query.range(from, to);
 
-      // ✅ UPDATED: Smart ordering based on search type
+      // ✅ Smart ordering based on search type
       if (searchType === 'recovery_only') {
-        // For recovery-only search, prioritize by service availability and bed availability
         query = query.order('available_beds', { ascending: false })
                     .order('case_management', { ascending: false })
                     .order('monthly_rent', { ascending: true });
       } else if (searchType === 'general_only') {
-        // For general-only search, standard rental prioritization
         query = query.order('monthly_rent', { ascending: true })
                     .order('bedrooms', { ascending: true });
       } else {
-        // For all housing, prioritize recovery housing first, then by price
         query = query.order('is_recovery_housing', { ascending: false })
                     .order('monthly_rent', { ascending: true });
       }
@@ -420,7 +407,7 @@ const usePropertySearch = (user) => {
     }, 300);
   }, [performSearch]);
 
-  // ✅ UPDATED: Filter change handlers
+  // ✅ Filter change handlers
   const handleSharedFilterChange = useCallback((field, value) => {
     setSharedFilters(prev => ({
       ...prev,
@@ -461,7 +448,7 @@ const usePropertySearch = (user) => {
     debouncedSearch(true);
   }, [debouncedSearch]);
 
-  // ✅ UPDATED: Search type change handler
+  // ✅ Search type change handler
   const handleSearchTypeChange = useCallback((type) => {
     setSearchType(type);
     debouncedSearch(true);
@@ -490,7 +477,6 @@ const usePropertySearch = (user) => {
           recoveryStage: userPreferences.recovery_stage || ''
         }));
         
-        // If user needs substance-free housing, default to recovery housing search
         if (userPreferences.substance_free_home_required) {
           setSearchType('recovery_only');
         }
@@ -503,11 +489,12 @@ const usePropertySearch = (user) => {
     return false;
   }, [userPreferences, debouncedSearch]);
 
-  // ✅ UPDATED: Clear all filters
+  // ✅ UPDATED: Clear all filters with new fields
   const clearAllFilters = useCallback(() => {
     setSharedFilters({
       location: '',
       state: '',
+      zipCode: '', // NEW: Clear zipCode
       maxRent: '',
       minBedrooms: '',
       availableDate: '',
@@ -519,7 +506,7 @@ const usePropertySearch = (user) => {
     });
     
     setRecoveryFilters({
-      minAvailableBeds: '',
+      hasOpenBed: false, // UPDATED: Reset hasOpenBed instead of minAvailableBeds
       maxWeeklyRate: '',
       mealsIncluded: false,
       linensProvided: false,
@@ -613,7 +600,7 @@ const usePropertySearch = (user) => {
   const totalPages = Math.ceil(totalResults / 12);
   const showPagination = totalPages > 1;
 
-  // ✅ UPDATED: Return updated state and handlers
+  // ✅ Return updated state and handlers
   return {
     // Search state
     loading,
@@ -631,7 +618,7 @@ const usePropertySearch = (user) => {
     recoveryFilters,
     advancedFilters,
 
-    // Updated action handlers
+    // Action handlers
     handleSharedFilterChange,
     handleRecoveryFilterChange,
     handleAdvancedFilterChange,

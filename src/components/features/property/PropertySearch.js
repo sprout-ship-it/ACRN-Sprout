@@ -1,9 +1,9 @@
-// src/components/features/property/PropertySearch.js - UPDATED FOR NEW SEARCH STRATEGY
+// src/components/features/property/PropertySearch.js - FINAL VERSION WITH AUTO-SCROLL
 import React, { useState } from 'react';
 import { useAuth } from '../../../hooks/useAuth';
 import { supabase } from '../../../utils/supabase';
 
-// ✅ UPDATED: Import new search strategy components
+// ✅ Import updated search strategy components
 import PropertyTypeSelection from './search/PropertyTypeSelection';
 import PropertySharedFilters from './search/PropertySharedFilters';
 import PropertyRecoverySearchFilters from './search/PropertyRecoverySearchFilters';
@@ -21,7 +21,7 @@ const PropertySearch = () => {
   // ✅ Advanced filters toggle state
   const [showAdvancedFilters, setShowAdvancedFilters] = useState(false);
 
-  // ✅ UPDATED: Get all search state and handlers from updated custom hook
+  // ✅ Get all search state and handlers from updated custom hook
   const {
     // Search state
     loading,
@@ -172,7 +172,7 @@ I'd love to discuss availability and the application process. Thank you!`,
 
   return (
     <div className="content">
-      {/* ✅ UPDATED: Header */}
+      {/* ✅ Header */}
       <div className={styles.headerSection}>
         <h1 className={styles.headerTitle}>Find Housing That Supports Your Journey</h1>
         <p className={styles.headerSubtitle}>
@@ -180,7 +180,7 @@ I'd love to discuss availability and the application process. Thank you!`,
         </p>
       </div>
 
-      {/* ✅ NEW: Property Type Selection replaces search mode toggle */}
+      {/* ✅ Property Type Selection */}
       <div className={styles.typeSelectionSection}>
         <PropertyTypeSelection
           selectedType={searchType}
@@ -189,7 +189,7 @@ I'd love to discuss availability and the application process. Thank you!`,
         />
       </div>
 
-      {/* ✅ UPDATED: Shared Search Filters (always visible) */}
+      {/* ✅ Shared Search Filters (always visible, collapsible sections) */}
       <div className={styles.filtersSection}>
         <PropertySharedFilters
           sharedFilters={sharedFilters}
@@ -204,7 +204,7 @@ I'd love to discuss availability and the application process. Thank you!`,
         />
       </div>
 
-      {/* ✅ NEW: Recovery-Specific Filters (conditional) */}
+      {/* ✅ Recovery-Specific Filters (conditional, collapsible sections) */}
       <div className={styles.filtersSection}>
         <PropertyRecoverySearchFilters
           recoveryFilters={recoveryFilters}
@@ -215,7 +215,7 @@ I'd love to discuss availability and the application process. Thank you!`,
         />
       </div>
 
-      {/* ✅ UPDATED: Advanced Filters (collapsible) */}
+      {/* ✅ Advanced Filters (collapsible) */}
       <div className={styles.filtersSection}>
         <PropertyAdvancedFilters
           advancedFilters={advancedFilters}
@@ -227,63 +227,81 @@ I'd love to discuss availability and the application process. Thank you!`,
         />
       </div>
 
-      {/* ✅ UPDATED: Search Results with enhanced context */}
-      <PropertySearchResults
-        loading={loading}
-        properties={properties}
-        totalResults={totalResults}
-        currentPage={currentPage}
-        totalPages={totalPages}
-        showPagination={showPagination}
-        searchType={searchType}
-        savedProperties={savedProperties}
-        onPageChange={handlePageChange}
-        onContactLandlord={handleContactLandlord}
-        onSaveProperty={handleSavePropertyWithFeedback}
-        onSendHousingInquiry={handleSendHousingInquiry}
-        onClearAllFilters={clearAllFilters}
-        onSearchTypeChange={handleSearchTypeChange}
-      />
+      {/* ✅ UPDATED: Search Results with data attribute for auto-scroll */}
+      <div data-results-section className={styles.resultsSection}>
+        <PropertySearchResults
+          loading={loading}
+          properties={properties}
+          totalResults={totalResults}
+          currentPage={currentPage}
+          totalPages={totalPages}
+          showPagination={showPagination}
+          searchType={searchType}
+          savedProperties={savedProperties}
+          onPageChange={handlePageChange}
+          onContactLandlord={handleContactLandlord}
+          onSaveProperty={handleSavePropertyWithFeedback}
+          onSendHousingInquiry={handleSendHousingInquiry}
+          onClearAllFilters={clearAllFilters}
+          onSearchTypeChange={handleSearchTypeChange}
+        />
+      </div>
 
-      {/* ✅ NEW: Search Context Help */}
-      <div className={styles.searchHelpSection}>
-        <div className="card">
-          <div className={styles.helpContent}>
-            <h4 className={styles.helpTitle}>Search Tips</h4>
-            <div className={styles.helpGrid}>
-              <div className={styles.helpItem}>
-                <span className={styles.helpIcon}>🏠</span>
-                <div className={styles.helpText}>
-                  <strong>All Housing Types:</strong> Shows both general rentals and recovery housing, with recovery-friendly options prioritized
-                </div>
-              </div>
-              
-              <div className={styles.helpItem}>
-                <span className={styles.helpIcon}>🏢</span>
-                <div className={styles.helpText}>
-                  <strong>General Rentals:</strong> Standard apartments, houses, and condos with traditional rental terms
-                </div>
-              </div>
-              
-              <div className={styles.helpItem}>
-                <span className={styles.helpIcon}>🌱</span>
-                <div className={styles.helpText}>
-                  <strong>Recovery Housing:</strong> Specialized sober living homes and recovery residences with support services
-                </div>
-              </div>
-              
-              {userPreferences && (
+      {/* ✅ Search Context Help - Only show if no results yet */}
+      {!loading && properties.length === 0 && totalResults === 0 && (
+        <div className={styles.searchHelpSection}>
+          <div className="card">
+            <div className={styles.helpContent}>
+              <h4 className={styles.helpTitle}>Search Tips</h4>
+              <div className={styles.helpGrid}>
                 <div className={styles.helpItem}>
-                  <span className={styles.helpIcon}>⚙️</span>
+                  <span className={styles.helpIcon}>🏠</span>
                   <div className={styles.helpText}>
-                    <strong>Quick Setup:</strong> Use the "Use My Preferences" button to automatically fill filters from your profile
+                    <strong>All Housing Types:</strong> Shows both general rentals and recovery housing, with recovery-friendly options prioritized
                   </div>
                 </div>
-              )}
+                
+                <div className={styles.helpItem}>
+                  <span className={styles.helpIcon}>🏢</span>
+                  <div className={styles.helpText}>
+                    <strong>General Rentals:</strong> Standard apartments, houses, and condos with traditional rental terms
+                  </div>
+                </div>
+                
+                <div className={styles.helpItem}>
+                  <span className={styles.helpIcon}>🌱</span>
+                  <div className={styles.helpText}>
+                    <strong>Recovery Housing:</strong> Specialized sober living homes and recovery residences with support services
+                  </div>
+                </div>
+                
+                {userPreferences && (
+                  <div className={styles.helpItem}>
+                    <span className={styles.helpIcon}>⚙️</span>
+                    <div className={styles.helpText}>
+                      <strong>Quick Setup:</strong> Use the "Use My Preferences" button to automatically fill filters from your profile
+                    </div>
+                  </div>
+                )}
+
+                <div className={styles.helpItem}>
+                  <span className={styles.helpIcon}>📍</span>
+                  <div className={styles.helpText}>
+                    <strong>Start Simple:</strong> Try searching by just city or state first, then add more specific filters as needed
+                  </div>
+                </div>
+                
+                <div className={styles.helpItem}>
+                  <span className={styles.helpIcon}>🔍</span>
+                  <div className={styles.helpText}>
+                    <strong>Expand Sections:</strong> Click on any filter section header to expand and see more options
+                  </div>
+                </div>
+              </div>
             </div>
           </div>
         </div>
-      </div>
+      )}
     </div>
   );
 };

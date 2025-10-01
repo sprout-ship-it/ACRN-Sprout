@@ -1,5 +1,5 @@
-// src/components/features/property/search/PropertyRecoverySearchFilters.js - Recovery-Specific Search Filters
-import React from 'react';
+// src/components/features/property/search/PropertyRecoverySearchFilters.js - Collapsible Recovery Filters
+import React, { useState } from 'react';
 import PropTypes from 'prop-types';
 import { 
   requiredRecoveryPrograms,
@@ -20,6 +20,23 @@ const PropertyRecoverySearchFilters = ({
   if (searchType === 'general_only') {
     return null;
   }
+
+  // ✅ Collapsible section state - all collapsed by default
+  const [expandedSections, setExpandedSections] = useState({
+    housingDetails: false,
+    services: false,
+    programs: false,
+    demographics: false,
+    supportServices: false,
+    licensing: false
+  });
+
+  const toggleSection = (section) => {
+    setExpandedSections(prev => ({
+      ...prev,
+      [section]: !prev[section]
+    }));
+  };
 
   // ✅ Recovery stage options for filtering
   const recoveryStageOptions = [
@@ -67,435 +84,482 @@ const PropertyRecoverySearchFilters = ({
 
   return (
     <div className={styles.recoveryFiltersContainer}>
-      {/* ✅ SECTION 1: Recovery Housing Capacity & Rates */}
+      {/* ✅ SECTION 1: Recovery Housing Details - Collapsible */}
       <div className="card mb-4">
-        <div className="card-header">
+        <div 
+          className={`card-header ${styles.collapsibleHeader}`}
+          onClick={() => toggleSection('housingDetails')}
+        >
           <h3 className="card-title">
             <span className={styles.sectionIcon}>🏠</span>
             Recovery Housing Details
+            <span className={`${styles.expandIcon} ${expandedSections.housingDetails ? styles.expanded : ''}`}>
+              ▼
+            </span>
           </h3>
           <p className="card-subtitle">
-            Specific to recovery housing bed capacity and specialized rates
+            Specific to recovery housing bed availability and specialized rates
           </p>
         </div>
         
-        <div className={styles.filterSection}>
-          <div className={styles.housingDetailsGrid}>
-            <div className="form-group">
-              <label className="label">Minimum Available Beds</label>
-              <input
-                className="input"
-                type="number"
-                placeholder="e.g., 2"
-                value={recoveryFilters.minAvailableBeds}
-                onChange={(e) => onRecoveryFilterChange('minAvailableBeds', e.target.value)}
-                disabled={loading}
-                min="1"
-                max="20"
-              />
-              <div className={styles.inputHint}>
-                Minimum number of beds that should be available
+        {expandedSections.housingDetails && (
+          <div className={styles.filterSection}>
+            <div className={styles.housingDetailsGrid}>
+              <div 
+                className={`${styles.serviceItem} ${recoveryFilters.hasOpenBed ? styles.selected : ''}`}
+                onClick={() => onRecoveryFilterChange('hasOpenBed', !recoveryFilters.hasOpenBed)}
+              >
+                <input
+                  type="checkbox"
+                  checked={recoveryFilters.hasOpenBed || false}
+                  onChange={() => {}} // Handled by onClick
+                  disabled={loading}
+                />
+                <div className={styles.serviceContent}>
+                  <span className={styles.serviceName}>Has Open Bed Available</span>
+                  <span className={styles.serviceDescription}>Show only properties with at least one bed currently available</span>
+                </div>
               </div>
-            </div>
 
-            <div className="form-group">
-              <label className="label">Weekly Rate Budget</label>
-              <input
-                className="input"
-                type="number"
-                placeholder="e.g., 250"
-                value={recoveryFilters.maxWeeklyRate}
-                onChange={(e) => onRecoveryFilterChange('maxWeeklyRate', e.target.value)}
-                disabled={loading}
-                min="0"
-                step="25"
-              />
-              <div className={styles.inputHint}>
-                Maximum weekly rate you can afford
+              <div className="form-group">
+                <label className="label">Weekly Rate Budget</label>
+                <input
+                  className="input"
+                  type="number"
+                  placeholder="e.g., 250"
+                  value={recoveryFilters.maxWeeklyRate}
+                  onChange={(e) => onRecoveryFilterChange('maxWeeklyRate', e.target.value)}
+                  disabled={loading}
+                  min="0"
+                  step="25"
+                />
+                <div className={styles.inputHint}>
+                  Maximum weekly rate you can afford
+                </div>
               </div>
             </div>
           </div>
-        </div>
+        )}
       </div>
 
-      {/* ✅ SECTION 2: Recovery Services & Features */}
+      {/* ✅ SECTION 2: Recovery Services & Features - Collapsible */}
       <div className="card mb-4">
-        <div className="card-header">
+        <div 
+          className={`card-header ${styles.collapsibleHeader}`}
+          onClick={() => toggleSection('services')}
+        >
           <h3 className="card-title">
             <span className={styles.sectionIcon}>🍽️</span>
             Recovery Services & Features
+            <span className={`${styles.expandIcon} ${expandedSections.services ? styles.expanded : ''}`}>
+              ▼
+            </span>
           </h3>
         </div>
         
-        <div className={styles.filterSection}>
-          <div className={styles.servicesGrid}>
-            <div 
-              className={`${styles.serviceItem} ${recoveryFilters.mealsIncluded ? styles.selected : ''}`}
-              onClick={() => onRecoveryFilterChange('mealsIncluded', !recoveryFilters.mealsIncluded)}
-            >
-              <input
-                type="checkbox"
-                checked={recoveryFilters.mealsIncluded}
-                onChange={() => {}} // Handled by onClick
-                disabled={loading}
-              />
-              <div className={styles.serviceContent}>
-                <span className={styles.serviceName}>Meals Included</span>
-                <span className={styles.serviceDescription}>Some or all meals provided</span>
+        {expandedSections.services && (
+          <div className={styles.filterSection}>
+            <div className={styles.servicesGrid}>
+              <div 
+                className={`${styles.serviceItem} ${recoveryFilters.mealsIncluded ? styles.selected : ''}`}
+                onClick={() => onRecoveryFilterChange('mealsIncluded', !recoveryFilters.mealsIncluded)}
+              >
+                <input
+                  type="checkbox"
+                  checked={recoveryFilters.mealsIncluded}
+                  onChange={() => {}} // Handled by onClick
+                  disabled={loading}
+                />
+                <div className={styles.serviceContent}>
+                  <span className={styles.serviceName}>Meals Included</span>
+                  <span className={styles.serviceDescription}>Some or all meals provided</span>
+                </div>
               </div>
-            </div>
-            
-            <div 
-              className={`${styles.serviceItem} ${recoveryFilters.linensProvided ? styles.selected : ''}`}
-              onClick={() => onRecoveryFilterChange('linensProvided', !recoveryFilters.linensProvided)}
-            >
-              <input
-                type="checkbox"
-                checked={recoveryFilters.linensProvided}
-                onChange={() => {}} // Handled by onClick
-                disabled={loading}
-              />
-              <div className={styles.serviceContent}>
-                <span className={styles.serviceName}>Linens Provided</span>
-                <span className={styles.serviceDescription}>Bedding and towels included</span>
+              
+              <div 
+                className={`${styles.serviceItem} ${recoveryFilters.linensProvided ? styles.selected : ''}`}
+                onClick={() => onRecoveryFilterChange('linensProvided', !recoveryFilters.linensProvided)}
+              >
+                <input
+                  type="checkbox"
+                  checked={recoveryFilters.linensProvided}
+                  onChange={() => {}} // Handled by onClick
+                  disabled={loading}
+                />
+                <div className={styles.serviceContent}>
+                  <span className={styles.serviceName}>Linens Provided</span>
+                  <span className={styles.serviceDescription}>Bedding and towels included</span>
+                </div>
               </div>
-            </div>
 
-            <div 
-              className={`${styles.serviceItem} ${recoveryFilters.immediateMovein ? styles.selected : ''}`}
-              onClick={() => onRecoveryFilterChange('immediateMovein', !recoveryFilters.immediateMovein)}
-            >
-              <input
-                type="checkbox"
-                checked={recoveryFilters.immediateMovein}
-                onChange={() => {}} // Handled by onClick
-                disabled={loading}
-              />
-              <div className={styles.serviceContent}>
-                <span className={styles.serviceName}>Immediate Move-in Available</span>
-                <span className={styles.serviceDescription}>Same-day or 24-hour move-in possible</span>
+              <div 
+                className={`${styles.serviceItem} ${recoveryFilters.immediateMovein ? styles.selected : ''}`}
+                onClick={() => onRecoveryFilterChange('immediateMovein', !recoveryFilters.immediateMovein)}
+              >
+                <input
+                  type="checkbox"
+                  checked={recoveryFilters.immediateMovein}
+                  onChange={() => {}} // Handled by onClick
+                  disabled={loading}
+                />
+                <div className={styles.serviceContent}>
+                  <span className={styles.serviceName}>Immediate Move-in Available</span>
+                  <span className={styles.serviceDescription}>Same-day or 24-hour move-in possible</span>
+                </div>
               </div>
             </div>
           </div>
-        </div>
+        )}
       </div>
 
-      {/* ✅ SECTION 3: Recovery Program Requirements */}
+      {/* ✅ SECTION 3: Recovery Program Requirements - Collapsible */}
       <div className="card mb-4">
-        <div className="card-header">
+        <div 
+          className={`card-header ${styles.collapsibleHeader}`}
+          onClick={() => toggleSection('programs')}
+        >
           <h3 className="card-title">
             <span className={styles.sectionIcon}>🌱</span>
             Recovery Program Requirements
+            <span className={`${styles.expandIcon} ${expandedSections.programs ? styles.expanded : ''}`}>
+              ▼
+            </span>
           </h3>
         </div>
         
-        <div className={styles.filterSection}>
-          <div className={styles.programRequirementsGrid}>
-            <div className="form-group">
-              <label className="label">Your Recovery Stage</label>
-              <select
-                className="input"
-                value={recoveryFilters.recoveryStage}
-                onChange={(e) => onRecoveryFilterChange('recoveryStage', e.target.value)}
-                disabled={loading}
-              >
-                {recoveryStageOptions.map(option => (
-                  <option key={option.value} value={option.value}>
-                    {option.label}
-                  </option>
-                ))}
-              </select>
-              <div className={styles.inputHint}>
-                Find housing appropriate for your stage of recovery
-              </div>
-            </div>
-            
-            <div className="form-group">
-              <label className="label">Sobriety Requirements You Can Meet</label>
-              <select
-                className="input"
-                value={recoveryFilters.sobrietyTime}
-                onChange={(e) => onRecoveryFilterChange('sobrietyTime', e.target.value)}
-                disabled={loading}
-              >
-                {sobrietyTimeOptions.map(option => (
-                  <option key={option.value} value={option.value}>
-                    {option.label}
-                  </option>
-                ))}
-              </select>
-              <div className={styles.inputHint}>
-                Show properties with sobriety requirements you meet
-              </div>
-            </div>
-
-            <div className="form-group">
-              <label className="label">Treatment Completion Status</label>
-              <select
-                className="input"
-                value={recoveryFilters.treatmentCompletion}
-                onChange={(e) => onRecoveryFilterChange('treatmentCompletion', e.target.value)}
-                disabled={loading}
-              >
-                {treatmentCompletionOptions.map(option => (
-                  <option key={option.value} value={option.value}>
-                    {option.label}
-                  </option>
-                ))}
-              </select>
-              <div className={styles.inputHint}>
-                Match with properties based on your treatment background
-              </div>
-            </div>
-          </div>
-
-          {/* Required Programs */}
-          <div className="form-group">
-            <label className="label">Programs You're Willing to Participate In</label>
-            <div className={styles.inputHint}>
-              Select recovery programs you're open to participating in
-            </div>
-            <div className={styles.programsGrid}>
-              {requiredRecoveryPrograms.map(program => (
-                <div
-                  key={program.value}
-                  className={`${styles.programItem} ${recoveryFilters.acceptablePrograms?.includes(program.value) ? styles.selected : ''}`}
-                  onClick={() => onArrayFilterChange('recovery', 'acceptablePrograms', program.value, !recoveryFilters.acceptablePrograms?.includes(program.value))}
+        {expandedSections.programs && (
+          <div className={styles.filterSection}>
+            <div className={styles.programRequirementsGrid}>
+              <div className="form-group">
+                <label className="label">Your Recovery Stage</label>
+                <select
+                  className="input"
+                  value={recoveryFilters.recoveryStage}
+                  onChange={(e) => onRecoveryFilterChange('recoveryStage', e.target.value)}
+                  disabled={loading}
                 >
-                  <input
-                    type="checkbox"
-                    checked={recoveryFilters.acceptablePrograms?.includes(program.value) || false}
-                    onChange={() => {}} // Handled by onClick
-                    disabled={loading}
-                  />
-                  <span className={styles.programText}>{program.label}</span>
+                  {recoveryStageOptions.map(option => (
+                    <option key={option.value} value={option.value}>
+                      {option.label}
+                    </option>
+                  ))}
+                </select>
+                <div className={styles.inputHint}>
+                  Find housing appropriate for your stage of recovery
                 </div>
-              ))}
+              </div>
+              
+              <div className="form-group">
+                <label className="label">Sobriety Requirements You Can Meet</label>
+                <select
+                  className="input"
+                  value={recoveryFilters.sobrietyTime}
+                  onChange={(e) => onRecoveryFilterChange('sobrietyTime', e.target.value)}
+                  disabled={loading}
+                >
+                  {sobrietyTimeOptions.map(option => (
+                    <option key={option.value} value={option.value}>
+                      {option.label}
+                    </option>
+                  ))}
+                </select>
+                <div className={styles.inputHint}>
+                  Show properties with sobriety requirements you meet
+                </div>
+              </div>
+
+              <div className="form-group">
+                <label className="label">Treatment Completion Status</label>
+                <select
+                  className="input"
+                  value={recoveryFilters.treatmentCompletion}
+                  onChange={(e) => onRecoveryFilterChange('treatmentCompletion', e.target.value)}
+                  disabled={loading}
+                >
+                  {treatmentCompletionOptions.map(option => (
+                    <option key={option.value} value={option.value}>
+                      {option.label}
+                    </option>
+                  ))}
+                </select>
+                <div className={styles.inputHint}>
+                  Match with properties based on your treatment background
+                </div>
+              </div>
+            </div>
+
+            {/* Required Programs */}
+            <div className="form-group">
+              <label className="label">Programs You're Willing to Participate In</label>
+              <div className={styles.inputHint}>
+                Select recovery programs you're open to participating in
+              </div>
+              <div className={styles.programsGrid}>
+                {requiredRecoveryPrograms.map(program => (
+                  <div
+                    key={program.value}
+                    className={`${styles.programItem} ${recoveryFilters.acceptablePrograms?.includes(program.value) ? styles.selected : ''}`}
+                    onClick={() => onArrayFilterChange('recovery', 'acceptablePrograms', program.value, !recoveryFilters.acceptablePrograms?.includes(program.value))}
+                  >
+                    <input
+                      type="checkbox"
+                      checked={recoveryFilters.acceptablePrograms?.includes(program.value) || false}
+                      onChange={() => {}} // Handled by onClick
+                      disabled={loading}
+                    />
+                    <span className={styles.programText}>{program.label}</span>
+                  </div>
+                ))}
+              </div>
             </div>
           </div>
-        </div>
+        )}
       </div>
 
-      {/* ✅ SECTION 4: Resident Demographics & Restrictions */}
+      {/* ✅ SECTION 4: Demographics & Community Preferences - Collapsible */}
       <div className="card mb-4">
-        <div className="card-header">
+        <div 
+          className={`card-header ${styles.collapsibleHeader}`}
+          onClick={() => toggleSection('demographics')}
+        >
           <h3 className="card-title">
             <span className={styles.sectionIcon}>👥</span>
             Demographics & Community Preferences
+            <span className={`${styles.expandIcon} ${expandedSections.demographics ? styles.expanded : ''}`}>
+              ▼
+            </span>
           </h3>
         </div>
         
-        <div className={styles.filterSection}>
-          <div className={styles.demographicsGrid}>
-            <div className="form-group">
-              <label className="label">Gender Community Preference</label>
-              <select
-                className="input"
-                value={recoveryFilters.genderPreference}
-                onChange={(e) => onRecoveryFilterChange('genderPreference', e.target.value)}
-                disabled={loading}
+        {expandedSections.demographics && (
+          <div className={styles.filterSection}>
+            <div className={styles.demographicsGrid}>
+              <div className="form-group">
+                <label className="label">Gender Community Preference</label>
+                <select
+                  className="input"
+                  value={recoveryFilters.genderPreference}
+                  onChange={(e) => onRecoveryFilterChange('genderPreference', e.target.value)}
+                  disabled={loading}
+                >
+                  {genderOptions.map(option => (
+                    <option key={option.value} value={option.value}>
+                      {option.label}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <div className="form-group">
+                <label className="label">Age Range Preference</label>
+                <input
+                  className="input"
+                  type="text"
+                  placeholder="e.g., '25-45', '18+', 'Young Adults'"
+                  value={recoveryFilters.agePreference}
+                  onChange={(e) => onRecoveryFilterChange('agePreference', e.target.value)}
+                  disabled={loading}
+                />
+                <div className={styles.inputHint}>
+                  Describe your preferred age community
+                </div>
+              </div>
+            </div>
+
+            <div className={styles.backgroundGrid}>
+              <div 
+                className={`${styles.backgroundItem} ${recoveryFilters.acceptsCriminalBackground ? styles.selected : ''}`}
+                onClick={() => onRecoveryFilterChange('acceptsCriminalBackground', !recoveryFilters.acceptsCriminalBackground)}
               >
-                {genderOptions.map(option => (
-                  <option key={option.value} value={option.value}>
-                    {option.label}
-                  </option>
-                ))}
-              </select>
-            </div>
-
-            <div className="form-group">
-              <label className="label">Age Range Preference</label>
-              <input
-                className="input"
-                type="text"
-                placeholder="e.g., '25-45', '18+', 'Young Adults'"
-                value={recoveryFilters.agePreference}
-                onChange={(e) => onRecoveryFilterChange('agePreference', e.target.value)}
-                disabled={loading}
-              />
-              <div className={styles.inputHint}>
-                Describe your preferred age community
+                <input
+                  type="checkbox"
+                  checked={recoveryFilters.acceptsCriminalBackground}
+                  onChange={() => {}} // Handled by onClick
+                  disabled={loading}
+                />
+                <div className={styles.backgroundContent}>
+                  <span className={styles.backgroundName}>Accepts Criminal Background</span>
+                  <span className={styles.backgroundDescription}>Properties that consider applicants with criminal history</span>
+                </div>
               </div>
             </div>
           </div>
-
-          <div className={styles.backgroundGrid}>
-            <div 
-              className={`${styles.backgroundItem} ${recoveryFilters.acceptsCriminalBackground ? styles.selected : ''}`}
-              onClick={() => onRecoveryFilterChange('acceptsCriminalBackground', !recoveryFilters.acceptsCriminalBackground)}
-            >
-              <input
-                type="checkbox"
-                checked={recoveryFilters.acceptsCriminalBackground}
-                onChange={() => {}} // Handled by onClick
-                disabled={loading}
-              />
-              <div className={styles.backgroundContent}>
-                <span className={styles.backgroundName}>Accepts Criminal Background</span>
-                <span className={styles.backgroundDescription}>Properties that consider applicants with criminal history</span>
-              </div>
-            </div>
-          </div>
-        </div>
+        )}
       </div>
 
-      {/* ✅ SECTION 5: Recovery Support Services */}
+      {/* ✅ SECTION 5: Recovery Support Services - Collapsible */}
       <div className="card mb-4">
-        <div className="card-header">
+        <div 
+          className={`card-header ${styles.collapsibleHeader}`}
+          onClick={() => toggleSection('supportServices')}
+        >
           <h3 className="card-title">
             <span className={styles.sectionIcon}>🤝</span>
             Recovery Support Services
+            <span className={`${styles.expandIcon} ${expandedSections.supportServices ? styles.expanded : ''}`}>
+              ▼
+            </span>
           </h3>
           <p className="card-subtitle">
             Professional support services available on-site or through partnerships
           </p>
         </div>
         
-        <div className={styles.filterSection}>
-          <div className={styles.supportServicesGrid}>
-            <div 
-              className={`${styles.serviceItem} ${recoveryFilters.caseManagement ? styles.selected : ''}`}
-              onClick={() => onRecoveryFilterChange('caseManagement', !recoveryFilters.caseManagement)}
-            >
-              <input
-                type="checkbox"
-                checked={recoveryFilters.caseManagement}
-                onChange={() => {}} // Handled by onClick
-                disabled={loading}
-              />
-              <div className={styles.serviceContent}>
-                <span className={styles.serviceName}>Case Management</span>
-                <span className={styles.serviceDescription}>Professional case management and support coordination</span>
+        {expandedSections.supportServices && (
+          <div className={styles.filterSection}>
+            <div className={styles.supportServicesGrid}>
+              <div 
+                className={`${styles.serviceItem} ${recoveryFilters.caseManagement ? styles.selected : ''}`}
+                onClick={() => onRecoveryFilterChange('caseManagement', !recoveryFilters.caseManagement)}
+              >
+                <input
+                  type="checkbox"
+                  checked={recoveryFilters.caseManagement}
+                  onChange={() => {}} // Handled by onClick
+                  disabled={loading}
+                />
+                <div className={styles.serviceContent}>
+                  <span className={styles.serviceName}>Case Management</span>
+                  <span className={styles.serviceDescription}>Professional case management and support coordination</span>
+                </div>
               </div>
-            </div>
-            
-            <div 
-              className={`${styles.serviceItem} ${recoveryFilters.counselingServices ? styles.selected : ''}`}
-              onClick={() => onRecoveryFilterChange('counselingServices', !recoveryFilters.counselingServices)}
-            >
-              <input
-                type="checkbox"
-                checked={recoveryFilters.counselingServices}
-                onChange={() => {}} // Handled by onClick
-                disabled={loading}
-              />
-              <div className={styles.serviceContent}>
-                <span className={styles.serviceName}>Counseling Services</span>
-                <span className={styles.serviceDescription}>Individual or group counseling available</span>
+              
+              <div 
+                className={`${styles.serviceItem} ${recoveryFilters.counselingServices ? styles.selected : ''}`}
+                onClick={() => onRecoveryFilterChange('counselingServices', !recoveryFilters.counselingServices)}
+              >
+                <input
+                  type="checkbox"
+                  checked={recoveryFilters.counselingServices}
+                  onChange={() => {}} // Handled by onClick
+                  disabled={loading}
+                />
+                <div className={styles.serviceContent}>
+                  <span className={styles.serviceName}>Counseling Services</span>
+                  <span className={styles.serviceDescription}>Individual or group counseling available</span>
+                </div>
               </div>
-            </div>
 
-            <div 
-              className={`${styles.serviceItem} ${recoveryFilters.jobTraining ? styles.selected : ''}`}
-              onClick={() => onRecoveryFilterChange('jobTraining', !recoveryFilters.jobTraining)}
-            >
-              <input
-                type="checkbox"
-                checked={recoveryFilters.jobTraining}
-                onChange={() => {}} // Handled by onClick
-                disabled={loading}
-              />
-              <div className={styles.serviceContent}>
-                <span className={styles.serviceName}>Job Training & Placement</span>
-                <span className={styles.serviceDescription}>Employment assistance and job training programs</span>
+              <div 
+                className={`${styles.serviceItem} ${recoveryFilters.jobTraining ? styles.selected : ''}`}
+                onClick={() => onRecoveryFilterChange('jobTraining', !recoveryFilters.jobTraining)}
+              >
+                <input
+                  type="checkbox"
+                  checked={recoveryFilters.jobTraining}
+                  onChange={() => {}} // Handled by onClick
+                  disabled={loading}
+                />
+                <div className={styles.serviceContent}>
+                  <span className={styles.serviceName}>Job Training & Placement</span>
+                  <span className={styles.serviceDescription}>Employment assistance and job training programs</span>
+                </div>
               </div>
-            </div>
 
-            <div 
-              className={`${styles.serviceItem} ${recoveryFilters.medicalServices ? styles.selected : ''}`}
-              onClick={() => onRecoveryFilterChange('medicalServices', !recoveryFilters.medicalServices)}
-            >
-              <input
-                type="checkbox"
-                checked={recoveryFilters.medicalServices}
-                onChange={() => {}} // Handled by onClick
-                disabled={loading}
-              />
-              <div className={styles.serviceContent}>
-                <span className={styles.serviceName}>Medical Services</span>
-                <span className={styles.serviceDescription}>On-site medical care or clinic access</span>
+              <div 
+                className={`${styles.serviceItem} ${recoveryFilters.medicalServices ? styles.selected : ''}`}
+                onClick={() => onRecoveryFilterChange('medicalServices', !recoveryFilters.medicalServices)}
+              >
+                <input
+                  type="checkbox"
+                  checked={recoveryFilters.medicalServices}
+                  onChange={() => {}} // Handled by onClick
+                  disabled={loading}
+                />
+                <div className={styles.serviceContent}>
+                  <span className={styles.serviceName}>Medical Services</span>
+                  <span className={styles.serviceDescription}>On-site medical care or clinic access</span>
+                </div>
               </div>
-            </div>
 
-            <div 
-              className={`${styles.serviceItem} ${recoveryFilters.transportationServices ? styles.selected : ''}`}
-              onClick={() => onRecoveryFilterChange('transportationServices', !recoveryFilters.transportationServices)}
-            >
-              <input
-                type="checkbox"
-                checked={recoveryFilters.transportationServices}
-                onChange={() => {}} // Handled by onClick
-                disabled={loading}
-              />
-              <div className={styles.serviceContent}>
-                <span className={styles.serviceName}>Transportation Services</span>
-                <span className={styles.serviceDescription}>Transportation assistance for appointments and work</span>
+              <div 
+                className={`${styles.serviceItem} ${recoveryFilters.transportationServices ? styles.selected : ''}`}
+                onClick={() => onRecoveryFilterChange('transportationServices', !recoveryFilters.transportationServices)}
+              >
+                <input
+                  type="checkbox"
+                  checked={recoveryFilters.transportationServices}
+                  onChange={() => {}} // Handled by onClick
+                  disabled={loading}
+                />
+                <div className={styles.serviceContent}>
+                  <span className={styles.serviceName}>Transportation Services</span>
+                  <span className={styles.serviceDescription}>Transportation assistance for appointments and work</span>
+                </div>
               </div>
-            </div>
 
-            <div 
-              className={`${styles.serviceItem} ${recoveryFilters.lifeSkillsTraining ? styles.selected : ''}`}
-              onClick={() => onRecoveryFilterChange('lifeSkillsTraining', !recoveryFilters.lifeSkillsTraining)}
-            >
-              <input
-                type="checkbox"
-                checked={recoveryFilters.lifeSkillsTraining}
-                onChange={() => {}} // Handled by onClick
-                disabled={loading}
-              />
-              <div className={styles.serviceContent}>
-                <span className={styles.serviceName}>Life Skills Training</span>
-                <span className={styles.serviceDescription}>Training in daily living and independent living skills</span>
+              <div 
+                className={`${styles.serviceItem} ${recoveryFilters.lifeSkillsTraining ? styles.selected : ''}`}
+                onClick={() => onRecoveryFilterChange('lifeSkillsTraining', !recoveryFilters.lifeSkillsTraining)}
+              >
+                <input
+                  type="checkbox"
+                  checked={recoveryFilters.lifeSkillsTraining}
+                  onChange={() => {}} // Handled by onClick
+                  disabled={loading}
+                />
+                <div className={styles.serviceContent}>
+                  <span className={styles.serviceName}>Life Skills Training</span>
+                  <span className={styles.serviceDescription}>Training in daily living and independent living skills</span>
+                </div>
               </div>
             </div>
           </div>
-        </div>
+        )}
       </div>
 
-      {/* ✅ SECTION 6: Licensing & Accreditation */}
+      {/* ✅ SECTION 6: Licensing & Accreditation - Collapsible */}
       <div className="card mb-4">
-        <div className="card-header">
+        <div 
+          className={`card-header ${styles.collapsibleHeader}`}
+          onClick={() => toggleSection('licensing')}
+        >
           <h3 className="card-title">
             <span className={styles.sectionIcon}>📋</span>
             Licensing & Accreditation Preferences
+            <span className={`${styles.expandIcon} ${expandedSections.licensing ? styles.expanded : ''}`}>
+              ▼
+            </span>
           </h3>
         </div>
         
-        <div className={styles.filterSection}>
-          <div className={styles.licensingGrid}>
-            <div 
-              className={`${styles.licensingItem} ${recoveryFilters.requiresLicensing ? styles.selected : ''}`}
-              onClick={() => onRecoveryFilterChange('requiresLicensing', !recoveryFilters.requiresLicensing)}
-            >
-              <input
-                type="checkbox"
-                checked={recoveryFilters.requiresLicensing}
-                onChange={() => {}} // Handled by onClick
-                disabled={loading}
-              />
-              <div className={styles.licensingContent}>
-                <span className={styles.licensingName}>State Licensed Properties Only</span>
-                <span className={styles.licensingDescription}>Properties with proper state licensing and oversight</span>
+        {expandedSections.licensing && (
+          <div className={styles.filterSection}>
+            <div className={styles.licensingGrid}>
+              <div 
+                className={`${styles.licensingItem} ${recoveryFilters.requiresLicensing ? styles.selected : ''}`}
+                onClick={() => onRecoveryFilterChange('requiresLicensing', !recoveryFilters.requiresLicensing)}
+              >
+                <input
+                  type="checkbox"
+                  checked={recoveryFilters.requiresLicensing}
+                  onChange={() => {}} // Handled by onClick
+                  disabled={loading}
+                />
+                <div className={styles.licensingContent}>
+                  <span className={styles.licensingName}>State Licensed Properties Only</span>
+                  <span className={styles.licensingDescription}>Properties with proper state licensing and oversight</span>
+                </div>
               </div>
-            </div>
 
-            <div 
-              className={`${styles.licensingItem} ${recoveryFilters.requiresAccreditation ? styles.selected : ''}`}
-              onClick={() => onRecoveryFilterChange('requiresAccreditation', !recoveryFilters.requiresAccreditation)}
-            >
-              <input
-                type="checkbox"
-                checked={recoveryFilters.requiresAccreditation}
-                onChange={() => {}} // Handled by onClick
-                disabled={loading}
-              />
-              <div className={styles.licensingContent}>
-                <span className={styles.licensingName}>Accredited Properties Preferred</span>
-                <span className={styles.licensingDescription}>Properties with NARR, CARF, or other professional accreditation</span>
+              <div 
+                className={`${styles.licensingItem} ${recoveryFilters.requiresAccreditation ? styles.selected : ''}`}
+                onClick={() => onRecoveryFilterChange('requiresAccreditation', !recoveryFilters.requiresAccreditation)}
+              >
+                <input
+                  type="checkbox"
+                  checked={recoveryFilters.requiresAccreditation}
+                  onChange={() => {}} // Handled by onClick
+                  disabled={loading}
+                />
+                <div className={styles.licensingContent}>
+                  <span className={styles.licensingName}>Accredited Properties Preferred</span>
+                  <span className={styles.licensingDescription}>Properties with NARR, CARF, or other professional accreditation</span>
+                </div>
               </div>
             </div>
           </div>
-        </div>
+        )}
       </div>
     </div>
   );
@@ -503,7 +567,7 @@ const PropertyRecoverySearchFilters = ({
 
 PropertyRecoverySearchFilters.propTypes = {
   recoveryFilters: PropTypes.shape({
-    minAvailableBeds: PropTypes.string.isRequired,
+    hasOpenBed: PropTypes.bool.isRequired,
     maxWeeklyRate: PropTypes.string.isRequired,
     mealsIncluded: PropTypes.bool.isRequired,
     linensProvided: PropTypes.bool.isRequired,
