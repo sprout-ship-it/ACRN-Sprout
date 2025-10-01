@@ -16,12 +16,7 @@ const PropertyRecoverySearchFilters = ({
   searchType,
   loading
 }) => {
-  // ✅ Don't render if user selected general rentals only
-  if (searchType === 'general_only') {
-    return null;
-  }
-
-  // ✅ Collapsible section state - all collapsed by default
+  // ✅ Collapsible section state - all collapsed by default (MUST be before conditional return)
   const [expandedSections, setExpandedSections] = useState({
     housingDetails: false,
     services: false,
@@ -30,6 +25,11 @@ const PropertyRecoverySearchFilters = ({
     supportServices: false,
     licensing: false
   });
+
+  // ✅ Don't render if user selected general rentals only (AFTER hooks)
+  if (searchType === 'general_only') {
+    return null;
+  }
 
   const toggleSection = (section) => {
     setExpandedSections(prev => ({
