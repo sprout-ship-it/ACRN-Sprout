@@ -1,4 +1,4 @@
-// src/components/features/property/sections/PropertyAvailabilitySection.js - NEW UNIVERSAL SECTION
+// src/components/features/property/sections/PropertyAvailabilitySection.js - CLEANED FOR SHARED FIELDS ONLY
 import React from 'react';
 import PropTypes from 'prop-types';
 
@@ -42,7 +42,7 @@ const PropertyAvailabilitySection = ({
     <>
       <h3 className="card-title mb-4">Availability & Lease Terms</h3>
       
-      {/* ✅ Move-in Availability */}
+      {/* ✅ SHARED: Move-in Availability */}
       <div className={styles.gridTwo}>
         <div className={styles.formGroup}>
           <label className="label">
@@ -91,7 +91,7 @@ const PropertyAvailabilitySection = ({
         </div>
       </div>
 
-      {/* ✅ Property Details - Conditional Fields */}
+      {/* ✅ SHARED: Property Details - Conditional Fields */}
       <div className={styles.gridTwo}>
         {!isRecoveryHousing && (
           <div className={styles.formGroup}>
@@ -132,7 +132,7 @@ const PropertyAvailabilitySection = ({
         </div>
       </div>
 
-      {/* ✅ Application Status */}
+      {/* ✅ SHARED: Application Status */}
       <div className={styles.applicationSection}>
         <h4 className={styles.sectionHeading}>Application Management</h4>
         
@@ -153,35 +153,7 @@ const PropertyAvailabilitySection = ({
         </div>
       </div>
 
-      {/* ✅ Recovery Housing Specific - Move-in Process */}
-      {isRecoveryHousing && (
-        <div className={styles.recoveryMoveInSection}>
-          <h4 className={styles.sectionHeading}>Move-in Process</h4>
-          
-          <div className={styles.formGroup}>
-            <label className="label">Move-in Requirements Timeline</label>
-            <select
-              className="input"
-              name="move_in_timeline"
-              value={formData.move_in_timeline || ''}
-              onChange={onInputChange}
-              disabled={loading}
-            >
-              <option value="">Standard process</option>
-              <option value="immediate">Same-day move-in available</option>
-              <option value="24_hours">24-hour notice required</option>
-              <option value="48_hours">48-hour notice required</option>
-              <option value="1_week">1 week notice required</option>
-              <option value="2_weeks">2+ weeks notice required</option>
-            </select>
-            <div className={styles.helpText}>
-              How much advance notice do you typically need for move-ins?
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* ✅ General Rental Specific - Showing & Viewing */}
+      {/* ✅ SHARED: General Rental Specific - Showing & Viewing */}
       {!isRecoveryHousing && (
         <div className={styles.showingSection}>
           <h4 className={styles.sectionHeading}>Property Showings</h4>
@@ -231,7 +203,7 @@ const PropertyAvailabilitySection = ({
         </div>
       )}
 
-      {/* ✅ Universal - Additional Terms */}
+      {/* ✅ SHARED: Additional Terms */}
       <div className={styles.additionalTermsSection}>
         <h4 className={styles.sectionHeading}>Additional Terms & Conditions</h4>
         
@@ -243,7 +215,7 @@ const PropertyAvailabilitySection = ({
             value={formData.special_terms || ''}
             onChange={onInputChange}
             placeholder={isRecoveryHousing 
-              ? "Any special move-in requirements, program prerequisites, or house-specific policies..."
+              ? "Any special requirements, prerequisites, or house-specific policies..."
               : "Any special lease terms, move-in requirements, or property-specific policies..."
             }
             disabled={loading}

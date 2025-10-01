@@ -1,9 +1,9 @@
-// src/components/features/property/sections/PropertyFinancialSection.js - FIXED WITH PROPER BED/ROOM FIELDS
+// src/components/features/property/sections/PropertyFinancialSection.js - CLEANED FOR SHARED FIELDS ONLY
 import React from 'react';
 import PropTypes from 'prop-types';
 import { acceptedSubsidyPrograms } from '../constants/propertyConstants';
 
-// ✅ UPDATED: Import CSS module
+// ✅ Import CSS module
 import styles from './PropertyFinancialSection.module.css';
 
 const PropertyFinancialSection = ({
@@ -27,21 +27,21 @@ const PropertyFinancialSection = ({
 
   return (
     <>
-      <h3 className="card-title mb-4">Financial Information & Housing Details</h3>
+      <h3 className="card-title mb-4">Financial Information & Basic Housing Details</h3>
       
-      {/* ✅ FIXED: Proper Room and Bed Fields */}
-      <div className={styles.gridThree}>
+      {/* ✅ SHARED: Basic Room and Housing Information */}
+      <div className={styles.gridTwo}>
         <div className={styles.formGroup}>
-          <label className="label">Number of Bedrooms/Rooms *</label>
+          <label className="label">Number of Bedrooms *</label>
           <input
             className={`input ${errors.bedrooms ? styles.inputError : ''}`}
             type="number"
             name="bedrooms"
             value={formData.bedrooms}
             onChange={onInputChange}
-            min="1"
+            min="0"
             max="15"
-            placeholder="3"
+            placeholder="2"
             disabled={loading}
             required
           />
@@ -49,56 +49,10 @@ const PropertyFinancialSection = ({
             <div className={styles.errorMessage}>{errors.bedrooms}</div>
           )}
           <div className={styles.helpText}>
-            Actual number of bedrooms/sleeping rooms
+            Number of separate bedrooms (use 0 for studio)
           </div>
         </div>
         
-        <div className={styles.formGroup}>
-          <label className="label">Total Bed Capacity *</label>
-          <input
-            className={`input ${errors.total_beds ? styles.inputError : ''}`}
-            type="number"
-            name="total_beds"
-            value={formData.total_beds}
-            onChange={onInputChange}
-            min="1"
-            max="50"
-            placeholder="12"
-            disabled={loading}
-            required
-          />
-          {errors.total_beds && (
-            <div className={styles.errorMessage}>{errors.total_beds}</div>
-          )}
-          <div className={styles.helpText}>
-            Total beds across all rooms (can exceed room count)
-          </div>
-        </div>
-        
-        <div className={styles.formGroup}>
-          <label className="label">Currently Available Beds</label>
-          <input
-            className={`input ${errors.available_beds ? styles.inputError : ''}`}
-            type="number"
-            name="available_beds"
-            value={formData.available_beds}
-            onChange={onInputChange}
-            min="0"
-            max={formData.total_beds || 50}
-            placeholder="8"
-            disabled={loading}
-          />
-          {errors.available_beds && (
-            <div className={styles.errorMessage}>{errors.available_beds}</div>
-          )}
-          <div className={styles.helpText}>
-            Number of beds currently vacant
-          </div>
-        </div>
-      </div>
-
-      {/* ✅ UPDATED: Additional Housing Information */}
-      <div className={styles.gridTwo}>
         <div className={styles.formGroup}>
           <label className="label">Bathrooms</label>
           <input
@@ -110,26 +64,16 @@ const PropertyFinancialSection = ({
             min="0.5"
             step="0.5"
             max="10"
-            placeholder="2"
+            placeholder="1"
             disabled={loading}
           />
           <div className={styles.helpText}>
             Number of bathrooms (use 0.5 for half-baths)
           </div>
         </div>
-        
-        <div className={styles.formGroup}>
-          <div className={styles.bedCalculator}>
-            <strong>Bed Density:</strong> 
-            {formData.bedrooms && formData.total_beds ? 
-              ` ${Math.round((formData.total_beds / formData.bedrooms) * 10) / 10} beds per room` : 
-              ' Enter room and bed counts above'
-            }
-          </div>
-        </div>
       </div>
 
-      {/* ✅ UPDATED: Pricing Information */}
+      {/* ✅ SHARED: Pricing Information */}
       <h4 className={styles.sectionHeading}>Pricing & Financial Terms</h4>
       
       <div className={styles.gridTwo}>
@@ -141,9 +85,9 @@ const PropertyFinancialSection = ({
             name="rent_amount"
             value={formData.rent_amount}
             onChange={onInputChange}
-            placeholder="800"
+            placeholder="1200"
             min="0"
-            max="5000"
+            max="10000"
             disabled={loading}
             required
           />
@@ -151,7 +95,7 @@ const PropertyFinancialSection = ({
             <div className={styles.errorMessage}>{errors.rent_amount}</div>
           )}
           <div className={styles.helpText}>
-            Monthly rent per person/bed
+            Monthly rent amount
           </div>
         </div>
         
@@ -165,7 +109,7 @@ const PropertyFinancialSection = ({
             onChange={onInputChange}
             placeholder="Usually equal to monthly rent"
             min="0"
-            max="10000"
+            max="20000"
             disabled={loading}
           />
           <div className={styles.helpText}>
@@ -174,52 +118,32 @@ const PropertyFinancialSection = ({
         </div>
       </div>
 
-      {/* ✅ UPDATED: Additional Financial Information */}
-      <div className={styles.gridTwo}>
-        <div className={styles.formGroup}>
-          <label className="label">Application Fee</label>
-          <input
-            className="input"
-            type="number"
-            name="application_fee"
-            value={formData.application_fee || ''}
-            onChange={onInputChange}
-            placeholder="50"
-            min="0"
-            max="500"
-            disabled={loading}
-          />
-          <div className={styles.helpText}>
-            One-time application processing fee
-          </div>
-        </div>
-        
-        <div className={styles.formGroup}>
-          <label className="label">Weekly Rate (if applicable)</label>
-          <input
-            className="input"
-            type="number"
-            name="weekly_rate"
-            value={formData.weekly_rate || ''}
-            onChange={onInputChange}
-            placeholder="200"
-            min="0"
-            max="1000"
-            disabled={loading}
-          />
-          <div className={styles.helpText}>
-            For short-term or weekly rental options
-          </div>
+      {/* ✅ SHARED: Additional Financial Information */}
+      <div className={styles.formGroup}>
+        <label className="label">Application Fee</label>
+        <input
+          className="input"
+          type="number"
+          name="application_fee"
+          value={formData.application_fee || ''}
+          onChange={onInputChange}
+          placeholder="50"
+          min="0"
+          max="500"
+          disabled={loading}
+        />
+        <div className={styles.helpText}>
+          One-time application processing fee
         </div>
       </div>
 
-      {/* ✅ UPDATED: Housing Subsidy Acceptance */}
+      {/* ✅ SHARED: Housing Subsidy Acceptance */}
       <div className={styles.formGroup}>
         <label className="label">
           Accepted Housing Assistance Programs
         </label>
         <div className={styles.helpTextLarge}>
-          Select all housing assistance programs that your property accepts. This helps match you with qualified residents.
+          Select all housing assistance programs that your property accepts. This helps match you with qualified applicants.
         </div>
         <div className={styles.checkboxColumns}>
           {acceptedSubsidyPrograms.map(subsidy => (
@@ -239,9 +163,9 @@ const PropertyFinancialSection = ({
         )}
       </div>
 
-      {/* ✅ UPDATED: Enhanced Utilities Section with Array Handling */}
+      {/* ✅ SHARED: Utilities Section with Array Handling */}
       <div className={styles.utilitiesSection}>
-        <h4 className={styles.utilitiesTitle}>Utilities & Included Services</h4>
+        <h4 className={styles.sectionHeading}>Utilities & Included Services</h4>
         
         <div className={styles.formGroup}>
           <label className="label">Utilities Included</label>
@@ -264,9 +188,11 @@ const PropertyFinancialSection = ({
         </div>
       </div>
 
-      {/* ✅ UPDATED: Property Features */}
-      <div className={styles.featuresGrid}>
-        <div className={styles.featureGroup}>
+      {/* ✅ SHARED: Basic Property Features */}
+      <div className={styles.basicFeaturesSection}>
+        <h4 className={styles.sectionHeading}>Basic Property Features</h4>
+        
+        <div className={styles.formGroup}>
           <label className={styles.checkboxLabel}>
             <input
               type="checkbox"
@@ -275,40 +201,10 @@ const PropertyFinancialSection = ({
               onChange={onInputChange}
               disabled={loading}
             />
-            <span className={styles.checkboxText}>Furnished Rooms</span>
+            <span className={styles.checkboxText}>Furnished</span>
           </label>
           <div className={styles.helpText}>
-            Basic furniture provided in bedrooms
-          </div>
-          
-          <label className={styles.checkboxLabel}>
-            <input
-              type="checkbox"
-              name="meals_included"
-              checked={formData.meals_included || false}
-              onChange={onInputChange}
-              disabled={loading}
-            />
-            <span className={styles.checkboxText}>Meals Included</span>
-          </label>
-          <div className={styles.helpText}>
-            Some or all meals provided
-          </div>
-        </div>
-        
-        <div className={styles.featureGroup}>
-          <label className={styles.checkboxLabel}>
-            <input
-              type="checkbox"
-              name="linens_provided"
-              checked={formData.linens_provided || false}
-              onChange={onInputChange}
-              disabled={loading}
-            />
-            <span className={styles.checkboxText}>Linens Provided</span>
-          </label>
-          <div className={styles.helpText}>
-            Bedding and towels provided
+            Property comes with basic furniture
           </div>
         </div>
       </div>

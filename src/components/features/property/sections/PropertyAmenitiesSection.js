@@ -1,4 +1,4 @@
-// src/components/features/property/sections/PropertyAmenitiesSection.js - UPDATED WITH CSS MODULE
+// src/components/features/property/sections/PropertyAmenitiesSection.js - CLEANED FOR GENERAL AMENITIES ONLY
 import React from 'react';
 import PropTypes from 'prop-types';
 import { 
@@ -7,7 +7,7 @@ import {
   neighborhoodFeatures
 } from '../constants/propertyConstants';
 
-// ✅ UPDATED: Import CSS module
+// ✅ Import CSS module
 import styles from './PropertyAmenitiesSection.module.css';
 
 const PropertyAmenitiesSection = ({
@@ -19,15 +19,15 @@ const PropertyAmenitiesSection = ({
 }) => {
   return (
     <>
-      <h3 className="card-title mb-4">Amenities & Services</h3>
+      <h3 className="card-title mb-4">Property Amenities & Features</h3>
       
-      {/* ✅ UPDATED: Property Amenities with CSS module */}
+      {/* ✅ SHARED: Property Amenities */}
       <div className="form-group mb-4">
         <label className="label">
           Property Amenities
         </label>
         <div className={styles.helpTextLarge}>
-          Select all amenities available at your property. This helps residents find what they're looking for.
+          Select all amenities available at your property. This helps potential residents find what they're looking for.
         </div>
         <div className={styles.checkboxColumns}>
           {propertyAmenities.map(amenity => (
@@ -47,7 +47,7 @@ const PropertyAmenitiesSection = ({
         )}
       </div>
 
-      {/* ✅ UPDATED: Accessibility Features with CSS module */}
+      {/* ✅ SHARED: Accessibility Features */}
       <div className="form-group mb-4">
         <label className="label">
           Accessibility Features
@@ -73,7 +73,7 @@ const PropertyAmenitiesSection = ({
         )}
       </div>
 
-      {/* ✅ UPDATED: Neighborhood Features with CSS module */}
+      {/* ✅ SHARED: Neighborhood Features */}
       <div className="form-group mb-4">
         <label className="label">
           Neighborhood Characteristics
@@ -99,175 +99,44 @@ const PropertyAmenitiesSection = ({
         )}
       </div>
 
-      {/* ✅ UPDATED: Support Services with CSS module */}
-      <h4 className={styles.cardSubtitle}>Support Services Available</h4>
+      {/* ✅ SHARED: General Property Policies (moved from Recovery section) */}
+      <h4 className={styles.cardSubtitle}>Property Policies</h4>
       
-      <div className={styles.servicesGrid}>
-        <div className={styles.serviceGroup}>
+      <div className={styles.policiesGrid}>
+        <div className={styles.policyGroup}>
           <label className={styles.checkboxLabel}>
             <input
               type="checkbox"
-              name="case_management"
-              checked={formData.case_management || false}
+              name="pets_allowed"
+              checked={formData.pets_allowed || false}
               onChange={onInputChange}
               disabled={loading}
             />
-            <span className={styles.checkboxText}>Case Management Services</span>
+            <span className={styles.checkboxText}>Pets Allowed</span>
           </label>
           <div className={styles.helpText}>
-            Professional case management available on-site
-          </div>
-          
-          <label className={styles.checkboxLabel}>
-            <input
-              type="checkbox"
-              name="counseling_services"
-              checked={formData.counseling_services || false}
-              onChange={onInputChange}
-              disabled={loading}
-            />
-            <span className={styles.checkboxText}>Counseling Services</span>
-          </label>
-          <div className={styles.helpText}>
-            Individual or group counseling available
-          </div>
-          
-          <label className={styles.checkboxLabel}>
-            <input
-              type="checkbox"
-              name="job_training"
-              checked={formData.job_training || false}
-              onChange={onInputChange}
-              disabled={loading}
-            />
-            <span className={styles.checkboxText}>Job Training/Placement</span>
-          </label>
-          <div className={styles.helpText}>
-            Employment assistance and job training programs
+            Residents can have pets (specify restrictions in additional notes if needed)
           </div>
         </div>
         
-        <div className={styles.serviceGroup}>
+        <div className={styles.policyGroup}>
           <label className={styles.checkboxLabel}>
             <input
               type="checkbox"
-              name="medical_services"
-              checked={formData.medical_services || false}
+              name="smoking_allowed"
+              checked={formData.smoking_allowed || false}
               onChange={onInputChange}
               disabled={loading}
             />
-            <span className={styles.checkboxText}>Medical Services</span>
+            <span className={styles.checkboxText}>Smoking Allowed (Designated Areas)</span>
           </label>
           <div className={styles.helpText}>
-            On-site medical care or clinic access
-          </div>
-          
-          <label className={styles.checkboxLabel}>
-            <input
-              type="checkbox"
-              name="transportation_services"
-              checked={formData.transportation_services || false}
-              onChange={onInputChange}
-              disabled={loading}
-            />
-            <span className={styles.checkboxText}>Transportation Services</span>
-          </label>
-          <div className={styles.helpText}>
-            Transportation assistance for appointments/work
-          </div>
-          
-          <label className={styles.checkboxLabel}>
-            <input
-              type="checkbox"
-              name="life_skills_training"
-              checked={formData.life_skills_training || false}
-              onChange={onInputChange}
-              disabled={loading}
-            />
-            <span className={styles.checkboxText}>Life Skills Training</span>
-          </label>
-          <div className={styles.helpText}>
-            Training in daily living and independent living skills
+            Smoking permitted in designated outdoor areas only
           </div>
         </div>
       </div>
 
-      {/* ✅ UPDATED: Licensing & Certification with CSS module */}
-      <h4 className={styles.cardSubtitle}>Licensing & Certification</h4>
-      
-      <div className={styles.licensingGrid}>
-        <div className="form-group">
-          <label className="label">License Number</label>
-          <input
-            className="input"
-            type="text"
-            name="license_number"
-            value={formData.license_number || ''}
-            onChange={onInputChange}
-            placeholder="State licensing number (if required)"
-            disabled={loading}
-          />
-          <div className={styles.helpText}>
-            Required in some states for recovery housing
-          </div>
-        </div>
-        
-        <div className="form-group">
-          <label className="label">Accreditation</label>
-          <input
-            className="input"
-            type="text"
-            name="accreditation"
-            value={formData.accreditation || ''}
-            onChange={onInputChange}
-            placeholder="e.g., NARR, CARF, State certification"
-            disabled={loading}
-          />
-          <div className={styles.helpText}>
-            Professional certifications or accreditations
-          </div>
-        </div>
-      </div>
-
-      {/* ✅ UPDATED: Property Status with CSS module */}
-      <h4 className={styles.cardSubtitle}>Property Status</h4>
-      
-      <div className={styles.statusGrid}>
-        <div className="form-group">
-          <label className={styles.checkboxLabel}>
-            <input
-              type="checkbox"
-              name="accepting_applications"
-              checked={formData.accepting_applications !== false}
-              onChange={onInputChange}
-              disabled={loading}
-            />
-            <span className={styles.checkboxText}>Currently Accepting Applications</span>
-          </label>
-          <div className={styles.helpText}>
-            Uncheck to temporarily stop receiving new applications
-          </div>
-        </div>
-        
-        <div className="form-group">
-          <label className="label">Property Status</label>
-          <select
-            className="input"
-            name="property_status"
-            value={formData.property_status || 'available'}
-            onChange={onInputChange}
-            disabled={loading}
-          >
-            <option value="available">Available</option>
-            <option value="waitlist">Waitlist Only</option>
-            <option value="full">Currently Full</option>
-            <option value="temporarily_closed">Temporarily Closed</option>
-            <option value="under_renovation">Under Renovation</option>
-          </select>
-        </div>
-      </div>
-
-      {/* ✅ UPDATED: Additional Notes with CSS module */}
+      {/* ✅ SHARED: Additional Information */}
       <div className="form-group mb-4">
         <label className="label">Additional Information</label>
         <textarea
@@ -275,7 +144,7 @@ const PropertyAmenitiesSection = ({
           name="additional_notes"
           value={formData.additional_notes || ''}
           onChange={onInputChange}
-          placeholder="Any additional information about your property, special programs, or unique features..."
+          placeholder="Any additional information about your property, special features, or unique amenities..."
           style={{ minHeight: '80px', resize: 'vertical' }}
           disabled={loading}
           maxLength="750"

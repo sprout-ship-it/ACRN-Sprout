@@ -1,14 +1,14 @@
-// src/components/features/property/GeneralPropertyForm.js - FINAL INTEGRATED VERSION
+// src/components/features/property/GeneralPropertyForm.js - FINAL CLEAN VERSION
 import React from 'react';
 import PropTypes from 'prop-types';
 
-// ✅ Import the reusable section components
+// ✅ Import the cleaned section components
 import PropertyBasicInfoSection from './sections/PropertyBasicInfoSection';
 import PropertyFinancialSection from './sections/PropertyFinancialSection';
 import PropertyAmenitiesSection from './sections/PropertyAmenitiesSection';
 import PropertyAvailabilitySection from './sections/PropertyAvailabilitySection';
 
-// ✅ Import CSS foundation and renamed component module
+// ✅ Import CSS foundation and component module
 import '../../../styles/main.css';
 import styles from './GeneralPropertyForm.module.css';
 
@@ -33,7 +33,7 @@ const GeneralPropertyForm = ({
         />
       </div>
 
-      {/* ✅ SECTION 2: Financial Information & Housing Details */}
+      {/* ✅ SECTION 2: Financial Information & Basic Housing Details */}
       <div className={styles.sectionCard}>
         <PropertyFinancialSection
           formData={formData}
@@ -44,7 +44,7 @@ const GeneralPropertyForm = ({
         />
       </div>
 
-      {/* ✅ SECTION 3: Availability & Lease Terms (NEW UNIVERSAL SECTION) */}
+      {/* ✅ SECTION 3: Availability & Lease Terms */}
       <div className={styles.sectionCard}>
         <PropertyAvailabilitySection
           formData={formData}
@@ -66,49 +66,10 @@ const GeneralPropertyForm = ({
         />
       </div>
 
-      {/* ✅ SECTION 5: Additional Information */}
+      {/* ✅ SECTION 5: General Rental Specific Communication Preferences */}
       <div className={styles.sectionCard}>
-        <h3 className={styles.sectionCardTitle}>Additional Information</h3>
+        <h3 className={styles.sectionCardTitle}>Communication & Contact Preferences</h3>
         
-        <div className={styles.formGroup}>
-          <label className={styles.formLabel}>Property Description</label>
-          <textarea
-            className={styles.formTextarea}
-            name="description"
-            value={formData.description || ''}
-            onChange={onInputChange}
-            placeholder="Describe your property, neighborhood, special features, and what makes it a great place to live..."
-            disabled={loading}
-            maxLength="1000"
-          />
-          <div className={styles.characterCounter}>
-            {(formData.description?.length || 0)}/1000 characters
-          </div>
-          <div className={styles.helperText}>
-            A good description helps attract the right tenants and sets clear expectations.
-          </div>
-        </div>
-
-        <div className={styles.formGroup}>
-          <label className={styles.formLabel}>Tenant Requirements or Preferences</label>
-          <textarea
-            className={styles.formTextarea}
-            name="additional_notes"
-            value={formData.additional_notes || ''}
-            onChange={onInputChange}
-            placeholder="Any specific tenant requirements, preferences, or additional information (e.g., income requirements, employment verification, references needed)..."
-            disabled={loading}
-            maxLength="500"
-          />
-          <div className={styles.characterCounter}>
-            {(formData.additional_notes?.length || 0)}/500 characters
-          </div>
-          <div className={styles.helperText}>
-            Specify any requirements or preferences for potential tenants.
-          </div>
-        </div>
-
-        {/* ✅ Contact Preferences */}
         <div className={styles.formGrid}>
           <div className={styles.formGroup}>
             <label className={styles.formLabel}>Preferred Contact Method</label>
@@ -147,6 +108,25 @@ const GeneralPropertyForm = ({
             <div className={styles.helperText}>
               How quickly do you typically respond to inquiries?
             </div>
+          </div>
+        </div>
+
+        <div className={styles.formGroup}>
+          <label className={styles.formLabel}>Tenant Requirements or Preferences</label>
+          <textarea
+            className={styles.formTextarea}
+            name="tenant_requirements"
+            value={formData.tenant_requirements || ''}
+            onChange={onInputChange}
+            placeholder="Any specific tenant requirements or preferences (e.g., income requirements, employment verification, references needed, credit score minimums)..."
+            disabled={loading}
+            maxLength="500"
+          />
+          <div className={styles.characterCounter}>
+            {(formData.tenant_requirements?.length || 0)}/500 characters
+          </div>
+          <div className={styles.helperText}>
+            Specify any requirements or preferences for potential tenants.
           </div>
         </div>
       </div>

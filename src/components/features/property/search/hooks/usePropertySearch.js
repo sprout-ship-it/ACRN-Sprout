@@ -1,47 +1,69 @@
-// src/components/features/property/search/hooks/usePropertySearch.js
+// src/components/features/property/search/hooks/usePropertySearch.js - UPDATED FOR NEW SEARCH STRATEGY
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { supabase } from '../../../../../utils/supabase';
 
-// ✅ UPDATED: Custom hook for property search logic - FULLY ALIGNED WITH SCHEMA.SQL
 const usePropertySearch = (user) => {
-  // ✅ Search state management
+  // ✅ UPDATED: Search state management with new search types
   const [loading, setLoading] = useState(false);
   const [properties, setProperties] = useState([]);
   const [totalResults, setTotalResults] = useState(0);
   const [currentPage, setCurrentPage] = useState(1);
-  const [searchMode, setSearchMode] = useState('basic'); // 'basic' or 'recovery'
+  const [searchType, setSearchType] = useState('all_housing'); // 'all_housing', 'general_only', 'recovery_only'
   const [userPreferences, setUserPreferences] = useState(null);
   const [savedProperties, setSavedProperties] = useState(new Set());
 
-  // ✅ Filter state management - consolidated and organized
-  const [basicFilters, setBasicFilters] = useState({
+  // ✅ UPDATED: Reorganized filter state to match new components
+  const [sharedFilters, setSharedFilters] = useState({
     location: '',
     state: '',
     maxRent: '',
     minBedrooms: '',
-    housingType: [],
+    availableDate: '',
+    acceptedSubsidies: [],
     furnished: false,
     petsAllowed: false,
-    utilityBudget: ''
+    smokingAllowed: false,
+    utilitiesIncluded: []
   });
 
   const [recoveryFilters, setRecoveryFilters] = useState({
-    recoveryHousingOnly: true,
-    soberness: '',
+    // Recovery Housing Details
+    minAvailableBeds: '',
+    maxWeeklyRate: '',
+    
+    // Recovery Services & Features
+    mealsIncluded: false,
+    linensProvided: false,
+    immediateMovein: false,
+    
+    // Recovery Program Requirements
+    recoveryStage: '',
+    sobrietyTime: '',
+    treatmentCompletion: '',
+    acceptablePrograms: [],
+    
+    // Demographics & Community
+    genderPreference: '',
+    agePreference: '',
+    acceptsCriminalBackground: false,
+    
+    // Recovery Support Services
     caseManagement: false,
     counselingServices: false,
-    supportGroups: false,
-    requiredPrograms: [],
-    recoveryStage: ''
+    jobTraining: false,
+    medicalServices: false,
+    transportationServices: false,
+    lifeSkillsTraining: false,
+    
+    // Licensing & Accreditation
+    requiresLicensing: false,
+    requiresAccreditation: false
   });
 
   const [advancedFilters, setAdvancedFilters] = useState({
-    acceptedSubsidies: [],
     amenities: [],
-    utilitiesIncluded: [],
     accessibilityFeatures: [],
-    smokingPolicy: '',
-    guestPolicy: '',
+    neighborhoodFeatures: [],
     backgroundCheck: '',
     leaseLength: '',
     moveInCost: ''
@@ -50,90 +72,72 @@ const usePropertySearch = (user) => {
   // ✅ Debouncing ref for search optimization
   const searchTimeoutRef = useRef(null);
 
-  // ✅ CORRECTED: Load user preferences from applicant_matching_profiles (EXACT SCHEMA ALIGNMENT)
-const loadUserPreferences = useCallback(async () => {
-  if (!user?.id) {
-    console.log('⚠️ usePropertySearch: No user ID provided');
-    return;
-  }
-
-  try {
-    console.log('👤 usePropertySearch: Loading user preferences for auth user:', user.id);
-    
-    // ✅ Get registrant_profiles.id first since applicant_matching_profiles.user_id references that
-    const { data: registrantData, error: registrantError } = await supabase
-      .from('registrant_profiles')
-      .select('id')
-      .eq('user_id', user.id)
-      .single();
-
-    console.log('📋 usePropertySearch: Registrant query result:', {
-      registrantData,
-      registrantError,
-      authUserId: user.id
-    });
-
-    if (registrantError || !registrantData) {
-      console.log('ℹ️ usePropertySearch: No registrant profile found for user - this is likely the problem!');
+  // ✅ Load user preferences from applicant_matching_profiles
+  const loadUserPreferences = useCallback(async () => {
+    if (!user?.id) {
+      console.log('⚠️ usePropertySearch: No user ID provided');
       return;
     }
 
-    console.log('🔍 usePropertySearch: About to query applicant_matching_profiles with registrant_id:', registrantData.id);
+    try {
+      console.log('👤 usePropertySearch: Loading user preferences for auth user:', user.id);
+      
+      const { data: registrantData, error: registrantError } = await supabase
+        .from('registrant_profiles')
+        .select('id')
+        .eq('user_id', user.id)
+        .single();
 
-    // ✅ UPDATED: Query with exact schema field names
-    const { data, error } = await supabase
-      .from('applicant_matching_profiles')
-      .select(`
-        user_id,
-        primary_city,
-        primary_state,
-        budget_min,
-        budget_max,
-        housing_types_accepted,
-        preferred_bedrooms,
-        furnished_preference,
-        pets_owned,
-        pets_comfortable,
-        recovery_stage,
-        substance_free_home_required,
-        move_in_date,
-        accessibility_needed,
-        parking_required,
-        public_transit_access,
-        utilities_included_preference
-      `)
-      .eq('user_id', registrantData.id)
-      .single();
-
-    console.log('📊 usePropertySearch: Applicant profile query result:', {
-      data,
-      error,
-      queryUserId: registrantData.id
-    });
-
-    if (error) {
-      if (error.code !== 'PGRST116') { // Not "no rows returned"
-        console.error('❌ usePropertySearch: Error loading user preferences:', error);
-      } else {
-        console.log('ℹ️ usePropertySearch: No applicant matching profile found for user');
+      if (registrantError || !registrantData) {
+        console.log('ℹ️ usePropertySearch: No registrant profile found for user');
+        return;
       }
-      return;
-    }
 
-    if (data) {
-      setUserPreferences(data);
-      console.log('✅ usePropertySearch: User preferences loaded from applicant_matching_profiles');
+      const { data, error } = await supabase
+        .from('applicant_matching_profiles')
+        .select(`
+          user_id,
+          primary_city,
+          primary_state,
+          budget_min,
+          budget_max,
+          housing_types_accepted,
+          preferred_bedrooms,
+          furnished_preference,
+          pets_owned,
+          pets_comfortable,
+          recovery_stage,
+          substance_free_home_required,
+          move_in_date,
+          accessibility_needed,
+          parking_required,
+          public_transit_access,
+          utilities_included_preference
+        `)
+        .eq('user_id', registrantData.id)
+        .single();
+
+      if (error) {
+        if (error.code !== 'PGRST116') {
+          console.error('❌ usePropertySearch: Error loading user preferences:', error);
+        }
+        return;
+      }
+
+      if (data) {
+        setUserPreferences(data);
+        console.log('✅ usePropertySearch: User preferences loaded');
+      }
+    } catch (err) {
+      console.error('💥 usePropertySearch: Exception loading user preferences:', err);
     }
-  } catch (err) {
-    console.error('💥 usePropertySearch: Exception loading user preferences:', err);
-  }
-}, [user?.id]);
-  // ✅ Load saved properties from favorites table (SCHEMA ALIGNED)
+  }, [user?.id]);
+
+  // ✅ Load saved properties from favorites table
   const loadSavedProperties = useCallback(async () => {
     if (!user?.id) return;
 
     try {
-      // ✅ CORRECTED: Use proper favorites table structure from schema
       const { data: registrantData } = await supabase
         .from('registrant_profiles')
         .select('id')
@@ -155,7 +159,7 @@ const loadUserPreferences = useCallback(async () => {
     }
   }, [user?.id]);
 
-  // ✅ CORRECTED: Property search with exact schema field names
+  // ✅ UPDATED: Property search with new search type logic
   const performSearch = useCallback(async (resetPage = true) => {
     if (resetPage) {
       setCurrentPage(1);
@@ -163,121 +167,194 @@ const loadUserPreferences = useCallback(async () => {
     
     setLoading(true);
     try {
-      console.log('🔍 Searching properties with mode:', searchMode, 'Page:', currentPage);
+      console.log('🔍 Searching properties with type:', searchType, 'Page:', currentPage);
       
-      // ✅ CORRECTED: Build query with exact schema field names
+      // ✅ UPDATED: Build query based on search type
       let query = supabase
         .from('properties')
         .select('*', { count: 'exact' })
         .eq('status', 'available')
         .eq('accepting_applications', true);
 
-      // ✅ Enhanced location filtering
-      if (basicFilters.location.trim()) {
-        const searchLocation = basicFilters.location.trim();
+      // ✅ UPDATED: Apply search type filtering
+      if (searchType === 'general_only') {
+        query = query.eq('is_recovery_housing', false);
+      } else if (searchType === 'recovery_only') {
+        query = query.eq('is_recovery_housing', true);
+      }
+      // For 'all_housing', we don't filter by is_recovery_housing
+
+      // ✅ SHARED FILTERS: Apply to all search types
+      
+      // Location filtering
+      if (sharedFilters.location.trim()) {
+        const searchLocation = sharedFilters.location.trim();
         const locationParts = searchLocation.split(',').map(part => part.trim());
         
         if (locationParts.length === 2) {
-          // Handle "City, State" format
           const [city, state] = locationParts;
           query = query.or(`city.ilike.%${city}%,state.ilike.%${state}%,address.ilike.%${searchLocation}%`);
         } else {
-          // Single location term - search across multiple fields
           query = query.or(`city.ilike.%${searchLocation}%,state.ilike.%${searchLocation}%,address.ilike.%${searchLocation}%`);
         }
       }
 
-      // ✅ Basic filter applications
-      if (basicFilters.state) {
-        query = query.eq('state', basicFilters.state);
+      // Basic shared filters
+      if (sharedFilters.state) {
+        query = query.eq('state', sharedFilters.state);
       }
 
-      if (basicFilters.maxRent) {
-        query = query.lte('monthly_rent', parseInt(basicFilters.maxRent));
+      if (sharedFilters.maxRent) {
+        query = query.lte('monthly_rent', parseInt(sharedFilters.maxRent));
       }
 
-      if (basicFilters.minBedrooms) {
-        query = query.gte('bedrooms', parseInt(basicFilters.minBedrooms));
+      if (sharedFilters.minBedrooms) {
+        query = query.gte('bedrooms', parseInt(sharedFilters.minBedrooms));
       }
 
-      // ✅ CORRECTED: Housing type filtering with exact schema property_type values
-      if (basicFilters.housingType.length > 0) {
-        const typeConditions = basicFilters.housingType.map(type => `property_type.eq.${type}`).join(',');
-        query = query.or(typeConditions);
+      if (sharedFilters.availableDate) {
+        query = query.lte('available_date', sharedFilters.availableDate);
       }
 
-      // ✅ CORRECTED: Property feature filters with exact schema field names
-      if (basicFilters.furnished) {
+      // Shared property features
+      if (sharedFilters.furnished) {
         query = query.eq('furnished', true);
       }
 
-      if (basicFilters.petsAllowed) {
+      if (sharedFilters.petsAllowed) {
         query = query.eq('pets_allowed', true);
       }
 
-      // ✅ CORRECTED: Recovery housing mode filtering with exact schema fields
-      if (searchMode === 'recovery') {
-        if (recoveryFilters.recoveryHousingOnly) {
-          query = query.eq('is_recovery_housing', true); // ✅ FIXED: Correct field name
-        }
+      if (sharedFilters.smokingAllowed) {
+        query = query.eq('smoking_allowed', true);
+      }
+
+      // Housing assistance programs
+      if (sharedFilters.acceptedSubsidies.length > 0) {
+        query = query.overlaps('accepted_subsidies', sharedFilters.acceptedSubsidies);
+      }
+
+      // Utilities included
+      if (sharedFilters.utilitiesIncluded.length > 0) {
+        query = query.overlaps('utilities_included', sharedFilters.utilitiesIncluded);
+      }
+
+      // ✅ RECOVERY FILTERS: Only apply if searching recovery housing
+      if (searchType === 'all_housing' || searchType === 'recovery_only') {
         
-        // ✅ CORRECTED: Use individual boolean fields instead of non-existent recovery_features array
+        // Recovery housing details
+        if (recoveryFilters.minAvailableBeds) {
+          query = query.gte('available_beds', parseInt(recoveryFilters.minAvailableBeds));
+        }
+
+        if (recoveryFilters.maxWeeklyRate) {
+          query = query.lte('weekly_rate', parseInt(recoveryFilters.maxWeeklyRate));
+        }
+
+        // Recovery services & features
+        if (recoveryFilters.mealsIncluded) {
+          query = query.eq('meals_included', true);
+        }
+
+        if (recoveryFilters.linensProvided) {
+          query = query.eq('linens_provided', true);
+        }
+
+        if (recoveryFilters.immediateMovein) {
+          query = query.in('move_in_timeline', ['immediate', '24_hours']);
+        }
+
+        // Recovery program requirements
+        if (recoveryFilters.sobrietyTime) {
+          // For sobriety filtering, we want properties that accept people with AT LEAST this much sobriety
+          // So if user has 90 days, show properties requiring 90 days or less
+          const sobrietyDays = {
+            '0_days': 0,
+            '30_days': 30,
+            '60_days': 60, 
+            '90_days': 90,
+            '6_months': 180,
+            '1_year': 365,
+            '2_years': 730
+          };
+          
+          if (sobrietyDays[recoveryFilters.sobrietyTime] !== undefined) {
+            // This is complex - for now, we'll match exact requirements
+            query = query.eq('min_sobriety_time', recoveryFilters.sobrietyTime);
+          }
+        }
+
+        if (recoveryFilters.treatmentCompletion) {
+          query = query.eq('treatment_completion_required', recoveryFilters.treatmentCompletion);
+        }
+
+        if (recoveryFilters.acceptablePrograms.length > 0) {
+          query = query.overlaps('required_programs', recoveryFilters.acceptablePrograms);
+        }
+
+        // Demographics & community
+        if (recoveryFilters.genderPreference && recoveryFilters.genderPreference !== 'any') {
+          query = query.or(`gender_restrictions.eq.any,gender_restrictions.eq.${recoveryFilters.genderPreference}`);
+        }
+
+        if (recoveryFilters.acceptsCriminalBackground) {
+          query = query.eq('criminal_background_ok', true);
+        }
+
+        // Recovery support services
         if (recoveryFilters.caseManagement) {
           query = query.eq('case_management', true);
         }
-        
+
         if (recoveryFilters.counselingServices) {
           query = query.eq('counseling_services', true);
         }
-        
-        if (recoveryFilters.supportGroups) {
-          // Note: This would need to be mapped to job_training, medical_services, etc. 
-          // or we need to add a support_groups field to the schema
-          // For now, we'll look for properties with any support services
-          query = query.or('counseling_services.eq.true,case_management.eq.true,job_training.eq.true');
+
+        if (recoveryFilters.jobTraining) {
+          query = query.eq('job_training', true);
         }
 
-        // ✅ CORRECTED: Use exact schema field for required programs
-        if (recoveryFilters.requiredPrograms.length > 0) {
-          query = query.overlaps('required_programs', recoveryFilters.requiredPrograms);
+        if (recoveryFilters.medicalServices) {
+          query = query.eq('medical_services', true);
         }
 
-        // ✅ NEW: Add sobriety time filtering if provided
-        if (recoveryFilters.soberness) {
-          query = query.eq('min_sobriety_time', recoveryFilters.soberness);
+        if (recoveryFilters.transportationServices) {
+          query = query.eq('transportation_services', true);
+        }
+
+        if (recoveryFilters.lifeSkillsTraining) {
+          query = query.eq('life_skills_training', true);
+        }
+
+        // Licensing & accreditation
+        if (recoveryFilters.requiresLicensing) {
+          query = query.not('license_number', 'is', null);
+        }
+
+        if (recoveryFilters.requiresAccreditation) {
+          query = query.not('accreditation', 'is', null);
         }
       }
 
-      // ✅ CORRECTED: Advanced filters with exact schema field names
-      if (advancedFilters.acceptedSubsidies.length > 0) {
-        query = query.overlaps('accepted_subsidies', advancedFilters.acceptedSubsidies);
-      }
-
+      // ✅ ADVANCED FILTERS: Apply to all search types
       if (advancedFilters.amenities.length > 0) {
         query = query.overlaps('amenities', advancedFilters.amenities);
-      }
-
-      if (advancedFilters.utilitiesIncluded.length > 0) {
-        query = query.overlaps('utilities_included', advancedFilters.utilitiesIncluded);
       }
 
       if (advancedFilters.accessibilityFeatures.length > 0) {
         query = query.overlaps('accessibility_features', advancedFilters.accessibilityFeatures);
       }
 
-      if (advancedFilters.smokingPolicy) {
-        query = query.eq('smoking_allowed', advancedFilters.smokingPolicy === 'allowed');
+      if (advancedFilters.neighborhoodFeatures.length > 0) {
+        query = query.overlaps('neighborhood_features', advancedFilters.neighborhoodFeatures);
       }
 
       if (advancedFilters.leaseLength) {
-        // ✅ CORRECTED: Use lease_duration from schema
         query = query.ilike('lease_duration', `%${advancedFilters.leaseLength}%`);
       }
 
       if (advancedFilters.moveInCost) {
-        // Calculate total move-in cost (rent + deposit + fees)
         const maxMoveInCost = parseInt(advancedFilters.moveInCost);
-        // This is a complex calculation, so we'll filter on monthly_rent as a proxy
         query = query.lte('monthly_rent', Math.floor(maxMoveInCost / 2));
       }
 
@@ -289,12 +366,18 @@ const loadUserPreferences = useCallback(async () => {
       
       query = query.range(from, to);
 
-      // ✅ CORRECTED: Smart ordering with exact schema field names
-      if (searchMode === 'recovery') {
-        query = query.order('is_recovery_housing', { ascending: false })
+      // ✅ UPDATED: Smart ordering based on search type
+      if (searchType === 'recovery_only') {
+        // For recovery-only search, prioritize by service availability and bed availability
+        query = query.order('available_beds', { ascending: false })
+                    .order('case_management', { ascending: false })
                     .order('monthly_rent', { ascending: true });
+      } else if (searchType === 'general_only') {
+        // For general-only search, standard rental prioritization
+        query = query.order('monthly_rent', { ascending: true })
+                    .order('bedrooms', { ascending: true });
       } else {
-        // Prioritize recovery housing in general search too
+        // For all housing, prioritize recovery housing first, then by price
         query = query.order('is_recovery_housing', { ascending: false })
                     .order('monthly_rent', { ascending: true });
       }
@@ -314,38 +397,36 @@ const loadUserPreferences = useCallback(async () => {
         setCurrentPage(1);
       }
       
-      console.log(`✅ Found ${results.length} properties (${count} total)`);
+      console.log(`✅ Found ${results.length} properties (${count} total) for search type: ${searchType}`);
       
     } catch (error) {
       console.error('Error searching properties:', error);
       setProperties([]);
       setTotalResults(0);
-      throw error; // Re-throw to allow component to handle user notification
+      throw error;
     } finally {
       setLoading(false);
     }
-  }, [basicFilters, recoveryFilters, advancedFilters, searchMode, currentPage]);
+  }, [sharedFilters, recoveryFilters, advancedFilters, searchType, currentPage]);
 
-  // ✅ OPTIMIZED: Debounced search function
+  // ✅ Debounced search function
   const debouncedSearch = useCallback((resetPage = true) => {
-    // Clear existing timeout
     if (searchTimeoutRef.current) {
       clearTimeout(searchTimeoutRef.current);
     }
 
-    // Set new timeout for debounced search
     searchTimeoutRef.current = setTimeout(() => {
       performSearch(resetPage);
-    }, 300); // 300ms debounce delay
+    }, 300);
   }, [performSearch]);
 
-  // ✅ Filter change handlers with automatic search triggering
-  const handleBasicFilterChange = useCallback((field, value) => {
-    setBasicFilters(prev => ({
+  // ✅ UPDATED: Filter change handlers
+  const handleSharedFilterChange = useCallback((field, value) => {
+    setSharedFilters(prev => ({
       ...prev,
       [field]: value
     }));
-    debouncedSearch(true); // Reset to page 1 on filter changes
+    debouncedSearch(true);
   }, [debouncedSearch]);
 
   const handleRecoveryFilterChange = useCallback((field, value) => {
@@ -364,9 +445,9 @@ const loadUserPreferences = useCallback(async () => {
     debouncedSearch(true);
   }, [debouncedSearch]);
 
-  // ✅ Array filter changes (checkboxes, multi-select)
+  // ✅ Array filter changes
   const handleArrayFilterChange = useCallback((filterGroup, field, value, isChecked) => {
-    const setFilter = filterGroup === 'basic' ? setBasicFilters : 
+    const setFilter = filterGroup === 'shared' ? setSharedFilters : 
                      filterGroup === 'recovery' ? setRecoveryFilters : 
                      setAdvancedFilters;
     
@@ -380,117 +461,109 @@ const loadUserPreferences = useCallback(async () => {
     debouncedSearch(true);
   }, [debouncedSearch]);
 
-  // ✅ Search mode change handler
-  const handleSearchModeChange = useCallback((mode) => {
-    setSearchMode(mode);
-    
-    // Update recovery filters based on mode
-    if (mode === 'recovery') {
-      setRecoveryFilters(prev => ({
-        ...prev,
-        recoveryHousingOnly: true
-      }));
-    }
-    
+  // ✅ UPDATED: Search type change handler
+  const handleSearchTypeChange = useCallback((type) => {
+    setSearchType(type);
     debouncedSearch(true);
   }, [debouncedSearch]);
 
-  // ✅ CORRECTED: Auto-populate filters from user preferences (EXACT SCHEMA ALIGNMENT)
+  // ✅ Apply user preferences to filters
   const applyUserPreferences = useCallback(() => {
     if (userPreferences) {
-      console.log('🔄 Applying user preferences from applicant_matching_profiles...');
+      console.log('🔄 Applying user preferences...');
       
-      // ✅ CORRECTED: Map exact schema fields to filter fields
       const autoFilters = {
         location: userPreferences.primary_city ? 
           `${userPreferences.primary_city}, ${userPreferences.primary_state}` : '',
         state: userPreferences.primary_state || '',
         maxRent: userPreferences.budget_max?.toString() || '',
         minBedrooms: userPreferences.preferred_bedrooms || '',
-        housingType: userPreferences.housing_types_accepted || [],
         furnished: userPreferences.furnished_preference || false,
         petsAllowed: userPreferences.pets_owned || userPreferences.pets_comfortable || false
       };
       
-      setBasicFilters(prev => ({ ...prev, ...autoFilters }));
+      setSharedFilters(prev => ({ ...prev, ...autoFilters }));
       
-      // ✅ CORRECTED: Apply recovery-specific preferences with exact schema fields
       if (userPreferences.recovery_stage || userPreferences.substance_free_home_required) {
         setRecoveryFilters(prev => ({
           ...prev,
-          recoveryStage: userPreferences.recovery_stage || '',
-          recoveryHousingOnly: userPreferences.substance_free_home_required || true
+          recoveryStage: userPreferences.recovery_stage || ''
         }));
-      }
-      
-      // ✅ CORRECTED: Apply advanced preferences with exact schema fields
-      const advancedPrefs = {};
-      if (userPreferences.accessibility_needed) {
-        advancedPrefs.accessibilityFeatures = ['wheelchair_accessible'];
-      }
-      
-      if (Object.keys(advancedPrefs).length > 0) {
-        setAdvancedFilters(prev => ({ ...prev, ...advancedPrefs }));
+        
+        // If user needs substance-free housing, default to recovery housing search
+        if (userPreferences.substance_free_home_required) {
+          setSearchType('recovery_only');
+        }
       }
       
       debouncedSearch(true);
       console.log('✅ User preferences applied successfully');
-      return true; // Success
+      return true;
     }
-    console.log('ℹ️ No user preferences found to apply');
-    return false; // No preferences found
+    return false;
   }, [userPreferences, debouncedSearch]);
 
-  // ✅ Clear all filters
+  // ✅ UPDATED: Clear all filters
   const clearAllFilters = useCallback(() => {
-    setBasicFilters({
+    setSharedFilters({
       location: '',
       state: '',
       maxRent: '',
       minBedrooms: '',
-      housingType: [],
+      availableDate: '',
+      acceptedSubsidies: [],
       furnished: false,
       petsAllowed: false,
-      utilityBudget: ''
+      smokingAllowed: false,
+      utilitiesIncluded: []
     });
     
     setRecoveryFilters({
-      recoveryHousingOnly: searchMode === 'recovery',
-      soberness: '',
+      minAvailableBeds: '',
+      maxWeeklyRate: '',
+      mealsIncluded: false,
+      linensProvided: false,
+      immediateMovein: false,
+      recoveryStage: '',
+      sobrietyTime: '',
+      treatmentCompletion: '',
+      acceptablePrograms: [],
+      genderPreference: '',
+      agePreference: '',
+      acceptsCriminalBackground: false,
       caseManagement: false,
       counselingServices: false,
-      supportGroups: false,
-      requiredPrograms: [],
-      recoveryStage: ''
+      jobTraining: false,
+      medicalServices: false,
+      transportationServices: false,
+      lifeSkillsTraining: false,
+      requiresLicensing: false,
+      requiresAccreditation: false
     });
     
     setAdvancedFilters({
-      acceptedSubsidies: [],
       amenities: [],
-      utilitiesIncluded: [],
       accessibilityFeatures: [],
-      smokingPolicy: '',
-      guestPolicy: '',
+      neighborhoodFeatures: [],
       backgroundCheck: '',
       leaseLength: '',
       moveInCost: ''
     });
 
     debouncedSearch(true);
-  }, [searchMode, debouncedSearch]);
+  }, [debouncedSearch]);
 
   // ✅ Page navigation
   const handlePageChange = useCallback((newPage) => {
     setCurrentPage(newPage);
-    performSearch(false); // Don't reset page, just search with new page
+    performSearch(false);
   }, [performSearch]);
 
-  // ✅ CORRECTED: Save property using exact schema favorites structure
+  // ✅ Save property functionality
   const handleSaveProperty = useCallback(async (property) => {
     if (!user?.id) return false;
 
     try {
-      // Get registrant profile id
       const { data: registrantData } = await supabase
         .from('registrant_profiles')
         .select('id')
@@ -498,7 +571,6 @@ const loadUserPreferences = useCallback(async () => {
         .single();
 
       if (registrantData) {
-        // ✅ CORRECTED: Use exact schema favorites structure
         await supabase
           .from('favorites')
           .insert({ 
@@ -541,7 +613,7 @@ const loadUserPreferences = useCallback(async () => {
   const totalPages = Math.ceil(totalResults / 12);
   const showPagination = totalPages > 1;
 
-  // ✅ Return all state and handlers for the component
+  // ✅ UPDATED: Return updated state and handlers
   return {
     // Search state
     loading,
@@ -550,28 +622,28 @@ const loadUserPreferences = useCallback(async () => {
     totalPages,
     currentPage,
     showPagination,
-    searchMode,
+    searchType,
     userPreferences,
     savedProperties,
 
-    // Filter states
-    basicFilters,
+    // Updated filter states
+    sharedFilters,
     recoveryFilters,
     advancedFilters,
 
-    // Action handlers
-    handleBasicFilterChange,
+    // Updated action handlers
+    handleSharedFilterChange,
     handleRecoveryFilterChange,
     handleAdvancedFilterChange,
     handleArrayFilterChange,
-    handleSearchModeChange,
+    handleSearchTypeChange,
     handlePageChange,
     handleSaveProperty,
     
     // Utility functions
     applyUserPreferences,
     clearAllFilters,
-    performSearch: () => performSearch(true) // Manual search trigger
+    performSearch: () => performSearch(true)
   };
 };
 

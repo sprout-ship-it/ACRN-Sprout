@@ -1,16 +1,17 @@
-// src/components/features/property/PropertySearch.js - UPDATED WITH CSS MODULE
+// src/components/features/property/PropertySearch.js - UPDATED FOR NEW SEARCH STRATEGY
 import React, { useState } from 'react';
 import { useAuth } from '../../../hooks/useAuth';
 import { supabase } from '../../../utils/supabase';
 
-// ✅ Import new modular components
-import PropertySearchFilters from './search/PropertySearchFilters';
-import PropertyRecoveryFilters from './search/PropertyRecoveryFilters';
+// ✅ UPDATED: Import new search strategy components
+import PropertyTypeSelection from './search/PropertyTypeSelection';
+import PropertySharedFilters from './search/PropertySharedFilters';
+import PropertyRecoverySearchFilters from './search/PropertyRecoverySearchFilters';
 import PropertyAdvancedFilters from './search/PropertyAdvancedFilters';
 import PropertySearchResults from './search/PropertySearchResults';
 import usePropertySearch from './search/hooks/usePropertySearch';
 
-// ✅ UPDATED: Import our new CSS foundation and component module
+// ✅ Import CSS foundation and component module
 import '../../../styles/main.css';
 import styles from './PropertySearch.module.css';
 
@@ -20,7 +21,7 @@ const PropertySearch = () => {
   // ✅ Advanced filters toggle state
   const [showAdvancedFilters, setShowAdvancedFilters] = useState(false);
 
-  // ✅ Get all search state and handlers from custom hook
+  // ✅ UPDATED: Get all search state and handlers from updated custom hook
   const {
     // Search state
     loading,
@@ -29,21 +30,21 @@ const PropertySearch = () => {
     totalPages,
     currentPage,
     showPagination,
-    searchMode,
+    searchType,
     userPreferences,
     savedProperties,
 
-    // Filter states
-    basicFilters,
+    // Updated filter states
+    sharedFilters,
     recoveryFilters,
     advancedFilters,
 
-    // Action handlers
-    handleBasicFilterChange,
+    // Updated action handlers
+    handleSharedFilterChange,
     handleRecoveryFilterChange,
     handleAdvancedFilterChange,
     handleArrayFilterChange,
-    handleSearchModeChange,
+    handleSearchTypeChange,
     handlePageChange,
     handleSaveProperty,
     
@@ -165,79 +166,56 @@ I'd love to discuss availability and the application process. Thank you!`,
   const handleSavePropertyWithFeedback = (property) => {
     const success = handleSaveProperty(property);
     if (success) {
-      alert(`Property "${property.title}" saved to your favorites! (Feature coming soon)`);
+      alert(`Property "${property.title}" saved to your favorites!`);
     }
   };
 
   return (
     <div className="content">
-      {/* ✅ UPDATED: Header using CSS module */}
+      {/* ✅ UPDATED: Header */}
       <div className={styles.headerSection}>
-        <h1 className={styles.headerTitle}>Find Recovery-Friendly Housing</h1>
+        <h1 className={styles.headerTitle}>Find Housing That Supports Your Journey</h1>
         <p className={styles.headerSubtitle}>
-          Search for housing options that support your recovery journey and meet your needs
+          Search for housing options tailored to your needs - from general rentals to specialized recovery housing with support services
         </p>
       </div>
 
-      {/* ✅ UPDATED: Search Mode Toggle using CSS module */}
-      <div className={styles.searchModeCard}>
-        <h3 className={styles.searchModeTitle}>Search Type</h3>
-        <div className={styles.searchModeNavigation}>
-          <ul className={styles.searchModeNavList}>
-            <li className={styles.searchModeNavItem}>
-              <button
-                className={`${styles.searchModeNavButton} ${searchMode === 'basic' ? styles.active : ''}`}
-                onClick={() => handleSearchModeChange('basic')}
-              >
-                <span className={styles.navIcon}>🏠</span>
-                <span>All Housing</span>
-              </button>
-            </li>
-            <li className={styles.searchModeNavItem}>
-              <button
-                className={`${styles.searchModeNavButton} ${searchMode === 'recovery' ? styles.active : ''}`}
-                onClick={() => handleSearchModeChange('recovery')}
-              >
-                <span className={styles.navIcon}>🏡</span>
-                <span>Recovery Housing</span>
-              </button>
-            </li>
-          </ul>
-        </div>
-        <p className={styles.searchModeDescription}>
-          {searchMode === 'basic' 
-            ? 'Search all available housing with recovery-friendly options prioritized'
-            : 'Search specifically for recovery housing with specialized support services'
-          }
-        </p>
+      {/* ✅ NEW: Property Type Selection replaces search mode toggle */}
+      <div className={styles.typeSelectionSection}>
+        <PropertyTypeSelection
+          selectedType={searchType}
+          onTypeChange={handleSearchTypeChange}
+          loading={loading}
+        />
       </div>
 
-      {/* ✅ UPDATED: Basic Search Filters using CSS module */}
+      {/* ✅ UPDATED: Shared Search Filters (always visible) */}
       <div className={styles.filtersSection}>
-        <PropertySearchFilters
-          basicFilters={basicFilters}
-          onBasicFilterChange={handleBasicFilterChange}
+        <PropertySharedFilters
+          sharedFilters={sharedFilters}
+          onSharedFilterChange={handleSharedFilterChange}
           onArrayFilterChange={handleArrayFilterChange}
           onUseMyPreferences={handleUseMyPreferences}
           onManualSearch={performSearch}
           onClearAllFilters={clearAllFilters}
           userPreferences={userPreferences}
           loading={loading}
+          searchType={searchType}
         />
       </div>
 
-      {/* ✅ UPDATED: Recovery-Specific Filters using CSS module */}
+      {/* ✅ NEW: Recovery-Specific Filters (conditional) */}
       <div className={styles.filtersSection}>
-        <PropertyRecoveryFilters
+        <PropertyRecoverySearchFilters
           recoveryFilters={recoveryFilters}
           onRecoveryFilterChange={handleRecoveryFilterChange}
           onArrayFilterChange={handleArrayFilterChange}
-          searchMode={searchMode}
+          searchType={searchType}
           loading={loading}
         />
       </div>
 
-      {/* ✅ UPDATED: Advanced Filters using CSS module */}
+      {/* ✅ UPDATED: Advanced Filters (collapsible) */}
       <div className={styles.filtersSection}>
         <PropertyAdvancedFilters
           advancedFilters={advancedFilters}
@@ -249,7 +227,7 @@ I'd love to discuss availability and the application process. Thank you!`,
         />
       </div>
 
-      {/* ✅ Search Results */}
+      {/* ✅ UPDATED: Search Results with enhanced context */}
       <PropertySearchResults
         loading={loading}
         properties={properties}
@@ -257,15 +235,55 @@ I'd love to discuss availability and the application process. Thank you!`,
         currentPage={currentPage}
         totalPages={totalPages}
         showPagination={showPagination}
-        searchMode={searchMode}
+        searchType={searchType}
         savedProperties={savedProperties}
         onPageChange={handlePageChange}
         onContactLandlord={handleContactLandlord}
         onSaveProperty={handleSavePropertyWithFeedback}
         onSendHousingInquiry={handleSendHousingInquiry}
         onClearAllFilters={clearAllFilters}
-        onSearchModeChange={handleSearchModeChange}
+        onSearchTypeChange={handleSearchTypeChange}
       />
+
+      {/* ✅ NEW: Search Context Help */}
+      <div className={styles.searchHelpSection}>
+        <div className="card">
+          <div className={styles.helpContent}>
+            <h4 className={styles.helpTitle}>Search Tips</h4>
+            <div className={styles.helpGrid}>
+              <div className={styles.helpItem}>
+                <span className={styles.helpIcon}>🏠</span>
+                <div className={styles.helpText}>
+                  <strong>All Housing Types:</strong> Shows both general rentals and recovery housing, with recovery-friendly options prioritized
+                </div>
+              </div>
+              
+              <div className={styles.helpItem}>
+                <span className={styles.helpIcon}>🏢</span>
+                <div className={styles.helpText}>
+                  <strong>General Rentals:</strong> Standard apartments, houses, and condos with traditional rental terms
+                </div>
+              </div>
+              
+              <div className={styles.helpItem}>
+                <span className={styles.helpIcon}>🌱</span>
+                <div className={styles.helpText}>
+                  <strong>Recovery Housing:</strong> Specialized sober living homes and recovery residences with support services
+                </div>
+              </div>
+              
+              {userPreferences && (
+                <div className={styles.helpItem}>
+                  <span className={styles.helpIcon}>⚙️</span>
+                  <div className={styles.helpText}>
+                    <strong>Quick Setup:</strong> Use the "Use My Preferences" button to automatically fill filters from your profile
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      </div>
     </div>
   );
 };
