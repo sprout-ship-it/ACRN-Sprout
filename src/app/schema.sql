@@ -1855,6 +1855,44 @@ GRANT SELECT ON auth.users TO postgres, anon, authenticated, service_role;
 GRANT SELECT, INSERT, UPDATE, DELETE ON ALL TABLES IN SCHEMA public TO authenticated;
 GRANT USAGE, SELECT ON ALL SEQUENCES IN SCHEMA public TO authenticated;
 
+--added to allow user to save favorite properties
+-- =====================================================
+-- FAVORITES TABLE (Polymorphic favorites system)
+-- =====================================================
+
+-- Create favorites table for favoriting profiles and properties
+CREATE TABLE IF NOT EXISTS favorites (
+  id UUID DEFAULT uuid_generate_v4() PRIMARY KEY,
+  favoriting_user_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
+  favorited_profile_id UUID REFERENCES registrant_profiles(id) ON DELETE CASCADE,
+  favorited_property_id UUID REFERENCES properties(id) ON DELETE CASCADE,
+  favorite_type VARCHAR NOT NULL CHECK (favorite_type IN ('profile', 'property')),
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+  
+  -- Ensure a user can't favorite the same item twice
+  UNIQUE(favoriting_user_id, favorited_profile_id, favorite_type),
+  UNIQUE(favoriting_user_id, favorited_property_id, favorite_type),
+  
+  -- Ensure only one of the favorited_* fields is populated based on type
+  CONSTRAINT check_favorite_target CHECK (
+    (favorite_type = 'profile' AND favorited_profile_id IS NOT NULL AND favorited_property_id IS NULL) OR
+    (favorite_type = 'property' AND favorited_property_id IS NOT NULL AND favorited_profile_id IS NULL)
+  )
+);
+
+-- Enable RLS
+ALTER TABLE favorites ENABLE ROW LEVEL SECURITY;
+
+-- Create RLS policy - Users can only manage their own favorites
+CREATE POLICY "Users can manage their own favorites" ON favorites
+  FOR ALL USING (auth.uid() = favoriting_user_id)
+  WITH CHECK (auth.uid() = favoriting_user_id);
+
+-- Create indexes for performance
+CREATE INDEX IF NOT EXISTS idx_favorites_user_type ON favorites(favoriting_user_id, favorite_type);
+CREATE INDEX IF NOT EXISTS idx_favorites_property ON favorites(favorited_property_id) WHERE favorite_type = 'property';
+CREATE INDEX IF NOT EXISTS idx_favorites_profile ON favorites(favorited_profile_id) WHERE favorite_type = 'profile';
+CREATE INDEX IF NOT EXISTS idx_favorites_created_at ON favorites(created_at);
 -- ============================================================================
 -- SCHEMA COMPLETION SUMMARY
 -- ============================================================================
