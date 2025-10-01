@@ -10,7 +10,7 @@
 --   • Properties: Separate table linked to landlord_profiles for scalability
 --   • Matching: housing_matches references properties.id (not landlord_profiles.id)
 --   • Security: Comprehensive RLS policies for cross-role access and data protection
--- Last Updated: September 2025
+-- Last Updated: October 2025
 -- ============================================================================
 
 -- ============================================================================
@@ -474,70 +474,21 @@ CREATE TABLE properties (
   featured BOOLEAN DEFAULT FALSE,
   views_count INTEGER DEFAULT 0,
   inquiries_count INTEGER DEFAULT 0,
-
-  -- Proper policy if properties should be public
-CREATE POLICY "Properties are publicly readable" ON properties
-FOR SELECT USING (true);
-
--- Or if they should only be readable by their owners:
-CREATE POLICY "Users can read their own properties" ON properties
-FOR SELECT USING (
-  landlord_id IN (
-    SELECT id FROM landlord_profiles 
-    WHERE user_id = auth.uid()
-  )
-);
--- Allow users to save their own favorites
-CREATE POLICY "Users can insert their own favorites" ON favorites
-FOR INSERT WITH CHECK (
-  favoriting_user_id IN (
-    SELECT id FROM registrant_profiles 
-    WHERE user_id = auth.uid()
-  )
-);
--- Favorites Table (for favoriting profiles and properties)
-CREATE TABLE IF NOT EXISTS favorites (
-  id UUID DEFAULT uuid_generate_v4() PRIMARY KEY,
-  favoriting_user_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
-  favorited_profile_id UUID REFERENCES registrant_profiles(id) ON DELETE CASCADE,
-  favorited_property_id UUID REFERENCES properties(id) ON DELETE CASCADE,
-  favorite_type VARCHAR NOT NULL CHECK (favorite_type IN ('profile', 'property')),
-  created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
-  
-  -- Ensure a user can't favorite the same item twice
-  UNIQUE(favoriting_user_id, favorited_profile_id, favorite_type),
-  UNIQUE(favoriting_user_id, favorited_property_id, favorite_type),
-  
-  -- Ensure only one of the favorited_* fields is populated based on type
-  CONSTRAINT check_favorite_target CHECK (
-    (favorite_type = 'profile' AND favorited_profile_id IS NOT NULL AND favorited_property_id IS NULL) OR
-    (favorite_type = 'property' AND favorited_property_id IS NOT NULL AND favorited_profile_id IS NULL)
-  )
-);
-
--- Add RLS policies
-ALTER TABLE favorites ENABLE ROW LEVEL SECURITY;
-
--- Users can only see/manage their own favorites
-CREATE POLICY "Users can manage their own favorites" ON favorites
-  FOR ALL USING (auth.uid() = favoriting_user_id);
-
--- Index for performance
-CREATE INDEX IF NOT EXISTS idx_favorites_user_type ON favorites(favoriting_user_id, favorite_type);
-CREATE INDEX IF NOT EXISTS idx_favorites_property ON favorites(favorited_property_id) WHERE favorite_type = 'property';
-CREATE INDEX IF NOT EXISTS idx_favorites_profile ON favorites(favorited_profile_id) WHERE favorite_type = 'profile';
   
   -- ============================================================================
   -- CONSTRAINTS
   -- ============================================================================
   CONSTRAINT valid_bedrooms CHECK (bedrooms >= 0),
   CONSTRAINT valid_total_beds CHECK (total_beds >= 0),
-  CONSTRAINT valid_available_beds CHECK (available_beds >= 0 AND (total_beds IS NULL OR available_beds <= total_beds)),
+  CONSTRAINT check_available_beds_valid CHECK (
+    available_beds >= 0 AND 
+    (total_beds IS NULL OR available_beds <= total_beds)
+  ),
   CONSTRAINT valid_bathrooms CHECK (bathrooms >= 0.5),
   CONSTRAINT valid_rent CHECK (monthly_rent > 0),
   CONSTRAINT valid_status CHECK (status IN ('available', 'waitlist', 'full', 'temporarily_closed', 'under_renovation')),
   
-  -- ✅ UPDATED: Enhanced property type constraint with all new types
+  -- Enhanced property type constraint with all new types
   CONSTRAINT valid_property_type CHECK (
     (is_recovery_housing = FALSE AND property_type IN (
       'apartment', 
@@ -567,6 +518,11 @@ CREATE INDEX IF NOT EXISTS idx_favorites_profile ON favorites(favorited_profile_
     ))
   )
 );
+
+-- Add comments to clarify bed vs bedroom distinction
+COMMENT ON COLUMN properties.bedrooms IS 'Number of actual rooms/bedrooms in the property';
+COMMENT ON COLUMN properties.total_beds IS 'Total number of beds across all rooms (can exceed bedroom count)';
+COMMENT ON COLUMN properties.available_beds IS 'Number of currently vacant/available beds';
 
 -- ============================================================================
 -- EMPLOYER PROFILES
@@ -841,21 +797,21 @@ CREATE TABLE match_requests (
 
 CREATE TABLE favorites (
   id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-  favoriting_user_id UUID NOT NULL REFERENCES registrant_profiles(id) ON DELETE CASCADE,
+  favoriting_user_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
   
   -- Can favorite profiles or properties
-  favorited_profile_id UUID,
-  favorited_property_id UUID REFERENCES properties(id),
+  favorited_profile_id UUID REFERENCES registrant_profiles(id) ON DELETE CASCADE,
+  favorited_property_id UUID REFERENCES properties(id) ON DELETE CASCADE,
   
-  favorite_type VARCHAR(20) NOT NULL CHECK (favorite_type IN ('housing', 'property', 'employment', 'peer-support')),
+  favorite_type VARCHAR(20) NOT NULL CHECK (favorite_type IN ('profile', 'property')),
   
   created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
   
   -- Constraints
-  CONSTRAINT unique_favorite UNIQUE (favoriting_user_id, favorited_profile_id, favorited_property_id, favorite_type),
+  CONSTRAINT unique_favorite UNIQUE (favoriting_user_id, favorited_profile_id, favorited_property_id),
   CONSTRAINT favorite_target_check CHECK (
-    (favorite_type IN ('property', 'housing') AND favorited_property_id IS NOT NULL) OR
-    (favorite_type IN ('employment', 'peer-support') AND favorited_profile_id IS NOT NULL)
+    (favorite_type = 'profile' AND favorited_profile_id IS NOT NULL AND favorited_property_id IS NULL) OR
+    (favorite_type = 'property' AND favorited_property_id IS NOT NULL AND favorited_profile_id IS NULL)
   )
 );
 
@@ -1558,9 +1514,25 @@ CREATE POLICY "Users can view their employment matches" ON employment_matches
     )
   );
 
--- Similar INSERT and UPDATE policies for employment_matches...
+-- Users can create employment matches for themselves
 CREATE POLICY "Users can create employment matches" ON employment_matches
   FOR INSERT WITH CHECK (
+    applicant_id IN (
+      SELECT amp.id FROM applicant_matching_profiles amp 
+      JOIN registrant_profiles rp ON amp.user_id = rp.id 
+      WHERE rp.user_id = auth.uid()
+    )
+    OR 
+    employer_id IN (
+      SELECT ep.id FROM employer_profiles ep
+      JOIN registrant_profiles rp ON ep.user_id = rp.id 
+      WHERE rp.user_id = auth.uid()
+    )
+  );
+
+-- Users can update employment matches they're involved in
+CREATE POLICY "Users can update their employment matches" ON employment_matches
+  FOR UPDATE USING (
     applicant_id IN (
       SELECT amp.id FROM applicant_matching_profiles amp 
       JOIN registrant_profiles rp ON amp.user_id = rp.id 
@@ -1594,9 +1566,25 @@ CREATE POLICY "Users can view their peer support matches" ON peer_support_matche
     )
   );
 
--- Similar INSERT policies for peer_support_matches...
+-- Users can create peer support matches for themselves
 CREATE POLICY "Users can create peer support matches" ON peer_support_matches
   FOR INSERT WITH CHECK (
+    applicant_id IN (
+      SELECT amp.id FROM applicant_matching_profiles amp 
+      JOIN registrant_profiles rp ON amp.user_id = rp.id 
+      WHERE rp.user_id = auth.uid()
+    )
+    OR 
+    peer_support_id IN (
+      SELECT psp.id FROM peer_support_profiles psp
+      JOIN registrant_profiles rp ON psp.user_id = rp.id 
+      WHERE rp.user_id = auth.uid()
+    )
+  );
+
+-- Users can update peer support matches they're involved in
+CREATE POLICY "Users can update their peer support matches" ON peer_support_matches
+  FOR UPDATE USING (
     applicant_id IN (
       SELECT amp.id FROM applicant_matching_profiles amp 
       JOIN registrant_profiles rp ON amp.user_id = rp.id 
@@ -1655,6 +1643,27 @@ CREATE POLICY "Users can create match groups" ON match_groups
     )
   );
 
+-- Users can update match groups they're part of
+CREATE POLICY "Users can update their match groups" ON match_groups
+  FOR UPDATE USING (
+    applicant_1_id IN (
+      SELECT amp.id FROM applicant_matching_profiles amp
+      JOIN registrant_profiles rp ON amp.user_id = rp.id
+      WHERE rp.user_id = auth.uid()
+    )
+    OR applicant_2_id IN (
+      SELECT amp.id FROM applicant_matching_profiles amp
+      JOIN registrant_profiles rp ON amp.user_id = rp.id
+      WHERE rp.user_id = auth.uid()
+    )
+    OR property_id IN (
+      SELECT p.id FROM properties p
+      JOIN landlord_profiles lp ON p.landlord_id = lp.id
+      JOIN registrant_profiles rp ON lp.user_id = rp.id
+      WHERE rp.user_id = auth.uid()
+    )
+  );
+
 -- ============================================================================
 -- MATCH REQUESTS RLS POLICIES
 -- ============================================================================
@@ -1709,6 +1718,20 @@ CREATE POLICY "Users can view their match requests" ON match_requests
        WHERE rp.user_id = auth.uid()
      ))
     OR
+    (requester_type = 'employer' AND 
+     requester_id IN (
+       SELECT ep.id FROM employer_profiles ep
+       JOIN registrant_profiles rp ON ep.user_id = rp.id
+       WHERE rp.user_id = auth.uid()
+     ))
+    OR
+    (requester_type = 'peer-support' AND 
+     requester_id IN (
+       SELECT psp.id FROM peer_support_profiles psp
+       JOIN registrant_profiles rp ON psp.user_id = rp.id
+       WHERE rp.user_id = auth.uid()
+     ))
+    OR
     -- Recipient perspective
     (recipient_type = 'applicant' AND 
      recipient_id IN (
@@ -1723,12 +1746,26 @@ CREATE POLICY "Users can view their match requests" ON match_requests
        JOIN registrant_profiles rp ON lp.user_id = rp.id
        WHERE rp.user_id = auth.uid()
      ))
+    OR
+    (recipient_type = 'employer' AND 
+     recipient_id IN (
+       SELECT ep.id FROM employer_profiles ep
+       JOIN registrant_profiles rp ON ep.user_id = rp.id
+       WHERE rp.user_id = auth.uid()
+     ))
+    OR
+    (recipient_type = 'peer-support' AND 
+     recipient_id IN (
+       SELECT psp.id FROM peer_support_profiles psp
+       JOIN registrant_profiles rp ON psp.user_id = rp.id
+       WHERE rp.user_id = auth.uid()
+     ))
   );
 
 -- Users can update match requests they're involved in
 CREATE POLICY "Users can update their match requests" ON match_requests
   FOR UPDATE USING (
-    -- Same logic as SELECT policy - both requester and recipient can update
+    -- Both requester and recipient can update
     (requester_type = 'applicant' AND 
      requester_id IN (
        SELECT amp.id FROM applicant_matching_profiles amp
@@ -1756,6 +1793,34 @@ CREATE POLICY "Users can update their match requests" ON match_requests
        JOIN registrant_profiles rp ON lp.user_id = rp.id
        WHERE rp.user_id = auth.uid()
      ))
+    OR
+    (requester_type = 'employer' AND 
+     requester_id IN (
+       SELECT ep.id FROM employer_profiles ep
+       JOIN registrant_profiles rp ON ep.user_id = rp.id
+       WHERE rp.user_id = auth.uid()
+     ))
+    OR
+    (recipient_type = 'employer' AND 
+     recipient_id IN (
+       SELECT ep.id FROM employer_profiles ep
+       JOIN registrant_profiles rp ON ep.user_id = rp.id
+       WHERE rp.user_id = auth.uid()
+     ))
+    OR
+    (requester_type = 'peer-support' AND 
+     requester_id IN (
+       SELECT psp.id FROM peer_support_profiles psp
+       JOIN registrant_profiles rp ON psp.user_id = rp.id
+       WHERE rp.user_id = auth.uid()
+     ))
+    OR
+    (recipient_type = 'peer-support' AND 
+     recipient_id IN (
+       SELECT psp.id FROM peer_support_profiles psp
+       JOIN registrant_profiles rp ON psp.user_id = rp.id
+       WHERE rp.user_id = auth.uid()
+     ))
   );
 
 -- ============================================================================
@@ -1764,28 +1829,13 @@ CREATE POLICY "Users can update their match requests" ON match_requests
 
 -- Users can manage their own favorites
 CREATE POLICY "Users can view their own favorites" ON favorites
-  FOR SELECT USING (
-    favoriting_user_id IN (
-      SELECT rp.id FROM registrant_profiles rp
-      WHERE rp.user_id = auth.uid()
-    )
-  );
+  FOR SELECT USING (auth.uid() = favoriting_user_id);
 
 CREATE POLICY "Users can create their own favorites" ON favorites
-  FOR INSERT WITH CHECK (
-    favoriting_user_id IN (
-      SELECT rp.id FROM registrant_profiles rp
-      WHERE rp.user_id = auth.uid()
-    )
-  );
+  FOR INSERT WITH CHECK (auth.uid() = favoriting_user_id);
 
 CREATE POLICY "Users can delete their own favorites" ON favorites
-  FOR DELETE USING (
-    favoriting_user_id IN (
-      SELECT rp.id FROM registrant_profiles rp
-      WHERE rp.user_id = auth.uid()
-    )
-  );
+  FOR DELETE USING (auth.uid() = favoriting_user_id);
 
 -- ============================================================================
 -- EMPLOYER FAVORITES RLS POLICIES
@@ -1816,33 +1866,6 @@ CREATE POLICY "Users can delete their own employer favorites" ON employer_favori
     )
   );
 
-ALTER TABLE properties 
-ADD COLUMN total_beds INTEGER;
-
--- Add comment to clarify the distinction
-COMMENT ON COLUMN properties.bedrooms IS 'Number of actual rooms/bedrooms in the property';
-COMMENT ON COLUMN properties.total_beds IS 'Total number of beds across all rooms (can exceed bedroom count)';
-COMMENT ON COLUMN properties.available_beds IS 'Number of currently vacant/available beds';
--- Remove any legacy constraint that incorrectly limits available_beds to bedrooms
--- (This is needed because sober living homes can have multiple beds per room)
-ALTER TABLE properties 
-DROP CONSTRAINT IF EXISTS valid_available_beds;
-
--- Add the correct constraint that ensures available_beds doesn't exceed total_beds
-ALTER TABLE properties 
-ADD CONSTRAINT check_available_beds_valid 
-CHECK (available_beds IS NULL OR total_beds IS NULL OR available_beds <= total_beds);
-
--- Add check constraint to ensure available_beds doesn't exceed total_beds
-ALTER TABLE properties 
-ADD CONSTRAINT check_available_beds_valid 
-CHECK (available_beds IS NULL OR total_beds IS NULL OR available_beds <= total_beds);
-
--- Update any existing properties where total_beds should match current bedrooms
--- (You may want to adjust this based on your existing data)
-UPDATE properties 
-SET total_beds = bedrooms 
-WHERE total_beds IS NULL AND bedrooms IS NOT NULL;
 -- ============================================================================
 -- SECTION 9: PERMISSIONS AND GRANTS
 -- ============================================================================
@@ -1855,44 +1878,6 @@ GRANT SELECT ON auth.users TO postgres, anon, authenticated, service_role;
 GRANT SELECT, INSERT, UPDATE, DELETE ON ALL TABLES IN SCHEMA public TO authenticated;
 GRANT USAGE, SELECT ON ALL SEQUENCES IN SCHEMA public TO authenticated;
 
---added to allow user to save favorite properties
--- =====================================================
--- FAVORITES TABLE (Polymorphic favorites system)
--- =====================================================
-
--- Create favorites table for favoriting profiles and properties
-CREATE TABLE IF NOT EXISTS favorites (
-  id UUID DEFAULT uuid_generate_v4() PRIMARY KEY,
-  favoriting_user_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
-  favorited_profile_id UUID REFERENCES registrant_profiles(id) ON DELETE CASCADE,
-  favorited_property_id UUID REFERENCES properties(id) ON DELETE CASCADE,
-  favorite_type VARCHAR NOT NULL CHECK (favorite_type IN ('profile', 'property')),
-  created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
-  
-  -- Ensure a user can't favorite the same item twice
-  UNIQUE(favoriting_user_id, favorited_profile_id, favorite_type),
-  UNIQUE(favoriting_user_id, favorited_property_id, favorite_type),
-  
-  -- Ensure only one of the favorited_* fields is populated based on type
-  CONSTRAINT check_favorite_target CHECK (
-    (favorite_type = 'profile' AND favorited_profile_id IS NOT NULL AND favorited_property_id IS NULL) OR
-    (favorite_type = 'property' AND favorited_property_id IS NOT NULL AND favorited_profile_id IS NULL)
-  )
-);
-
--- Enable RLS
-ALTER TABLE favorites ENABLE ROW LEVEL SECURITY;
-
--- Create RLS policy - Users can only manage their own favorites
-CREATE POLICY "Users can manage their own favorites" ON favorites
-  FOR ALL USING (auth.uid() = favoriting_user_id)
-  WITH CHECK (auth.uid() = favoriting_user_id);
-
--- Create indexes for performance
-CREATE INDEX IF NOT EXISTS idx_favorites_user_type ON favorites(favoriting_user_id, favorite_type);
-CREATE INDEX IF NOT EXISTS idx_favorites_property ON favorites(favorited_property_id) WHERE favorite_type = 'property';
-CREATE INDEX IF NOT EXISTS idx_favorites_profile ON favorites(favorited_profile_id) WHERE favorite_type = 'profile';
-CREATE INDEX IF NOT EXISTS idx_favorites_created_at ON favorites(created_at);
 -- ============================================================================
 -- SCHEMA COMPLETION SUMMARY
 -- ============================================================================
@@ -1907,13 +1892,22 @@ CREATE INDEX IF NOT EXISTS idx_favorites_created_at ON favorites(created_at);
 6. ✅ All triggers and functions properly organized
 7. ✅ Ready for landlord registration and property management
 8. ✅ Security-first design with proper access controls
+9. ✅ Fixed bed/bedroom constraints for sober living homes
+10. ✅ Clean favorites system with proper constraints
 
 ARCHITECTURE FLOW:
 auth.users.id → registrant_profiles.user_id → role_profiles → properties/matches
 
+COMMUNICATION & SECURITY:
+- Cross-role visibility through match relationships
+- Comprehensive RLS protecting all data access
+- Structured communication through match_requests
+- Favorites system for properties and profiles
+
 READY FOR NEXT PHASE:
 - Landlord registration workflow
-- Property creation and management
+- Property creation and management  
 - Property listing and search
 - Enhanced matching algorithms
+- Communication features
 */
