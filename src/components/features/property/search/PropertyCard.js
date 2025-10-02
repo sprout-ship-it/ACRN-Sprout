@@ -1,6 +1,8 @@
-// src/components/features/property/search/PropertyCard.js - ENHANCED WITH PROPER FAVORITES
+// src/components/features/property/search/PropertyCard.js - FIXED HOUSING INQUIRY
 import React, { useState } from 'react';
 import PropTypes from 'prop-types';
+import { useAuth } from '../../../../hooks/useAuth';
+import { supabase } from '../../../../utils/supabase';
 
 // ✅ Import CSS module
 import styles from './PropertyCard.module.css';
@@ -12,7 +14,9 @@ const PropertyCard = ({
   onSaveProperty,
   onSendHousingInquiry
 }) => {
+  const { user, profile } = useAuth();
   const [saving, setSaving] = useState(false);
+  const [sendingInquiry, setSendingInquiry] = useState(false);
   const isSaved = savedProperties.has(property.id);
 
   // ✅ Handle save with loading state
@@ -29,9 +33,161 @@ const PropertyCard = ({
     }
   };
 
+  // ✅ FIXED: Proper housing inquiry implementation
+  const handleSendHousingInquiry = async () => {
+    if (sendingInquiry || !user || !profile) return;
+
+    setSendingInquiry(true);
+    
+    try {
+      // 1. Get applicant profile ID
+      const { data: applicantProfile, error: applicantError } = await supabase
+        .from('applicant_matching_profiles')
+        .select('id')
+        .eq('user_id', profile.id)
+        .single();
+
+      if (applicantError || !applicantProfile) {
+        throw new Error('You must complete your applicant profile before sending housing inquiries.');
+      }
+
+      // 2. Get landlord profile ID from property
+      if (!property.landlord_id) {
+        throw new Error('Unable to send inquiry - landlord information not available.');
+      }
+
+      const { data: landlordProfile, error: landlordError } = await supabase
+        .from('landlord_profiles')
+        .select('id, user_id')
+        .eq('id', property.landlord_id)
+        .single();
+
+      if (landlordError || !landlordProfile) {
+        throw new Error('Unable to send inquiry - landlord profile not found.');
+      }
+
+      // 3. Check for daily request limit (5 per day)
+      const today = new Date().toISOString().split('T')[0];
+      const { data: todayRequests, error: countError } = await supabase
+        .from('match_requests')
+        .select('id')
+        .eq('requester_type', 'applicant')
+        .eq('requester_id', applicantProfile.id)
+        .eq('request_type', 'housing')
+        .gte('created_at', `${today}T00:00:00Z`)
+        .lt('created_at', `${today}T23:59:59Z`);
+
+      if (countError) {
+        console.warn('Error checking request limit:', countError);
+      } else if (todayRequests && todayRequests.length >= 5) {
+        throw new Error('You have reached the daily limit of 5 housing inquiries. Please try again tomorrow.');
+      }
+
+      // 4. Check if request already exists for this property
+      const { data: existingRequest, error: existingError } = await supabase
+        .from('match_requests')
+        .select('id, status')
+        .eq('requester_type', 'applicant')
+        .eq('requester_id', applicantProfile.id)
+        .eq('recipient_type', 'landlord')
+        .eq('recipient_id', landlordProfile.id)
+        .eq('property_id', property.id)
+        .eq('request_type', 'housing')
+        .single();
+
+      if (existingRequest) {
+        if (existingRequest.status === 'pending') {
+          throw new Error('You have already sent an inquiry for this property. Please wait for a response.');
+        } else if (existingRequest.status === 'accepted') {
+          throw new Error('Your inquiry for this property has already been accepted!');
+        } else if (existingRequest.status === 'rejected') {
+          throw new Error('Your previous inquiry for this property was declined. You cannot send another inquiry.');
+        }
+      }
+
+      // 5. Create the housing inquiry
+      const inquiryMessage = `Hi! I'm very interested in your property "${property.title}" located at ${property.address}, ${property.city}, ${property.state}.
+
+Property Details I'm Interested In:
+- Monthly Rent: $${property.monthly_rent}
+- Bedrooms: ${property.bedrooms || 'Studio'}
+- Bathrooms: ${property.bathrooms}
+${property.is_recovery_housing ? '- Recovery Housing: Yes' : ''}
+${property.available_beds ? `- Available Beds: ${property.available_beds}` : ''}
+
+I would love to learn more about:
+- Current availability and move-in timeline
+- Application process and requirements
+- Viewing availability
+${property.is_recovery_housing ? '- Recovery support services available' : ''}
+
+Please let me know if you need any additional information from me. I'm looking forward to hearing from you!
+
+Thank you for your time.`;
+
+      const { data: newRequest, error: insertError } = await supabase
+        .from('match_requests')
+        .insert({
+          requester_type: 'applicant',
+          requester_id: applicantProfile.id,
+          recipient_type: 'landlord', 
+          recipient_id: landlordProfile.id,
+          property_id: property.id,
+          request_type: 'housing',
+          message: inquiryMessage,
+          status: 'pending'
+        })
+        .select()
+        .single();
+
+      if (insertError) {
+        throw new Error(insertError.message);
+      }
+
+      // 6. Update favorites table with outreach status (if property is saved)
+      if (isSaved) {
+        try {
+          const { error: favoritesError } = await supabase
+            .from('favorites')
+            .update({
+              outreach_status: 'inquiry_sent',
+              last_inquiry_date: new Date().toISOString()
+            })
+            .eq('favoriting_user_id', user.id)
+            .eq('favorited_property_id', property.id)
+            .eq('favorite_type', 'property');
+
+          if (favoritesError) {
+            console.warn('Could not update favorite outreach status:', favoritesError);
+            // Non-critical error, don't block the success
+          } else {
+            console.log('✅ Updated favorite outreach status for property:', property.id);
+          }
+        } catch (favError) {
+          console.warn('Could not update favorite status:', favError);
+          // Non-critical error, don't block the success
+        }
+      }
+
+      alert(`Housing inquiry sent successfully! 
+
+Your inquiry has been sent to the property owner for "${property.title}". 
+
+You can track the status of your inquiry in your Connections tab. The landlord will be able to review your request and respond through their dashboard.
+
+Daily limit: ${todayRequests ? todayRequests.length + 1 : 1} of 5 inquiries used today.`);
+
+    } catch (error) {
+      console.error('Error sending housing inquiry:', error);
+      alert(`Unable to send housing inquiry: ${error.message}`);
+    } finally {
+      setSendingInquiry(false);
+    }
+  };
+
   return (
     <div className={`card ${styles.propertyCard} ${isSaved ? styles.favorited : ''}`}>
-      {/* ✅ UPDATED: Enhanced Property Image Placeholder with favorited indicator */}
+      {/* ✅ Property Image Placeholder with favorited indicator */}
       <div className={styles.propertyImagePlaceholder}>
         <div className={styles.propertyIcon}>
           {property.is_recovery_housing ? '🏡' : '🏠'}
@@ -44,7 +200,7 @@ const PropertyCard = ({
       </div>
       
       <div className={styles.propertyDetails}>
-        {/* ✅ UPDATED: Property Badges with favorited styling */}
+        {/* ✅ Property Badges with favorited styling */}
         <div className={`${styles.propertyBadges} mb-2`}>
           {isSaved && (
             <span className={`badge ${styles.badgeFavorited}`}>
@@ -71,7 +227,7 @@ const PropertyCard = ({
               Subsidies OK
             </span>
           )}
-          {/* ✅ NEW: Availability indicator for recovery housing */}
+          {/* ✅ Availability indicator for recovery housing */}
           {property.is_recovery_housing && property.available_beds > 0 && (
             <span className="badge badge-success">
               {property.available_beds} Bed{property.available_beds !== 1 ? 's' : ''} Available
@@ -128,7 +284,7 @@ const PropertyCard = ({
           </div>
         )}
 
-        {/* ✅ UPDATED: Action Buttons with enhanced favorite styling and loading state */}
+        {/* ✅ Action Buttons with fixed housing inquiry */}
         <div className={styles.propertyActions}>
           <div className={styles.primaryActions}>
             <button
@@ -162,20 +318,28 @@ const PropertyCard = ({
             </button>
           </div>
 
-          {/* ✅ Housing Inquiry Option for Registered Landlords */}
+          {/* ✅ FIXED: Housing Inquiry with proper implementation */}
           {property.landlord_id && (
             <div className={styles.secondaryActions}>
               <button
-                className={`btn btn-secondary btn-sm ${styles.fullWidth}`}
-                onClick={() => onSendHousingInquiry(property)}
+                className={`btn btn-secondary btn-sm ${styles.fullWidth} ${sendingInquiry ? styles.btnLoading : ''}`}
+                onClick={handleSendHousingInquiry}
+                disabled={sendingInquiry}
               >
-                Send Housing Inquiry
+                {sendingInquiry ? (
+                  <>
+                    <span className={styles.loadingSpinner}></span>
+                    Sending Inquiry...
+                  </>
+                ) : (
+                  'Send Housing Inquiry'
+                )}
               </button>
             </div>
           )}
         </div>
 
-        {/* ✅ NEW: Favorited Footer Message */}
+        {/* ✅ Favorited Footer Message */}
         {isSaved && (
           <div className={styles.favoritedFooter}>
             <small className={styles.favoritedMessage}>
@@ -218,7 +382,12 @@ PropertyCard.propTypes = {
   savedProperties: PropTypes.instanceOf(Set).isRequired,
   onContactLandlord: PropTypes.func.isRequired,
   onSaveProperty: PropTypes.func.isRequired,
-  onSendHousingInquiry: PropTypes.func.isRequired
+  onSendHousingInquiry: PropTypes.func
+};
+
+// ✅ Make onSendHousingInquiry optional since we're handling it internally now
+PropertyCard.defaultProps = {
+  onSendHousingInquiry: () => {}
 };
 
 export default PropertyCard;

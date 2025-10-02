@@ -1,4 +1,4 @@
-// src/components/features/property/SavedProperties.js - User's Saved Properties Page
+// src/components/features/property/SavedProperties.js - Enhanced with Outreach Status
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../../../hooks/useAuth';
 import { supabase } from '../../../utils/supabase';
@@ -14,6 +14,7 @@ const SavedProperties = () => {
   const [loading, setLoading] = useState(true);
   const [properties, setProperties] = useState([]);
   const [error, setError] = useState(null);
+  const [outreachStatus, setOutreachStatus] = useState(new Map()); // Track outreach status per property
 
   // ✅ Get saved properties functionality (only pass user)
   const {
@@ -23,10 +24,65 @@ const SavedProperties = () => {
     isPropertySaved
   } = useSavedProperties(user);
 
-  // ✅ Fetch full property details for saved properties
+  // ✅ NEW: Fetch outreach status for saved properties
+  const fetchOutreachStatus = async (propertyIds) => {
+    if (!user?.id || !profile?.id || propertyIds.length === 0) {
+      return new Map();
+    }
+
+    try {
+      // Get applicant profile ID
+      const { data: applicantProfile, error: applicantError } = await supabase
+        .from('applicant_matching_profiles')
+        .select('id')
+        .eq('user_id', profile.id)
+        .single();
+
+      if (applicantError || !applicantProfile) {
+        console.warn('No applicant profile found for outreach status');
+        return new Map();
+      }
+
+      // Get match requests for these properties
+      const { data: requests, error: requestsError } = await supabase
+        .from('match_requests')
+        .select('property_id, status, created_at, responded_at')
+        .eq('requester_type', 'applicant')
+        .eq('requester_id', applicantProfile.id)
+        .eq('request_type', 'housing')
+        .in('property_id', propertyIds)
+        .order('created_at', { ascending: false });
+
+      if (requestsError) {
+        console.warn('Error fetching outreach status:', requestsError);
+        return new Map();
+      }
+
+      // Create status map (most recent request per property)
+      const statusMap = new Map();
+      requests.forEach(request => {
+        if (!statusMap.has(request.property_id)) {
+          statusMap.set(request.property_id, {
+            status: request.status,
+            requested_at: request.created_at,
+            responded_at: request.responded_at
+          });
+        }
+      });
+
+      return statusMap;
+
+    } catch (err) {
+      console.warn('Error fetching outreach status:', err);
+      return new Map();
+    }
+  };
+
+  // ✅ Fetch full property details for saved properties with outreach status
   const fetchSavedPropertyDetails = async () => {
     if (!user?.id || savedProperties.size === 0) {
       setProperties([]);
+      setOutreachStatus(new Map());
       setLoading(false);
       return;
     }
@@ -37,6 +93,7 @@ const SavedProperties = () => {
       
       const savedPropertyIds = Array.from(savedProperties);
       
+      // Fetch properties
       const { data, error } = await supabase
         .from('properties')
         .select('*')
@@ -48,7 +105,12 @@ const SavedProperties = () => {
         throw error;
       }
 
+      // Fetch outreach status
+      const statusMap = await fetchOutreachStatus(savedPropertyIds);
+
       setProperties(data || []);
+      setOutreachStatus(statusMap);
+      
     } catch (err) {
       console.error('Error fetching saved property details:', err);
       setError('Unable to load your saved properties. Please try again.');
@@ -121,7 +183,7 @@ Thank you!`;
     }
   };
 
-  // ✅ Send housing inquiry
+  // ✅ UPDATED: Send housing inquiry with status refresh
   const handleSendHousingInquiry = async (property) => {
     if (!property.landlord_id) {
       alert('Direct inquiries are not available for this property. Please use the contact owner option.');
@@ -153,7 +215,12 @@ I'd love to discuss availability, the application process, and next steps. Thank
         throw new Error(result.error.message);
       }
 
+      // Refresh outreach status after sending inquiry
+      const statusMap = await fetchOutreachStatus(Array.from(savedProperties));
+      setOutreachStatus(statusMap);
+
       alert('Housing inquiry sent! The landlord will be notified and can respond through their dashboard.');
+      
     } catch (err) {
       console.error('Error sending housing inquiry:', err);
       alert('Failed to send inquiry. Please try the contact owner option instead.');
@@ -176,6 +243,75 @@ I'd love to discuss availability, the application process, and next steps. Thank
       console.error('Error removing from favorites:', err);
       alert('An error occurred. Please try again.');
     }
+  };
+
+  // ✅ NEW: Get outreach status display info
+  const getOutreachStatusInfo = (propertyId) => {
+    const status = outreachStatus.get(propertyId);
+    if (!status) return null;
+
+    switch (status.status) {
+      case 'pending':
+        return {
+          badge: 'warning',
+          text: '⏳ Inquiry Sent',
+          description: `Sent ${new Date(status.requested_at).toLocaleDateString()}`,
+          class: styles.statusPending
+        };
+      case 'accepted':
+        return {
+          badge: 'success', 
+          text: '✅ Approved',
+          description: status.responded_at ? `Approved ${new Date(status.responded_at).toLocaleDateString()}` : 'Approved',
+          class: styles.statusApproved
+        };
+      case 'rejected':
+        return {
+          badge: 'danger',
+          text: '❌ Declined', 
+          description: status.responded_at ? `Declined ${new Date(status.responded_at).toLocaleDateString()}` : 'Declined',
+          class: styles.statusRejected
+        };
+      default:
+        return null;
+    }
+  };
+
+  // ✅ NEW: Enhanced property card component wrapper
+  const EnhancedPropertyCard = ({ property, ...props }) => {
+    const statusInfo = getOutreachStatusInfo(property.id);
+    
+    return (
+      <div className={`${styles.propertyWrapper} ${statusInfo ? statusInfo.class : ''}`}>
+        {/* Outreach Status Banner */}
+        {statusInfo && (
+          <div className={`${styles.outreachBanner} ${styles[`banner${statusInfo.badge.charAt(0).toUpperCase() + statusInfo.badge.slice(1)}`]}`}>
+            <div className={styles.bannerContent}>
+              <span className={styles.bannerText}>{statusInfo.text}</span>
+              <span className={styles.bannerDescription}>{statusInfo.description}</span>
+            </div>
+            
+            {statusInfo.text.includes('Approved') && (
+              <div className={styles.bannerAction}>
+                <small>You can now contact the landlord directly!</small>
+              </div>
+            )}
+          </div>
+        )}
+        
+        {/* Original Property Card */}
+        <PropertyCard
+          property={property}
+          savedProperties={savedProperties}
+          onContactLandlord={props.onContactLandlord}
+          onSaveProperty={props.onSaveProperty}
+          onSendHousingInquiry={props.onSendHousingInquiry}
+          // Pass additional props for status-aware rendering
+          outreachStatus={statusInfo}
+          disableInquiry={statusInfo?.text.includes('Sent') || statusInfo?.text.includes('Declined')}
+        />
+      </div>
+    );
   };
 
   // ✅ Loading state
@@ -246,7 +382,13 @@ I'd love to discuss availability, the application process, and next steps. Thank
     );
   }
 
-  // ✅ Main content with saved properties
+  // ✅ NEW: Group properties by outreach status for better organization
+  const propertiesWithPending = properties.filter(p => getOutreachStatusInfo(p.id)?.text.includes('Sent'));
+  const propertiesWithApproved = properties.filter(p => getOutreachStatusInfo(p.id)?.text.includes('Approved'));
+  const propertiesWithRejected = properties.filter(p => getOutreachStatusInfo(p.id)?.text.includes('Declined'));
+  const propertiesWithoutOutreach = properties.filter(p => !getOutreachStatusInfo(p.id));
+
+  // ✅ Main content with enhanced status display
   return (
     <div className="content">
       <div className={styles.headerSection}>
@@ -254,10 +396,22 @@ I'd love to discuss availability, the application process, and next steps. Thank
           <h1 className={styles.headerTitle}>My Saved Properties</h1>
           <p className={styles.headerSubtitle}>
             {properties.length} saved {properties.length === 1 ? 'property' : 'properties'}
+            {outreachStatus.size > 0 && (
+              <span className={styles.outreachSummary}>
+                • {propertiesWithPending.length} pending • {propertiesWithApproved.length} approved • {propertiesWithRejected.length} declined
+              </span>
+            )}
           </p>
         </div>
         
         <div className={styles.headerActions}>
+          <button 
+            className="btn btn-outline btn-sm"
+            onClick={fetchSavedPropertyDetails}
+            disabled={loading}
+          >
+            🔄 Refresh Status
+          </button>
           <a href="/app/property-search" className="btn btn-outline">
             <span className={styles.btnIcon}>🔍</span>
             Search More Properties
@@ -265,52 +419,107 @@ I'd love to discuss availability, the application process, and next steps. Thank
         </div>
       </div>
 
-      {/* ✅ Properties Grid */}
-      <div className={styles.propertiesGrid}>
-        <div className="grid-auto">
-          {properties.map(property => (
-            <PropertyCard
-              key={property.id}
-              property={property}
-              savedProperties={savedProperties}
-              onContactLandlord={handleContactLandlord}
-              onSaveProperty={handleRemoveFromFavorites}
-              onSendHousingInquiry={handleSendHousingInquiry}
-            />
-          ))}
+      {/* ✅ NEW: Status sections for better organization */}
+      {propertiesWithApproved.length > 0 && (
+        <div className="mb-4">
+          <h3 className={styles.sectionTitle}>✅ Approved Inquiries ({propertiesWithApproved.length})</h3>
+          <div className="grid-auto">
+            {propertiesWithApproved.map(property => (
+              <EnhancedPropertyCard
+                key={property.id}
+                property={property}
+                onContactLandlord={handleContactLandlord}
+                onSaveProperty={handleRemoveFromFavorites}
+                onSendHousingInquiry={handleSendHousingInquiry}
+              />
+            ))}
+          </div>
         </div>
-      </div>
+      )}
 
-      {/* ✅ Page Footer with Tips */}
+      {propertiesWithPending.length > 0 && (
+        <div className="mb-4">
+          <h3 className={styles.sectionTitle}>⏳ Pending Inquiries ({propertiesWithPending.length})</h3>
+          <div className="grid-auto">
+            {propertiesWithPending.map(property => (
+              <EnhancedPropertyCard
+                key={property.id}
+                property={property}
+                onContactLandlord={handleContactLandlord}
+                onSaveProperty={handleRemoveFromFavorites}
+                onSendHousingInquiry={handleSendHousingInquiry}
+              />
+            ))}
+          </div>
+        </div>
+      )}
+
+      {propertiesWithoutOutreach.length > 0 && (
+        <div className="mb-4">
+          <h3 className={styles.sectionTitle}>❤️ Saved Properties ({propertiesWithoutOutreach.length})</h3>
+          <div className="grid-auto">
+            {propertiesWithoutOutreach.map(property => (
+              <EnhancedPropertyCard
+                key={property.id}
+                property={property}
+                onContactLandlord={handleContactLandlord}
+                onSaveProperty={handleRemoveFromFavorites}
+                onSendHousingInquiry={handleSendHousingInquiry}
+              />
+            ))}
+          </div>
+        </div>
+      )}
+
+      {propertiesWithRejected.length > 0 && (
+        <div className="mb-4">
+          <details className={styles.collapsibleSection}>
+            <summary className={styles.sectionTitle}>❌ Declined Inquiries ({propertiesWithRejected.length})</summary>
+            <div className="grid-auto mt-3">
+              {propertiesWithRejected.map(property => (
+                <EnhancedPropertyCard
+                  key={property.id}
+                  property={property}
+                  onContactLandlord={handleContactLandlord}
+                  onSaveProperty={handleRemoveFromFavorites}
+                  onSendHousingInquiry={handleSendHousingInquiry}
+                />
+              ))}
+            </div>
+          </details>
+        </div>
+      )}
+
+      {/* ✅ Page Footer with Enhanced Tips */}
       <div className="card mt-4">
         <div className={styles.tipsSection}>
           <h4 className={styles.tipsTitle}>💡 Tips for Your Saved Properties</h4>
           <div className={styles.tipsGrid}>
             <div className={styles.tipItem}>
+              <span className={styles.tipIcon}>⏳</span>
+              <div className={styles.tipContent}>
+                <strong>Track Your Inquiries:</strong> Monitor the status of your housing requests right here in your saved properties.
+              </div>
+            </div>
+            
+            <div className={styles.tipItem}>
+              <span className={styles.tipIcon}>✅</span>
+              <div className={styles.tipContent}>
+                <strong>Act on Approvals:</strong> When a landlord approves your inquiry, contact them quickly to schedule viewings.
+              </div>
+            </div>
+            
+            <div className={styles.tipItem}>
               <span className={styles.tipIcon}>📞</span>
               <div className={styles.tipContent}>
-                <strong>Contact Quickly:</strong> Popular properties get applications fast. Reach out as soon as possible.
+                <strong>Direct Contact:</strong> Use "Contact Owner" for immediate communication outside the inquiry system.
               </div>
             </div>
             
             <div className={styles.tipItem}>
-              <span className={styles.tipIcon}>📋</span>
+              <span className={styles.tipIcon}>🔄</span>
               <div className={styles.tipContent}>
-                <strong>Prepare Documents:</strong> Have your application materials ready including income verification and references.
-              </div>
-            </div>
-            
-            <div className={styles.tipItem}>
-              <span className={styles.tipIcon}>🏠</span>
-              <div className={styles.tipContent}>
-                <strong>Schedule Viewings:</strong> Try to see properties in person or request virtual tours when possible.
-              </div>
-            </div>
-            
-            <div className={styles.tipItem}>
-              <span className={styles.tipIcon}>❤️</span>
-              <div className={styles.tipContent}>
-                <strong>Keep Searching:</strong> Continue searching and saving more properties to increase your options.
+                <strong>Keep Searching:</strong> Continue exploring new properties while tracking your existing inquiries.
               </div>
             </div>
           </div>

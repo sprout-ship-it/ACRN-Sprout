@@ -752,7 +752,12 @@ CREATE TABLE match_groups (
   -- Constraints
   CONSTRAINT different_applicants CHECK (applicant_1_id != applicant_2_id)
 );
-
+ALTER TABLE match_groups 
+ADD COLUMN contact_shared BOOLEAN DEFAULT FALSE,
+ADD COLUMN shared_contact_info JSONB DEFAULT '{}';
+ALTER TABLE favorites 
+ADD COLUMN outreach_status VARCHAR(50) DEFAULT NULL,
+ADD COLUMN last_inquiry_date TIMESTAMP WITH TIME ZONE DEFAULT NULL;
 -- ============================================================================
 -- MATCH REQUESTS (Property-specific requests)
 -- ============================================================================

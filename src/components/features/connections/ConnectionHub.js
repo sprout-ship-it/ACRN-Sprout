@@ -1,7 +1,7 @@
-// src/components/features/connections/ConnectionHub.js - UPDATED FOR CURRENT SCHEMA
+// src/components/features/connections/ConnectionHub.js - UPDATED WITH HOUSING APPROVAL INTEGRATION
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../../../hooks/useAuth';
-import { db } from '../../../utils/supabase';
+import { supabase } from '../../../utils/supabase';
 import LoadingSpinner from '../../ui/LoadingSpinner';
 import styles from './ConnectionHub.module.css';
 
@@ -51,22 +51,40 @@ const ConnectionHub = ({ onBack }) => {
         template: 'Hi {name}! Thank you for our last session. I wanted to follow up on {topic} we discussed. When can we talk again?'
       }
     ],
-    landlord: [
+    housing_approved: [
       {
-        title: 'Request Property Viewing',
-        template: 'Hello {name}! I\'m interested in viewing your property "{property}". My roommate and I are available {availability}. Thank you!'
+        title: 'Schedule Property Viewing',
+        template: 'Hi {name}! Thank you for approving my housing inquiry for "{property}". I\'d love to schedule a viewing. I\'m available {availability}. What works best for you?'
       },
       {
-        title: 'Ask About Application Process',
-        template: 'Hi {name}! Could you please provide information about the application process and requirements for "{property}"?'
+        title: 'Application Process Questions',
+        template: 'Hi {name}! I\'m excited about "{property}" and would like to know more about the application process, required documents, and next steps.'
       },
       {
-        title: 'Inquire About Recovery Support',
-        template: 'Hello {name}! I wanted to confirm that your property is recovery-friendly and ask about any specific policies or support available.'
+        title: 'Move-in Timeline Discussion',
+        template: 'Hi {name}! I wanted to discuss the move-in timeline for "{property}". My preferred move-in date is {date}. Is this feasible?'
       },
       {
-        title: 'Follow-up on Application',
-        template: 'Hi {name}! I wanted to follow up on my application for "{property}". Please let me know if you need any additional information.'
+        title: 'Property Details Inquiry',
+        template: 'Hi {name}! I have a few questions about "{property}" regarding utilities, neighborhood amenities, and building policies. When would be a good time to discuss?'
+      }
+    ],
+    landlord_communication: [
+      {
+        title: 'Tenant Application Update',
+        template: 'Hi {name}! I wanted to update you on your application for "{property}". {update}. Please let me know if you have any questions.'
+      },
+      {
+        title: 'Viewing Confirmation',
+        template: 'Hi {name}! I\'m confirming our property viewing for "{property}" on {date} at {time}. The address is {address}. Looking forward to meeting you!'
+      },
+      {
+        title: 'Application Requirements',
+        template: 'Hi {name}! To complete your application for "{property}", I\'ll need: {requirements}. Please provide these documents when convenient.'
+      },
+      {
+        title: 'Welcome New Tenant',
+        template: 'Hi {name}! Welcome to "{property}"! I\'m excited to have you as a tenant. Here are the next steps: {next_steps}.'
       }
     ],
     employer: [
@@ -90,7 +108,7 @@ const ConnectionHub = ({ onBack }) => {
   };
 
   /**
-   * Load all active connections from different sources
+   * ✅ UPDATED: Enhanced connection loading with housing approval integration
    */
   const loadConnections = async () => {
     if (!user?.id || !profile?.id) return;
@@ -103,16 +121,35 @@ const ConnectionHub = ({ onBack }) => {
       
       const allConnections = [];
 
-      // 1. Load roommate and peer support matches from match_groups
+      // ✅ UPDATED: Load match_groups with enhanced housing connection handling
       try {
-        const matchResult = await db.matchGroups.getByUserId(profile.id);
-        if (matchResult.data && !matchResult.error) {
-          for (const match of matchResult.data) {
-            // Determine the other user in the match
+        const { data: matchGroups, error: matchError } = await supabase
+          .from('match_groups')
+          .select(`
+            *,
+            properties (
+              id,
+              title,
+              address,
+              city,
+              state,
+              monthly_rent,
+              landlord_id
+            )
+          `)
+          .or(`applicant_1_id.eq.${profile.id},applicant_2_id.eq.${profile.id},peer_support_id.eq.${profile.id}`)
+          .eq('status', 'confirmed');
+
+        if (matchError) {
+          console.warn('Error loading match groups:', matchError);
+        } else if (matchGroups && matchGroups.length > 0) {
+          for (const match of matchGroups) {
             let otherProfileId = null;
             let connectionType = 'roommate';
             let avatar = '👥';
+            let isHousingConnection = false;
             
+            // ✅ ENHANCED: Better handling of different match group types
             if (match.peer_support_id) {
               // This is a peer support connection
               connectionType = 'peer_support';
@@ -124,21 +161,61 @@ const ConnectionHub = ({ onBack }) => {
                 // Current user is the applicant
                 otherProfileId = match.peer_support_id;
               }
-            } else if (match.property_id) {
-              // This is a housing connection - need to get landlord from property
-              connectionType = 'landlord';
+            } else if (match.property_id && match.properties) {
+              // ✅ NEW: This is an approved housing connection
+              connectionType = 'housing_approved';
               avatar = '🏠';
+              isHousingConnection = true;
               
-              // Get property details to find landlord
-              const propertyResult = await db.properties.getById(match.property_id);
-              if (propertyResult.data && !propertyResult.error) {
-                const property = propertyResult.data;
-                // Get landlord profile from landlord_id
-                const landlordResult = await db.landlordProfiles.getById(property.landlord_id);
-                if (landlordResult.data && !landlordResult.error) {
-                  otherProfileId = landlordResult.data.user_id;
-                }
+              // Get landlord profile from property
+              const { data: landlordProfile, error: landlordError } = await supabase
+                .from('landlord_profiles')
+                .select(`
+                  id,
+                  user_id,
+                  primary_phone,
+                  contact_email,
+                  registrant_profiles!inner(
+                    id,
+                    first_name,
+                    last_name,
+                    email
+                  )
+                `)
+                .eq('id', match.properties.landlord_id)
+                .single();
+
+              if (landlordProfile && !landlordError) {
+                otherProfileId = landlordProfile.user_id;
+                
+                // Add the connection with full property and landlord context
+                allConnections.push({
+                  id: `housing_${match.id}`,
+                  profile_id: landlordProfile.user_id,
+                  name: `${landlordProfile.registrant_profiles.first_name} ${landlordProfile.registrant_profiles.last_name}`,
+                  type: connectionType,
+                  status: 'approved',
+                  source: 'housing_approval',
+                  match_group_id: match.id,
+                  property_title: match.properties.title,
+                  property_address: `${match.properties.address}, ${match.properties.city}, ${match.properties.state}`,
+                  property_rent: match.properties.monthly_rent,
+                  property_id: match.properties.id,
+                  created_at: match.created_at,
+                  last_activity: match.updated_at || match.created_at,
+                  shared_contact: true, // Approved housing connections have shared contact
+                  contact_info: {
+                    phone: landlordProfile.primary_phone,
+                    email: landlordProfile.contact_email || landlordProfile.registrant_profiles.email,
+                    preferred_contact: 'email',
+                    availability: 'Business hours'
+                  },
+                  avatar: avatar,
+                  // ✅ NEW: Add landlord-specific context
+                  landlord_profile: landlordProfile
+                });
               }
+              continue; // Skip the general processing since we handled it above
             } else {
               // This is a roommate connection
               connectionType = 'roommate';
@@ -146,19 +223,22 @@ const ConnectionHub = ({ onBack }) => {
               otherProfileId = match.applicant_1_id === profile.id ? match.applicant_2_id : match.applicant_1_id;
             }
             
-            if (otherProfileId) {
+            // Process non-housing connections
+            if (otherProfileId && !isHousingConnection) {
               // Get other user's registrant profile
-              const profileResult = await db.profiles.getById(otherProfileId);
+              const { data: otherProfile, error: profileError } = await supabase
+                .from('registrant_profiles')
+                .select('id, first_name, last_name, email, user_id')
+                .eq('id', otherProfileId)
+                .single();
               
-              if (profileResult.data && !profileResult.error) {
-                const otherProfile = profileResult.data;
-                
+              if (otherProfile && !profileError) {
                 allConnections.push({
                   id: match.id,
                   profile_id: otherProfileId,
                   name: `${otherProfile.first_name} ${otherProfile.last_name}` || 'Anonymous',
                   type: connectionType,
-                  status: match.status === 'active' ? 'active' : match.status,
+                  status: match.status === 'confirmed' ? 'active' : match.status,
                   source: 'match_group',
                   match_group_id: match.id,
                   created_at: match.created_at,
@@ -176,93 +256,60 @@ const ConnectionHub = ({ onBack }) => {
         console.warn('Error loading match groups:', err);
       }
 
-      // 2. Load housing connections from match_requests (property-specific requests)
+      // ✅ UPDATED: Load employer favorites (if available)
       try {
-        const housingResult = await db.matchRequests.getByUserId(profile.id);
-        if (housingResult.data && !housingResult.error) {
-          const approvedHousingRequests = housingResult.data.filter(
-            req => req.request_type === 'housing' && req.status === 'accepted' && req.property_id
-          );
+        const { data: employerFavorites, error: favoritesError } = await supabase
+          .from('employer_favorites')
+          .select(`
+            *,
+            employer_profiles!inner(
+              business_type,
+              industry,
+              description,
+              service_city,
+              service_state,
+              contact_email,
+              primary_phone,
+              registrant_profiles!inner(
+                first_name,
+                last_name,
+                email
+              )
+            )
+          `)
+          .eq('user_id', profile.id);
 
-          for (const request of approvedHousingRequests) {
-            // Get property details
-            const propertyResult = await db.properties.getById(request.property_id);
-            if (propertyResult.data && !propertyResult.error) {
-              const property = propertyResult.data;
-              
-              // Get landlord profile
-              const landlordResult = await db.landlordProfiles.getById(property.landlord_id);
-              if (landlordResult.data && !landlordResult.error) {
-                const landlordProfile = landlordResult.data;
-                
-                // Get registrant profile for landlord
-                const registrantResult = await db.profiles.getById(landlordProfile.user_id);
-                if (registrantResult.data && !registrantResult.error) {
-                  const registrant = registrantResult.data;
-                  
-                  allConnections.push({
-                    id: `housing_${request.id}`,
-                    profile_id: landlordProfile.user_id,
-                    name: `${registrant.first_name} ${registrant.last_name}` || 'Property Owner',
-                    type: 'landlord',
-                    status: 'active',
-                    source: 'housing_request',
-                    request_id: request.id,
-                    property_title: property.title || 'Property',
-                    property_id: property.id,
-                    created_at: request.created_at,
-                    last_activity: request.updated_at || request.created_at,
-                    shared_contact: false,
-                    contact_info: {
-                      phone: landlordProfile.primary_phone,
-                      email: landlordProfile.contact_email || registrant.email,
-                      preferred_contact: landlordProfile.preferred_contact_method || 'email'
-                    },
-                    avatar: '🏠'
-                  });
-                }
-              }
-            }
+        if (favoritesError) {
+          console.warn('Error loading employer favorites:', favoritesError);
+        } else if (employerFavorites && employerFavorites.length > 0) {
+          for (const favorite of employerFavorites) {
+            const employerProfile = favorite.employer_profiles;
+            
+            allConnections.push({
+              id: `employer_${favorite.id}`,
+              profile_id: favorite.employer_user_id,
+              name: `${employerProfile.registrant_profiles.first_name} ${employerProfile.registrant_profiles.last_name}`,
+              type: 'employer',
+              status: 'favorited',
+              source: 'employer_favorite',
+              favorite_id: favorite.id,
+              company_name: employerProfile.business_type,
+              industry: employerProfile.industry,
+              created_at: favorite.created_at,
+              last_activity: favorite.created_at,
+              shared_contact: true, // Employer info is public
+              contact_info: {
+                email: employerProfile.contact_email || employerProfile.registrant_profiles.email,
+                phone: employerProfile.primary_phone,
+                preferred_contact: 'email',
+                availability: 'Business hours'
+              },
+              avatar: '💼'
+            });
           }
         }
       } catch (err) {
-        console.warn('Error loading housing connections:', err);
-      }
-
-      // 3. Load employer favorites (conditional - may not exist yet)
-      try {
-        // Check if employer favorites service exists
-        if (db.employerFavorites && typeof db.employerFavorites.getByUserId === 'function') {
-          const favoritesResult = await db.employerFavorites.getByUserId(profile.id);
-          if (favoritesResult.data && !favoritesResult.error) {
-            for (const favorite of favoritesResult.data) {
-              // Use the view data that includes employer profile information
-              allConnections.push({
-                id: `employer_${favorite.id}`,
-                profile_id: favorite.employer_user_id,
-                name: favorite.business_type || 'Employer',
-                type: 'employer',
-                status: 'favorited',
-                source: 'employer_favorite',
-                favorite_id: favorite.id,
-                company_name: favorite.business_type,
-                industry: favorite.industry,
-                created_at: favorite.created_at,
-                last_activity: favorite.created_at,
-                shared_contact: true, // Employer info is public
-                contact_info: {
-                  email: favorite.contact_email,
-                  phone: favorite.primary_phone,
-                  preferred_contact: 'email',
-                  availability: 'Business hours'
-                },
-                avatar: '💼'
-              });
-            }
-          }
-        }
-      } catch (err) {
-        console.warn('Error loading employer favorites (service may not exist yet):', err);
+        console.warn('Error loading employer favorites:', err);
       }
 
       // Sort connections by most recent activity
@@ -298,23 +345,26 @@ const ConnectionHub = ({ onBack }) => {
           notes: 'Contact me anytime about our housing search!'
         };
 
-        const result = await db.matchGroups.update(connection.match_group_id, {
-          contact_shared: true,
-          shared_contact_info: contactInfo
-        });
+        const { error: updateError } = await supabase
+          .from('match_groups')
+          .update({
+            contact_shared: true,
+            shared_contact_info: contactInfo
+          })
+          .eq('id', connection.match_group_id);
 
-        if (result.data && !result.error) {
-          // Update local state
-          setConnections(prev => prev.map(conn => 
-            conn.id === connection.id 
-              ? { ...conn, shared_contact: true, contact_info: contactInfo }
-              : conn
-          ));
-          
-          alert(`Contact information shared with ${connection.name}!`);
-        } else {
-          throw new Error(result.error?.message || 'Failed to share contact');
+        if (updateError) {
+          throw new Error(updateError.message);
         }
+
+        // Update local state
+        setConnections(prev => prev.map(conn => 
+          conn.id === connection.id 
+            ? { ...conn, shared_contact: true, contact_info: contactInfo }
+            : conn
+        ));
+        
+        alert(`Contact information shared with ${connection.name}!`);
       } else {
         alert('Contact sharing for this connection type will be available soon!');
       }
@@ -326,22 +376,24 @@ const ConnectionHub = ({ onBack }) => {
   };
 
   /**
-   * Send a templated message via email
+   * ✅ UPDATED: Enhanced template messaging with housing-specific templates
    */
   const handleSendTemplate = (template, connection) => {
     const replacements = {
       name: connection.name,
-      address: '[PROPERTY ADDRESS]',
+      address: connection.property_address || '[PROPERTY ADDRESS]',
+      property: connection.property_title || '[PROPERTY NAME]',
       date: '[DATE]',
       time: '[TIME]',
       availability: '[YOUR AVAILABILITY]',
       update: '[YOUR UPDATE]',
       program: '[PROGRAM NAME]',
       topic: '[TOPIC]',
-      property: connection.property_title || '[PROPERTY NAME]',
       position: '[POSITION TITLE]',
       company: connection.company_name || connection.name,
-      skills: '[YOUR SKILLS]'
+      skills: '[YOUR SKILLS]',
+      requirements: '[REQUIRED DOCUMENTS]',
+      next_steps: '[NEXT STEPS]'
     };
 
     let message = template.template;
@@ -359,12 +411,13 @@ const ConnectionHub = ({ onBack }) => {
   };
 
   /**
-   * Get connection type badge class
+   * ✅ UPDATED: Enhanced connection type badge with housing approval support
    */
   const getConnectionTypeBadgeClass = (type) => {
     const typeClasses = {
       roommate: styles.roommateType,
       peer_support: styles.peerSupportType,
+      housing_approved: styles.housingApprovedType,
       landlord: styles.landlordType,
       employer: styles.employerType
     };
@@ -398,7 +451,7 @@ const ConnectionHub = ({ onBack }) => {
       <div className="text-center mb-5">
         <h1 className="welcome-title">Connection Hub</h1>
         <p className="welcome-text">
-          Manage communication with your matches, landlords, and saved employers through secure contact exchange
+          Manage communication with your matches, approved housing connections, and saved employers
         </p>
       </div>
 
@@ -484,12 +537,16 @@ const ConnectionHub = ({ onBack }) => {
                       <span className={getConnectionTypeBadgeClass(connection.type)}>
                         {connection.type === 'roommate' && 'Roommate Match'}
                         {connection.type === 'peer_support' && 'Peer Support'}
+                        {connection.type === 'housing_approved' && 'Approved Housing'}
                         {connection.type === 'landlord' && 'Property Owner'}
                         {connection.type === 'employer' && 'Employer'}
                       </span>
                       
                       {connection.status === 'active' && (
                         <span className="badge badge-success">✓ Connected</span>
+                      )}
+                      {connection.status === 'approved' && (
+                        <span className="badge badge-success">✅ Approved</span>
                       )}
                       {connection.status === 'favorited' && (
                         <span className="badge badge-info">⭐ Saved</span>
@@ -498,11 +555,27 @@ const ConnectionHub = ({ onBack }) => {
                   </div>
                 </div>
 
+                {/* ✅ ENHANCED: Property details for housing connections */}
+                {connection.type === 'housing_approved' && (
+                  <div className={styles.housingDetails}>
+                    <div className={styles.propertyInfo}>
+                      <h5 className={styles.propertyTitle}>🏠 Property Details</h5>
+                      <div className={styles.propertyAddress}>{connection.property_address}</div>
+                      <div className={styles.propertyRent}>${connection.property_rent}/month</div>
+                    </div>
+                    <div className={styles.approvalNotice}>
+                      <span className={styles.approvalIcon}>✅</span>
+                      <span className={styles.approvalText}>Your housing inquiry was approved! You can now communicate directly with the landlord.</span>
+                    </div>
+                  </div>
+                )}
+
                 {/* Connection Info */}
                 <div className="mb-4">
                   <div className={styles.sourceInfo}>
                     <span className={styles.sourceLabel}>Source:</span> {
                       connection.source === 'match_group' ? 'Roommate/Peer Matching' :
+                      connection.source === 'housing_approval' ? 'Approved Housing Inquiry' :
                       connection.source === 'housing_request' ? 'Property Search' :
                       connection.source === 'employer_favorite' ? 'Employer Directory' :
                       'Unknown'
@@ -513,11 +586,11 @@ const ConnectionHub = ({ onBack }) => {
                   <div className={styles.contactStatus}>
                     {connection.shared_contact ? (
                       <div className={styles.contactShared}>
-                        <strong>📞 Contact Shared:</strong> You can communicate directly with {connection.name}
+                        <strong>📞 Contact Available:</strong> You can communicate directly with {connection.name}
                       </div>
-                    ) : connection.type === 'employer' ? (
-                      <div className={styles.employerContact}>
-                        <strong>💼 Employer Contact:</strong> Use the contact buttons below to reach out professionally
+                    ) : connection.type === 'employer' || connection.type === 'housing_approved' ? (
+                      <div className={styles.contactAvailable}>
+                        <strong>💼 Contact Information:</strong> Use the contact buttons below to reach out professionally
                       </div>
                     ) : (
                       <div className={styles.contactPending}>
@@ -530,7 +603,7 @@ const ConnectionHub = ({ onBack }) => {
                 {/* Action Buttons */}
                 <div className="button-grid">
                   {/* Contact/Share Button */}
-                  {connection.shared_contact ? (
+                  {connection.shared_contact || connection.type === 'housing_approved' ? (
                     <button
                       className="btn btn-primary"
                       onClick={() => {
@@ -656,7 +729,7 @@ const ConnectionHub = ({ onBack }) => {
         </div>
       )}
 
-      {/* Message Templates Modal */}
+      {/* ✅ ENHANCED: Message Templates Modal with housing-specific templates */}
       {activeModal === 'templates' && selectedConnection && (
         <div className="modal-overlay" onClick={() => setActiveModal(null)}>
           <div className={`modal-content ${styles.templatesModal}`} onClick={(e) => e.stopPropagation()}>
@@ -672,7 +745,8 @@ const ConnectionHub = ({ onBack }) => {
               </p>
               
               <div className={styles.templatesList}>
-                {messageTemplates[selectedConnection.type]?.map((template, index) => (
+                {/* ✅ NEW: Use housing-specific templates for approved housing connections */}
+                {messageTemplates[selectedConnection.type === 'housing_approved' ? 'housing_approved' : selectedConnection.type]?.map((template, index) => (
                   <button
                     key={index}
                     className={styles.templateButton}
