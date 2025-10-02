@@ -1933,6 +1933,38 @@ ALTER TABLE peer_support_profiles ENABLE ROW LEVEL SECURITY;
 GRANT SELECT, INSERT, UPDATE, DELETE ON peer_support_profiles TO authenticated;
 GRANT USAGE, SELECT ON ALL SEQUENCES IN SCHEMA public TO authenticated;
 
+-- Fix RLS policies for peer_support_profiles
+DROP POLICY IF EXISTS "Users can view their own peer support profile" ON peer_support_profiles;
+DROP POLICY IF EXISTS "Users can insert their own peer support profile" ON peer_support_profiles;
+DROP POLICY IF EXISTS "Users can update their own peer support profile" ON peer_support_profiles;
+
+CREATE POLICY "Users can view their own peer support profile" ON peer_support_profiles
+  FOR SELECT USING (
+    user_id IN (
+      SELECT rp.id FROM registrant_profiles rp
+      WHERE rp.user_id = auth.uid()
+    )
+  );
+
+CREATE POLICY "Users can insert their own peer support profile" ON peer_support_profiles
+  FOR INSERT WITH CHECK (
+    user_id IN (
+      SELECT rp.id FROM registrant_profiles rp
+      WHERE rp.user_id = auth.uid()
+    )
+  );
+
+CREATE POLICY "Users can update their own peer support profile" ON peer_support_profiles
+  FOR UPDATE USING (
+    user_id IN (
+      SELECT rp.id FROM registrant_profiles rp
+      WHERE rp.user_id = auth.uid()
+    )
+  );
+
+ALTER TABLE peer_support_profiles ENABLE ROW LEVEL SECURITY;
+GRANT SELECT, INSERT, UPDATE, DELETE ON peer_support_profiles TO authenticated;
+
 -- ============================================================================
 -- SCHEMA COMPLETION SUMMARY
 -- ============================================================================
