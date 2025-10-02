@@ -125,16 +125,20 @@ export const usePeerSupportProfileForm = ({ editMode = false, onComplete } = {})
         // ✅ FIXED: Use the db object with proper error handling
         // Create a direct function similar to getMatchingProfile
 const getPeerSupportProfile = async (registrantProfileId, supabaseClient) => {
+  console.log('🚀 DIRECT FUNCTION: Getting peer support profile for:', registrantProfileId);
+  
   const { data, error } = await supabaseClient
     .from('peer_support_profiles')
     .select('*')
     .eq('user_id', registrantProfileId)
     .single();
-  
+ 
+  console.log('🚀 DIRECT FUNCTION: Raw response:', { data, error });
+ 
   if (error && error.code === 'PGRST116') {
     return { success: false, error: { code: 'NOT_FOUND', message: 'No peer support profile found' } };
   }
-  
+ 
   return error ? { success: false, error } : { success: true, data };
 };
 
