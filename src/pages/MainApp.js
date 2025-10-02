@@ -4,11 +4,10 @@ import { Routes, Route, Navigate, useNavigate, useLocation } from 'react-router-
 import { useAuth } from '../hooks/useAuth';
 
 // ✅ UPDATED: Import authenticated supabase client
-import { supabase } from '../utils/supabase';
+import { supabase, db } from '../utils/supabase';
 
 // ✅ UPDATED: Import individual schema-compliant services instead of db object
 import { getMatchingProfile } from '../utils/database/matchingProfilesService';
-import { getPeerSupportProfileByUserId } from '../utils/database/peerSupportService';
 import { getEmployerProfilesByUserId } from '../utils/database/employerService';
 
 // Layout
@@ -161,7 +160,7 @@ const checkLandlordProfile = async (profileId) => {
           console.log('Checking peer support comprehensive profile...')
           
           // ✅ SCHEMA COMPLIANT: Use profile.id instead of user.id
-          const result = await getPeerSupportProfileByUserId(profile.id)
+          const result = await db.peerSupportProfiles.getByUserId(profile.id)
           
           if (result.success && result.data) {
             const peerProfile = result.data;
