@@ -3,7 +3,7 @@ import { useState, useEffect, useCallback, useRef } from 'react';
 import { useAuth } from '../../../../hooks/useAuth';
 
 // ✅ FIXED: Import the db object with defensive fallback
-import { db } from '../../../../utils/supabase';
+import { db, supabase } from '../../../../utils/supabase';
 
 const INITIAL_FORM_DATA = {
   // Contact Information
