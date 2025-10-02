@@ -1,5 +1,5 @@
-// src/pages/MainApp.js - SCHEMA COMPLIANT VERSION (FIXED INFINITE RE-RENDERS)
-import React, { useEffect, useState, useRef, useCallback } from 'react'
+// src/pages/MainApp.js - FIXED INFINITE LOOP VERSION
+import React, { useEffect, useState, useRef, useCallback, useMemo } from 'react'
 import { Routes, Route, Navigate, useNavigate, useLocation } from 'react-router-dom'
 import { useAuth } from '../hooks/useAuth';
 
@@ -56,26 +56,34 @@ const MainApp = () => {
   const { user, profile, isAuthenticated, hasRole } = useAuth()
   const navigate = useNavigate()
   const location = useLocation();
-  const queryParams = new URLSearchParams(window.location.search);
-  const profileJustCompleted = queryParams.get('profileComplete') === 'true';
   
-  // ✅ FIXED: Add refs to prevent infinite re-renders
+  // ✅ FIXED: Stable query params check
+  const profileJustCompleted = useMemo(() => {
+    const params = new URLSearchParams(window.location.search);
+    return params.get('profileComplete') === 'true';
+  }, [location.search]);
+  
+  // ✅ FIXED: Add stable refs to prevent infinite re-renders
   const isCheckingProfileRef = useRef(false);
-  const hasCheckedProfileRef = useRef(false);
   const isMountedRef = useRef(true);
-  const lastProfileIdRef = useRef(null);
-  const lastRolesRef = useRef(null);
   
-  // ✅ FIXED: Enhanced profile setup state with error tracking
-  const [profileSetup, setProfileSetup] = useState({
+  // ✅ FIXED: Memoize profile key to prevent unnecessary re-checks
+  const profileKey = useMemo(() => {
+    if (!profile?.id || !profile?.roles?.length) return null;
+    return `${profile.id}-${profile.roles.sort().join(',')}`;
+  }, [profile?.id, profile?.roles]);
+  
+  // ✅ FIXED: Enhanced profile setup state with stable structure
+  const [profileSetup, setProfileSetup] = useState(() => ({
     hasComprehensiveProfile: false,
     loading: true,
     error: null,
-    lastChecked: null
-  });
+    lastChecked: null,
+    profileKey: null
+  }));
 
-  // ✅ FIXED: Service availability check
-  const checkServiceAvailability = useCallback(() => {
+  // ✅ FIXED: Memoized service availability check
+  const serviceAvailability = useMemo(() => {
     const services = {
       peerSupport: !!(db && db.peerSupportProfiles && typeof db.peerSupportProfiles.getByUserId === 'function'),
       matching: typeof getMatchingProfile === 'function',
@@ -84,9 +92,9 @@ const MainApp = () => {
     
     console.log('🔧 Service availability check:', services);
     return services;
-  }, []);
+  }, []); // Empty dependency array - this rarely changes
 
-  // ✅ FIXED: Landlord profile check with better error handling
+  // ✅ FIXED: Landlord profile check with stable callback
   const checkLandlordProfile = useCallback(async (profileId) => {
     try {
       const { data, error } = await supabase
@@ -100,7 +108,6 @@ const MainApp = () => {
       }
 
       if (data) {
-        // Check if landlord profile is complete
         const isComplete = !!(
           data.primary_phone && 
           data.business_type && 
@@ -124,26 +131,23 @@ const MainApp = () => {
       console.error('Error checking landlord profile:', error);
       return false;
     }
-  }, []);
+  }, []); // No dependencies - supabase client is stable
 
-  // ✅ FIXED: Profile completion check with robust error handling and re-render prevention
-  const checkProfileCompletion = useCallback(async () => {
+  // ✅ FIXED: Stable profile completion check with proper memoization
+  const checkProfileCompletion = useCallback(async (currentProfileKey) => {
     // ✅ FIXED: Prevent multiple simultaneous checks
     if (isCheckingProfileRef.current || !isMountedRef.current) {
       console.log('Profile check already in progress or component unmounted');
       return;
     }
 
-    // ✅ FIXED: Check if we need to re-check (profile ID or roles changed)
-    const profileChanged = lastProfileIdRef.current !== profile?.id;
-    const rolesChanged = JSON.stringify(lastRolesRef.current) !== JSON.stringify(profile?.roles);
-    
-    if (hasCheckedProfileRef.current && !profileChanged && !rolesChanged && !profileJustCompleted) {
-      console.log('Profile already checked and no changes detected');
+    // ✅ FIXED: Check if we already checked this profile
+    if (profileSetup.profileKey === currentProfileKey && profileSetup.lastChecked) {
+      console.log('Profile already checked for this key:', currentProfileKey);
       return;
     }
 
-    // ✅ UPDATED: Check for profile (registrant_profiles record) not just user
+    // ✅ FIXED: Validate required data
     if (!user || !profile?.id || !profile?.roles?.length) {
       console.log('Missing user, profile, or roles:', { user: !!user, profile: !!profile, roles: profile?.roles })
       if (isMountedRef.current) {
@@ -151,23 +155,18 @@ const MainApp = () => {
           hasComprehensiveProfile: false, 
           loading: false, 
           error: null,
-          lastChecked: Date.now()
+          lastChecked: Date.now(),
+          profileKey: currentProfileKey
         });
-        hasCheckedProfileRef.current = true;
       }
       return;
     }
 
-    // ✅ FIXED: Set checking flags and update refs
+    // ✅ FIXED: Set checking flag
     isCheckingProfileRef.current = true;
-    lastProfileIdRef.current = profile.id;
-    lastRolesRef.current = [...profile.roles];
 
     try {
       console.log('Checking profile completion for profile.id:', profile.id, 'roles:', profile.roles);
-      
-      // ✅ FIXED: Check service availability before proceeding
-      const services = checkServiceAvailability();
       
       let hasCompleteProfile = false;
       let profileError = null;
@@ -182,7 +181,6 @@ const MainApp = () => {
           if (result.success && result.data) {
             const applicantProfile = result.data;
             
-            // ✅ SCHEMA COMPLIANT: Check using exact schema field names
             hasCompleteProfile = !!(
               applicantProfile?.primary_city && 
               applicantProfile?.primary_state && 
@@ -194,16 +192,7 @@ const MainApp = () => {
               applicantProfile?.profile_completed
             );
             
-            console.log('Applicant profile check:', { 
-              hasProfile: !!applicantProfile,
-              hasLocation: !!(applicantProfile?.primary_city && applicantProfile?.primary_state),
-              hasBudget: !!(applicantProfile?.budget_min && applicantProfile?.budget_max),
-              hasRecoveryInfo: !!applicantProfile?.recovery_stage,
-              hasContent: !!(applicantProfile?.about_me && applicantProfile?.looking_for),
-              isCompleted: !!applicantProfile?.profile_completed,
-              completionPercentage: applicantProfile?.completion_percentage || 0,
-              overallComplete: hasCompleteProfile
-            });
+            console.log('Applicant profile check complete:', hasCompleteProfile);
           } else {
             console.log('No applicant profile found or error:', result.error);
             hasCompleteProfile = false;
@@ -215,11 +204,11 @@ const MainApp = () => {
         }
       }
       
-      // ✅ FIXED: Peer support check with enhanced error handling
+      // ✅ FIXED: Peer support check with service availability
       else if (hasRole('peer-support')) {
         console.log('Checking peer support comprehensive profile...');
         
-        if (!services.peerSupport) {
+        if (!serviceAvailability.peerSupport) {
           console.warn('⚠️ Peer support service not available, assuming incomplete profile');
           profileError = 'Peer support service temporarily unavailable';
           hasCompleteProfile = false;
@@ -230,7 +219,6 @@ const MainApp = () => {
             if (result.success && result.data) {
               const peerProfile = result.data;
               
-              // ✅ SCHEMA COMPLIANT: Use exact schema field names
               hasCompleteProfile = !!(
                 peerProfile?.primary_phone && 
                 peerProfile?.bio && 
@@ -239,18 +227,10 @@ const MainApp = () => {
                 peerProfile?.profile_completed
               );
               
-              console.log('Peer profile check:', { 
-                hasProfile: !!peerProfile,
-                hasPhone: !!peerProfile?.primary_phone,
-                hasBio: !!peerProfile?.bio,
-                hasSpecialties: !!(peerProfile?.specialties && peerProfile?.specialties?.length > 0),
-                isCompleted: !!peerProfile?.profile_completed,
-                overallComplete: hasCompleteProfile
-              });
+              console.log('Peer profile check complete:', hasCompleteProfile);
             } else {
               console.log('No peer support profile found or error:', result.error);
               
-              // ✅ FIXED: Handle service errors specifically
               if (result.error?.message?.includes('not available')) {
                 profileError = 'Peer support service temporarily unavailable';
               }
@@ -285,9 +265,8 @@ const MainApp = () => {
           const result = await getEmployerProfilesByUserId(profile.id);
           
           if (result.success && result.data && result.data.length > 0) {
-            const employerProfile = result.data[0]; // Get first employer profile
+            const employerProfile = result.data[0];
             
-            // ✅ SCHEMA COMPLIANT: Use exact schema field names from employer_profiles table
             hasCompleteProfile = !!(
               employerProfile?.business_type && 
               employerProfile?.industry && 
@@ -296,15 +275,7 @@ const MainApp = () => {
               employerProfile?.profile_completed
             );
             
-            console.log('Employer profile check:', { 
-              hasProfile: !!employerProfile,
-              hasBusinessType: !!employerProfile?.business_type,
-              hasIndustry: !!employerProfile?.industry,
-              hasDescription: !!employerProfile?.description,
-              hasJobTypes: !!(employerProfile?.job_types_available?.length > 0),
-              isCompleted: !!employerProfile?.profile_completed,
-              overallComplete: hasCompleteProfile
-            });
+            console.log('Employer profile check complete:', hasCompleteProfile);
           } else {
             console.log('No employer profile found or error:', result.error);
             hasCompleteProfile = false;
@@ -322,15 +293,13 @@ const MainApp = () => {
           hasComprehensiveProfile: hasCompleteProfile,
           loading: false,
           error: profileError,
-          lastChecked: Date.now()
+          lastChecked: Date.now(),
+          profileKey: currentProfileKey
         });
-        
-        hasCheckedProfileRef.current = true;
       }
 
       console.log('Profile completion check complete:', {
-        profileId: profile.id,
-        userRoles: profile.roles,
+        profileKey: currentProfileKey,
         hasComprehensiveProfile: hasCompleteProfile,
         error: profileError
       });
@@ -342,36 +311,44 @@ const MainApp = () => {
           hasComprehensiveProfile: false, 
           loading: false, 
           error: 'Failed to check profile status',
-          lastChecked: Date.now()
+          lastChecked: Date.now(),
+          profileKey: currentProfileKey
         });
-        hasCheckedProfileRef.current = true;
       }
     } finally {
       isCheckingProfileRef.current = false;
     }
-  }, [user, profile, hasRole, isAuthenticated, profileJustCompleted, checkServiceAvailability, checkLandlordProfile]);
+  }, [user, profile, hasRole, serviceAvailability, checkLandlordProfile, profileSetup.profileKey, profileSetup.lastChecked]);
 
-  // ✅ FIXED: Profile check effect with better dependency management
+  // ✅ FIXED: Effect with stable dependencies
   useEffect(() => {
-    if (isAuthenticated && profile?.id && profile?.roles?.length) {
-      checkProfileCompletion();
+    if (isAuthenticated && profileKey) {
+      checkProfileCompletion(profileKey);
+    } else if (isAuthenticated && !profileKey) {
+      // User is authenticated but no valid profile data yet
+      console.log('User authenticated but waiting for profile data');
+      if (isMountedRef.current) {
+        setProfileSetup({ 
+          hasComprehensiveProfile: false, 
+          loading: true, 
+          error: null,
+          lastChecked: null,
+          profileKey: null
+        });
+      }
     } else {
-      console.log('Not ready for profile check:', { 
-        isAuthenticated, 
-        profileId: profile?.id, 
-        rolesLength: profile?.roles?.length 
-      });
-      
+      // Not authenticated
       if (isMountedRef.current) {
         setProfileSetup({ 
           hasComprehensiveProfile: false, 
           loading: false, 
           error: null,
-          lastChecked: Date.now()
+          lastChecked: Date.now(),
+          profileKey: null
         });
       }
     }
-  }, [isAuthenticated, profile?.id, profile?.roles?.length, checkProfileCompletion]);
+  }, [isAuthenticated, profileKey, checkProfileCompletion]);
 
   // ✅ FIXED: Component cleanup
   useEffect(() => {
@@ -382,7 +359,7 @@ const MainApp = () => {
     };
   }, []);
 
-  // ✅ FIXED: Profile setup completion handler
+  // ✅ FIXED: Stable profile setup completion handler
   const handleProfileSetupComplete = useCallback(() => {
     console.log('Profile setup completed, updating state');
     if (isMountedRef.current) {
@@ -392,9 +369,6 @@ const MainApp = () => {
         error: null,
         lastChecked: Date.now()
       }));
-      
-      // Reset check flags to allow future checks if needed
-      hasCheckedProfileRef.current = false;
     }
   }, []);
 
@@ -404,7 +378,7 @@ const MainApp = () => {
     return <Navigate to="/" replace />
   }
 
-  // ✅ FIXED: Loading state with error handling
+  // ✅ FIXED: Loading state with better messaging
   if (profileSetup.loading) {
     console.log('Profile setup loading...');
     return (
@@ -427,12 +401,12 @@ const MainApp = () => {
     )
   }
 
-  // ✅ FIXED: Profile completion flow with better error handling
+  // ✅ FIXED: Profile completion flow - prevent loops
   if (!profileSetup.hasComprehensiveProfile && !profileJustCompleted) {
     console.log('User needs to complete comprehensive profile');
     
-    // ✅ FIXED: Show error message if there's a service issue
-    const renderErrorAlert = () => {
+    // ✅ FIXED: Render error alert component
+    const ErrorAlert = () => {
       if (profileSetup.error) {
         return (
           <div className="alert alert-warning mb-4">
@@ -445,16 +419,16 @@ const MainApp = () => {
       return null;
     };
     
-    // For APPLICANTS - show comprehensive matching profile form
+    // For APPLICANTS
     if (hasRole('applicant')) {
-      console.log('Redirecting applicant to comprehensive matching profile form');
+      console.log('Showing applicant profile form');
       return (
         <div className="app-background" style={{ minHeight: '100vh', padding: '20px 0' }}>
           <div className="container">
             <Header />
             <div className="content">
               <div style={{ maxWidth: '900px', margin: '0 auto' }}>
-                {renderErrorAlert()}
+                <ErrorAlert />
                 <div className="alert alert-info mb-4">
                   <h4>Complete Your Profile</h4>
                   <p>Please complete your comprehensive profile to access the full platform and start finding compatible roommates.</p>
@@ -469,16 +443,16 @@ const MainApp = () => {
       )
     }
     
-    // ✅ FIXED: For PEER SPECIALISTS - show comprehensive peer support form (schema compliant)
+    // ✅ FIXED: For PEER SPECIALISTS - show form with proper error handling
     else if (hasRole('peer-support')) {
-      console.log('Redirecting peer specialist to comprehensive peer support form')
+      console.log('Showing peer support profile form');
       return (
         <div className="app-background" style={{ minHeight: '100vh', padding: '20px 0' }}>
           <div className="container">
             <Header />
             <div className="content">
               <div style={{ maxWidth: '900px', margin: '0 auto' }}>
-                {renderErrorAlert()}
+                <ErrorAlert />
                 <div className="alert alert-info mb-4">
                   <h4>Complete Your Peer Support Profile</h4>
                   <p>Please complete your comprehensive peer support profile to help others find the right support services.</p>
@@ -493,16 +467,16 @@ const MainApp = () => {
       )
     }
     
-    // For EMPLOYERS - redirect to employer management
+    // For EMPLOYERS
     else if (hasRole('employer')) {
-      console.log('Redirecting employer to create employer profile')
+      console.log('Showing employer management');
       return (
         <div className="app-background" style={{ minHeight: '100vh', padding: '20px 0' }}>
           <div className="container">
             <Header />
             <div className="content">
               <div style={{ maxWidth: '900px', margin: '0 auto' }}>
-                {renderErrorAlert()}
+                <ErrorAlert />
                 <div className="alert alert-info mb-4">
                   <h4>Create Your Employer Profile</h4>
                   <p>Please create your company profile to start connecting with recovery-focused talent and posting job opportunities.</p>
@@ -515,16 +489,16 @@ const MainApp = () => {
       )
     }
     
-    // For LANDLORDS - they have basic info from registrant_profiles, proceed to dashboard
+    // For LANDLORDS
     else if (hasRole('landlord')) {
-      console.log('Redirecting landlord to create landlord profile')
+      console.log('Showing landlord profile form');
       return (
         <div className="app-background" style={{ minHeight: '100vh', padding: '20px 0' }}>
           <div className="container">
             <Header />
             <div className="content">
               <div style={{ maxWidth: '900px', margin: '0 auto' }}>
-                {renderErrorAlert()}
+                <ErrorAlert />
                 <div className="alert alert-info mb-4">
                   <h4>Complete Your Landlord Profile</h4>
                   <p>Please complete your landlord profile to start listing properties and connecting with potential tenants.</p>
@@ -541,17 +515,17 @@ const MainApp = () => {
     
     // Fallback for unknown roles
     else {
-      console.log('Unknown role, proceeding to dashboard')
+      console.log('Unknown role, proceeding to dashboard');
       if (isMountedRef.current) {
-        setProfileSetup(prev => ({ ...prev, hasComprehensiveProfile: true }))
+        setProfileSetup(prev => ({ ...prev, hasComprehensiveProfile: true }));
       }
-      return null // Will re-render with updated state
+      return null; // Will re-render with updated state
     }
   }
 
-  console.log('User has comprehensive profile, rendering main app routes')
+  console.log('User has comprehensive profile, rendering main app routes');
   
-  // Main app routes
+  // Main app routes (rest remains the same...)
   return (
     <div className="app-background" style={{ minHeight: '100vh', padding: '20px 0' }}>
       <div className="container">
@@ -584,7 +558,7 @@ const MainApp = () => {
               </>
             )}
 
-            {/* ✅ FIXED: Peer Support Routes - Only check for 'peer-support' role */}
+            {/* Peer Support Routes */}
             {hasRole('peer-support') && (
               <>
                 <Route path="/profile/peer-support" element={
@@ -639,7 +613,7 @@ const MainApp = () => {
             {/* Redirect old routes */}
             <Route path="/messages" element={<Navigate to="/app/communications" replace />} />
             
-            {/* ✅ SCHEMA COMPLIANT: Basic profile route using registrant_profiles fields */}
+            {/* Basic profile route */}
             <Route path="/profile/basic" element={
               <div style={{ maxWidth: '800px', margin: '0 auto' }}>
                 <div className="card">
@@ -676,7 +650,7 @@ const MainApp = () => {
                       value={profile?.roles?.map(role => {
                         switch(role) {
                           case 'applicant': return 'Housing Seeker'
-                          case 'peer-support': return 'Peer Specialist'  // ✅ FIXED: Only use 'peer-support'
+                          case 'peer-support': return 'Peer Specialist'
                           case 'landlord': return 'Property Owner'
                           case 'employer': return 'Recovery-Friendly Employer'
                           default: return role.charAt(0).toUpperCase() + role.slice(1)
