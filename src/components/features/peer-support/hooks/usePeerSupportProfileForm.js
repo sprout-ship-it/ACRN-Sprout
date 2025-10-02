@@ -1,10 +1,9 @@
-// src/components/features/peer-support/hooks/usePeerSupportProfileForm.js - FIXED VERSION
+// src/components/features/peer-support/hooks/usePeerSupportProfileForm.js - FIXED IMPORTS
 import { useState, useEffect, useCallback } from 'react';
 import { useAuth } from '../../../../hooks/useAuth';
-import { supabase } from '../../../../utils/supabase';
 
-// ✅ FIXED: Import the correct service function
-import { getPeerSupportProfileByUserId, createPeerSupportProfile, updatePeerSupportProfile } from '../../../../utils/database/peerSupportService';
+// ✅ FIXED: Import the db object instead of individual functions
+import { db } from '../../../../utils/supabase';
 
 const INITIAL_FORM_DATA = {
   // Contact Information
@@ -57,7 +56,7 @@ export const usePeerSupportProfileForm = ({ editMode = false, onComplete } = {})
   const [successMessage, setSuccessMessage] = useState('');
   const [hasLoadedData, setHasLoadedData] = useState(false); // ✅ FIXED: Prevent multiple loads
 
-  // ✅ FIXED: Load existing data with proper error handling and no recursion
+  // ✅ FIXED: Load existing data with proper service usage
   useEffect(() => {
     let isMounted = true;
     
@@ -73,8 +72,8 @@ export const usePeerSupportProfileForm = ({ editMode = false, onComplete } = {})
       try {
         console.log('🤝 Loading peer support profile for registrant ID:', profile.id);
         
-        // ✅ FIXED: Use the correct service function with supabase client
-        const result = await getPeerSupportProfileByUserId(profile.id, supabase);
+        // ✅ FIXED: Use the db object from supabase.js
+        const result = await db.peerSupportProfiles.getByUserId(profile.id);
         
         if (!isMounted) return;
 
@@ -110,7 +109,7 @@ export const usePeerSupportProfileForm = ({ editMode = false, onComplete } = {})
           }));
         } else if (result.error) {
           // ✅ FIXED: Handle "not found" gracefully vs real errors
-          if (result.error.includes('No peer support profile found') || result.error.includes('not found')) {
+          if (result.error.code === 'NOT_FOUND' || result.error.message?.includes('No peer support profile found')) {
             console.log('ℹ️ No existing peer support profile found - starting fresh');
             // This is normal for new users, don't set an error
           } else {
@@ -260,7 +259,7 @@ export const usePeerSupportProfileForm = ({ editMode = false, onComplete } = {})
     return Object.keys(newErrors).length === 0;
   }, [formData]);
 
-  // ✅ FIXED: Form submission with proper service functions
+  // ✅ FIXED: Form submission with proper service usage
   const submitForm = useCallback(async (isSubmission = true) => {
     if (!profile?.id) {
       setErrors({ submit: 'You must be logged in to save your profile' });
@@ -320,16 +319,16 @@ export const usePeerSupportProfileForm = ({ editMode = false, onComplete } = {})
 
       console.log('💾 Submitting peer support profile data:', peerProfileData);
 
-      // ✅ FIXED: Use the correct service functions
+      // ✅ FIXED: Use the db object services
       let result;
       if (editMode) {
-        result = await updatePeerSupportProfile(profile.id, peerProfileData, supabase);
+        result = await db.peerSupportProfiles.update(profile.id, peerProfileData);
       } else {
-        result = await createPeerSupportProfile(peerProfileData, supabase);
+        result = await db.peerSupportProfiles.create(peerProfileData);
       }
 
       if (!result.success) {
-        throw new Error(result.error || 'Failed to save profile');
+        throw new Error(result.error?.message || 'Failed to save profile');
       }
 
       const successMsg = isSubmission 
