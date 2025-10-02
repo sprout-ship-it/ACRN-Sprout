@@ -8,47 +8,60 @@
 
 -- Drop any existing policies to prevent conflicts
 DROP POLICY IF EXISTS "Users can view their own peer support profile" ON peer_support_profiles;
+DROP POLICY IF EXISTS "Users can view own peer support profile" ON peer_support_profiles;
 DROP POLICY IF EXISTS "Users can insert their own peer support profile" ON peer_support_profiles;
+DROP POLICY IF EXISTS "Users can insert own peer support profile" ON peer_support_profiles;
 DROP POLICY IF EXISTS "Users can update their own peer support profile" ON peer_support_profiles;
+DROP POLICY IF EXISTS "Users can update own peer support profile" ON peer_support_profiles;
+DROP POLICY IF EXISTS "Users can delete their own peer support profile" ON peer_support_profiles;
+DROP POLICY IF EXISTS "Users can delete own peer support profile" ON peer_support_profiles;
 DROP POLICY IF EXISTS "Active applicants can view peer support profiles" ON peer_support_profiles;
 DROP POLICY IF EXISTS "Verified applicants can view peer support profiles" ON peer_support_profiles;
 
 -- ============================================================================
--- SELF-MANAGEMENT POLICIES (Non-recursive pattern)
+-- SELF-MANAGEMENT POLICIES (Working Pattern)
 -- ============================================================================
 
 -- Users can view their own peer support profile
-CREATE POLICY "Users can view own peer support profile" ON peer_support_profiles
-  FOR SELECT USING (
+CREATE POLICY "peer_support_select_own" ON peer_support_profiles
+  FOR SELECT 
+  USING (
     user_id IN (
-      SELECT rp.id FROM registrant_profiles rp
+      SELECT rp.id 
+      FROM registrant_profiles rp 
       WHERE rp.user_id = auth.uid()
     )
   );
 
 -- Users can insert their own peer support profile
-CREATE POLICY "Users can insert own peer support profile" ON peer_support_profiles
-  FOR INSERT WITH CHECK (
+CREATE POLICY "peer_support_insert_own" ON peer_support_profiles
+  FOR INSERT 
+  WITH CHECK (
     user_id IN (
-      SELECT rp.id FROM registrant_profiles rp
+      SELECT rp.id 
+      FROM registrant_profiles rp 
       WHERE rp.user_id = auth.uid()
     )
   );
 
 -- Users can update their own peer support profile
-CREATE POLICY "Users can update own peer support profile" ON peer_support_profiles
-  FOR UPDATE USING (
+CREATE POLICY "peer_support_update_own" ON peer_support_profiles
+  FOR UPDATE 
+  USING (
     user_id IN (
-      SELECT rp.id FROM registrant_profiles rp
+      SELECT rp.id 
+      FROM registrant_profiles rp 
       WHERE rp.user_id = auth.uid()
     )
   );
 
 -- Users can delete their own peer support profile
-CREATE POLICY "Users can delete own peer support profile" ON peer_support_profiles
-  FOR DELETE USING (
+CREATE POLICY "peer_support_delete_own" ON peer_support_profiles
+  FOR DELETE 
+  USING (
     user_id IN (
-      SELECT rp.id FROM registrant_profiles rp
+      SELECT rp.id 
+      FROM registrant_profiles rp 
       WHERE rp.user_id = auth.uid()
     )
   );
@@ -57,17 +70,20 @@ CREATE POLICY "Users can delete own peer support profile" ON peer_support_profil
 -- CROSS-ROLE ACCESS POLICIES
 -- ============================================================================
 
--- Verified applicants can view active peer support profiles
-CREATE POLICY "Verified applicants can view peer support profiles" ON peer_support_profiles
-  FOR SELECT USING (
-    is_active = true 
-    AND accepting_clients = true 
+-- Active applicants can view peer support profiles for matching
+CREATE POLICY "peer_support_select_by_applicants" ON peer_support_profiles
+  FOR SELECT 
+  USING (
+    is_active = TRUE 
+    AND accepting_clients = TRUE 
+    AND profile_completed = TRUE
     AND EXISTS (
-      SELECT 1 FROM applicant_matching_profiles amp
+      SELECT 1 
+      FROM applicant_matching_profiles amp
       JOIN registrant_profiles rp ON amp.user_id = rp.id
       WHERE rp.user_id = auth.uid() 
-        AND amp.is_active = true
-        AND amp.profile_completed = true
+        AND amp.is_active = TRUE
+        AND amp.profile_completed = TRUE
     )
   );
 
@@ -88,7 +104,7 @@ GRANT USAGE, SELECT ON ALL SEQUENCES IN SCHEMA public TO authenticated;
 
 /*
 POLICY VERIFICATION:
-- ✅ No recursive queries (uses direct user_id IN pattern)
+- ✅ No recursive queries (uses IN SELECT pattern instead of = SELECT)
 - ✅ Users can manage their own profiles
 - ✅ Active applicants can view active peer support profiles
 - ✅ Proper permissions granted
@@ -97,5 +113,5 @@ POLICY VERIFICATION:
 SECURITY PATTERN:
 - Self-management: user_id IN (SELECT rp.id FROM registrant_profiles rp WHERE rp.user_id = auth.uid())
 - Cross-role access: EXISTS check for active applicant profiles
-- No direct auth.uid() = (SELECT user_id FROM...) patterns that cause recursion
+- No recursive auth.uid() = (SELECT user_id FROM...) patterns that cause HTTP 406 errors
 */

@@ -1,8 +1,8 @@
-// src/components/features/peer-support/hooks/usePeerSupportProfileForm.js - FIXED IMPORTS
-import { useState, useEffect, useCallback } from 'react';
+// src/components/features/peer-support/hooks/usePeerSupportProfileForm.js - FIXED WITH ENHANCED ERROR HANDLING
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { useAuth } from '../../../../hooks/useAuth';
 
-// ✅ FIXED: Import the db object instead of individual functions
+// ✅ FIXED: Import the db object with defensive fallback
 import { db } from '../../../../utils/supabase';
 
 const INITIAL_FORM_DATA = {
@@ -48,34 +48,84 @@ const INITIAL_FORM_DATA = {
 export const usePeerSupportProfileForm = ({ editMode = false, onComplete } = {}) => {
   const { user, profile } = useAuth();
   
+  // ✅ FIXED: Add refs to prevent infinite re-renders
+  const isLoadingRef = useRef(false);
+  const hasAttemptedLoadRef = useRef(false);
+  const isMountedRef = useRef(true);
+  
   // State
   const [formData, setFormData] = useState(INITIAL_FORM_DATA);
   const [errors, setErrors] = useState({});
   const [loading, setLoading] = useState(false);
   const [initialLoading, setInitialLoading] = useState(true);
   const [successMessage, setSuccessMessage] = useState('');
-  const [hasLoadedData, setHasLoadedData] = useState(false); // ✅ FIXED: Prevent multiple loads
+  const [hasLoadedData, setHasLoadedData] = useState(false);
+  const [serviceError, setServiceError] = useState(null); // ✅ ADDED: Track service errors
 
-  // ✅ FIXED: Load existing data with proper service usage
+  // ✅ FIXED: Service availability check with better error handling
+  const checkServiceAvailability = useCallback(() => {
+    try {
+      if (!db || !db.peerSupportProfiles) {
+        console.error('❌ PeerSupport: db.peerSupportProfiles is not available');
+        setServiceError('Peer support service is not available. Please refresh the page.');
+        return false;
+      }
+
+      const requiredMethods = ['getByUserId', 'create', 'update'];
+      const missingMethods = requiredMethods.filter(method => 
+        typeof db.peerSupportProfiles[method] !== 'function'
+      );
+
+      if (missingMethods.length > 0) {
+        console.error('❌ PeerSupport: Missing methods:', missingMethods);
+        setServiceError(`Peer support service is incomplete. Missing: ${missingMethods.join(', ')}`);
+        return false;
+      }
+
+      return true;
+    } catch (error) {
+      console.error('❌ PeerSupport: Service check failed:', error);
+      setServiceError('Failed to verify peer support service availability.');
+      return false;
+    }
+  }, []);
+
+  // ✅ FIXED: Enhanced data loading with better error handling and re-render prevention
   useEffect(() => {
-    let isMounted = true;
-    
+    // ✅ FIXED: Prevent multiple simultaneous loads
+    if (isLoadingRef.current || hasAttemptedLoadRef.current || !isMountedRef.current) {
+      return;
+    }
+
     const loadExistingData = async () => {
-      // ✅ FIXED: Prevent multiple loads and ensure we have the right data
+      // ✅ FIXED: Check prerequisites first
       if (!profile?.id || hasLoadedData) {
-        if (isMounted) {
+        if (isMountedRef.current) {
           setInitialLoading(false);
         }
         return;
       }
 
+      // ✅ FIXED: Check service availability before attempting to use it
+      if (!checkServiceAvailability()) {
+        if (isMountedRef.current) {
+          setInitialLoading(false);
+          setHasLoadedData(true); // Prevent further attempts
+        }
+        return;
+      }
+
+      // ✅ FIXED: Set loading flags to prevent re-entry
+      isLoadingRef.current = true;
+      hasAttemptedLoadRef.current = true;
+
       try {
         console.log('🤝 Loading peer support profile for registrant ID:', profile.id);
         
-        // ✅ FIXED: Use the db object from supabase.js
+        // ✅ FIXED: Use the db object with proper error handling
         const result = await db.peerSupportProfiles.getByUserId(profile.id);
         
-        if (!isMounted) return;
+        if (!isMountedRef.current) return;
 
         if (result.success && result.data) {
           console.log('✅ Loaded existing peer support profile:', result.data);
@@ -107,41 +157,59 @@ export const usePeerSupportProfileForm = ({ editMode = false, onComplete } = {})
             is_accepting_clients: peerProfile.accepting_clients !== false,
             is_verified: peerProfile.is_verified || false
           }));
+          
+          // Clear any service errors on successful load
+          setServiceError(null);
+          
         } else if (result.error) {
           // ✅ FIXED: Handle "not found" gracefully vs real errors
           if (result.error.code === 'NOT_FOUND' || result.error.message?.includes('No peer support profile found')) {
             console.log('ℹ️ No existing peer support profile found - starting fresh');
             // This is normal for new users, don't set an error
+            setServiceError(null);
           } else {
             console.warn('⚠️ Error loading peer support profile:', result.error);
             setErrors({ load: 'Unable to load your existing profile data.' });
+            
+            // ✅ FIXED: Handle service unavailable errors specifically
+            if (result.error.message?.includes('not available')) {
+              setServiceError(result.error.message);
+            }
           }
         } else {
           console.log('ℹ️ No existing peer support profile found - starting fresh');
+          setServiceError(null);
         }
         
       } catch (error) {
         console.error('❌ Error loading peer support profile:', error);
-        if (isMounted) {
-          // ✅ FIXED: Only show error for real problems, not 404s
-          if (!error.message?.includes('not found') && !error.message?.includes('No peer support profile')) {
+        if (isMountedRef.current) {
+          // ✅ FIXED: Better error categorization
+          if (error.message?.includes('not available') || error.message?.includes('undefined')) {
+            setServiceError('Peer support service is temporarily unavailable. Please refresh the page.');
+          } else if (!error.message?.includes('not found') && !error.message?.includes('No peer support profile')) {
             setErrors({ load: 'Failed to load your profile. Please refresh the page.' });
           }
         }
       } finally {
-        if (isMounted) {
+        if (isMountedRef.current) {
           setHasLoadedData(true);
           setInitialLoading(false);
+          isLoadingRef.current = false;
         }
       }
     };
 
     loadExistingData();
+  }, [profile?.id, hasLoadedData, checkServiceAvailability]); // ✅ FIXED: Stable dependencies
 
+  // ✅ FIXED: Cleanup to prevent memory leaks and stale updates
+  useEffect(() => {
+    isMountedRef.current = true;
     return () => {
-      isMounted = false;
+      isMountedRef.current = false;
     };
-  }, [profile?.id, hasLoadedData]); // ✅ FIXED: Include hasLoadedData in dependencies
+  }, []);
 
   // Calculate completion percentage
   const completionPercentage = useCallback(() => {
@@ -191,7 +259,12 @@ export const usePeerSupportProfileForm = ({ editMode = false, onComplete } = {})
     if (errors[field]) {
       setErrors(prev => ({ ...prev, [field]: '' }));
     }
-  }, [errors]);
+    
+    // Clear service error when user makes changes
+    if (serviceError) {
+      setServiceError(null);
+    }
+  }, [errors, serviceError]);
 
   // Handle array field changes
   const handleArrayChange = useCallback((field, value, checked) => {
@@ -211,7 +284,12 @@ export const usePeerSupportProfileForm = ({ editMode = false, onComplete } = {})
     if (errors[field]) {
       setErrors(prev => ({ ...prev, [field]: '' }));
     }
-  }, [errors]);
+    
+    // Clear service error when user makes changes
+    if (serviceError) {
+      setServiceError(null);
+    }
+  }, [errors, serviceError]);
 
   // Validation
   const validateForm = useCallback((isSubmission = false) => {
@@ -259,10 +337,16 @@ export const usePeerSupportProfileForm = ({ editMode = false, onComplete } = {})
     return Object.keys(newErrors).length === 0;
   }, [formData]);
 
-  // ✅ FIXED: Form submission with proper service usage
+  // ✅ FIXED: Enhanced form submission with better service checks and error handling
   const submitForm = useCallback(async (isSubmission = true) => {
     if (!profile?.id) {
       setErrors({ submit: 'You must be logged in to save your profile' });
+      return false;
+    }
+
+    // ✅ FIXED: Check service availability before submission
+    if (!checkServiceAvailability()) {
+      setErrors({ submit: 'Peer support service is currently unavailable. Please try again later.' });
       return false;
     }
 
@@ -273,6 +357,7 @@ export const usePeerSupportProfileForm = ({ editMode = false, onComplete } = {})
 
     setLoading(true);
     setSuccessMessage('');
+    setServiceError(null);
 
     try {
       // Prepare data for database
@@ -319,12 +404,21 @@ export const usePeerSupportProfileForm = ({ editMode = false, onComplete } = {})
 
       console.log('💾 Submitting peer support profile data:', peerProfileData);
 
-      // ✅ FIXED: Use the db object services
+      // ✅ FIXED: Use the db object services with enhanced error handling
       let result;
-      if (editMode) {
-        result = await db.peerSupportProfiles.update(profile.id, peerProfileData);
-      } else {
-        result = await db.peerSupportProfiles.create(peerProfileData);
+      try {
+        if (editMode) {
+          result = await db.peerSupportProfiles.update(profile.id, peerProfileData);
+        } else {
+          result = await db.peerSupportProfiles.create(peerProfileData);
+        }
+      } catch (serviceError) {
+        // ✅ FIXED: Handle service-level errors specifically
+        console.error('❌ PeerSupport: Service call failed:', serviceError);
+        throw new Error(serviceError.message?.includes('not available') 
+          ? 'Peer support service is temporarily unavailable'
+          : serviceError.message || 'Service call failed'
+        );
       }
 
       if (!result.success) {
@@ -346,18 +440,37 @@ export const usePeerSupportProfileForm = ({ editMode = false, onComplete } = {})
 
     } catch (error) {
       console.error('❌ Error saving peer support profile:', error);
+      
+      // ✅ FIXED: Better error categorization for user feedback
+      let errorMessage;
+      if (error.message?.includes('not available') || error.message?.includes('undefined')) {
+        errorMessage = 'Peer support service is temporarily unavailable. Please refresh the page and try again.';
+        setServiceError(errorMessage);
+      } else {
+        errorMessage = error.message || 'Failed to save peer support profile. Please try again.';
+      }
+      
       setErrors({ 
-        submit: error.message || 'Failed to save peer support profile. Please try again.' 
+        submit: errorMessage
       });
       return false;
     } finally {
       setLoading(false);
     }
-  }, [profile?.id, formData, validateForm, completionPercentage, editMode, onComplete]);
+  }, [profile?.id, formData, validateForm, completionPercentage, editMode, onComplete, checkServiceAvailability]);
 
   // Clear success message
   const clearSuccessMessage = useCallback(() => {
     setSuccessMessage('');
+  }, []);
+
+  // ✅ ADDED: Function to retry service initialization
+  const retryServiceConnection = useCallback(() => {
+    setServiceError(null);
+    setErrors({});
+    hasAttemptedLoadRef.current = false;
+    setHasLoadedData(false);
+    setInitialLoading(true);
   }, []);
 
   return {
@@ -367,10 +480,11 @@ export const usePeerSupportProfileForm = ({ editMode = false, onComplete } = {})
     loading,
     initialLoading,
     successMessage,
+    serviceError, // ✅ ADDED: Expose service error state
     
     // Computed values
     completionPercentage: completionPercentage(),
-    canSubmit: completionPercentage() >= 80,
+    canSubmit: completionPercentage() >= 80 && !serviceError,
     
     // Handlers
     handleInputChange,
@@ -380,6 +494,8 @@ export const usePeerSupportProfileForm = ({ editMode = false, onComplete } = {})
     
     // Utils
     setSuccessMessage,
-    clearSuccessMessage
+    clearSuccessMessage,
+    retryServiceConnection, // ✅ ADDED: Retry function
+    checkServiceAvailability // ✅ ADDED: Expose service check
   };
 };

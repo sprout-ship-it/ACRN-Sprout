@@ -177,7 +177,7 @@ CREATE POLICY "Active applicants can view available properties" ON properties
   );
 
 -- ============================================================================
--- EMPLOYER PROFILES RLS POLICIES (FIXED)
+-- EMPLOYER PROFILES RLS POLICIES
 -- ============================================================================
 
 CREATE POLICY "Users can view own employer profile" ON employer_profiles
@@ -209,34 +209,67 @@ CREATE POLICY "Verified applicants can view employer profiles" ON employer_profi
   );
 
 -- ============================================================================
--- PEER SUPPORT PROFILES RLS POLICIES (FIXED)
+-- PEER SUPPORT PROFILES RLS POLICIES (FIXED - NO HTTP 406 ERRORS)
 -- ============================================================================
 
-CREATE POLICY "Users can view own peer support profile" ON peer_support_profiles
-  FOR SELECT USING (
-    auth.uid() = (SELECT user_id FROM registrant_profiles WHERE id = peer_support_profiles.user_id)
+-- Users can view their own peer support profile
+CREATE POLICY "peer_support_select_own" ON peer_support_profiles
+  FOR SELECT 
+  USING (
+    user_id IN (
+      SELECT rp.id 
+      FROM registrant_profiles rp 
+      WHERE rp.user_id = auth.uid()
+    )
   );
 
-CREATE POLICY "Users can update own peer support profile" ON peer_support_profiles
-  FOR UPDATE USING (
-    auth.uid() = (SELECT user_id FROM registrant_profiles WHERE id = peer_support_profiles.user_id)
+-- Users can insert their own peer support profile
+CREATE POLICY "peer_support_insert_own" ON peer_support_profiles
+  FOR INSERT 
+  WITH CHECK (
+    user_id IN (
+      SELECT rp.id 
+      FROM registrant_profiles rp 
+      WHERE rp.user_id = auth.uid()
+    )
   );
 
-CREATE POLICY "Users can insert own peer support profile" ON peer_support_profiles
-  FOR INSERT WITH CHECK (
-    auth.uid() = (SELECT user_id FROM registrant_profiles WHERE id = peer_support_profiles.user_id)
+-- Users can update their own peer support profile
+CREATE POLICY "peer_support_update_own" ON peer_support_profiles
+  FOR UPDATE 
+  USING (
+    user_id IN (
+      SELECT rp.id 
+      FROM registrant_profiles rp 
+      WHERE rp.user_id = auth.uid()
+    )
   );
 
-CREATE POLICY "Verified applicants can view peer support profiles" ON peer_support_profiles
-  FOR SELECT USING (
-    is_active = true 
-    AND accepting_clients = true 
+-- Users can delete their own peer support profile
+CREATE POLICY "peer_support_delete_own" ON peer_support_profiles
+  FOR DELETE 
+  USING (
+    user_id IN (
+      SELECT rp.id 
+      FROM registrant_profiles rp 
+      WHERE rp.user_id = auth.uid()
+    )
+  );
+
+-- Active applicants can view peer support profiles for matching
+CREATE POLICY "peer_support_select_by_applicants" ON peer_support_profiles
+  FOR SELECT 
+  USING (
+    is_active = TRUE 
+    AND accepting_clients = TRUE 
+    AND profile_completed = TRUE
     AND EXISTS (
-      SELECT 1 FROM applicant_matching_profiles amp
+      SELECT 1 
+      FROM applicant_matching_profiles amp
       JOIN registrant_profiles rp ON amp.user_id = rp.id
       WHERE rp.user_id = auth.uid() 
-        AND amp.is_active = true
-        AND amp.profile_completed = true
+        AND amp.is_active = TRUE
+        AND amp.profile_completed = TRUE
     )
   );
 

@@ -11,7 +11,7 @@ import createMatchGroupsService from './database/matchGroupsService'
 // ✅ NEW: Import properties service (critical for refactored schema)
 import createPropertiesService from './database/propertiesService'
 
-// ✅ ADDED: Import peer support service
+// ✅ FIXED: Import peer support service with better error handling
 import createPeerSupportService from './database/peerSupportService'
 
 // TODO: Import remaining role-specific services as we verify alignment
@@ -41,16 +41,58 @@ export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
 
 console.log('✅ Supabase client created')
 
-// Initialize core services
-const authService = createAuthService(supabase)
-const profilesService = createProfilesService(supabase)
-const matchingProfilesService = createMatchingProfilesService(supabase)
-const matchRequestsService = createMatchRequestsService(supabase)
-const matchGroupsService = createMatchGroupsService(supabase)
-const propertiesService = createPropertiesService(supabase) // ✅ NEW: Critical service
+// ✅ FIXED: Initialize services with proper error handling
+let authService, profilesService, matchingProfilesService, matchRequestsService, matchGroupsService, propertiesService, peerSupportService;
 
-// ✅ ADDED: Initialize peer support service
-const peerSupportService = createPeerSupportService(supabase)
+try {
+  // Initialize core services
+  authService = createAuthService(supabase)
+  profilesService = createProfilesService(supabase)
+  matchingProfilesService = createMatchingProfilesService(supabase)
+  matchRequestsService = createMatchRequestsService(supabase)
+  matchGroupsService = createMatchGroupsService(supabase)
+  propertiesService = createPropertiesService(supabase)
+  
+  // ✅ FIXED: Initialize peer support service with error handling
+  console.log('🤝 Initializing peer support service...')
+  peerSupportService = createPeerSupportService(supabase)
+  
+  if (!peerSupportService) {
+    throw new Error('Peer support service initialization returned null/undefined')
+  }
+  
+  // Verify the service has required methods
+  const requiredMethods = ['create', 'getByUserId', 'update', 'delete', 'getAvailable']
+  const missingMethods = requiredMethods.filter(method => typeof peerSupportService[method] !== 'function')
+  
+  if (missingMethods.length > 0) {
+    throw new Error(`Peer support service missing methods: ${missingMethods.join(', ')}`)
+  }
+  
+  console.log('✅ Peer support service initialized successfully')
+  
+} catch (error) {
+  console.error('💥 Error initializing services:', error)
+  
+  // ✅ FIXED: Create fallback service to prevent undefined errors
+  if (!peerSupportService) {
+    console.warn('⚠️ Creating fallback peer support service')
+    peerSupportService = {
+      create: async () => ({ success: false, error: { message: 'Peer support service not available' } }),
+      getByUserId: async () => ({ success: false, error: { message: 'Peer support service not available' } }),
+      getById: async () => ({ success: false, error: { message: 'Peer support service not available' } }),
+      update: async () => ({ success: false, error: { message: 'Peer support service not available' } }),
+      delete: async () => ({ success: false, error: { message: 'Peer support service not available' } }),
+      getAvailable: async () => ({ success: false, data: [], error: { message: 'Peer support service not available' } }),
+      search: async () => ({ success: false, data: [], error: { message: 'Peer support service not available' } }),
+      getBySpecialty: async () => ({ success: false, data: [], error: { message: 'Peer support service not available' } }),
+      getByServiceArea: async () => ({ success: false, data: [], error: { message: 'Peer support service not available' } }),
+      updateAvailability: async () => ({ success: false, error: { message: 'Peer support service not available' } }),
+      getStatistics: async () => ({ success: false, error: { message: 'Peer support service not available' } }),
+      bulkUpdate: async () => ({ success: false, error: { message: 'Peer support service not available' } })
+    }
+  }
+}
 
 // Authentication helpers
 export const auth = {
@@ -66,7 +108,7 @@ export const auth = {
   getAuthStatus: authService.getAuthStatus
 }
 
-// ✅ UPDATED: Database helpers organized by refactored schema structure
+// ✅ FIXED: Database helpers with guaranteed peer support service
 export const db = {
   // ============================================================================
   // CORE PROFILES - Central hub for role selection (registrant_profiles table)
@@ -142,7 +184,7 @@ export const db = {
   },
 
   // ============================================================================
-  // ✅ ADDED: PEER SUPPORT PROFILES (peer_support_profiles table)
+  // ✅ FIXED: PEER SUPPORT PROFILES (peer_support_profiles table)
   // Flow: registrant_profiles.id → peer_support_profiles.user_id → peer_support_profiles.id
   // ============================================================================
   peerSupportProfiles: {
@@ -214,12 +256,23 @@ export const db = {
   // ============================================================================
 }
 
-// ✅ ADDED: Legacy support for any remaining imports
+// ✅ FIXED: Enhanced legacy support with error handling
 export const getPeerSupportProfileByUserId = async (userId, supabaseClient = null) => {
   console.log('⚠️ Using legacy getPeerSupportProfileByUserId - consider updating to db.peerSupportProfiles.getByUserId()');
-  const client = supabaseClient || supabase;
-  const service = createPeerSupportService(client);
-  return await service.getByUserId(userId);
+  
+  try {
+    if (db.peerSupportProfiles && typeof db.peerSupportProfiles.getByUserId === 'function') {
+      return await db.peerSupportProfiles.getByUserId(userId);
+    } else {
+      // Fallback to direct service creation
+      const client = supabaseClient || supabase;
+      const service = createPeerSupportService(client);
+      return await service.getByUserId(userId);
+    }
+  } catch (error) {
+    console.error('❌ Legacy peer support function error:', error);
+    return { success: false, data: null, error: { message: error.message } };
+  }
 };
 
 // ✅ ADDED: Additional legacy exports for different import patterns
@@ -237,30 +290,57 @@ export const getSchemaInfo = () => {
       roleProfiles: {
         applicants: 'applicant_matching_profiles',
         landlords: 'landlord_profiles (business info only)',
-        properties: 'properties (property-specific data)', // ✅ NEW
+        properties: 'properties (property-specific data)',
         employers: 'employer_profiles',
-        peerSupport: 'peer_support_profiles' // ✅ ADDED
+        peerSupport: 'peer_support_profiles'
       }
     },
     relationshipTables: {
-      housingMatches: 'Uses applicant_matching_profiles.id + properties.id', // ✅ UPDATED
+      housingMatches: 'Uses applicant_matching_profiles.id + properties.id',
       employmentMatches: 'Uses applicant_matching_profiles.id + employer_profiles.id',
-      peerSupportMatches: 'Uses applicant_matching_profiles.id + peer_support_profiles.id', // ✅ ADDED
-      matchGroups: 'Uses applicant_matching_profiles.id + properties.id + peer_support_profiles.id', // ✅ UPDATED
-      matchRequests: 'Enhanced with property_id for housing-specific requests', // ✅ UPDATED
-      favorites: 'Supports both profile favorites and property favorites' // ✅ NEW
+      peerSupportMatches: 'Uses applicant_matching_profiles.id + peer_support_profiles.id',
+      matchGroups: 'Uses applicant_matching_profiles.id + properties.id + peer_support_profiles.id',
+      matchRequests: 'Enhanced with property_id for housing-specific requests',
+      favorites: 'Supports both profile favorites and property favorites'
     },
     keyChanges: {
       propertiesTable: 'Separated property data from landlord_profiles for multi-property support',
       updatedReferences: 'Housing matches/groups now reference properties.id instead of landlord_profiles.id',
       enhancedRequests: 'Match requests support property-specific housing requests',
       propertyTypes: 'Supports both general rentals and recovery housing with different field sets',
-      peerSupportService: 'Full peer support service integration with correct field mappings' // ✅ ADDED
+      peerSupportService: 'Full peer support service integration with error handling and fallbacks'
+    },
+    serviceStatus: {
+      peerSupportInitialized: !!peerSupportService,
+      peerSupportMethods: peerSupportService ? Object.keys(peerSupportService).length : 0,
+      dbExportValid: !!(db && db.peerSupportProfiles)
     }
   }
 }
 
 console.log('✅ Supabase module loaded with refactored schema structure + peer support')
 console.log('📋 Schema Info:', getSchemaInfo())
+
+// ✅ ADDED: Debug export for troubleshooting
+export const debugInfo = {
+  supabaseClientCreated: !!supabase,
+  servicesInitialized: {
+    auth: !!authService,
+    profiles: !!profilesService,
+    matching: !!matchingProfilesService,
+    requests: !!matchRequestsService,
+    groups: !!matchGroupsService,
+    properties: !!propertiesService,
+    peerSupport: !!peerSupportService
+  },
+  dbExportStructure: {
+    hasRegistrantProfiles: !!(db && db.registrantProfiles),
+    hasMatchingProfiles: !!(db && db.matchingProfiles),
+    hasProperties: !!(db && db.properties),
+    hasPeerSupportProfiles: !!(db && db.peerSupportProfiles),
+    hasMatchRequests: !!(db && db.matchRequests),
+    hasMatchGroups: !!(db && db.matchGroups)
+  }
+}
 
 export default supabase

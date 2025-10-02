@@ -1,5 +1,5 @@
-// src/pages/MainApp.js - SCHEMA COMPLIANT VERSION (FIXED ROLES)
-import React, { useEffect, useState } from 'react'
+// src/pages/MainApp.js - SCHEMA COMPLIANT VERSION (FIXED INFINITE RE-RENDERS)
+import React, { useEffect, useState, useRef, useCallback } from 'react'
 import { Routes, Route, Navigate, useNavigate, useLocation } from 'react-router-dom'
 import { useAuth } from '../hooks/useAuth';
 
@@ -59,70 +59,125 @@ const MainApp = () => {
   const queryParams = new URLSearchParams(window.location.search);
   const profileJustCompleted = queryParams.get('profileComplete') === 'true';
   
-  // Profile setup tracking
+  // ✅ FIXED: Add refs to prevent infinite re-renders
+  const isCheckingProfileRef = useRef(false);
+  const hasCheckedProfileRef = useRef(false);
+  const isMountedRef = useRef(true);
+  const lastProfileIdRef = useRef(null);
+  const lastRolesRef = useRef(null);
+  
+  // ✅ FIXED: Enhanced profile setup state with error tracking
   const [profileSetup, setProfileSetup] = useState({
     hasComprehensiveProfile: false,
-    loading: true
-  })
-const checkLandlordProfile = async (profileId) => {
-  try {
-    const { data, error } = await supabase
-      .from('landlord_profiles')
-      .select('id, profile_completed, primary_phone, business_type')
-      .eq('user_id', profileId)
-      .single();
+    loading: true,
+    error: null,
+    lastChecked: null
+  });
 
-    if (error && error.code !== 'PGRST116') { // PGRST116 = not found
-      throw error;
-    }
+  // ✅ FIXED: Service availability check
+  const checkServiceAvailability = useCallback(() => {
+    const services = {
+      peerSupport: !!(db && db.peerSupportProfiles && typeof db.peerSupportProfiles.getByUserId === 'function'),
+      matching: typeof getMatchingProfile === 'function',
+      employer: typeof getEmployerProfilesByUserId === 'function'
+    };
+    
+    console.log('🔧 Service availability check:', services);
+    return services;
+  }, []);
 
-    if (data) {
-      // Check if landlord profile is complete
-      const isComplete = !!(
-        data.primary_phone && 
-        data.business_type && 
-        data.profile_completed
-      );
-      
-      console.log('Landlord profile check:', { 
-        hasProfile: !!data,
-        hasPhone: !!data.primary_phone,
-        hasBusinessType: !!data.business_type,
-        isCompleted: !!data.profile_completed,
-        overallComplete: isComplete
-      });
-      
-      return isComplete;
-    } else {
-      console.log('No landlord profile found');
-      return false;
-    }
-  } catch (error) {
-    console.error('Error checking landlord profile:', error);
-    return false;
-  }
-};
-  // ✅ SCHEMA COMPLIANT: Check profile completion using correct ID relationships
-  useEffect(() => {
-    const checkProfileCompletion = async () => {
-      // ✅ UPDATED: Check for profile (registrant_profiles record) not just user
-      if (!user || !profile?.id || !profile?.roles?.length) {
-        console.log('Missing user, profile, or roles:', { user: !!user, profile: !!profile, roles: profile?.roles })
-        setProfileSetup({ hasComprehensiveProfile: false, loading: false })
-        return
+  // ✅ FIXED: Landlord profile check with better error handling
+  const checkLandlordProfile = useCallback(async (profileId) => {
+    try {
+      const { data, error } = await supabase
+        .from('landlord_profiles')
+        .select('id, profile_completed, primary_phone, business_type')
+        .eq('user_id', profileId)
+        .single();
+
+      if (error && error.code !== 'PGRST116') { // PGRST116 = not found
+        throw error;
       }
 
-      try {
-        console.log('Checking profile completion for profile.id:', profile.id, 'roles:', profile.roles)
+      if (data) {
+        // Check if landlord profile is complete
+        const isComplete = !!(
+          data.primary_phone && 
+          data.business_type && 
+          data.profile_completed
+        );
         
-        let hasCompleteProfile = false
+        console.log('Landlord profile check:', { 
+          hasProfile: !!data,
+          hasPhone: !!data.primary_phone,
+          hasBusinessType: !!data.business_type,
+          isCompleted: !!data.profile_completed,
+          overallComplete: isComplete
+        });
+        
+        return isComplete;
+      } else {
+        console.log('No landlord profile found');
+        return false;
+      }
+    } catch (error) {
+      console.error('Error checking landlord profile:', error);
+      return false;
+    }
+  }, []);
 
-        // Check based on user's primary role
-        if (hasRole('applicant')) {
-          console.log('Checking applicant comprehensive profile...')
-          
-          // ✅ SCHEMA COMPLIANT: Use profile.id (registrant_profiles.id) instead of user.id
-          const result = await getMatchingProfile(profile.id, supabase)
+  // ✅ FIXED: Profile completion check with robust error handling and re-render prevention
+  const checkProfileCompletion = useCallback(async () => {
+    // ✅ FIXED: Prevent multiple simultaneous checks
+    if (isCheckingProfileRef.current || !isMountedRef.current) {
+      console.log('Profile check already in progress or component unmounted');
+      return;
+    }
+
+    // ✅ FIXED: Check if we need to re-check (profile ID or roles changed)
+    const profileChanged = lastProfileIdRef.current !== profile?.id;
+    const rolesChanged = JSON.stringify(lastRolesRef.current) !== JSON.stringify(profile?.roles);
+    
+    if (hasCheckedProfileRef.current && !profileChanged && !rolesChanged && !profileJustCompleted) {
+      console.log('Profile already checked and no changes detected');
+      return;
+    }
+
+    // ✅ UPDATED: Check for profile (registrant_profiles record) not just user
+    if (!user || !profile?.id || !profile?.roles?.length) {
+      console.log('Missing user, profile, or roles:', { user: !!user, profile: !!profile, roles: profile?.roles })
+      if (isMountedRef.current) {
+        setProfileSetup({ 
+          hasComprehensiveProfile: false, 
+          loading: false, 
+          error: null,
+          lastChecked: Date.now()
+        });
+        hasCheckedProfileRef.current = true;
+      }
+      return;
+    }
+
+    // ✅ FIXED: Set checking flags and update refs
+    isCheckingProfileRef.current = true;
+    lastProfileIdRef.current = profile.id;
+    lastRolesRef.current = [...profile.roles];
+
+    try {
+      console.log('Checking profile completion for profile.id:', profile.id, 'roles:', profile.roles);
+      
+      // ✅ FIXED: Check service availability before proceeding
+      const services = checkServiceAvailability();
+      
+      let hasCompleteProfile = false;
+      let profileError = null;
+
+      // Check based on user's primary role
+      if (hasRole('applicant')) {
+        console.log('Checking applicant comprehensive profile...');
+        
+        try {
+          const result = await getMatchingProfile(profile.id, supabase);
           
           if (result.success && result.data) {
             const applicantProfile = result.data;
@@ -137,7 +192,7 @@ const checkLandlordProfile = async (profileId) => {
               applicantProfile?.about_me && 
               applicantProfile?.looking_for &&
               applicantProfile?.profile_completed
-            )
+            );
             
             console.log('Applicant profile check:', { 
               hasProfile: !!applicantProfile,
@@ -148,58 +203,86 @@ const checkLandlordProfile = async (profileId) => {
               isCompleted: !!applicantProfile?.profile_completed,
               completionPercentage: applicantProfile?.completion_percentage || 0,
               overallComplete: hasCompleteProfile
-            })
+            });
           } else {
             console.log('No applicant profile found or error:', result.error);
             hasCompleteProfile = false;
           }
+        } catch (error) {
+          console.error('Error checking applicant profile:', error);
+          profileError = 'Failed to check applicant profile';
+          hasCompleteProfile = false;
         }
+      }
+      
+      // ✅ FIXED: Peer support check with enhanced error handling
+      else if (hasRole('peer-support')) {
+        console.log('Checking peer support comprehensive profile...');
         
-        // ✅ FIXED: Only check for 'peer-support' role (schema compliant)
-        else if (hasRole('peer-support')) {
-          console.log('Checking peer support comprehensive profile...')
-          
-          // ✅ SCHEMA COMPLIANT: Use profile.id instead of user.id
-          const result = await db.peerSupportProfiles.getByUserId(profile.id)
-          
-          if (result.success && result.data) {
-            const peerProfile = result.data;
+        if (!services.peerSupport) {
+          console.warn('⚠️ Peer support service not available, assuming incomplete profile');
+          profileError = 'Peer support service temporarily unavailable';
+          hasCompleteProfile = false;
+        } else {
+          try {
+            const result = await db.peerSupportProfiles.getByUserId(profile.id);
             
-            // ✅ SCHEMA COMPLIANT: Use exact schema field names
-            hasCompleteProfile = !!(
-              peerProfile?.primary_phone && 
-              peerProfile?.bio && 
-              peerProfile?.specialties &&
-              peerProfile?.specialties?.length > 0 &&
-              peerProfile?.profile_completed
-            )
-            
-            console.log('Peer profile check:', { 
-              hasProfile: !!peerProfile,
-              hasPhone: !!peerProfile?.primary_phone,
-              hasBio: !!peerProfile?.bio,
-              hasSpecialties: !!(peerProfile?.specialties && peerProfile?.specialties?.length > 0),
-              isCompleted: !!peerProfile?.profile_completed,
-              overallComplete: hasCompleteProfile
-            })
-          } else {
-            console.log('No peer support profile found or error:', result.error);
+            if (result.success && result.data) {
+              const peerProfile = result.data;
+              
+              // ✅ SCHEMA COMPLIANT: Use exact schema field names
+              hasCompleteProfile = !!(
+                peerProfile?.primary_phone && 
+                peerProfile?.bio && 
+                peerProfile?.specialties &&
+                peerProfile?.specialties?.length > 0 &&
+                peerProfile?.profile_completed
+              );
+              
+              console.log('Peer profile check:', { 
+                hasProfile: !!peerProfile,
+                hasPhone: !!peerProfile?.primary_phone,
+                hasBio: !!peerProfile?.bio,
+                hasSpecialties: !!(peerProfile?.specialties && peerProfile?.specialties?.length > 0),
+                isCompleted: !!peerProfile?.profile_completed,
+                overallComplete: hasCompleteProfile
+              });
+            } else {
+              console.log('No peer support profile found or error:', result.error);
+              
+              // ✅ FIXED: Handle service errors specifically
+              if (result.error?.message?.includes('not available')) {
+                profileError = 'Peer support service temporarily unavailable';
+              }
+              hasCompleteProfile = false;
+            }
+          } catch (error) {
+            console.error('Error checking peer support profile:', error);
+            profileError = error.message?.includes('not available') 
+              ? 'Peer support service temporarily unavailable'
+              : 'Failed to check peer support profile';
             hasCompleteProfile = false;
           }
         }
+      }
+      
+      else if (hasRole('landlord')) {
+        console.log('Checking landlord profile...');
         
-else if (hasRole('landlord')) {
-  console.log('Checking landlord profile...')
-  
-  // ✅ UPDATED: Actually check for landlord_profiles record, not just basic info
-  hasCompleteProfile = await checkLandlordProfile(profile.id);
-}
+        try {
+          hasCompleteProfile = await checkLandlordProfile(profile.id);
+        } catch (error) {
+          console.error('Error checking landlord profile:', error);
+          profileError = 'Failed to check landlord profile';
+          hasCompleteProfile = false;
+        }
+      }
 
-        else if (hasRole('employer')) {
-          console.log('Checking employer comprehensive profile...')
-          
-          // ✅ SCHEMA COMPLIANT: Use profile.id instead of user.id
-          const result = await getEmployerProfilesByUserId(profile.id)
+      else if (hasRole('employer')) {
+        console.log('Checking employer comprehensive profile...');
+        
+        try {
+          const result = await getEmployerProfilesByUserId(profile.id);
           
           if (result.success && result.data && result.data.length > 0) {
             const employerProfile = result.data[0]; // Get first employer profile
@@ -211,7 +294,7 @@ else if (hasRole('landlord')) {
               employerProfile?.description && 
               employerProfile?.job_types_available?.length > 0 &&
               employerProfile?.profile_completed
-            )
+            );
             
             console.log('Employer profile check:', { 
               hasProfile: !!employerProfile,
@@ -221,47 +304,109 @@ else if (hasRole('landlord')) {
               hasJobTypes: !!(employerProfile?.job_types_available?.length > 0),
               isCompleted: !!employerProfile?.profile_completed,
               overallComplete: hasCompleteProfile
-            })
+            });
           } else {
-            console.log('No employer profile found or error:', result.error)
-            hasCompleteProfile = false
+            console.log('No employer profile found or error:', result.error);
+            hasCompleteProfile = false;
           }
+        } catch (error) {
+          console.error('Error checking employer profile:', error);
+          profileError = 'Failed to check employer profile';
+          hasCompleteProfile = false;
         }
+      }
 
+      // ✅ FIXED: Update state only if component is still mounted
+      if (isMountedRef.current) {
         setProfileSetup({
           hasComprehensiveProfile: hasCompleteProfile,
-          loading: false
-        })
+          loading: false,
+          error: profileError,
+          lastChecked: Date.now()
+        });
+        
+        hasCheckedProfileRef.current = true;
+      }
 
-        console.log('Profile completion check complete:', {
-          profileId: profile.id,
-          userRoles: profile.roles,
-          hasComprehensiveProfile: hasCompleteProfile
-        })
+      console.log('Profile completion check complete:', {
+        profileId: profile.id,
+        userRoles: profile.roles,
+        hasComprehensiveProfile: hasCompleteProfile,
+        error: profileError
+      });
 
-      } catch (error) {
-        console.error('Error checking profile completion:', error)
-        setProfileSetup({ hasComprehensiveProfile: false, loading: false })
+    } catch (error) {
+      console.error('Error checking profile completion:', error);
+      if (isMountedRef.current) {
+        setProfileSetup({ 
+          hasComprehensiveProfile: false, 
+          loading: false, 
+          error: 'Failed to check profile status',
+          lastChecked: Date.now()
+        });
+        hasCheckedProfileRef.current = true;
+      }
+    } finally {
+      isCheckingProfileRef.current = false;
+    }
+  }, [user, profile, hasRole, isAuthenticated, profileJustCompleted, checkServiceAvailability, checkLandlordProfile]);
+
+  // ✅ FIXED: Profile check effect with better dependency management
+  useEffect(() => {
+    if (isAuthenticated && profile?.id && profile?.roles?.length) {
+      checkProfileCompletion();
+    } else {
+      console.log('Not ready for profile check:', { 
+        isAuthenticated, 
+        profileId: profile?.id, 
+        rolesLength: profile?.roles?.length 
+      });
+      
+      if (isMountedRef.current) {
+        setProfileSetup({ 
+          hasComprehensiveProfile: false, 
+          loading: false, 
+          error: null,
+          lastChecked: Date.now()
+        });
       }
     }
+  }, [isAuthenticated, profile?.id, profile?.roles?.length, checkProfileCompletion]);
 
-    if (isAuthenticated && profile?.id && profile?.roles?.length) {
-      checkProfileCompletion()
-    } else {
-      console.log('Not ready for profile check:', { isAuthenticated, profileId: profile?.id, rolesLength: profile?.roles?.length })
-      setProfileSetup({ hasComprehensiveProfile: false, loading: false })
+  // ✅ FIXED: Component cleanup
+  useEffect(() => {
+    isMountedRef.current = true;
+    return () => {
+      isMountedRef.current = false;
+      isCheckingProfileRef.current = false;
+    };
+  }, []);
+
+  // ✅ FIXED: Profile setup completion handler
+  const handleProfileSetupComplete = useCallback(() => {
+    console.log('Profile setup completed, updating state');
+    if (isMountedRef.current) {
+      setProfileSetup(prev => ({ 
+        ...prev, 
+        hasComprehensiveProfile: true,
+        error: null,
+        lastChecked: Date.now()
+      }));
+      
+      // Reset check flags to allow future checks if needed
+      hasCheckedProfileRef.current = false;
     }
-  }, [user, profile, hasRole, isAuthenticated])
+  }, []);
 
   // Redirect unauthenticated users
   if (!isAuthenticated) {
-    console.log('User not authenticated, redirecting to landing')
+    console.log('User not authenticated, redirecting to landing');
     return <Navigate to="/" replace />
   }
 
-  // Loading state while checking profile
+  // ✅ FIXED: Loading state with error handling
   if (profileSetup.loading) {
-    console.log('Profile setup loading...')
+    console.log('Profile setup loading...');
     return (
       <div className="app-background" style={{ minHeight: '100vh', padding: '20px 0' }}>
         <div className="container">
@@ -269,6 +414,12 @@ else if (hasRole('landlord')) {
           <div className="content">
             <div className="flex-center" style={{ minHeight: '400px' }}>
               <LoadingSpinner message="Loading your dashboard..." />
+              {profileSetup.error && (
+                <div className="alert alert-warning mt-3" style={{ maxWidth: '500px' }}>
+                  <p><strong>Notice:</strong> {profileSetup.error}</p>
+                  <p><small>You can still access most features below.</small></p>
+                </div>
+              )}
             </div>
           </div>
         </div>
@@ -276,9 +427,23 @@ else if (hasRole('landlord')) {
     )
   }
 
-  // Direct users to appropriate comprehensive form if not completed
+  // ✅ FIXED: Profile completion flow with better error handling
   if (!profileSetup.hasComprehensiveProfile && !profileJustCompleted) {
     console.log('User needs to complete comprehensive profile');
+    
+    // ✅ FIXED: Show error message if there's a service issue
+    const renderErrorAlert = () => {
+      if (profileSetup.error) {
+        return (
+          <div className="alert alert-warning mb-4">
+            <h4>Service Notice</h4>
+            <p>{profileSetup.error}</p>
+            <p><small>You can still complete your profile, but some features may be limited until services are restored.</small></p>
+          </div>
+        );
+      }
+      return null;
+    };
     
     // For APPLICANTS - show comprehensive matching profile form
     if (hasRole('applicant')) {
@@ -289,12 +454,13 @@ else if (hasRole('landlord')) {
             <Header />
             <div className="content">
               <div style={{ maxWidth: '900px', margin: '0 auto' }}>
+                {renderErrorAlert()}
                 <div className="alert alert-info mb-4">
                   <h4>Complete Your Profile</h4>
                   <p>Please complete your comprehensive profile to access the full platform and start finding compatible roommates.</p>
                 </div>
                 <EnhancedMatchingProfileForm 
-                  onComplete={() => setProfileSetup(prev => ({ ...prev, hasComprehensiveProfile: true }))}
+                  onComplete={handleProfileSetupComplete}
                 />
               </div>
             </div>
@@ -312,12 +478,13 @@ else if (hasRole('landlord')) {
             <Header />
             <div className="content">
               <div style={{ maxWidth: '900px', margin: '0 auto' }}>
+                {renderErrorAlert()}
                 <div className="alert alert-info mb-4">
                   <h4>Complete Your Peer Support Profile</h4>
                   <p>Please complete your comprehensive peer support profile to help others find the right support services.</p>
                 </div>
                 <PeerSupportProfileForm 
-                  onComplete={() => setProfileSetup(prev => ({ ...prev, hasComprehensiveProfile: true }))}
+                  onComplete={handleProfileSetupComplete}
                 />
               </div>
             </div>
@@ -335,6 +502,7 @@ else if (hasRole('landlord')) {
             <Header />
             <div className="content">
               <div style={{ maxWidth: '900px', margin: '0 auto' }}>
+                {renderErrorAlert()}
                 <div className="alert alert-info mb-4">
                   <h4>Create Your Employer Profile</h4>
                   <p>Please create your company profile to start connecting with recovery-focused talent and posting job opportunities.</p>
@@ -348,32 +516,35 @@ else if (hasRole('landlord')) {
     }
     
     // For LANDLORDS - they have basic info from registrant_profiles, proceed to dashboard
-else if (hasRole('landlord')) {
-  console.log('Redirecting landlord to create landlord profile')
-  return (
-    <div className="app-background" style={{ minHeight: '100vh', padding: '20px 0' }}>
-      <div className="container">
-        <Header />
-        <div className="content">
-          <div style={{ maxWidth: '900px', margin: '0 auto' }}>
-            <div className="alert alert-info mb-4">
-              <h4>Complete Your Landlord Profile</h4>
-              <p>Please complete your landlord profile to start listing properties and connecting with potential tenants.</p>
+    else if (hasRole('landlord')) {
+      console.log('Redirecting landlord to create landlord profile')
+      return (
+        <div className="app-background" style={{ minHeight: '100vh', padding: '20px 0' }}>
+          <div className="container">
+            <Header />
+            <div className="content">
+              <div style={{ maxWidth: '900px', margin: '0 auto' }}>
+                {renderErrorAlert()}
+                <div className="alert alert-info mb-4">
+                  <h4>Complete Your Landlord Profile</h4>
+                  <p>Please complete your landlord profile to start listing properties and connecting with potential tenants.</p>
+                </div>
+                <LandlordProfileForm 
+                  onComplete={handleProfileSetupComplete}
+                />
+              </div>
             </div>
-            <LandlordProfileForm 
-              onComplete={() => setProfileSetup(prev => ({ ...prev, hasComprehensiveProfile: true }))}
-            />
           </div>
         </div>
-      </div>
-    </div>
-  )
-}
+      )
+    }
     
     // Fallback for unknown roles
     else {
       console.log('Unknown role, proceeding to dashboard')
-      setProfileSetup(prev => ({ ...prev, hasComprehensiveProfile: true }))
+      if (isMountedRef.current) {
+        setProfileSetup(prev => ({ ...prev, hasComprehensiveProfile: true }))
+      }
       return null // Will re-render with updated state
     }
   }
@@ -431,26 +602,23 @@ else if (hasRole('landlord')) {
               </>
             )}
             
-{/* Landlord Routes */}
-{hasRole('landlord') && (
-  <>
-    <Route path="/profile/landlord" element={
-      <div style={{ maxWidth: '900px', margin: '0 auto' }}>
-        <LandlordProfileForm 
-          editMode={true}
-          onComplete={() => {
-            setProfileSetup(prev => ({ ...prev, hasComprehensiveProfile: true }));
-            navigate('/app');
-          }}
-          onCancel={() => navigate('/app')}
-        />
-      </div>
-    } />
-    
-    <Route path="/properties" element={<PropertyManagement />} />
-    <Route path="/tenants" element={<MatchRequests />} />
-  </>
-)}
+            {/* Landlord Routes */}
+            {hasRole('landlord') && (
+              <>
+                <Route path="/profile/landlord" element={
+                  <div style={{ maxWidth: '900px', margin: '0 auto' }}>
+                    <LandlordProfileForm 
+                      editMode={true}
+                      onComplete={handleProfileSetupComplete}
+                      onCancel={() => navigate('/app')}
+                    />
+                  </div>
+                } />
+                
+                <Route path="/properties" element={<PropertyManagement />} />
+                <Route path="/tenants" element={<MatchRequests />} />
+              </>
+            )}
 
             {/* Employer Routes */}
             {hasRole('employer') && (

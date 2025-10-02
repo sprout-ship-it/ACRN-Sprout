@@ -1,5 +1,5 @@
-// src/pages/Dashboard.js - FIXED: Updated imports and service usage
-import React, { useState, useEffect } from 'react'
+// src/pages/Dashboard.js - FIXED: Enhanced service availability and error handling
+import React, { useState, useEffect, useRef, useCallback } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../hooks/useAuth'
 
@@ -17,169 +17,326 @@ import styles from './Dashboard.module.css'
 const Dashboard = () => {
   const { profile, hasRole, user, loading: authLoading } = useAuth()
   const navigate = useNavigate()
+  
+  // ✅ FIXED: Add refs to prevent infinite re-renders
+  const isCalculatingRef = useRef(false)
+  const hasCalculatedRef = useRef(false)
+  const isMountedRef = useRef(true)
+  const lastProfileIdRef = useRef(null)
+  const lastRolesRef = useRef(null)
+  
+  // ✅ FIXED: Enhanced state with better error tracking
   const [profileStats, setProfileStats] = useState({
     completionPercentage: 0,
-    loading: true
+    loading: true,
+    error: null,
+    serviceErrors: {}, // Track specific service errors
+    lastCalculated: null
   })
   const [profileError, setProfileError] = useState(null)
 
-  // ✅ SCHEMA COMPLIANT: Calculate profile completeness using correct services and IDs
-  useEffect(() => {
-    let isMounted = true;
-    let timeoutId = null;
+  // ✅ FIXED: Service availability check with detailed logging
+  const checkServiceAvailability = useCallback(() => {
+    const services = {
+      peerSupport: {
+        available: !!(db && db.peerSupportProfiles && typeof db.peerSupportProfiles.getByUserId === 'function'),
+        service: db?.peerSupportProfiles
+      },
+      matching: {
+        available: typeof getMatchingProfile === 'function',
+        service: getMatchingProfile
+      },
+      supabase: {
+        available: !!supabase,
+        service: supabase
+      }
+    }
     
-    const calculateProfileStats = async () => {
-      if (isMounted) {
-        setProfileError(null)
+    console.log('📊 Dashboard: Service availability check:', {
+      peerSupport: services.peerSupport.available,
+      matching: services.matching.available,
+      supabase: services.supabase.available
+    })
+    
+    return services
+  }, [])
+
+  // ✅ SCHEMA COMPLIANT: Calculate profile completeness using correct services and IDs
+  const calculateProfileStats = useCallback(async () => {
+    // ✅ FIXED: Prevent multiple simultaneous calculations
+    if (isCalculatingRef.current || !isMountedRef.current) {
+      console.log('📊 Dashboard: Calculation already in progress or component unmounted')
+      return
+    }
+
+    // ✅ FIXED: Check if we need to recalculate (profile changed)
+    const profileChanged = lastProfileIdRef.current !== profile?.id
+    const rolesChanged = JSON.stringify(lastRolesRef.current) !== JSON.stringify(profile?.roles)
+    
+    if (hasCalculatedRef.current && !profileChanged && !rolesChanged) {
+      console.log('📊 Dashboard: Stats already calculated and no changes detected')
+      return
+    }
+
+    // ✅ FIXED: Clear any existing errors when starting fresh calculation
+    if (isMountedRef.current) {
+      setProfileError(null)
+      setProfileStats(prev => ({ ...prev, error: null, serviceErrors: {} }))
+    }
+
+    if (authLoading || !user) {
+      if (isMountedRef.current) {
+        setProfileStats({ 
+          completionPercentage: 0, 
+          loading: true, 
+          error: null,
+          serviceErrors: {},
+          lastCalculated: null
+        })
       }
+      return
+    }
 
-      if (authLoading || !user) {
-        if (isMounted) {
-          setProfileStats({ completionPercentage: 0, loading: true })
-        }
-        return
-      }
-
-      // ✅ UPDATED: Check for profile (registrant_profiles record) not just user
-      if (!profile?.id) {
-        timeoutId = setTimeout(() => {
-          if (isMounted && !profile?.id) {
-            console.warn('Dashboard: Profile still not loaded after timeout, showing fallback')
-            setProfileStats({ completionPercentage: 0, loading: false })
-            setProfileError('Profile information is taking longer than expected to load.')
-          }
-        }, 5000)
-        
-        if (isMounted) {
-          setProfileStats({ completionPercentage: 0, loading: true })
-        }
-        return
-      }
-
-      if (timeoutId) {
-        clearTimeout(timeoutId)
-        timeoutId = null
-      }
-
-      if (!profile.roles?.length) {
-        if (isMounted) {
-          setProfileStats({ completionPercentage: 0, loading: false })
-        }
-        return
-      }
-
-      try {
-        let completionPercentage = 0
-
-        if (hasRole('applicant')) {
-          try {
-            // ✅ FIXED: Pass supabase client as second parameter
-            const result = await getMatchingProfile(profile.id, supabase)
-            
-            if (result.success && result.data && isMounted) {
-              const applicantProfile = result.data
-              let completedFields = 0
-              const totalFields = 10 // Updated for comprehensive profile
-              
-              // ✅ SCHEMA COMPLIANT: Use exact schema field names
-              if (applicantProfile.date_of_birth) completedFields++
-              if (applicantProfile.primary_phone) completedFields++
-              if (applicantProfile.about_me) completedFields++
-              if (applicantProfile.looking_for) completedFields++
-              if (applicantProfile.recovery_stage) completedFields++
-              if (applicantProfile.budget_min && applicantProfile.budget_max) completedFields++
-              if (applicantProfile.primary_city && applicantProfile.primary_state) completedFields++
-              if (applicantProfile.interests?.length > 0) completedFields++
-              if (applicantProfile.recovery_methods?.length > 0) completedFields++
-              if (applicantProfile.spiritual_affiliation) completedFields++
-              
-              completionPercentage = Math.round((completedFields / totalFields) * 100)
-              
-              // Use the calculated completion_percentage if available
-              if (applicantProfile.completion_percentage !== null && applicantProfile.completion_percentage !== undefined) {
-                completionPercentage = applicantProfile.completion_percentage
-              }
-            }
-          } catch (error) {
-            console.warn('Error loading applicant profile:', error)
-          }
-        }
-        
-        // ✅ FIXED: Use db object for peer support service
-        else if (hasRole('peer-support')) {
-          try {
-            const result = await db.peerSupportProfiles.getByUserId(profile.id)
-            
-            if (result.success && result.data && isMounted) {
-              const peerProfile = result.data
-              let completedFields = 0
-              const totalFields = 8 // Updated for comprehensive profile
-              
-              // ✅ SCHEMA COMPLIANT: Use exact schema field names
-              if (peerProfile.primary_phone) completedFields++
-              if (peerProfile.bio) completedFields++
-              if (peerProfile.professional_title) completedFields++
-              if (peerProfile.specialties?.length > 0) completedFields++
-              if (peerProfile.time_in_recovery) completedFields++
-              if (peerProfile.supported_recovery_methods?.length > 0) completedFields++
-              if (peerProfile.service_city && peerProfile.service_state) completedFields++
-              if (peerProfile.profile_completed) completedFields++
-              
-              completionPercentage = Math.round((completedFields / totalFields) * 100)
-            }
-          } catch (error) {
-            console.warn('Error loading peer profile:', error)
-          }
-        }
-        
-        else if (hasRole('landlord')) {
-          // ✅ SCHEMA COMPLIANT: Landlords use registrant_profiles basic info
-          completionPercentage = (profile?.first_name && profile?.last_name && profile?.email) ? 100 : 80
-        }
-
-        else if (hasRole('employer')) {
-          try {
-            // ✅ FIXED: Use db object for employer service (when available)
-            // For now, fallback to basic profile completion
-            completionPercentage = (profile?.first_name && profile?.last_name) ? 20 : 0
-            
-            // TODO: Implement when db.employerProfiles is available
-            // const result = await db.employerProfiles.getByUserId(profile.id)
-            // if (result.success && result.data && result.data.length > 0 && isMounted) {
-            //   const employerProfile = result.data[0]
-            //   // Calculate employer profile completion...
-            // }
-          } catch (error) {
-            console.warn('Error loading employer profile:', error)
-            completionPercentage = (profile?.first_name && profile?.last_name) ? 20 : 0
-          }
-        }
-
-        if (isMounted) {
-          setProfileStats({
-            completionPercentage,
-            loading: false
+    // ✅ UPDATED: Check for profile (registrant_profiles record) not just user
+    if (!profile?.id) {
+      // ✅ FIXED: Set timeout with cleanup to handle delayed profile loading
+      const timeoutId = setTimeout(() => {
+        if (isMountedRef.current && !profile?.id) {
+          console.warn('📊 Dashboard: Profile still not loaded after timeout, showing fallback')
+          setProfileStats({ 
+            completionPercentage: 0, 
+            loading: false, 
+            error: null,
+            serviceErrors: {},
+            lastCalculated: Date.now()
           })
+          setProfileError('Profile information is taking longer than expected to load.')
+          hasCalculatedRef.current = true
         }
-
-      } catch (error) {
-        console.error('Error calculating profile stats:', error)
-        if (isMounted) {
-          setProfileStats({ completionPercentage: 0, loading: false })
-          setProfileError('Unable to load profile information. Please refresh the page.')
-        }
+      }, 5000)
+      
+      if (isMountedRef.current) {
+        setProfileStats({ 
+          completionPercentage: 0, 
+          loading: true, 
+          error: null,
+          serviceErrors: {},
+          lastCalculated: null
+        })
       }
+      
+      // Cleanup timeout when profile loads or component unmounts
+      return () => clearTimeout(timeoutId)
     }
 
+    if (!profile.roles?.length) {
+      if (isMountedRef.current) {
+        setProfileStats({ 
+          completionPercentage: 0, 
+          loading: false, 
+          error: null,
+          serviceErrors: {},
+          lastCalculated: Date.now()
+        })
+        hasCalculatedRef.current = true
+      }
+      return
+    }
+
+    // ✅ FIXED: Set calculation flags and update refs
+    isCalculatingRef.current = true
+    lastProfileIdRef.current = profile.id
+    lastRolesRef.current = [...profile.roles]
+
+    try {
+      console.log('📊 Dashboard: Calculating profile stats for:', profile.id, 'roles:', profile.roles)
+      
+      // ✅ FIXED: Check service availability before proceeding
+      const services = checkServiceAvailability()
+      let completionPercentage = 0
+      const serviceErrors = {}
+
+      if (hasRole('applicant')) {
+        try {
+          if (!services.matching.available) {
+            throw new Error('Matching profile service not available')
+          }
+
+          // ✅ FIXED: Pass supabase client as second parameter
+          const result = await getMatchingProfile(profile.id, supabase)
+          
+          if (result.success && result.data && isMountedRef.current) {
+            const applicantProfile = result.data
+            let completedFields = 0
+            const totalFields = 10 // Updated for comprehensive profile
+            
+            // ✅ SCHEMA COMPLIANT: Use exact schema field names
+            if (applicantProfile.date_of_birth) completedFields++
+            if (applicantProfile.primary_phone) completedFields++
+            if (applicantProfile.about_me) completedFields++
+            if (applicantProfile.looking_for) completedFields++
+            if (applicantProfile.recovery_stage) completedFields++
+            if (applicantProfile.budget_min && applicantProfile.budget_max) completedFields++
+            if (applicantProfile.primary_city && applicantProfile.primary_state) completedFields++
+            if (applicantProfile.interests?.length > 0) completedFields++
+            if (applicantProfile.recovery_methods?.length > 0) completedFields++
+            if (applicantProfile.spiritual_affiliation) completedFields++
+            
+            completionPercentage = Math.round((completedFields / totalFields) * 100)
+            
+            // Use the calculated completion_percentage if available
+            if (applicantProfile.completion_percentage !== null && applicantProfile.completion_percentage !== undefined) {
+              completionPercentage = applicantProfile.completion_percentage
+            }
+            
+            console.log('📊 Dashboard: Applicant profile completion:', completionPercentage + '%')
+          }
+        } catch (error) {
+          console.warn('📊 Dashboard: Error loading applicant profile:', error)
+          serviceErrors.applicant = error.message
+        }
+      }
+      
+      // ✅ FIXED: Enhanced peer support calculation with service checks
+      else if (hasRole('peer-support')) {
+        try {
+          if (!services.peerSupport.available) {
+            throw new Error('Peer support service not available')
+          }
+
+          const result = await db.peerSupportProfiles.getByUserId(profile.id)
+          
+          if (result.success && result.data && isMountedRef.current) {
+            const peerProfile = result.data
+            let completedFields = 0
+            const totalFields = 8 // Updated for comprehensive profile
+            
+            // ✅ SCHEMA COMPLIANT: Use exact schema field names
+            if (peerProfile.primary_phone) completedFields++
+            if (peerProfile.bio) completedFields++
+            if (peerProfile.professional_title) completedFields++
+            if (peerProfile.specialties?.length > 0) completedFields++
+            if (peerProfile.time_in_recovery) completedFields++
+            if (peerProfile.supported_recovery_methods?.length > 0) completedFields++
+            if (peerProfile.service_city && peerProfile.service_state) completedFields++
+            if (peerProfile.profile_completed) completedFields++
+            
+            completionPercentage = Math.round((completedFields / totalFields) * 100)
+            
+            console.log('📊 Dashboard: Peer support profile completion:', completionPercentage + '%')
+          } else if (result.error) {
+            // ✅ FIXED: Handle specific error types
+            if (result.error.code === 'NOT_FOUND' || result.error.message?.includes('No peer support profile found')) {
+              console.log('📊 Dashboard: No peer support profile found (normal for new users)')
+              completionPercentage = 0
+            } else if (result.error.message?.includes('not available')) {
+              throw new Error('Peer support service temporarily unavailable')
+            } else {
+              throw new Error(result.error.message || 'Failed to load peer support profile')
+            }
+          }
+        } catch (error) {
+          console.warn('📊 Dashboard: Error loading peer profile:', error)
+          serviceErrors.peerSupport = error.message
+          
+          // ✅ FIXED: Set reasonable fallback for service errors
+          if (error.message?.includes('not available')) {
+            completionPercentage = 0 // Can't determine completion without service
+          }
+        }
+      }
+      
+      else if (hasRole('landlord')) {
+        // ✅ SCHEMA COMPLIANT: Landlords use registrant_profiles basic info
+        completionPercentage = (profile?.first_name && profile?.last_name && profile?.email) ? 100 : 80
+        console.log('📊 Dashboard: Landlord profile completion:', completionPercentage + '%')
+      }
+
+      else if (hasRole('employer')) {
+        try {
+          // ✅ FIXED: Use basic profile completion for now, with future employer service support
+          completionPercentage = (profile?.first_name && profile?.last_name) ? 20 : 0
+          
+          // TODO: Implement when db.employerProfiles is available
+          // const result = await db.employerProfiles.getByUserId(profile.id)
+          // if (result.success && result.data && result.data.length > 0 && isMountedRef.current) {
+          //   const employerProfile = result.data[0]
+          //   // Calculate employer profile completion...
+          // }
+          
+          console.log('📊 Dashboard: Employer profile completion:', completionPercentage + '%')
+        } catch (error) {
+          console.warn('📊 Dashboard: Error loading employer profile:', error)
+          serviceErrors.employer = error.message
+          completionPercentage = (profile?.first_name && profile?.last_name) ? 20 : 0
+        }
+      }
+
+      // ✅ FIXED: Update state only if component is still mounted
+      if (isMountedRef.current) {
+        setProfileStats({
+          completionPercentage,
+          loading: false,
+          error: Object.keys(serviceErrors).length > 0 ? 'Some services are temporarily unavailable' : null,
+          serviceErrors,
+          lastCalculated: Date.now()
+        })
+        
+        hasCalculatedRef.current = true
+      }
+
+      console.log('📊 Dashboard: Profile stats calculation complete:', {
+        profileId: profile.id,
+        roles: profile.roles,
+        completion: completionPercentage,
+        serviceErrors: Object.keys(serviceErrors)
+      })
+
+    } catch (error) {
+      console.error('📊 Dashboard: Error calculating profile stats:', error)
+      if (isMountedRef.current) {
+        setProfileStats({ 
+          completionPercentage: 0, 
+          loading: false, 
+          error: 'Unable to load profile information. Please refresh the page.',
+          serviceErrors: { general: error.message },
+          lastCalculated: Date.now()
+        })
+        setProfileError('Unable to load profile information. Please refresh the page.')
+        hasCalculatedRef.current = true
+      }
+    } finally {
+      isCalculatingRef.current = false
+    }
+  }, [user, profile, hasRole, authLoading, checkServiceAvailability])
+
+  // ✅ FIXED: Effect with better dependency management and cleanup
+  useEffect(() => {
     calculateProfileStats()
+  }, [calculateProfileStats])
 
+  // ✅ FIXED: Component cleanup
+  useEffect(() => {
+    isMountedRef.current = true
     return () => {
-      isMounted = false
-      if (timeoutId) {
-        clearTimeout(timeoutId)
-      }
+      isMountedRef.current = false
+      isCalculatingRef.current = false
     }
-  }, [user, profile, hasRole, authLoading])
+  }, [])
+
+  // ✅ FIXED: Function to retry stats calculation
+  const retryStatsCalculation = useCallback(() => {
+    console.log('📊 Dashboard: Retrying stats calculation')
+    hasCalculatedRef.current = false
+    setProfileStats(prev => ({ 
+      ...prev, 
+      loading: true, 
+      error: null, 
+      serviceErrors: {} 
+    }))
+    setProfileError(null)
+    calculateProfileStats()
+  }, [calculateProfileStats])
 
   // Rest of the component remains the same...
   const getDashboardCards = () => {
@@ -296,6 +453,7 @@ const Dashboard = () => {
     }
   }
 
+  // ✅ FIXED: Enhanced welcome section with service error handling
   const getRoleSpecificWelcome = () => {
     if (authLoading || !user) {
       return (
@@ -336,6 +494,13 @@ const Dashboard = () => {
                 <strong>⚠️ {profileError}</strong>
                 <br />
                 <small>You can still access most features below.</small>
+                <br />
+                <button 
+                  className="btn btn-sm btn-outline-primary mt-2"
+                  onClick={retryStatsCalculation}
+                >
+                  Retry Loading
+                </button>
               </div>
             </div>
           )}
@@ -362,15 +527,30 @@ const Dashboard = () => {
           <strong>Your Role{profile?.roles?.length > 1 ? 's' : ''}:</strong> {roleLabels}
         </p>
         
-        {profileError && (
+        {/* ✅ FIXED: Enhanced error display with service-specific information */}
+        {(profileError || profileStats.error) && (
           <div className={styles.alertWarning}>
             <div style={{ textAlign: 'center' }}>
-              <strong>⚠️ {profileError}</strong>
+              <strong>⚠️ {profileError || profileStats.error}</strong>
+              {Object.keys(profileStats.serviceErrors).length > 0 && (
+                <div style={{ fontSize: '0.85rem', marginTop: '5px' }}>
+                  <small>
+                    Affected services: {Object.keys(profileStats.serviceErrors).join(', ')}
+                  </small>
+                </div>
+              )}
+              <br />
+              <button 
+                className="btn btn-sm btn-outline-primary mt-2"
+                onClick={retryStatsCalculation}
+              >
+                Retry Loading
+              </button>
             </div>
           </div>
         )}
         
-        {!profileStats.loading && !profileError && profileStats.completionPercentage < 100 && (
+        {!profileStats.loading && !profileError && !profileStats.error && profileStats.completionPercentage < 100 && (
           <div className={styles.alertInfo}>
             <div style={{ textAlign: 'center' }}>
               <strong>Profile Completion: {profileStats.completionPercentage}%</strong>
@@ -379,6 +559,18 @@ const Dashboard = () => {
                   Complete your profile to unlock all features
                 </p>
               )}
+            </div>
+          </div>
+        )}
+
+        {/* ✅ ADDED: Show completion even with service errors */}
+        {profileStats.error && profileStats.completionPercentage > 0 && (
+          <div className={styles.alertInfo}>
+            <div style={{ textAlign: 'center' }}>
+              <strong>Profile Completion: {profileStats.completionPercentage}%</strong>
+              <p style={{ margin: '5px 0 0 0', fontSize: '0.85rem' }}>
+                (Estimated - some services temporarily unavailable)
+              </p>
             </div>
           </div>
         )}
