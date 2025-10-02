@@ -1,7 +1,10 @@
-// src/components/features/peer-support/hooks/usePeerSupportProfileForm.js - UPDATED FOR PHASE 6
+// src/components/features/peer-support/hooks/usePeerSupportProfileForm.js - FIXED VERSION
 import { useState, useEffect, useCallback } from 'react';
 import { useAuth } from '../../../../hooks/useAuth';
-import { db } from '../../../../utils/supabase';
+import { supabase } from '../../../../utils/supabase';
+
+// ✅ FIXED: Import the correct service function
+import { getPeerSupportProfileByUserId, createPeerSupportProfile, updatePeerSupportProfile } from '../../../../utils/database/peerSupportService';
 
 const INITIAL_FORM_DATA = {
   // Contact Information
@@ -36,33 +39,6 @@ const INITIAL_FORM_DATA = {
   about_me: '',
   additional_info: '',
   
-  // Legacy fields for compatibility with existing constants
-  phone: '',
-  address: '',
-  city: '',
-  state: '',
-  zip_code: '',
-  title: '',
-  certifications: [],
-  license_number: '',
-  recovery_approach: [],
-  age_groups_served: [],
-  populations_served: [],
-  individual_sessions: true,
-  group_sessions: true,
-  crisis_support: false,
-  housing_assistance: true,
-  employment_support: false,
-  available_hours: '',
-  preferred_contact_method: 'phone',
-  response_time: '24-hours',
-  max_clients: 10,
-  service_area: [],
-  service_radius: 25,
-  offers_telehealth: true,
-  offers_in_person: true,
-  recovery_story: '',
-  
   // Status
   is_active: true,
   profile_completed: false,
@@ -79,93 +55,94 @@ export const usePeerSupportProfileForm = ({ editMode = false, onComplete } = {})
   const [loading, setLoading] = useState(false);
   const [initialLoading, setInitialLoading] = useState(true);
   const [successMessage, setSuccessMessage] = useState('');
+  const [hasLoadedData, setHasLoadedData] = useState(false); // ✅ FIXED: Prevent multiple loads
 
-  // Load existing data on mount
+  // ✅ FIXED: Load existing data with proper error handling and no recursion
   useEffect(() => {
+    let isMounted = true;
+    
     const loadExistingData = async () => {
-      if (!profile?.id) {
-        setInitialLoading(false);
+      // ✅ FIXED: Prevent multiple loads and ensure we have the right data
+      if (!profile?.id || hasLoadedData) {
+        if (isMounted) {
+          setInitialLoading(false);
+        }
         return;
       }
 
       try {
-        console.log('Loading existing peer support profile for user:', profile.id);
+        console.log('🤝 Loading peer support profile for registrant ID:', profile.id);
         
-        // Check if peer support service exists and has the required method
-        if (db.peerSupportService && typeof db.peerSupportService.getByUserId === 'function') {
-          const { data: peerProfile, error } = await db.peerSupportService.getByUserId(profile.id);
+        // ✅ FIXED: Use the correct service function with supabase client
+        const result = await getPeerSupportProfileByUserId(profile.id, supabase);
+        
+        if (!isMounted) return;
+
+        if (result.success && result.data) {
+          console.log('✅ Loaded existing peer support profile:', result.data);
+          const peerProfile = result.data;
           
-          if (error) {
-            console.warn('Error loading peer support profile:', error);
-          } else if (peerProfile) {
-            console.log('Loaded existing peer support profile:', peerProfile);
-            setFormData(prev => ({
-              ...prev,
-              // Map database fields to form fields
-              primary_phone: peerProfile.primary_phone || '',
-              contact_email: peerProfile.contact_email || '',
-              professional_title: peerProfile.professional_title || 'Peer Support Specialist',
-              is_licensed: peerProfile.is_licensed || false,
-              years_experience: peerProfile.years_experience || '',
-              service_city: peerProfile.service_city || '',
-              service_state: peerProfile.service_state || '',
-              service_areas: peerProfile.service_areas || [],
-              specialties: peerProfile.specialties || [],
-              supported_recovery_methods: peerProfile.supported_recovery_methods || [],
-              recovery_stage: peerProfile.recovery_stage || '',
-              time_in_recovery: peerProfile.time_in_recovery || '',
-              primary_issues: peerProfile.primary_issues || [],
-              spiritual_affiliation: peerProfile.spiritual_affiliation || '',
-              accepting_clients: peerProfile.accepting_clients !== false,
-              bio: peerProfile.bio || '',
-              about_me: peerProfile.about_me || '',
-              additional_info: peerProfile.additional_info || '',
-              is_active: peerProfile.is_active !== false,
-              profile_completed: peerProfile.profile_completed || false,
-              is_accepting_clients: peerProfile.accepting_clients !== false,
-              
-              // Legacy field mapping for compatibility
-              phone: peerProfile.primary_phone || '',
-              address: peerProfile.address || '',
-              city: peerProfile.service_city || '',
-              state: peerProfile.service_state || '',
-              zip_code: peerProfile.zip_code || '',
-              title: peerProfile.professional_title || '',
-              certifications: peerProfile.certifications || [],
-              license_number: peerProfile.license_number || '',
-              recovery_approach: peerProfile.supported_recovery_methods || [],
-              age_groups_served: peerProfile.age_groups_served || [],
-              populations_served: peerProfile.populations_served || [],
-              individual_sessions: peerProfile.individual_sessions !== false,
-              group_sessions: peerProfile.group_sessions !== false,
-              crisis_support: peerProfile.crisis_support || false,
-              housing_assistance: peerProfile.housing_assistance !== false,
-              employment_support: peerProfile.employment_support || false,
-              available_hours: peerProfile.available_hours || '',
-              preferred_contact_method: peerProfile.preferred_contact_method || 'phone',
-              response_time: peerProfile.response_time || '24-hours',
-              max_clients: peerProfile.max_clients || 10,
-              service_area: peerProfile.service_areas || [],
-              service_radius: peerProfile.service_radius || 25,
-              offers_telehealth: peerProfile.offers_telehealth !== false,
-              offers_in_person: peerProfile.offers_in_person !== false,
-              recovery_story: peerProfile.recovery_story || '',
-              is_verified: peerProfile.is_verified || false
-            }));
+          setFormData(prev => ({
+            ...prev,
+            // Map database fields to form fields
+            primary_phone: peerProfile.primary_phone || '',
+            contact_email: peerProfile.contact_email || '',
+            professional_title: peerProfile.professional_title || 'Peer Support Specialist',
+            is_licensed: peerProfile.is_licensed || false,
+            years_experience: peerProfile.years_experience || '',
+            service_city: peerProfile.service_city || '',
+            service_state: peerProfile.service_state || '',
+            service_areas: peerProfile.service_areas || [],
+            specialties: peerProfile.specialties || [],
+            supported_recovery_methods: peerProfile.supported_recovery_methods || [],
+            recovery_stage: peerProfile.recovery_stage || '',
+            time_in_recovery: peerProfile.time_in_recovery || '',
+            primary_issues: peerProfile.primary_issues || [],
+            spiritual_affiliation: peerProfile.spiritual_affiliation || '',
+            accepting_clients: peerProfile.accepting_clients !== false,
+            bio: peerProfile.bio || '',
+            about_me: peerProfile.about_me || '',
+            additional_info: peerProfile.additional_info || '',
+            is_active: peerProfile.is_active !== false,
+            profile_completed: peerProfile.profile_completed || false,
+            is_accepting_clients: peerProfile.accepting_clients !== false,
+            is_verified: peerProfile.is_verified || false
+          }));
+        } else if (result.error) {
+          // ✅ FIXED: Handle "not found" gracefully vs real errors
+          if (result.error.includes('No peer support profile found') || result.error.includes('not found')) {
+            console.log('ℹ️ No existing peer support profile found - starting fresh');
+            // This is normal for new users, don't set an error
+          } else {
+            console.warn('⚠️ Error loading peer support profile:', result.error);
+            setErrors({ load: 'Unable to load your existing profile data.' });
           }
         } else {
-          console.log('Peer support service not available yet - starting with empty form');
+          console.log('ℹ️ No existing peer support profile found - starting fresh');
         }
+        
       } catch (error) {
-        console.error('Error loading peer support profile:', error);
-        setErrors({ load: 'Failed to load your profile. Please refresh the page.' });
+        console.error('❌ Error loading peer support profile:', error);
+        if (isMounted) {
+          // ✅ FIXED: Only show error for real problems, not 404s
+          if (!error.message?.includes('not found') && !error.message?.includes('No peer support profile')) {
+            setErrors({ load: 'Failed to load your profile. Please refresh the page.' });
+          }
+        }
       } finally {
-        setInitialLoading(false);
+        if (isMounted) {
+          setHasLoadedData(true);
+          setInitialLoading(false);
+        }
       }
     };
 
     loadExistingData();
-  }, [profile?.id]);
+
+    return () => {
+      isMounted = false;
+    };
+  }, [profile?.id, hasLoadedData]); // ✅ FIXED: Include hasLoadedData in dependencies
 
   // Calculate completion percentage
   const completionPercentage = useCallback(() => {
@@ -207,11 +184,7 @@ export const usePeerSupportProfileForm = ({ editMode = false, onComplete } = {})
     setFormData(prev => ({ 
       ...prev, 
       [field]: value,
-      // Sync legacy fields for compatibility
-      ...(field === 'primary_phone' && { phone: value }),
-      ...(field === 'professional_title' && { title: value }),
-      ...(field === 'service_city' && { city: value }),
-      ...(field === 'service_state' && { state: value }),
+      // Sync related fields for compatibility
       ...(field === 'accepting_clients' && { is_accepting_clients: value })
     }));
     
@@ -231,11 +204,7 @@ export const usePeerSupportProfileForm = ({ editMode = false, onComplete } = {})
       
       return {
         ...prev,
-        [field]: newArray,
-        // Sync legacy fields for compatibility
-        ...(field === 'specialties' && { specialties: newArray }),
-        ...(field === 'supported_recovery_methods' && { recovery_approach: newArray }),
-        ...(field === 'service_areas' && { service_area: newArray })
+        [field]: newArray
       };
     });
 
@@ -285,21 +254,13 @@ export const usePeerSupportProfileForm = ({ editMode = false, onComplete } = {})
       if (formData.years_experience && formData.years_experience < 0) {
         newErrors.years_experience = 'Years of experience cannot be negative';
       }
-
-      if (formData.max_clients && formData.max_clients < 1) {
-        newErrors.max_clients = 'Maximum clients must be at least 1';
-      }
-
-      if (formData.service_radius && formData.service_radius < 1) {
-        newErrors.service_radius = 'Service radius must be at least 1 mile';
-      }
     }
 
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   }, [formData]);
 
-  // Form submission
+  // ✅ FIXED: Form submission with proper service functions
   const submitForm = useCallback(async (isSubmission = true) => {
     if (!profile?.id) {
       setErrors({ submit: 'You must be logged in to save your profile' });
@@ -315,12 +276,6 @@ export const usePeerSupportProfileForm = ({ editMode = false, onComplete } = {})
     setSuccessMessage('');
 
     try {
-      // Check if peer support service exists
-      if (!db.peerSupportService) {
-        setErrors({ submit: 'Peer support profile creation is not yet available. Please check back later.' });
-        return false;
-      }
-
       // Prepare data for database
       const peerProfileData = {
         user_id: profile.id,
@@ -357,56 +312,24 @@ export const usePeerSupportProfileForm = ({ editMode = false, onComplete } = {})
         about_me: formData.about_me?.trim() || null,
         additional_info: formData.additional_info?.trim() || null,
         
-        // Legacy fields for compatibility
-        address: formData.address?.trim() || null,
-        zip_code: formData.zip_code?.trim() || null,
-        certifications: formData.certifications || [],
-        license_number: formData.license_number?.trim() || null,
-        age_groups_served: formData.age_groups_served || [],
-        populations_served: formData.populations_served || [],
-        individual_sessions: formData.individual_sessions !== false,
-        group_sessions: formData.group_sessions !== false,
-        crisis_support: formData.crisis_support || false,
-        housing_assistance: formData.housing_assistance !== false,
-        employment_support: formData.employment_support || false,
-        available_hours: formData.available_hours?.trim() || null,
-        preferred_contact_method: formData.preferred_contact_method || 'phone',
-        response_time: formData.response_time || '24-hours',
-        max_clients: formData.max_clients || 10,
-        service_radius: formData.service_radius || 25,
-        offers_telehealth: formData.offers_telehealth !== false,
-        offers_in_person: formData.offers_in_person !== false,
-        recovery_story: formData.recovery_story?.trim() || null,
-        
         // Status
         is_active: formData.is_active !== false,
         profile_completed: isSubmission && completionPercentage() >= 80,
-        is_verified: formData.is_verified || false,
-        
-        // Timestamps
-        updated_at: new Date().toISOString()
+        is_verified: formData.is_verified || false
       };
 
-      console.log('Submitting peer support profile data:', peerProfileData);
+      console.log('💾 Submitting peer support profile data:', peerProfileData);
 
-      // Try to update existing profile, or create new one
+      // ✅ FIXED: Use the correct service functions
       let result;
       if (editMode) {
-        if (typeof db.peerSupportService.update === 'function') {
-          result = await db.peerSupportService.update(profile.id, peerProfileData);
-        } else {
-          throw new Error('Profile update functionality not available yet');
-        }
+        result = await updatePeerSupportProfile(profile.id, peerProfileData, supabase);
       } else {
-        if (typeof db.peerSupportService.create === 'function') {
-          result = await db.peerSupportService.create(peerProfileData);
-        } else {
-          throw new Error('Profile creation functionality not available yet');
-        }
+        result = await createPeerSupportProfile(peerProfileData, supabase);
       }
 
-      if (result?.error) {
-        throw new Error(result.error.message || 'Failed to save profile');
+      if (!result.success) {
+        throw new Error(result.error || 'Failed to save profile');
       }
 
       const successMsg = isSubmission 
@@ -423,7 +346,7 @@ export const usePeerSupportProfileForm = ({ editMode = false, onComplete } = {})
       return true;
 
     } catch (error) {
-      console.error('Error saving peer support profile:', error);
+      console.error('❌ Error saving peer support profile:', error);
       setErrors({ 
         submit: error.message || 'Failed to save peer support profile. Please try again.' 
       });

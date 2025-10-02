@@ -1,4 +1,4 @@
-// src/utils/supabase.js - Updated for Refactored Schema with Properties Table
+// src/utils/supabase.js - Updated for Refactored Schema with Properties Table + Peer Support
 import { createClient } from '@supabase/supabase-js'
 
 // Import service modules (core services that we've verified)
@@ -11,10 +11,12 @@ import createMatchGroupsService from './database/matchGroupsService'
 // ✅ NEW: Import properties service (critical for refactored schema)
 import createPropertiesService from './database/propertiesService'
 
+// ✅ ADDED: Import peer support service
+import createPeerSupportService from './database/peerSupportService'
+
 // TODO: Import remaining role-specific services as we verify alignment
 // import createLandlordProfilesService from './database/landlordProfilesService'
 // import createEmployerService from './database/employerService'
-// import createPeerSupportService from './database/peerSupportService'
 // import createCommunicationService from './database/communicationService'
 
 console.log('🔧 Supabase client initializing...')
@@ -46,6 +48,9 @@ const matchingProfilesService = createMatchingProfilesService(supabase)
 const matchRequestsService = createMatchRequestsService(supabase)
 const matchGroupsService = createMatchGroupsService(supabase)
 const propertiesService = createPropertiesService(supabase) // ✅ NEW: Critical service
+
+// ✅ ADDED: Initialize peer support service
+const peerSupportService = createPeerSupportService(supabase)
 
 // Authentication helpers
 export const auth = {
@@ -137,6 +142,32 @@ export const db = {
   },
 
   // ============================================================================
+  // ✅ ADDED: PEER SUPPORT PROFILES (peer_support_profiles table)
+  // Flow: registrant_profiles.id → peer_support_profiles.user_id → peer_support_profiles.id
+  // ============================================================================
+  peerSupportProfiles: {
+    // Core CRUD operations
+    create: peerSupportService.create,
+    getByUserId: peerSupportService.getByUserId,
+    getById: peerSupportService.getById,
+    update: peerSupportService.update,
+    delete: peerSupportService.delete,
+
+    // Peer support search and filtering
+    getAvailable: peerSupportService.getAvailable,
+    search: peerSupportService.search,
+    getBySpecialty: peerSupportService.getBySpecialty,
+    getByServiceArea: peerSupportService.getByServiceArea,
+
+    // Peer support management
+    updateAvailability: peerSupportService.updateAvailability,
+
+    // Analytics and bulk operations
+    getStatistics: peerSupportService.getStatistics,
+    bulkUpdate: peerSupportService.bulkUpdate
+  },
+
+  // ============================================================================
   // MATCH REQUESTS - Connection requests between users
   // ✅ UPDATED: Now supports property-specific requests
   // Uses role-specific IDs + property_id for housing requests
@@ -177,17 +208,23 @@ export const db = {
   // TODO: Add remaining role-specific services as we verify alignment:
   // - landlordProfiles (simplified landlord_profiles table - business info only)
   // - employerProfiles (employer_profiles table) 
-  // - peerSupportProfiles (peer_support_profiles table)
   // - housingMatches (applicant_matching_profiles.id + properties.id)
   // - employmentMatches, peerSupportMatches
   // - favorites system (enhanced to support property favorites)
   // ============================================================================
 }
 
-// ✅ UPDATED: Schema information reflecting refactored structure
+// ✅ ADDED: Legacy support for hook that expects this specific function
+export const getPeerSupportProfileByUserId = async (userId, supabaseClient = null) => {
+  const client = supabaseClient || supabase;
+  const service = createPeerSupportService(client);
+  return await service.getByUserId(userId);
+};
+
+// ✅ UPDATED: Schema information reflecting refactored structure + peer support
 export const getSchemaInfo = () => {
   return {
-    schemaVersion: '2.0-refactored',
+    schemaVersion: '2.1-refactored-with-peer-support',
     idFlow: 'auth.users.id → registrant_profiles.user_id → registrant_profiles.id → role_table.user_id → role_table.id',
     coreArchitecture: {
       userAuth: 'auth.users (managed by Supabase)',
@@ -197,13 +234,13 @@ export const getSchemaInfo = () => {
         landlords: 'landlord_profiles (business info only)',
         properties: 'properties (property-specific data)', // ✅ NEW
         employers: 'employer_profiles',
-        peerSupport: 'peer_support_profiles'
+        peerSupport: 'peer_support_profiles' // ✅ ADDED
       }
     },
     relationshipTables: {
       housingMatches: 'Uses applicant_matching_profiles.id + properties.id', // ✅ UPDATED
       employmentMatches: 'Uses applicant_matching_profiles.id + employer_profiles.id',
-      peerSupportMatches: 'Uses applicant_matching_profiles.id + peer_support_profiles.id',
+      peerSupportMatches: 'Uses applicant_matching_profiles.id + peer_support_profiles.id', // ✅ ADDED
       matchGroups: 'Uses applicant_matching_profiles.id + properties.id + peer_support_profiles.id', // ✅ UPDATED
       matchRequests: 'Enhanced with property_id for housing-specific requests', // ✅ UPDATED
       favorites: 'Supports both profile favorites and property favorites' // ✅ NEW
@@ -212,12 +249,13 @@ export const getSchemaInfo = () => {
       propertiesTable: 'Separated property data from landlord_profiles for multi-property support',
       updatedReferences: 'Housing matches/groups now reference properties.id instead of landlord_profiles.id',
       enhancedRequests: 'Match requests support property-specific housing requests',
-      propertyTypes: 'Supports both general rentals and recovery housing with different field sets'
+      propertyTypes: 'Supports both general rentals and recovery housing with different field sets',
+      peerSupportService: 'Full peer support service integration with correct field mappings' // ✅ ADDED
     }
   }
 }
 
-console.log('✅ Supabase module loaded with refactored schema structure')
+console.log('✅ Supabase module loaded with refactored schema structure + peer support')
 console.log('📋 Schema Info:', getSchemaInfo())
 
 export default supabase

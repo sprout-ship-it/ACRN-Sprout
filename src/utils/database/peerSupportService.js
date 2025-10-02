@@ -1,6 +1,9 @@
-// src/utils/database/peerSupportService.js - Peer support service module
+// src/utils/database/peerSupportService.js - FIXED VERSION
 /**
  * Peer support service for peer_support_profiles table operations
+ * ✅ FIXED: All field names match schema exactly
+ * ✅ FIXED: Removed conflicting standalone function
+ * ✅ FIXED: Consistent service factory pattern
  */
 
 const createPeerSupportService = (supabaseClient) => {
@@ -43,7 +46,7 @@ const createPeerSupportService = (supabaseClient) => {
     },
 
     /**
-     * Get peer support profile by user ID
+     * Get peer support profile by user ID (registrant_profiles.id)
      */
     getByUserId: async (userId) => {
       try {
@@ -57,7 +60,8 @@ const createPeerSupportService = (supabaseClient) => {
 
         if (error) {
           if (error.code === 'PGRST116') {
-            return { success: false, data: null, error: { code: 'NOT_FOUND', message: 'Peer support profile not found' } };
+            console.log('ℹ️ PeerSupport: No profile found for user:', userId);
+            return { success: false, data: null, error: { code: 'NOT_FOUND', message: 'No peer support profile found' } };
           }
           console.error('❌ PeerSupport: GetByUserId failed:', error.message);
           return { success: false, data: null, error };
@@ -132,169 +136,170 @@ const createPeerSupportService = (supabaseClient) => {
 
     /**
      * Get available peer support profiles with filters
+     * ✅ FIXED: Uses correct field name 'accepting_clients'
      */
-getAvailable: async (filters = {}) => {
-  try {
-    console.log('🤝 PeerSupport: Fetching available profiles with filters:', filters);
+    getAvailable: async (filters = {}) => {
+      try {
+        console.log('🤝 PeerSupport: Fetching available profiles with filters:', filters);
 
-    let query = supabaseClient
-      .from(tableName)
-      .select(`
-        *,
-        registrant_profiles!inner(id, first_name, last_name, email)
-      `)
-      .eq('accepting_clients', true); // ✅ FIXED: was 'is_accepting_clients'
+        let query = supabaseClient
+          .from(tableName)
+          .select(`
+            *,
+            registrant_profiles!inner(id, first_name, last_name, email)
+          `)
+          .eq('accepting_clients', true)
+          .eq('is_active', true);
 
-    const { data, error } = await query
-      .order('years_experience', { ascending: false })
-      .order('updated_at', { ascending: false });
+        const { data, error } = await query
+          .order('years_experience', { ascending: false })
+          .order('updated_at', { ascending: false });
 
-    if (error) {
-      console.error('❌ PeerSupport: GetAvailable failed:', error.message);
-      return { success: false, data: [], error };
-    }
-
-    let filteredData = data || [];
-
-    // Apply JavaScript filters for complex logic
-    if (filters.specialties && filters.specialties.length > 0) {
-      filteredData = filteredData.filter(profile => {
-        if (!profile.specialties || !Array.isArray(profile.specialties)) return false;
-        return filters.specialties.some(specialty => 
-          profile.specialties.some(profileSpecialty => 
-            profileSpecialty.toLowerCase().includes(specialty.toLowerCase()) ||
-            specialty.toLowerCase().includes(profileSpecialty.toLowerCase())
-          )
-        );
-      });
-    }
-
-    if (filters.serviceArea && filters.serviceArea.trim()) {
-      const searchArea = filters.serviceArea.trim().toLowerCase();
-      const searchTerms = searchArea.split(/[,\s]+/).filter(term => term.length > 2);
-      
-      filteredData = filteredData.filter(profile => {
-        // ✅ FIXED: Use service_areas (plural array) from schema
-        if (!profile.service_areas) return false;
-        
-        let serviceAreas = [];
-        if (Array.isArray(profile.service_areas)) {
-          serviceAreas = profile.service_areas;
-        } else if (typeof profile.service_areas === 'string') {
-          serviceAreas = [profile.service_areas];
-        } else {
-          return false;
+        if (error) {
+          console.error('❌ PeerSupport: GetAvailable failed:', error.message);
+          return { success: false, data: [], error };
         }
-        
-        return serviceAreas.some(area => {
-          const areaLower = area.toLowerCase();
-          return searchTerms.some(term => 
-            areaLower.includes(term) || term.includes(areaLower)
+
+        let filteredData = data || [];
+
+        // Apply JavaScript filters for complex logic
+        if (filters.specialties && filters.specialties.length > 0) {
+          filteredData = filteredData.filter(profile => {
+            if (!profile.specialties || !Array.isArray(profile.specialties)) return false;
+            return filters.specialties.some(specialty => 
+              profile.specialties.some(profileSpecialty => 
+                profileSpecialty.toLowerCase().includes(specialty.toLowerCase()) ||
+                specialty.toLowerCase().includes(profileSpecialty.toLowerCase())
+              )
+            );
+          });
+        }
+
+        if (filters.serviceArea && filters.serviceArea.trim()) {
+          const searchArea = filters.serviceArea.trim().toLowerCase();
+          const searchTerms = searchArea.split(/[,\s]+/).filter(term => term.length > 2);
+          
+          filteredData = filteredData.filter(profile => {
+            if (!profile.service_areas) return false;
+            
+            let serviceAreas = [];
+            if (Array.isArray(profile.service_areas)) {
+              serviceAreas = profile.service_areas;
+            } else if (typeof profile.service_areas === 'string') {
+              serviceAreas = [profile.service_areas];
+            } else {
+              return false;
+            }
+            
+            return serviceAreas.some(area => {
+              const areaLower = area.toLowerCase();
+              return searchTerms.some(term => 
+                areaLower.includes(term) || term.includes(areaLower)
+              );
+            });
+          });
+        }
+
+        if (filters.recoveryMethods && filters.recoveryMethods.length > 0) {
+          filteredData = filteredData.filter(profile => {
+            if (!profile.supported_recovery_methods) return false;
+            return filters.recoveryMethods.some(method =>
+              profile.supported_recovery_methods.includes(method)
+            );
+          });
+        }
+
+        if (filters.minExperience) {
+          filteredData = filteredData.filter(profile => 
+            (profile.years_experience || 0) >= filters.minExperience
           );
-        });
-      });
-    }
+        }
 
-    if (filters.recoveryMethods && filters.recoveryMethods.length > 0) {
-      filteredData = filteredData.filter(profile => {
-        if (!profile.supported_recovery_methods) return false;
-        return filters.recoveryMethods.some(method =>
-          profile.supported_recovery_methods.includes(method)
-        );
-      });
-    }
+        if (filters.isLicensed !== undefined) {
+          filteredData = filteredData.filter(profile => 
+            profile.is_licensed === filters.isLicensed
+          );
+        }
 
-    if (filters.minExperience) {
-      filteredData = filteredData.filter(profile => 
-        (profile.years_experience || 0) >= filters.minExperience
-      );
-    }
+        console.log(`✅ PeerSupport: Found ${filteredData.length} available profiles`);
+        return { success: true, data: filteredData, error: null };
 
-    if (filters.isLicensed !== undefined) {
-      filteredData = filteredData.filter(profile => 
-        profile.is_licensed === filters.isLicensed
-      );
-    }
-
-    console.log(`✅ PeerSupport: Found ${filteredData.length} available profiles`);
-    return { success: true, data: filteredData, error: null };
-
-  } catch (err) {
-    console.error('💥 PeerSupport: GetAvailable exception:', err);
-    return { success: false, data: [], error: { message: err.message } };
-  }
-},
-
+      } catch (err) {
+        console.error('💥 PeerSupport: GetAvailable exception:', err);
+        return { success: false, data: [], error: { message: err.message } };
+      }
+    },
 
     /**
      * Search peer support profiles
+     * ✅ FIXED: Uses correct field name 'accepting_clients'
      */
-search: async (searchTerm, filters = {}) => {
-  try {
-    console.log('🤝 PeerSupport: Searching profiles:', searchTerm);
+    search: async (searchTerm, filters = {}) => {
+      try {
+        console.log('🤝 PeerSupport: Searching profiles:', searchTerm);
 
-    let query = supabaseClient
-      .from(tableName)
-      .select(`
-        *,
-        registrant_profiles!inner(id, first_name, last_name, email)
-      `)
-      .eq('accepting_clients', true); // ✅ FIXED: was 'is_accepting_clients'
+        let query = supabaseClient
+          .from(tableName)
+          .select(`
+            *,
+            registrant_profiles!inner(id, first_name, last_name, email)
+          `)
+          .eq('accepting_clients', true)
+          .eq('is_active', true);
 
-    // Apply basic database filters first
-    if (filters.isLicensed !== undefined) {
-      query = query.eq('is_licensed', filters.isLicensed);
-    }
+        // Apply basic database filters first
+        if (filters.isLicensed !== undefined) {
+          query = query.eq('is_licensed', filters.isLicensed);
+        }
 
-    if (filters.minExperience) {
-      query = query.gte('years_experience', filters.minExperience);
-    }
+        if (filters.minExperience) {
+          query = query.gte('years_experience', filters.minExperience);
+        }
 
-    const { data, error } = await query
-      .order('years_experience', { ascending: false })
-      .limit(20);
+        const { data, error } = await query
+          .order('years_experience', { ascending: false })
+          .limit(20);
 
-    if (error) {
-      console.error('❌ PeerSupport: Search failed:', error.message);
-      return { success: false, data: [], error };
-    }
+        if (error) {
+          console.error('❌ PeerSupport: Search failed:', error.message);
+          return { success: false, data: [], error };
+        }
 
-    let results = data || [];
+        let results = data || [];
 
-    // Apply text search filter
-    if (searchTerm && searchTerm.trim()) {
-      const term = searchTerm.toLowerCase();
-      results = results.filter(profile => {
-        const searchableText = [
-          profile.professional_title,
-          profile.bio,
-          ...(profile.specialties || []),
-          ...(profile.service_areas || []) // ✅ FIXED: was service_area
-        ].filter(Boolean).join(' ').toLowerCase();
+        // Apply text search filter
+        if (searchTerm && searchTerm.trim()) {
+          const term = searchTerm.toLowerCase();
+          results = results.filter(profile => {
+            const searchableText = [
+              profile.professional_title,
+              profile.bio,
+              ...(profile.specialties || []),
+              ...(profile.service_areas || [])
+            ].filter(Boolean).join(' ').toLowerCase();
 
-        return searchableText.includes(term);
-      });
-    }
+            return searchableText.includes(term);
+          });
+        }
 
-    // Apply remaining filters
-    if (filters.specialties && filters.specialties.length > 0) {
-      results = results.filter(profile =>
-        profile.specialties && 
-        filters.specialties.some(specialty =>
-          profile.specialties.some(ps => ps.toLowerCase().includes(specialty.toLowerCase()))
-        )
-      );
-    }
+        // Apply remaining filters
+        if (filters.specialties && filters.specialties.length > 0) {
+          results = results.filter(profile =>
+            profile.specialties && 
+            filters.specialties.some(specialty =>
+              profile.specialties.some(ps => ps.toLowerCase().includes(specialty.toLowerCase()))
+            )
+          );
+        }
 
-    console.log(`✅ PeerSupport: Search found ${results.length} results`);
-    return { success: true, data: results, error: null };
+        console.log(`✅ PeerSupport: Search found ${results.length} results`);
+        return { success: true, data: results, error: null };
 
-  } catch (err) {
-    console.error('💥 PeerSupport: Search exception:', err);
-    return { success: false, data: [], error: { message: err.message } };
-  }
-},
-
+      } catch (err) {
+        console.error('💥 PeerSupport: Search exception:', err);
+        return { success: false, data: [], error: { message: err.message } };
+      }
+    },
 
     /**
      * Get peer support profiles by specialty
@@ -310,6 +315,7 @@ search: async (searchTerm, filters = {}) => {
             registrant_profiles!inner(id, first_name, last_name, email)
           `)
           .eq('accepting_clients', true)
+          .eq('is_active', true)
           .contains('specialties', [specialty])
           .order('years_experience', { ascending: false });
 
@@ -330,116 +336,117 @@ search: async (searchTerm, filters = {}) => {
     /**
      * Get peer support profiles by service area
      */
-getByServiceArea: async (serviceArea) => {
-  try {
-    console.log('🤝 PeerSupport: Fetching profiles by service area:', serviceArea);
+    getByServiceArea: async (serviceArea) => {
+      try {
+        console.log('🤝 PeerSupport: Fetching profiles by service area:', serviceArea);
 
-    const { data, error } = await supabaseClient
-      .from(tableName)
-      .select(`
-        *,
-        registrant_profiles!inner(id, first_name, last_name, email)
-      `)
-      .eq('accepting_clients', true) // ✅ FIXED: was 'is_accepting_clients'
-      .contains('service_areas', [serviceArea]) // ✅ FIXED: was 'service_area'
-      .order('years_experience', { ascending: false });
+        const { data, error } = await supabaseClient
+          .from(tableName)
+          .select(`
+            *,
+            registrant_profiles!inner(id, first_name, last_name, email)
+          `)
+          .eq('accepting_clients', true)
+          .eq('is_active', true)
+          .contains('service_areas', [serviceArea])
+          .order('years_experience', { ascending: false });
 
-    if (error) {
-      console.error('❌ PeerSupport: GetByServiceArea failed:', error.message);
-      return { success: false, data: [], error };
-    }
+        if (error) {
+          console.error('❌ PeerSupport: GetByServiceArea failed:', error.message);
+          return { success: false, data: [], error };
+        }
 
-    console.log(`✅ PeerSupport: Found ${data?.length || 0} profiles in service area: ${serviceArea}`);
-    return { success: true, data: data || [], error: null };
+        console.log(`✅ PeerSupport: Found ${data?.length || 0} profiles in service area: ${serviceArea}`);
+        return { success: true, data: data || [], error: null };
 
-  } catch (err) {
-    console.error('💥 PeerSupport: GetByServiceArea exception:', err);
-    return { success: false, data: [], error: { message: err.message } };
-  }
-},
-
+      } catch (err) {
+        console.error('💥 PeerSupport: GetByServiceArea exception:', err);
+        return { success: false, data: [], error: { message: err.message } };
+      }
+    },
 
     /**
      * Update availability status
+     * ✅ FIXED: Uses correct field name 'accepting_clients'
      */
-updateAvailability: async (userId, isAccepting) => {
-  try {
-    console.log('🤝 PeerSupport: Updating availability for user:', userId, 'to:', isAccepting);
+    updateAvailability: async (userId, isAccepting) => {
+      try {
+        console.log('🤝 PeerSupport: Updating availability for user:', userId, 'to:', isAccepting);
 
-    return await service.update(userId, { 
-      accepting_clients: isAccepting, // ✅ FIXED: was 'is_accepting_clients'
-      updated_at: new Date().toISOString() // ✅ ADDED: standard updated_at field
-    });
+        return await service.update(userId, { 
+          accepting_clients: isAccepting,
+          updated_at: new Date().toISOString()
+        });
 
-  } catch (err) {
-    console.error('💥 PeerSupport: UpdateAvailability exception:', err);
-    return { success: false, data: null, error: { message: err.message } };
-  }
-},
-
+      } catch (err) {
+        console.error('💥 PeerSupport: UpdateAvailability exception:', err);
+        return { success: false, data: null, error: { message: err.message } };
+      }
+    },
 
     /**
      * Get peer support statistics
+     * ✅ FIXED: Uses correct field name 'accepting_clients'
      */
-getStatistics: async () => {
-  try {
-    console.log('🤝 PeerSupport: Fetching statistics');
+    getStatistics: async () => {
+      try {
+        console.log('🤝 PeerSupport: Fetching statistics');
 
-    const { data, error } = await supabaseClient
-      .from(tableName)
-      .select('specialties, accepting_clients, is_licensed, years_experience, created_at'); // ✅ FIXED: was 'is_accepting_clients'
+        const { data, error } = await supabaseClient
+          .from(tableName)
+          .select('specialties, accepting_clients, is_licensed, years_experience, created_at');
 
-    if (error) {
-      console.error('❌ PeerSupport: Statistics failed:', error.message);
-      return { success: false, data: null, error };
-    }
+        if (error) {
+          console.error('❌ PeerSupport: Statistics failed:', error.message);
+          return { success: false, data: null, error };
+        }
 
-    const stats = {
-      total: data.length,
-      acceptingClients: data.filter(p => p.accepting_clients).length, // ✅ FIXED: field name
-      licensed: data.filter(p => p.is_licensed).length,
-      averageExperience: data.length > 0 ? Math.round(
-        data.reduce((sum, p) => sum + (p.years_experience || 0), 0) / data.length
-      ) : 0,
-      bySpecialty: {},
-      experienceRanges: {
-        '0-2': 0,
-        '3-5': 0,
-        '6-10': 0,
-        '11+': 0
-      },
-      recentlyJoined: data.filter(p => {
-        const createdDate = new Date(p.created_at);
-        const monthAgo = new Date();
-        monthAgo.setMonth(monthAgo.getMonth() - 1);
-        return createdDate > monthAgo;
-      }).length
-    };
+        const stats = {
+          total: data.length,
+          acceptingClients: data.filter(p => p.accepting_clients).length,
+          licensed: data.filter(p => p.is_licensed).length,
+          averageExperience: data.length > 0 ? Math.round(
+            data.reduce((sum, p) => sum + (p.years_experience || 0), 0) / data.length
+          ) : 0,
+          bySpecialty: {},
+          experienceRanges: {
+            '0-2': 0,
+            '3-5': 0,
+            '6-10': 0,
+            '11+': 0
+          },
+          recentlyJoined: data.filter(p => {
+            const createdDate = new Date(p.created_at);
+            const monthAgo = new Date();
+            monthAgo.setMonth(monthAgo.getMonth() - 1);
+            return createdDate > monthAgo;
+          }).length
+        };
 
-    // Count specialties
-    data.forEach(profile => {
-      if (profile.specialties && Array.isArray(profile.specialties)) {
-        profile.specialties.forEach(specialty => {
-          stats.bySpecialty[specialty] = (stats.bySpecialty[specialty] || 0) + 1;
+        // Count specialties
+        data.forEach(profile => {
+          if (profile.specialties && Array.isArray(profile.specialties)) {
+            profile.specialties.forEach(specialty => {
+              stats.bySpecialty[specialty] = (stats.bySpecialty[specialty] || 0) + 1;
+            });
+          }
+
+          // Count experience ranges
+          const experience = profile.years_experience || 0;
+          if (experience <= 2) stats.experienceRanges['0-2']++;
+          else if (experience <= 5) stats.experienceRanges['3-5']++;
+          else if (experience <= 10) stats.experienceRanges['6-10']++;
+          else stats.experienceRanges['11+']++;
         });
+
+        console.log('✅ PeerSupport: Statistics calculated');
+        return { success: true, data: stats, error: null };
+
+      } catch (err) {
+        console.error('💥 PeerSupport: Statistics exception:', err);
+        return { success: false, data: null, error: { message: err.message } };
       }
-
-      // Count experience ranges
-      const experience = profile.years_experience || 0;
-      if (experience <= 2) stats.experienceRanges['0-2']++;
-      else if (experience <= 5) stats.experienceRanges['3-5']++;
-      else if (experience <= 10) stats.experienceRanges['6-10']++;
-      else stats.experienceRanges['11+']++;
-    });
-
-    console.log('✅ PeerSupport: Statistics calculated');
-    return { success: true, data: stats, error: null };
-
-  } catch (err) {
-    console.error('💥 PeerSupport: Statistics exception:', err);
-    return { success: false, data: null, error: { message: err.message } };
-  }
-},
+    },
 
     /**
      * Get profile by ID (with user details)
@@ -511,33 +518,8 @@ getStatistics: async () => {
   };
 
   return service;
-};export const getPeerSupportProfileByUserId = async (registrantProfileId) => {
-  try {
-    console.log('🤝 Fetching peer support profile for registrant profile ID:', registrantProfileId);
-    
-    const { createClient } = require('@supabase/supabase-js');
-    const supabaseUrl = process.env.REACT_APP_SUPABASE_URL;
-    const supabaseKey = process.env.REACT_APP_SUPABASE_ANON_KEY;
-    const supabase = createClient(supabaseUrl, supabaseKey);
-
-    const { data, error } = await supabase
-      .from('peer_support_profiles')
-      .select('*')
-      .eq('user_id', registrantProfileId)
-      .single();
-
-    if (error) {
-      if (error.code === 'PGRST116') {
-        return { success: false, error: 'No peer support profile found', code: 'NOT_FOUND' };
-      }
-      throw new Error(`Database error: ${error.message}`);
-    }
-
-    return { success: true, data };
-  } catch (err) {
-    console.error('💥 Error in getPeerSupportProfileByUserId:', err);
-    return { success: false, error: err.message };
-  }
 };
+
+// ✅ REMOVED: Conflicting standalone function that created its own supabase client
 
 export default createPeerSupportService;
