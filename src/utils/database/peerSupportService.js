@@ -522,21 +522,31 @@ const createPeerSupportService = (supabaseClient) => {
 
 // ✅ REMOVED: Conflicting standalone function that created its own supabase client
 
-// ✅ ADDED: Legacy export for backward compatibility
+// ✅ ADDED: Legacy exports for any remaining direct imports
 export const getPeerSupportProfileByUserId = async (userId) => {
-  // This function provides backward compatibility for any remaining imports
-  // It uses a temporary supabase client to maintain the same interface
+  console.log('⚠️ Direct import detected - consider using db.peerSupportProfiles.getByUserId() instead');
+  
+  // Create a temporary service instance to maintain compatibility
   try {
     const { createClient } = await import('@supabase/supabase-js');
     const supabaseUrl = process.env.REACT_APP_SUPABASE_URL;
     const supabaseKey = process.env.REACT_APP_SUPABASE_ANON_KEY;
-    const tempClient = createClient(supabaseUrl, supabaseKey);
     
+    if (!supabaseUrl || !supabaseKey) {
+      throw new Error('Missing Supabase environment variables');
+    }
+    
+    const tempClient = createClient(supabaseUrl, supabaseKey);
     const service = createPeerSupportService(tempClient);
+    
     return await service.getByUserId(userId);
   } catch (error) {
-    console.error('❌ Legacy getPeerSupportProfileByUserId error:', error);
-    return { success: false, error: error.message };
+    console.error('❌ Legacy function error:', error);
+    return { 
+      success: false, 
+      data: null, 
+      error: { message: error.message } 
+    };
   }
 };
 

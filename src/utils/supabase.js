@@ -214,12 +214,17 @@ export const db = {
   // ============================================================================
 }
 
-// ✅ ADDED: Legacy support for hook that expects this specific function
+// ✅ ADDED: Legacy support for any remaining imports
 export const getPeerSupportProfileByUserId = async (userId, supabaseClient = null) => {
+  console.log('⚠️ Using legacy getPeerSupportProfileByUserId - consider updating to db.peerSupportProfiles.getByUserId()');
   const client = supabaseClient || supabase;
   const service = createPeerSupportService(client);
   return await service.getByUserId(userId);
 };
+
+// ✅ ADDED: Additional legacy exports for different import patterns
+export { getPeerSupportProfileByUserId as getPeerSupportProfile };
+export { getPeerSupportProfileByUserId as fetchPeerSupportProfile };
 
 // ✅ UPDATED: Schema information reflecting refactored structure + peer support
 export const getSchemaInfo = () => {

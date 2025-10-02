@@ -1883,6 +1883,56 @@ GRANT SELECT ON auth.users TO postgres, anon, authenticated, service_role;
 GRANT SELECT, INSERT, UPDATE, DELETE ON ALL TABLES IN SCHEMA public TO authenticated;
 GRANT USAGE, SELECT ON ALL SEQUENCES IN SCHEMA public TO authenticated;
 
+-- 1. First, check if the table exists and has RLS enabled
+SELECT schemaname, tablename, rowsecurity 
+FROM pg_tables 
+WHERE tablename = 'peer_support_profiles';
+
+-- 2. Check current RLS policies
+SELECT schemaname, tablename, policyname, permissive, roles, cmd, qual 
+FROM pg_policies 
+WHERE tablename = 'peer_support_profiles';
+
+-- 3. Drop existing problematic policies and recreate them
+DROP POLICY IF EXISTS "Users can view their own peer support profile" ON peer_support_profiles;
+DROP POLICY IF EXISTS "Users can insert their own peer support profile" ON peer_support_profiles;
+DROP POLICY IF EXISTS "Users can update their own peer support profile" ON peer_support_profiles;
+
+-- 4. Create new, working RLS policies
+-- Users can view their own peer support profile
+CREATE POLICY "Users can view their own peer support profile" ON peer_support_profiles
+  FOR SELECT USING (
+    user_id IN (
+      SELECT rp.id FROM registrant_profiles rp
+      WHERE rp.user_id = auth.uid()
+    )
+  );
+
+-- Users can insert their own peer support profile  
+CREATE POLICY "Users can insert their own peer support profile" ON peer_support_profiles
+  FOR INSERT WITH CHECK (
+    user_id IN (
+      SELECT rp.id FROM registrant_profiles rp
+      WHERE rp.user_id = auth.uid()
+    )
+  );
+
+-- Users can update their own peer support profile
+CREATE POLICY "Users can update their own peer support profile" ON peer_support_profiles
+  FOR UPDATE USING (
+    user_id IN (
+      SELECT rp.id FROM registrant_profiles rp
+      WHERE rp.user_id = auth.uid()
+    )
+  );
+
+-- 5. Ensure RLS is enabled
+ALTER TABLE peer_support_profiles ENABLE ROW LEVEL SECURITY;
+
+-- 6. Grant proper permissions
+GRANT SELECT, INSERT, UPDATE, DELETE ON peer_support_profiles TO authenticated;
+GRANT USAGE, SELECT ON ALL SEQUENCES IN SCHEMA public TO authenticated;
+
 -- ============================================================================
 -- SCHEMA COMPLETION SUMMARY
 -- ============================================================================
