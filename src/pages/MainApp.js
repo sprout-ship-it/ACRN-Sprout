@@ -141,11 +141,17 @@ const MainApp = () => {
       return;
     }
 
-    // ✅ FIXED: Check if we already checked this profile
-    if (profileSetup.profileKey === currentProfileKey && profileSetup.lastChecked) {
-      console.log('Profile already checked for this key:', currentProfileKey);
-      return;
-    }
+// ✅ SIMPLE FIX: Once we know they need to complete profile, stop checking
+if (!profileSetup.hasComprehensiveProfile && profileSetup.profileKey === currentProfileKey && !profileSetup.loading) {
+  console.log('Profile completion already determined - needs completion');
+  return;
+}
+
+// ✅ FIXED: Check if we already checked this profile (using current state, not dependency)
+if (profileSetup.profileKey === currentProfileKey && profileSetup.lastChecked) {
+  console.log('Profile already checked for this key:', currentProfileKey);
+  return;
+}
 
     // ✅ FIXED: Validate required data
     if (!user || !profile?.id || !profile?.roles?.length) {
