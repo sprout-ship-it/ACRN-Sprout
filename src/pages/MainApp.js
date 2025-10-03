@@ -1,4 +1,4 @@
-// src/pages/MainApp.js - FIXED INFINITE LOOP VERSION
+// src/pages/MainApp.js - FIXED INFINITE LOOP VERSION WITH DECISION LOCKING
 import React, { useEffect, useState, useRef, useCallback, useMemo } from 'react'
 import { Routes, Route, Navigate, useNavigate, useLocation } from 'react-router-dom'
 import { useAuth } from '../hooks/useAuth';
@@ -78,6 +78,7 @@ const MainApp = () => {
   const isCheckingProfileRef = useRef(false);
   const isMountedRef = useRef(true);
   const lastProfileCheckRef = useRef(null); // ✅ NEW: Track last check result
+  const formDecisionMadeRef = useRef(false); // ✅ NEW: Lock form decision once made
   
   // ✅ FIXED: Memoize profile key to prevent unnecessary re-checks
   const profileKey = useMemo(() => {
@@ -92,7 +93,8 @@ const MainApp = () => {
     error: null,
     lastChecked: null,
     profileKey: null,
-    checkInProgress: false // ✅ NEW: Track if check is in progress
+    checkInProgress: false, // ✅ NEW: Track if check is in progress
+    formShown: false // ✅ NEW: Track if form decision was made
   }));
 
   // ✅ FIXED: Memoized service availability check
@@ -148,257 +150,269 @@ const MainApp = () => {
 
   // ✅ FIXED: Stable profile completion check with MAJOR loop prevention improvements
   const checkProfileCompletion = useCallback(async (currentProfileKey) => {
-    // ✅ CRITICAL FIX: Prevent multiple simultaneous checks
-    if (isCheckingProfileRef.current || !isMountedRef.current) {
-      console.log('🔧 Profile check already in progress or component unmounted');
-      return;
-    }
-
-    // ✅ CRITICAL FIX: Don't re-check if we already have a definitive result for this profile
-    if (lastProfileCheckRef.current === currentProfileKey && profileSetup.lastChecked) {
-      const timeSinceLastCheck = Date.now() - profileSetup.lastChecked;
-      if (timeSinceLastCheck < 5000) { // Don't re-check within 5 seconds
-        console.log('🔧 Profile already checked recently, skipping:', currentProfileKey);
+    try {
+      // ✅ CRITICAL FIX: Prevent multiple simultaneous checks
+      if (isCheckingProfileRef.current || !isMountedRef.current) {
+        console.log('🔧 Profile check already in progress or component unmounted');
         return;
       }
-    }
 
-    // ✅ CRITICAL FIX: If we're showing the form and haven't completed it, don't re-check
-    if (!profileSetup.hasComprehensiveProfile && 
-        profileSetup.profileKey === currentProfileKey && 
-        !profileSetup.loading &&
-        !profileSetup.checkInProgress) {
-      console.log('🔧 Profile form is being shown, not re-checking to prevent loop');
-      return;
-    }
+      // ✅ CRITICAL FIX: Don't re-check if we already have a definitive result for this profile
+      if (lastProfileCheckRef.current === currentProfileKey && profileSetup.lastChecked) {
+        const timeSinceLastCheck = Date.now() - profileSetup.lastChecked;
+        if (timeSinceLastCheck < 5000) { // Don't re-check within 5 seconds
+          console.log('🔧 Profile already checked recently, skipping:', currentProfileKey);
+          return;
+        }
+      }
 
-    // ✅ FIXED: Validate required data
-    if (!user || !profile?.id || !profile?.roles?.length) {
-      console.log('Missing user, profile, or roles:', { user: !!user, profile: !!profile, roles: profile?.roles })
+      // ✅ CRITICAL FIX: If we're showing the form and haven't completed it, don't re-check
+      if (!profileSetup.hasComprehensiveProfile && 
+          profileSetup.profileKey === currentProfileKey && 
+          !profileSetup.loading &&
+          !profileSetup.checkInProgress) {
+        console.log('🔧 Profile form is being shown, not re-checking to prevent loop');
+        return;
+      }
+
+      // ✅ FIXED: Validate required data
+      if (!user || !profile?.id || !profile?.roles?.length) {
+        console.log('Missing user, profile, or roles:', { user: !!user, profile: !!profile, roles: profile?.roles })
+        if (isMountedRef.current) {
+          setProfileSetup(prev => ({
+            ...prev,
+            hasComprehensiveProfile: false, 
+            loading: false, 
+            error: null,
+            lastChecked: Date.now(),
+            profileKey: currentProfileKey,
+            checkInProgress: false,
+            formShown: false
+          }));
+          lastProfileCheckRef.current = currentProfileKey;
+        }
+        return;
+      }
+
+      // ✅ FIXED: Set checking flags BEFORE any async operations
+      isCheckingProfileRef.current = true;
+      lastProfileCheckRef.current = currentProfileKey;
+
+      // ✅ FIXED: Update state to show check in progress
       if (isMountedRef.current) {
         setProfileSetup(prev => ({
           ...prev,
-          hasComprehensiveProfile: false, 
-          loading: false, 
-          error: null,
-          lastChecked: Date.now(),
-          profileKey: currentProfileKey,
-          checkInProgress: false
+          checkInProgress: true,
+          error: null
         }));
-        lastProfileCheckRef.current = currentProfileKey;
       }
-      return;
-    }
 
-    // ✅ FIXED: Set checking flags BEFORE any async operations
-    isCheckingProfileRef.current = true;
-    lastProfileCheckRef.current = currentProfileKey;
-
-    // ✅ FIXED: Update state to show check in progress
-    if (isMountedRef.current) {
-      setProfileSetup(prev => ({
-        ...prev,
-        checkInProgress: true,
-        error: null
-      }));
-    }
-
-    try {
-      console.log('Checking profile completion for profile.id:', profile.id, 'roles:', profile.roles);
-      
-      let hasCompleteProfile = false;
-      let profileError = null;
-
-      // Check based on user's primary role
-      if (hasRole('applicant')) {
-        console.log('Checking applicant comprehensive profile...');
+      try {
+        console.log('Checking profile completion for profile.id:', profile.id, 'roles:', profile.roles);
         
-        try {
-          const result = await getMatchingProfile(profile.id, supabase);
+        let hasCompleteProfile = false;
+        let profileError = null;
+
+        // Check based on user's primary role
+        if (hasRole('applicant')) {
+          console.log('Checking applicant comprehensive profile...');
           
-          if (result.success && result.data) {
-            const applicantProfile = result.data;
-            
-            hasCompleteProfile = !!(
-              applicantProfile?.primary_city && 
-              applicantProfile?.primary_state && 
-              applicantProfile?.budget_min && 
-              applicantProfile?.budget_max &&
-              applicantProfile?.recovery_stage &&
-              applicantProfile?.about_me && 
-              applicantProfile?.looking_for &&
-              applicantProfile?.profile_completed
-            );
-            
-            console.log('Applicant profile check complete:', hasCompleteProfile);
-          } else {
-            console.log('No applicant profile found or error:', result.error);
-            hasCompleteProfile = false;
-          }
-        } catch (error) {
-          console.error('Error checking applicant profile:', error);
-          profileError = 'Failed to check applicant profile';
-          hasCompleteProfile = false;
-        }
-      }
-      
-      // ✅ CRITICAL FIX: Simplified peer support check with better loop prevention
-      else if (hasRole('peer-support')) {
-        console.log('Checking peer support comprehensive profile...');
-        
-        if (!serviceAvailability.peerSupport) {
-          console.warn('⚠️ Peer support service not available, assuming incomplete profile');
-          profileError = 'Peer support service temporarily unavailable';
-          hasCompleteProfile = false;
-        } else {
           try {
-            const result = await db.peerSupportProfiles.getByUserId(profile.id);
+            const result = await getMatchingProfile(profile.id, supabase);
             
             if (result.success && result.data) {
-              const peerProfile = result.data;
+              const applicantProfile = result.data;
               
               hasCompleteProfile = !!(
-                peerProfile?.primary_phone && 
-                peerProfile?.bio && 
-                peerProfile?.specialties &&
-                peerProfile?.specialties?.length > 0 &&
-                peerProfile?.profile_completed
+                applicantProfile?.primary_city && 
+                applicantProfile?.primary_state && 
+                applicantProfile?.budget_min && 
+                applicantProfile?.budget_max &&
+                applicantProfile?.recovery_stage &&
+                applicantProfile?.about_me && 
+                applicantProfile?.looking_for &&
+                applicantProfile?.profile_completed
               );
               
-              console.log('✅ Peer profile check complete:', hasCompleteProfile, {
-                hasPhone: !!peerProfile?.primary_phone,
-                hasBio: !!peerProfile?.bio,
-                hasSpecialties: !!(peerProfile?.specialties?.length > 0),
-                isCompleted: !!peerProfile?.profile_completed
-              });
-            } else if (result.error) {
-              // ✅ FIXED: Handle specific error types without causing loops
-              if (result.error.code === 'NOT_FOUND' || result.error.message?.includes('No peer support profile found')) {
-                console.log('ℹ️ No peer support profile found (normal for new users)');
-                hasCompleteProfile = false;
-                profileError = null; // Don't treat "not found" as an error
-              } else if (result.error.message?.includes('not available')) {
-                console.warn('⚠️ Peer support service temporarily unavailable');
-                profileError = 'Peer support service temporarily unavailable';
-                hasCompleteProfile = false;
-              } else {
-                console.error('❌ Unexpected peer support profile error:', result.error);
-                profileError = 'Failed to check peer support profile';
-                hasCompleteProfile = false;
-              }
+              console.log('Applicant profile check complete:', hasCompleteProfile);
+            } else {
+              console.log('No applicant profile found or error:', result.error);
+              hasCompleteProfile = false;
             }
           } catch (error) {
-            console.error('❌ Error checking peer support profile:', error);
-            profileError = error.message?.includes('not available') 
-              ? 'Peer support service temporarily unavailable'
-              : 'Failed to check peer support profile';
+            console.error('Error checking applicant profile:', error);
+            profileError = 'Failed to check applicant profile';
             hasCompleteProfile = false;
           }
         }
-      }
-      
-      else if (hasRole('landlord')) {
-        console.log('Checking landlord profile...');
         
-        try {
-          hasCompleteProfile = await checkLandlordProfile(profile.id);
-        } catch (error) {
-          console.error('Error checking landlord profile:', error);
-          profileError = 'Failed to check landlord profile';
-          hasCompleteProfile = false;
-        }
-      }
-
-      else if (hasRole('employer')) {
-        console.log('Checking employer comprehensive profile...');
-        
-        try {
-          const result = await getEmployerProfilesByUserId(profile.id);
+        // ✅ CRITICAL FIX: Simplified peer support check with better loop prevention
+        else if (hasRole('peer-support')) {
+          console.log('Checking peer support comprehensive profile...');
           
-          if (result.success && result.data && result.data.length > 0) {
-            const employerProfile = result.data[0];
-            
-            hasCompleteProfile = !!(
-              employerProfile?.business_type && 
-              employerProfile?.industry && 
-              employerProfile?.description && 
-              employerProfile?.job_types_available?.length > 0 &&
-              employerProfile?.profile_completed
-            );
-            
-            console.log('Employer profile check complete:', hasCompleteProfile);
+          if (!serviceAvailability.peerSupport) {
+            console.warn('⚠️ Peer support service not available, assuming incomplete profile');
+            profileError = 'Peer support service temporarily unavailable';
+            hasCompleteProfile = false;
           } else {
-            console.log('No employer profile found or error:', result.error);
+            try {
+              const result = await db.peerSupportProfiles.getByUserId(profile.id);
+              
+              if (result.success && result.data) {
+                const peerProfile = result.data;
+                
+                hasCompleteProfile = !!(
+                  peerProfile?.primary_phone && 
+                  peerProfile?.bio && 
+                  peerProfile?.specialties &&
+                  peerProfile?.specialties?.length > 0 &&
+                  peerProfile?.profile_completed
+                );
+                
+                console.log('✅ Peer profile check complete:', hasCompleteProfile, {
+                  hasPhone: !!peerProfile?.primary_phone,
+                  hasBio: !!peerProfile?.bio,
+                  hasSpecialties: !!(peerProfile?.specialties?.length > 0),
+                  isCompleted: !!peerProfile?.profile_completed
+                });
+              } else if (result.error) {
+                // ✅ FIXED: Handle specific error types without causing loops
+                if (result.error.code === 'NOT_FOUND' || result.error.message?.includes('No peer support profile found')) {
+                  console.log('ℹ️ No peer support profile found (normal for new users)');
+                  hasCompleteProfile = false;
+                  profileError = null; // Don't treat "not found" as an error
+                } else if (result.error.message?.includes('not available')) {
+                  console.warn('⚠️ Peer support service temporarily unavailable');
+                  profileError = 'Peer support service temporarily unavailable';
+                  hasCompleteProfile = false;
+                } else {
+                  console.error('❌ Unexpected peer support profile error:', result.error);
+                  profileError = 'Failed to check peer support profile';
+                  hasCompleteProfile = false;
+                }
+              }
+            } catch (error) {
+              console.error('❌ Error checking peer support profile:', error);
+              profileError = error.message?.includes('not available') 
+                ? 'Peer support service temporarily unavailable'
+                : 'Failed to check peer support profile';
+              hasCompleteProfile = false;
+            }
+          }
+        }
+        
+        else if (hasRole('landlord')) {
+          console.log('Checking landlord profile...');
+          
+          try {
+            hasCompleteProfile = await checkLandlordProfile(profile.id);
+          } catch (error) {
+            console.error('Error checking landlord profile:', error);
+            profileError = 'Failed to check landlord profile';
             hasCompleteProfile = false;
           }
-        } catch (error) {
-          console.error('Error checking employer profile:', error);
-          profileError = 'Failed to check employer profile';
-          hasCompleteProfile = false;
         }
-      }
 
-      // ✅ CRITICAL FIX: Only update state if component is still mounted AND values actually changed
-      if (isMountedRef.current) {
-        const newState = {
-          hasComprehensiveProfile: hasCompleteProfile,
-          loading: false,
-          error: profileError,
-          lastChecked: Date.now(),
-          profileKey: currentProfileKey,
-          checkInProgress: false
-        };
-
-        // ✅ CRITICAL FIX: Only update if values actually changed
-        setProfileSetup(prev => {
-          const hasChanged = (
-            prev.hasComprehensiveProfile !== newState.hasComprehensiveProfile ||
-            prev.error !== newState.error ||
-            prev.profileKey !== newState.profileKey ||
-            prev.checkInProgress !== newState.checkInProgress
-          );
-
-          if (hasChanged) {
-            console.log('📝 Updating profile setup state:', {
-              from: {
-                hasProfile: prev.hasComprehensiveProfile,
-                error: prev.error,
-                profileKey: prev.profileKey
-              },
-              to: {
-                hasProfile: newState.hasComprehensiveProfile,
-                error: newState.error,
-                profileKey: newState.profileKey
-              }
-            });
-            return newState;
-          } else {
-            console.log('📝 Profile setup state unchanged, skipping update');
-            return { ...prev, checkInProgress: false, lastChecked: Date.now() };
+        else if (hasRole('employer')) {
+          console.log('Checking employer comprehensive profile...');
+          
+          try {
+            const result = await getEmployerProfilesByUserId(profile.id);
+            
+            if (result.success && result.data && result.data.length > 0) {
+              const employerProfile = result.data[0];
+              
+              hasCompleteProfile = !!(
+                employerProfile?.business_type && 
+                employerProfile?.industry && 
+                employerProfile?.description && 
+                employerProfile?.job_types_available?.length > 0 &&
+                employerProfile?.profile_completed
+              );
+              
+              console.log('Employer profile check complete:', hasCompleteProfile);
+            } else {
+              console.log('No employer profile found or error:', result.error);
+              hasCompleteProfile = false;
+            }
+          } catch (error) {
+            console.error('Error checking employer profile:', error);
+            profileError = 'Failed to check employer profile';
+            hasCompleteProfile = false;
           }
-        });
-      }
+        }
 
-      console.log('✅ Profile completion check complete:', {
-        profileKey: currentProfileKey,
-        hasComprehensiveProfile: hasCompleteProfile,
-        error: profileError
-      });
+        // ✅ CRITICAL FIX: Only update state if component is still mounted AND values actually changed
+        if (isMountedRef.current) {
+          const newState = {
+            hasComprehensiveProfile: hasCompleteProfile,
+            loading: false,
+            error: profileError,
+            lastChecked: Date.now(),
+            profileKey: currentProfileKey,
+            checkInProgress: false,
+            formShown: false // Reset form shown when we do a fresh check
+          };
 
-    } catch (error) {
-      console.error('💥 Error checking profile completion:', error);
-      if (isMountedRef.current) {
-        setProfileSetup(prev => ({ 
-          ...prev,
-          hasComprehensiveProfile: false, 
-          loading: false, 
-          error: 'Failed to check profile status',
-          lastChecked: Date.now(),
+          // ✅ CRITICAL FIX: Only update if values actually changed
+          setProfileSetup(prev => {
+            const hasChanged = (
+              prev.hasComprehensiveProfile !== newState.hasComprehensiveProfile ||
+              prev.error !== newState.error ||
+              prev.profileKey !== newState.profileKey ||
+              prev.checkInProgress !== newState.checkInProgress
+            );
+
+            if (hasChanged) {
+              console.log('📝 Updating profile setup state:', {
+                from: {
+                  hasProfile: prev.hasComprehensiveProfile,
+                  error: prev.error,
+                  profileKey: prev.profileKey
+                },
+                to: {
+                  hasProfile: newState.hasComprehensiveProfile,
+                  error: newState.error,
+                  profileKey: newState.profileKey
+                }
+              });
+              // ✅ CRITICAL FIX: Reset decision lock if profile status changed
+              if (prev.hasComprehensiveProfile !== newState.hasComprehensiveProfile) {
+                formDecisionMadeRef.current = false;
+              }
+              return newState;
+            } else {
+              console.log('📝 Profile setup state unchanged, skipping update');
+              return { ...prev, checkInProgress: false, lastChecked: Date.now() };
+            }
+          });
+        }
+
+        console.log('✅ Profile completion check complete:', {
           profileKey: currentProfileKey,
-          checkInProgress: false
-        }));
+          hasComprehensiveProfile: hasCompleteProfile,
+          error: profileError
+        });
+
+      } catch (error) {
+        console.error('💥 Error checking profile completion:', error);
+        if (isMountedRef.current) {
+          setProfileSetup(prev => ({ 
+            ...prev,
+            hasComprehensiveProfile: false, 
+            loading: false, 
+            error: 'Failed to check profile status',
+            lastChecked: Date.now(),
+            profileKey: currentProfileKey,
+            checkInProgress: false,
+            formShown: false
+          }));
+        }
+      } finally {
+        isCheckingProfileRef.current = false;
       }
-    } finally {
+    } catch (outerError) {
+      console.error('💥 Outer error in profile completion check:', outerError);
       isCheckingProfileRef.current = false;
     }
   }, [user, profile, hasRole, serviceAvailability, checkLandlordProfile]);
@@ -410,7 +424,7 @@ const MainApp = () => {
         profileSetup.profileKey === profileKey && 
         !profileSetup.loading && 
         !profileSetup.checkInProgress &&
-        profileSetup.lastChecked) {
+        (profileSetup.lastChecked || formDecisionMadeRef.current)) {
       console.log('🔍 Form already determined to be needed, skipping re-check');
       return;
     }
@@ -440,8 +454,10 @@ const MainApp = () => {
           loading: true, 
           error: null,
           lastChecked: null,
-          profileKey: null
+          profileKey: null,
+          formShown: false
         }));
+        formDecisionMadeRef.current = false;
       }
     } else if (!isAuthenticated) {
       // Not authenticated
@@ -452,8 +468,10 @@ const MainApp = () => {
           loading: false, 
           error: null,
           lastChecked: Date.now(),
-          profileKey: null
+          profileKey: null,
+          formShown: false
         }));
+        formDecisionMadeRef.current = false;
       }
     }
   }, [isAuthenticated, profileKey]); // ✅ REMOVED checkProfileCompletion from dependencies
@@ -464,40 +482,58 @@ const MainApp = () => {
     return () => {
       isMountedRef.current = false;
       isCheckingProfileRef.current = false;
+      formDecisionMadeRef.current = false; // ✅ NEW: Reset form decision on unmount
     };
   }, []);
 
   // ✅ FIXED: Stable profile setup completion handler
   const handleProfileSetupComplete = useCallback(() => {
-    console.log('✅ Profile setup completed, updating state');
+    console.log('✅ Profile setup completed, updating state and resetting locks');
     if (isMountedRef.current) {
       setProfileSetup(prev => ({ 
         ...prev, 
         hasComprehensiveProfile: true,
         error: null,
         lastChecked: Date.now(),
-        checkInProgress: false
+        checkInProgress: false,
+        formShown: false
       }));
-      // Clear the last check ref so it can re-check if needed
+      // ✅ CRITICAL FIX: Reset decision locks when profile is completed
+      formDecisionMadeRef.current = false;
       lastProfileCheckRef.current = null;
     }
   }, []);
 
   // ✅ NEW: Memoize the decision about whether to show profile completion form
   const shouldShowProfileForm = useMemo(() => {
+    // ✅ CRITICAL FIX: Once decision is made, stick with it until profile is completed
+    if (formDecisionMadeRef.current && profileSetup.formShown) {
+      console.log('🔒 Form decision locked - already showing form');
+      return true;
+    }
+
     if (!isAuthenticated) return false;
     if (profileSetup.loading || profileSetup.checkInProgress) return false;
     if (profileJustCompleted) return false;
     if (profileSetup.hasComprehensiveProfile) return false;
     
     // Must have checked profile and determined it needs completion
-    return !profileSetup.hasComprehensiveProfile && profileSetup.lastChecked && !profileSetup.loading;
+    const shouldShow = !profileSetup.hasComprehensiveProfile && profileSetup.lastChecked && !profileSetup.loading;
+    
+    // ✅ CRITICAL FIX: Lock the decision once we decide to show the form
+    if (shouldShow && !formDecisionMadeRef.current) {
+      console.log('🔒 Locking form decision - will show profile form');
+      formDecisionMadeRef.current = true;
+    }
+    
+    return shouldShow;
   }, [
     isAuthenticated, 
     profileSetup.loading, 
     profileSetup.checkInProgress, 
     profileSetup.hasComprehensiveProfile, 
     profileSetup.lastChecked,
+    profileSetup.formShown,
     profileJustCompleted
   ]);
 
@@ -510,6 +546,14 @@ const MainApp = () => {
     if (hasRole('landlord')) return 'landlord';
     return null;
   }, [hasRole, profile?.roles]);
+
+  // ✅ NEW: Update formShown flag when we decide to show the form
+  useEffect(() => {
+    if (shouldShowProfileForm && !profileSetup.formShown && isMountedRef.current) {
+      console.log('🔒 Setting formShown flag to prevent re-evaluation');
+      setProfileSetup(prev => ({ ...prev, formShown: true }));
+    }
+  }, [shouldShowProfileForm, profileSetup.formShown]);
 
   // Redirect unauthenticated users
   if (!isAuthenticated) {
