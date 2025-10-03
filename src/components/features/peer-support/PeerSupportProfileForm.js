@@ -52,6 +52,11 @@ const FORM_SECTIONS = [
 
 const PeerSupportProfileForm = ({ editMode = false, onComplete, onCancel }) => {
   const { hasRole } = useAuth();
+    console.log('🔍 Form useAuth state:', { 
+    userId: user?.id, 
+    profileId: profile?.id,
+    authTimestamp: Date.now() 
+  });
   const [currentSectionIndex, setCurrentSectionIndex] = useState(0);
   const [isSubmitting, setIsSubmitting] = useState(false);
   
