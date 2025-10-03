@@ -93,8 +93,7 @@ const MainApp = () => {
     error: null,
     lastChecked: null,
     profileKey: null,
-    checkInProgress: false, // ✅ NEW: Track if check is in progress
-    formShown: false // ✅ NEW: Track if form decision was made
+    checkInProgress: false // ✅ NEW: Track if check is in progress
   }));
 
   // ✅ FIXED: Memoized service availability check
@@ -186,8 +185,7 @@ const MainApp = () => {
             error: null,
             lastChecked: Date.now(),
             profileKey: currentProfileKey,
-            checkInProgress: false,
-            formShown: false
+            checkInProgress: false
           }));
           lastProfileCheckRef.current = currentProfileKey;
         }
@@ -350,8 +348,7 @@ const MainApp = () => {
             error: profileError,
             lastChecked: Date.now(),
             profileKey: currentProfileKey,
-            checkInProgress: false,
-            formShown: false // Reset form shown when we do a fresh check
+            checkInProgress: false
           };
 
           // ✅ CRITICAL FIX: Only update if values actually changed
@@ -404,8 +401,7 @@ const MainApp = () => {
             error: 'Failed to check profile status',
             lastChecked: Date.now(),
             profileKey: currentProfileKey,
-            checkInProgress: false,
-            formShown: false
+            checkInProgress: false
           }));
         }
       } finally {
@@ -454,8 +450,7 @@ const MainApp = () => {
           loading: true, 
           error: null,
           lastChecked: null,
-          profileKey: null,
-          formShown: false
+          profileKey: null
         }));
         formDecisionMadeRef.current = false;
       }
@@ -468,8 +463,7 @@ const MainApp = () => {
           loading: false, 
           error: null,
           lastChecked: Date.now(),
-          profileKey: null,
-          formShown: false
+          profileKey: null
         }));
         formDecisionMadeRef.current = false;
       }
@@ -495,8 +489,7 @@ const MainApp = () => {
         hasComprehensiveProfile: true,
         error: null,
         lastChecked: Date.now(),
-        checkInProgress: false,
-        formShown: false
+        checkInProgress: false
       }));
       // ✅ CRITICAL FIX: Reset decision locks when profile is completed
       formDecisionMadeRef.current = false;
@@ -507,8 +500,8 @@ const MainApp = () => {
   // ✅ NEW: Memoize the decision about whether to show profile completion form
   const shouldShowProfileForm = useMemo(() => {
     // ✅ CRITICAL FIX: Once decision is made, stick with it until profile is completed
-    if (formDecisionMadeRef.current && profileSetup.formShown) {
-      console.log('🔒 Form decision locked - already showing form');
+    if (formDecisionMadeRef.current) {
+      console.log('🔒 Form decision locked - already decided to show form');
       return true;
     }
 
@@ -520,7 +513,7 @@ const MainApp = () => {
     // Must have checked profile and determined it needs completion
     const shouldShow = !profileSetup.hasComprehensiveProfile && profileSetup.lastChecked && !profileSetup.loading;
     
-    // ✅ CRITICAL FIX: Lock the decision once we decide to show the form
+    // ✅ CRITICAL FIX: Lock the decision once we decide to show the form (REF ONLY - NO STATE UPDATE)
     if (shouldShow && !formDecisionMadeRef.current) {
       console.log('🔒 Locking form decision - will show profile form');
       formDecisionMadeRef.current = true;
@@ -533,7 +526,6 @@ const MainApp = () => {
     profileSetup.checkInProgress, 
     profileSetup.hasComprehensiveProfile, 
     profileSetup.lastChecked,
-    profileSetup.formShown,
     profileJustCompleted
   ]);
 
