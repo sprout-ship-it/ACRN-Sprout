@@ -1,5 +1,5 @@
-// src/context/AuthContext.js - PHASE 3 CORRECTED VERSION
-import React, { createContext, useContext, useEffect, useState } from 'react'
+// src/context/AuthContext.js - FIXED VERSION - Prevents infinite re-renders
+import React, { createContext, useContext, useEffect, useState, useMemo, useCallback } from 'react'
 import { supabase } from '../utils/supabase'
 
 // Create and export AuthContext
@@ -20,6 +20,44 @@ export const AuthProvider = ({ children }) => {
   const [profile, setProfile] = useState(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
+
+  // ✅ FIXED: Memoized loadUserProfile function to prevent re-creates
+  const loadUserProfile = useCallback(async (authUserId) => {
+    console.log('👤 AuthProvider: Loading profile for auth user:', authUserId)
+    
+    try {
+      const { data, error } = await supabase
+        .from('registrant_profiles')
+        .select('*')
+        .eq('user_id', authUserId)
+        .single()
+
+      if (error) {
+        if (error.code === 'PGRST116') {
+          console.log('ℹ️ AuthProvider: No profile found (may still be creating via trigger)')
+          setProfile(null)
+          return
+        }
+        console.error('❌ AuthProvider: Profile query error:', error.message)
+        throw error
+      }
+
+      if (data) {
+        console.log('✅ AuthProvider: Profile loaded successfully:', {
+          registrant_id: data.id,
+          auth_user_id: authUserId
+        })
+        setProfile(data)
+        setError(null)
+      } else {
+        console.log('ℹ️ AuthProvider: No profile data returned')
+        setProfile(null)
+      }
+    } catch (err) {
+      console.error('💥 AuthProvider: Profile loading failed:', err.message)
+      throw err
+    }
+  }, [])
 
   // Initialize auth state on mount
   useEffect(() => {
@@ -53,7 +91,6 @@ export const AuthProvider = ({ children }) => {
             await loadUserProfile(session.user.id)
           } catch (profileErr) {
             console.error('⚠️ AuthProvider: Profile load failed:', profileErr)
-            // Don't create fallback profile - let the app handle missing profile case
             setProfile(null)
           }
         } else {
@@ -75,42 +112,7 @@ export const AuthProvider = ({ children }) => {
         }
       }
     }
-const loadUserProfile = async (authUserId) => {
-  console.log('👤 AuthProvider: Loading profile for auth user:', authUserId)
-  
-  try {
-    const { data, error } = await supabase
-      .from('registrant_profiles')
-      .select('*')
-      .eq('user_id', authUserId)
-      .single()
 
-    if (error) {
-      if (error.code === 'PGRST116') {
-        console.log('ℹ️ AuthProvider: No profile found (may still be creating via trigger)')
-        setProfile(null)
-        return
-      }
-      console.error('❌ AuthProvider: Profile query error:', error.message)
-      throw error
-    }
-
-    if (data) {
-      console.log('✅ AuthProvider: Profile loaded successfully:', {
-        registrant_id: data.id,  // ← This should be different from auth.users.id
-        auth_user_id: authUserId  // ← This is auth.users.id
-      })
-      setProfile(data)
-      setError(null)
-    } else {
-      console.log('ℹ️ AuthProvider: No profile data returned')
-      setProfile(null)
-    }
-  } catch (err) {
-    console.error('💥 AuthProvider: Profile loading failed:', err.message)
-    throw err
-  }
-}
     // Set up auth state listener
     console.log('🔐 AuthProvider: Setting up auth state listener...')
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
@@ -156,46 +158,10 @@ const loadUserProfile = async (authUserId) => {
       mounted = false
       subscription?.unsubscribe()
     }
-  }, [])
+  }, [loadUserProfile])
 
-  // Load user profile by auth.users.id
-  const loadUserProfile = async (authUserId) => {
-    console.log('👤 AuthProvider: Loading profile for auth user:', authUserId)
-    
-    try {
-      // Query registrant_profiles by user_id field (which references auth.users.id)
-      const { data, error } = await supabase
-        .from('registrant_profiles')
-        .select('*')
-        .eq('user_id', authUserId)
-        .single()
-
-      if (error) {
-        if (error.code === 'PGRST116') {
-          console.log('ℹ️ AuthProvider: No profile found (may still be creating via trigger)')
-          setProfile(null)
-          return
-        }
-        console.error('❌ AuthProvider: Profile query error:', error.message)
-        throw error
-      }
-
-      if (data) {
-        console.log('✅ AuthProvider: Profile loaded successfully')
-        setProfile(data)
-        setError(null)
-      } else {
-        console.log('ℹ️ AuthProvider: No profile data returned')
-        setProfile(null)
-      }
-    } catch (err) {
-      console.error('💥 AuthProvider: Profile loading failed:', err.message)
-      throw err
-    }
-  }
-
-  // Sign up new user - simplified since trigger handles profile creation
-  const signUp = async (email, password, userData) => {
+  // ✅ FIXED: Memoized auth methods to prevent re-creates
+  const signUp = useCallback(async (email, password, userData) => {
     console.log('🔐 AuthProvider: Starting sign up for:', email)
     setLoading(true)
     setError(null)
@@ -205,11 +171,11 @@ const loadUserProfile = async (authUserId) => {
         email,
         password,
         options: {
-      data: {
-        first_name: userData.first_name || '',   // ✅ FIXED
-        last_name: userData.last_name || '',     // ✅ FIXED  
-        role: userData.role || 'applicant'
-      }
+          data: {
+            first_name: userData.first_name || '',
+            last_name: userData.last_name || '',
+            role: userData.role || 'applicant'
+          }
         }
       })
 
@@ -231,10 +197,9 @@ const loadUserProfile = async (authUserId) => {
       setLoading(false)
       return { data: null, error }
     }
-  }
+  }, [])
 
-  // Sign in existing user
-  const signIn = async (email, password) => {
+  const signIn = useCallback(async (email, password) => {
     console.log('🔐 AuthProvider: Starting sign in for:', email)
     setLoading(true)
     setError(null)
@@ -263,10 +228,9 @@ const loadUserProfile = async (authUserId) => {
       setLoading(false)
       return { data: null, error }
     }
-  }
+  }, [])
 
-  // Sign out user
-  const signOut = async () => {
+  const signOut = useCallback(async () => {
     console.log('🔐 AuthProvider: Starting sign out...')
     setLoading(true)
 
@@ -298,10 +262,9 @@ const loadUserProfile = async (authUserId) => {
       
       return { error: null }
     }
-  }
+  }, [])
 
-  // Refresh user profile
-  const refreshProfile = async () => {
+  const refreshProfile = useCallback(async () => {
     if (!user?.id) {
       console.log('⚠️ AuthProvider: Cannot refresh profile - no user')
       return
@@ -314,30 +277,28 @@ const loadUserProfile = async (authUserId) => {
       console.error('💥 AuthProvider: Profile refresh failed:', err.message)
       setError(err)
     }
-  }
+  }, [user?.id, loadUserProfile])
 
-  // Clear error state
-  const clearError = () => {
+  const clearError = useCallback(() => {
     setError(null)
-  }
+  }, [])
 
-  // Helper: Check if user has specific role
-  const hasRole = (role) => {
+  // ✅ FIXED: Memoized helper functions
+  const hasRole = useCallback((role) => {
     return profile?.roles?.includes(role) || false
-  }
+  }, [profile?.roles])
 
-  // Helper: Check if user has any of the specified roles
-  const hasAnyRole = (roles) => {
+  const hasAnyRole = useCallback((roles) => {
     if (!profile?.roles || !Array.isArray(profile.roles)) return false
     return roles.some(role => profile.roles.includes(role))
-  }
+  }, [profile?.roles])
 
-  // Computed values
-  const isAuthenticated = !!(user && profile)
-  const isNewUser = !!(user && !profile) // Profile still being created or missing
+  // ✅ FIXED: Memoized computed values
+  const isAuthenticated = useMemo(() => !!(user && profile), [user, profile])
+  const isNewUser = useMemo(() => !!(user && !profile), [user, profile])
 
-  // Context value
-  const value = {
+  // ✅ FIXED: Memoized context value to prevent unnecessary re-renders
+  const value = useMemo(() => ({
     // State
     user,
     profile,
@@ -356,7 +317,21 @@ const loadUserProfile = async (authUserId) => {
     // Helpers
     hasRole,
     hasAnyRole
-  }
+  }), [
+    user, 
+    profile, 
+    loading, 
+    error, 
+    isAuthenticated, 
+    isNewUser,
+    signUp,
+    signIn,
+    signOut,
+    refreshProfile,
+    clearError,
+    hasRole,
+    hasAnyRole
+  ])
 
   return (
     <AuthContext.Provider value={value}>
