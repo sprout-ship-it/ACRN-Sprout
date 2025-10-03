@@ -135,6 +135,10 @@ const MainApp = () => {
 
   // ✅ FIXED: Stable profile completion check with proper memoization
   const checkProfileCompletion = useCallback(async (currentProfileKey) => {
+      if (hasRole('peer-support') && !profileSetup.hasComprehensiveProfile && profileSetup.profileKey === currentProfileKey) {
+    console.log('🔧 Form already showing for peer support, skipping re-check');
+    return;
+  }
     // ✅ FIXED: Prevent multiple simultaneous checks
     if (isCheckingProfileRef.current || !isMountedRef.current) {
       console.log('Profile check already in progress or component unmounted');
