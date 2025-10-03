@@ -68,7 +68,13 @@ const PeerSupportProfileForm = ({ editMode = false, onComplete, onCancel }) => {
     submitForm,
     setSuccessMessage
   } = usePeerSupportProfileForm({ editMode, onComplete });
-
+  console.log('🎯 PeerSupportProfileForm rendering:', {
+    initialLoading,
+    hasErrors: Object.keys(errors).length > 0,
+    errors: errors,
+    formDataReady: !!formData,
+    canRender: !initialLoading && Object.keys(errors).length === 0
+  });
   // Authorization check
   if (!hasRole('peer')) {
     return (
@@ -145,7 +151,14 @@ const PeerSupportProfileForm = ({ editMode = false, onComplete, onCancel }) => {
       setIsSubmitting(false);
     }
   };
+  if (initialLoading) {
+    console.log('🎯 Form showing loading spinner');
+    return <LoadingSpinner message="Loading your profile..." />;
+  }
 
+  if (Object.keys(errors).length > 0) {
+    console.log('🎯 Form has errors, might not render properly:', errors);
+  }
   return (
     <div className="content">
       <div className={styles.formContainer}>
