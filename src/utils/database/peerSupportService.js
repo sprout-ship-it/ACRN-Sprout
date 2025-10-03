@@ -52,49 +52,26 @@ getByUserId: async (userId) => {
       try {
         console.log('🤝 PeerSupport: Fetching profile for user:', userId);
 
-        // 🔍 DEBUG: Check authentication context
-        try {
-          const sessionResult = await supabaseClient.auth.getSession();
-          console.log('🔍 DEBUG: Auth session check:', {
-            hasClient: !!supabaseClient,
-            hasApiKey: !!supabaseClient.supabaseKey,
-            hasUrl: !!supabaseClient.supabaseUrl,
-            sessionExists: !!sessionResult?.data?.session,
-            userExists: !!sessionResult?.data?.session?.user,
-            userId: sessionResult?.data?.session?.user?.id || 'No user ID',
-            accessToken: sessionResult?.data?.session?.access_token ? 'Has token' : 'Missing token'
-          });
-        } catch (authError) {
-          console.error('🔍 DEBUG: Auth check failed:', authError);
-        }
-
+        // ✅ FIXED: Use regular query instead of .single() for "maybe exists" queries
         const { data, error } = await supabaseClient
           .from(tableName)
           .select('*')
-          .eq('user_id', userId)
-          .single();
-
-        // 🔍 DEBUG: Log the raw response
-        console.log('🔍 DEBUG: Raw database response:', {
-          hasData: !!data,
-          hasError: !!error,
-          errorCode: error?.code,
-          errorMessage: error?.message,
-          errorDetails: error?.details,
-          errorHint: error?.hint
-        });
+          .eq('user_id', userId);
 
         if (error) {
-          if (error.code === 'PGRST116') {
-            console.log('ℹ️ PeerSupport: No profile found for user:', userId);
-            return { success: false, data: null, error: { code: 'NOT_FOUND', message: 'No peer support profile found' } };
-          }
           console.error('❌ PeerSupport: GetByUserId failed:', error.message);
           return { success: false, data: null, error };
         }
 
+        // ✅ FIXED: Check if any results exist
+        if (!data || data.length === 0) {
+          console.log('ℹ️ PeerSupport: No profile found for user:', userId);
+          return { success: false, data: null, error: { code: 'NOT_FOUND', message: 'No peer support profile found' } };
+        }
+
+        // ✅ FIXED: Return the first (and should be only) result
         console.log('✅ PeerSupport: Profile retrieved successfully');
-        return { success: true, data, error: null };
+        return { success: true, data: data[0], error: null };
 
       } catch (err) {
         console.error('💥 PeerSupport: GetByUserId exception:', err);
