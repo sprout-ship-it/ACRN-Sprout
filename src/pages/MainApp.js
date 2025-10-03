@@ -1,4 +1,4 @@
-/// src/pages/MainApp.js - FIXED INFINITE LOOP VERSION
+// src/pages/MainApp.js - FIXED INFINITE LOOP VERSION
 import React, { useEffect, useState, useRef, useCallback, useMemo } from 'react'
 import { Routes, Route, Navigate, useNavigate, useLocation } from 'react-router-dom'
 import { useAuth } from '../hooks/useAuth';
@@ -56,6 +56,17 @@ const MainApp = () => {
   const { user, profile, isAuthenticated, hasRole } = useAuth()
   const navigate = useNavigate()
   const location = useLocation();
+  
+  // ✅ NEW: Debug what's changing between renders
+  const debugInfo = {
+    userId: user?.id,
+    profileId: profile?.id,
+    roles: profile?.roles,
+    isAuthenticated,
+    pathname: location.pathname,
+    timestamp: Date.now()
+  };
+  console.log('🔍 MainApp render debug:', debugInfo);
   
   // ✅ FIXED: Stable query params check
   const profileJustCompleted = useMemo(() => {
@@ -392,15 +403,23 @@ const MainApp = () => {
     }
   }, [user, profile, hasRole, serviceAvailability, checkLandlordProfile]);
   
-  // ✅ CRITICAL FIX: More restrictive effect with better conditions
+  // ✅ CRITICAL FIX: Even more restrictive effect to prevent continuous re-renders
   useEffect(() => {
+    // ✅ NEW: Don't do anything if we're already showing the form to a user who needs to complete profile
+    if (!profileSetup.hasComprehensiveProfile && 
+        profileSetup.profileKey === profileKey && 
+        !profileSetup.loading && 
+        !profileSetup.checkInProgress &&
+        profileSetup.lastChecked) {
+      console.log('🔍 Form already determined to be needed, skipping re-check');
+      return;
+    }
+
     // Only check if we have a valid profile key and we're not already in the middle of a check
     if (isAuthenticated && profileKey && !profileSetup.checkInProgress) {
       const shouldCheck = (
         // First time checking for this profile
         profileSetup.profileKey !== profileKey ||
-        // Or we haven't checked recently (more than 10 seconds ago)
-        (profileSetup.lastChecked && (Date.now() - profileSetup.lastChecked) > 10000) ||
         // Or we're still in initial loading state
         (profileSetup.loading && !profileSetup.lastChecked)
       );
@@ -409,7 +428,7 @@ const MainApp = () => {
         console.log('🔍 Triggering profile completion check for:', profileKey);
         checkProfileCompletion(profileKey);
       } else {
-        console.log('🔍 Skipping profile check - already done recently');
+        console.log('🔍 Skipping profile check - already done for this profile');
       }
     } else if (isAuthenticated && !profileKey) {
       // User is authenticated but no valid profile data yet
@@ -464,6 +483,34 @@ const MainApp = () => {
     }
   }, []);
 
+  // ✅ NEW: Memoize the decision about whether to show profile completion form
+  const shouldShowProfileForm = useMemo(() => {
+    if (!isAuthenticated) return false;
+    if (profileSetup.loading || profileSetup.checkInProgress) return false;
+    if (profileJustCompleted) return false;
+    if (profileSetup.hasComprehensiveProfile) return false;
+    
+    // Must have checked profile and determined it needs completion
+    return !profileSetup.hasComprehensiveProfile && profileSetup.lastChecked && !profileSetup.loading;
+  }, [
+    isAuthenticated, 
+    profileSetup.loading, 
+    profileSetup.checkInProgress, 
+    profileSetup.hasComprehensiveProfile, 
+    profileSetup.lastChecked,
+    profileJustCompleted
+  ]);
+
+  // ✅ NEW: Memoize the current user role for form selection
+  const primaryRole = useMemo(() => {
+    if (!hasRole || typeof hasRole !== 'function') return null;
+    if (hasRole('applicant')) return 'applicant';
+    if (hasRole('peer-support')) return 'peer-support';
+    if (hasRole('employer')) return 'employer';
+    if (hasRole('landlord')) return 'landlord';
+    return null;
+  }, [hasRole, profile?.roles]);
+
   // Redirect unauthenticated users
   if (!isAuthenticated) {
     console.log('User not authenticated, redirecting to landing');
@@ -493,9 +540,9 @@ const MainApp = () => {
     )
   }
 
-  // ✅ FIXED: Profile completion flow - prevent loops with better conditions
-  if (!profileSetup.hasComprehensiveProfile && !profileJustCompleted && !profileSetup.checkInProgress) {
-    console.log('🎯 User needs to complete comprehensive profile');
+  // ✅ CRITICAL FIX: Use memoized decision instead of re-evaluating conditions
+  if (shouldShowProfileForm) {
+    console.log('🎯 User needs to complete comprehensive profile for role:', primaryRole);
     
     // ✅ FIXED: Render error alert component
     const ErrorAlert = () => {
@@ -511,107 +558,100 @@ const MainApp = () => {
       return null;
     };
     
-    // For APPLICANTS
-    if (hasRole('applicant')) {
-      console.log('🎯 Showing applicant profile form');
-      return (
-        <div className="app-background" style={{ minHeight: '100vh', padding: '20px 0' }}>
-          <div className="container">
-            <Header />
-            <div className="content">
-              <div style={{ maxWidth: '900px', margin: '0 auto' }}>
-                <ErrorAlert />
-                <div className="alert alert-info mb-4">
-                  <h4>Complete Your Profile</h4>
-                  <p>Please complete your comprehensive profile to access the full platform and start finding compatible roommates.</p>
+    // ✅ CRITICAL FIX: Use switch statement with memoized role to prevent re-evaluation
+    switch (primaryRole) {
+      case 'applicant':
+        console.log('🎯 Showing applicant profile form');
+        return (
+          <div className="app-background" style={{ minHeight: '100vh', padding: '20px 0' }}>
+            <div className="container">
+              <Header />
+              <div className="content">
+                <div style={{ maxWidth: '900px', margin: '0 auto' }}>
+                  <ErrorAlert />
+                  <div className="alert alert-info mb-4">
+                    <h4>Complete Your Profile</h4>
+                    <p>Please complete your comprehensive profile to access the full platform and start finding compatible roommates.</p>
+                  </div>
+                  <EnhancedMatchingProfileForm 
+                    onComplete={handleProfileSetupComplete}
+                  />
                 </div>
-                <EnhancedMatchingProfileForm 
-                  onComplete={handleProfileSetupComplete}
-                />
               </div>
             </div>
           </div>
-        </div>
-      )
-    }
-    
-    // ✅ FIXED: For PEER SPECIALISTS - show form with proper error handling
-    else if (hasRole('peer-support')) {
-      console.log('🎯 Showing peer support profile form');
-      return (
-        <div className="app-background" style={{ minHeight: '100vh', padding: '20px 0' }}>
-          <div className="container">
-            <Header />
-            <div className="content">
-              <div style={{ maxWidth: '900px', margin: '0 auto' }}>
-                <ErrorAlert />
-                <div className="alert alert-info mb-4">
-                  <h4>Complete Your Peer Support Profile</h4>
-                  <p>Please complete your comprehensive peer support profile to help others find the right support services.</p>
+        );
+
+      case 'peer-support':
+        console.log('🎯 Showing peer support profile form');
+        return (
+          <div className="app-background" style={{ minHeight: '100vh', padding: '20px 0' }}>
+            <div className="container">
+              <Header />
+              <div className="content">
+                <div style={{ maxWidth: '900px', margin: '0 auto' }}>
+                  <ErrorAlert />
+                  <div className="alert alert-info mb-4">
+                    <h4>Complete Your Peer Support Profile</h4>
+                    <p>Please complete your comprehensive peer support profile to help others find the right support services.</p>
+                  </div>
+                  <PeerSupportProfileForm 
+                    onComplete={handleProfileSetupComplete}
+                  />
                 </div>
-                <PeerSupportProfileForm 
-                  onComplete={handleProfileSetupComplete}
-                />
               </div>
             </div>
           </div>
-        </div>
-      )
-    }
-    
-    // For EMPLOYERS
-    else if (hasRole('employer')) {
-      console.log('🎯 Showing employer management');
-      return (
-        <div className="app-background" style={{ minHeight: '100vh', padding: '20px 0' }}>
-          <div className="container">
-            <Header />
-            <div className="content">
-              <div style={{ maxWidth: '900px', margin: '0 auto' }}>
-                <ErrorAlert />
-                <div className="alert alert-info mb-4">
-                  <h4>Create Your Employer Profile</h4>
-                  <p>Please create your company profile to start connecting with recovery-focused talent and posting job opportunities.</p>
+        );
+
+      case 'employer':
+        console.log('🎯 Showing employer management');
+        return (
+          <div className="app-background" style={{ minHeight: '100vh', padding: '20px 0' }}>
+            <div className="container">
+              <Header />
+              <div className="content">
+                <div style={{ maxWidth: '900px', margin: '0 auto' }}>
+                  <ErrorAlert />
+                  <div className="alert alert-info mb-4">
+                    <h4>Create Your Employer Profile</h4>
+                    <p>Please create your company profile to start connecting with recovery-focused talent and posting job opportunities.</p>
+                  </div>
+                  <EmployerManagement />
                 </div>
-                <EmployerManagement />
               </div>
             </div>
           </div>
-        </div>
-      )
-    }
-    
-    // For LANDLORDS
-    else if (hasRole('landlord')) {
-      console.log('🎯 Showing landlord profile form');
-      return (
-        <div className="app-background" style={{ minHeight: '100vh', padding: '20px 0' }}>
-          <div className="container">
-            <Header />
-            <div className="content">
-              <div style={{ maxWidth: '900px', margin: '0 auto' }}>
-                <ErrorAlert />
-                <div className="alert alert-info mb-4">
-                  <h4>Complete Your Landlord Profile</h4>
-                  <p>Please complete your landlord profile to start listing properties and connecting with potential tenants.</p>
+        );
+
+      case 'landlord':
+        console.log('🎯 Showing landlord profile form');
+        return (
+          <div className="app-background" style={{ minHeight: '100vh', padding: '20px 0' }}>
+            <div className="container">
+              <Header />
+              <div className="content">
+                <div style={{ maxWidth: '900px', margin: '0 auto' }}>
+                  <ErrorAlert />
+                  <div className="alert alert-info mb-4">
+                    <h4>Complete Your Landlord Profile</h4>
+                    <p>Please complete your landlord profile to start listing properties and connecting with potential tenants.</p>
+                  </div>
+                  <LandlordProfileForm 
+                    onComplete={handleProfileSetupComplete}
+                  />
                 </div>
-                <LandlordProfileForm 
-                  onComplete={handleProfileSetupComplete}
-                />
               </div>
             </div>
           </div>
-        </div>
-      )
-    }
-    
-    // Fallback for unknown roles
-    else {
-      console.log('Unknown role, proceeding to dashboard');
-      if (isMountedRef.current) {
-        setProfileSetup(prev => ({ ...prev, hasComprehensiveProfile: true }));
-      }
-      return null; // Will re-render with updated state
+        );
+
+      default:
+        console.log('Unknown role, proceeding to dashboard');
+        if (isMountedRef.current) {
+          setProfileSetup(prev => ({ ...prev, hasComprehensiveProfile: true }));
+        }
+        return null; // Will re-render with updated state
     }
   }
 
