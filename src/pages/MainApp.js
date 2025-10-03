@@ -503,12 +503,11 @@ const MainApp = () => {
     }
   }, []);
 
-  // ✅ CLEAN: Simple form decision - purely ref-based, no state updates
+  // ✅ BULLETPROOF: Absolutely locked form decision - no dependencies once locked
   const shouldShowProfileForm = useMemo(() => {
-    // ✅ CRITICAL FIX: Once decision is made, stick with it until profile is completed
+    // ✅ CRITICAL FIX: Once decision is made, return true immediately - no other checks
     if (formDecisionMadeRef.current) {
-      console.log('🔒 Form decision already locked - showing form');
-      return true;
+      return true; // Absolutely locked - no console.log to avoid triggering anything
     }
 
     if (!isAuthenticated) return false;
@@ -527,6 +526,7 @@ const MainApp = () => {
     
     return shouldShow;
   }, [
+    // ✅ BULLETPROOF: Minimal dependencies - form decision ref not included
     isAuthenticated, 
     profileSetup.loading, 
     profileSetup.checkInProgress, 
@@ -535,15 +535,21 @@ const MainApp = () => {
     profileJustCompleted
   ]);
 
-  // ✅ NEW: Memoize the current user role for form selection
+  // ✅ BULLETPROOF: Stable role detection with minimal dependencies
   const primaryRole = useMemo(() => {
     if (!hasRole || typeof hasRole !== 'function') return null;
-    if (hasRole('applicant')) return 'applicant';
-    if (hasRole('peer-support')) return 'peer-support';
-    if (hasRole('employer')) return 'employer';
-    if (hasRole('landlord')) return 'landlord';
+    
+    // Check roles in order of priority
+    const roles = profile?.roles;
+    if (!roles || !Array.isArray(roles)) return null;
+    
+    // Return first matching role to avoid re-computation
+    if (roles.includes('applicant')) return 'applicant';
+    if (roles.includes('peer-support')) return 'peer-support';
+    if (roles.includes('employer')) return 'employer';
+    if (roles.includes('landlord')) return 'landlord';
     return null;
-  }, [hasRole, profile?.roles]);
+  }, [profile?.roles]); // Only depend on roles array, not hasRole function
 
   // Redirect unauthenticated users
   if (!isAuthenticated) {
@@ -574,9 +580,9 @@ const MainApp = () => {
     )
   }
 
-  // ✅ CLEAN: Use memoized decision - no extra state updates
+  // ✅ BULLETPROOF: Completely locked form display - no re-evaluation once decided
   if (shouldShowProfileForm) {
-    console.log('🎯 User needs to complete comprehensive profile for role:', primaryRole);
+    // Form display is locked - proceed to render
     
     // ✅ FIXED: Render error alert component
     const ErrorAlert = () => {
@@ -595,7 +601,6 @@ const MainApp = () => {
     // ✅ CLEAN: Use switch statement with memoized role
     switch (primaryRole) {
       case 'applicant':
-        console.log('🎯 Showing applicant profile form');
         return (
           <div className="app-background" style={{ minHeight: '100vh', padding: '20px 0' }}>
             <div className="container">
@@ -617,7 +622,6 @@ const MainApp = () => {
         );
 
       case 'peer-support':
-        console.log('🎯 Showing peer support profile form');
         return (
           <div className="app-background" style={{ minHeight: '100vh', padding: '20px 0' }}>
             <div className="container">
@@ -639,7 +643,6 @@ const MainApp = () => {
         );
 
       case 'employer':
-        console.log('🎯 Showing employer management');
         return (
           <div className="app-background" style={{ minHeight: '100vh', padding: '20px 0' }}>
             <div className="container">
@@ -659,7 +662,6 @@ const MainApp = () => {
         );
 
       case 'landlord':
-        console.log('🎯 Showing landlord profile form');
         return (
           <div className="app-background" style={{ minHeight: '100vh', padding: '20px 0' }}>
             <div className="container">
@@ -681,7 +683,6 @@ const MainApp = () => {
         );
 
       default:
-        console.log('Unknown role, proceeding to dashboard');
         if (isMountedRef.current) {
           setProfileSetup(prev => ({ ...prev, hasComprehensiveProfile: true }));
         }
@@ -689,9 +690,7 @@ const MainApp = () => {
     }
   }
 
-  console.log('✅ User has comprehensive profile, rendering main app routes');
-  
-  // Main app routes (rest remains the same...)
+  // User has comprehensive profile, render main app routes
   return (
     <div className="app-background" style={{ minHeight: '100vh', padding: '20px 0' }}>
       <div className="container">
