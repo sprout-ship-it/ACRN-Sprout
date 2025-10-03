@@ -318,8 +318,8 @@ const MainApp = () => {
     } finally {
       isCheckingProfileRef.current = false;
     }
-  }, [user, profile, hasRole, serviceAvailability, checkLandlordProfile, profileSetup.profileKey, profileSetup.lastChecked]);
-
+  }, [user, profile, hasRole, serviceAvailability, checkLandlordProfile]);
+  
   // ✅ FIXED: Effect with stable dependencies
   useEffect(() => {
     if (isAuthenticated && profileKey) {
