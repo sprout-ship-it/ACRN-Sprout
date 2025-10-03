@@ -1,4 +1,4 @@
-// src/pages/MainApp.js - FIXED INFINITE LOOP VERSION WITH DECISION LOCKING
+// src/pages/MainApp.js - FINAL CLEAN FIX - NO EXTRA STATE UPDATES
 import React, { useEffect, useState, useRef, useCallback, useMemo } from 'react'
 import { Routes, Route, Navigate, useNavigate, useLocation } from 'react-router-dom'
 import { useAuth } from '../hooks/useAuth';
@@ -77,8 +77,8 @@ const MainApp = () => {
   // ✅ FIXED: Add stable refs to prevent infinite re-renders
   const isCheckingProfileRef = useRef(false);
   const isMountedRef = useRef(true);
-  const lastProfileCheckRef = useRef(null); // ✅ NEW: Track last check result
-  const formDecisionMadeRef = useRef(false); // ✅ NEW: Lock form decision once made
+  const lastProfileCheckRef = useRef(null);
+  const formDecisionMadeRef = useRef(false); // ✅ KEY: Lock form decision once made
   
   // ✅ FIXED: Memoize profile key to prevent unnecessary re-checks
   const profileKey = useMemo(() => {
@@ -86,14 +86,14 @@ const MainApp = () => {
     return `${profile.id}-${profile.roles.sort().join(',')}`;
   }, [profile?.id, profile?.roles]);
   
-  // ✅ FIXED: Enhanced profile setup state with stable structure
+  // ✅ CLEAN: Simple profile setup state - NO formShown tracking
   const [profileSetup, setProfileSetup] = useState(() => ({
     hasComprehensiveProfile: false,
     loading: true,
     error: null,
     lastChecked: null,
     profileKey: null,
-    checkInProgress: false // ✅ NEW: Track if check is in progress
+    checkInProgress: false
   }));
 
   // ✅ FIXED: Memoized service availability check
@@ -147,7 +147,7 @@ const MainApp = () => {
     }
   }, []); // No dependencies - supabase client is stable
 
-  // ✅ FIXED: Stable profile completion check with MAJOR loop prevention improvements
+  // ✅ FIXED: Stable profile completion check
   const checkProfileCompletion = useCallback(async (currentProfileKey) => {
     try {
       // ✅ CRITICAL FIX: Prevent multiple simultaneous checks
@@ -413,14 +413,20 @@ const MainApp = () => {
     }
   }, [user, profile, hasRole, serviceAvailability, checkLandlordProfile]);
   
-  // ✅ CRITICAL FIX: Even more restrictive effect to prevent continuous re-renders
+  // ✅ CRITICAL FIX: Very restrictive effect - only trigger when absolutely necessary
   useEffect(() => {
+    // ✅ CRITICAL: If we already decided to show form, don't re-check
+    if (formDecisionMadeRef.current) {
+      console.log('🔒 Form decision already locked, skipping re-check');
+      return;
+    }
+
     // ✅ NEW: Don't do anything if we're already showing the form to a user who needs to complete profile
     if (!profileSetup.hasComprehensiveProfile && 
         profileSetup.profileKey === profileKey && 
         !profileSetup.loading && 
         !profileSetup.checkInProgress &&
-        (profileSetup.lastChecked || formDecisionMadeRef.current)) {
+        profileSetup.lastChecked) {
       console.log('🔍 Form already determined to be needed, skipping re-check');
       return;
     }
@@ -476,7 +482,7 @@ const MainApp = () => {
     return () => {
       isMountedRef.current = false;
       isCheckingProfileRef.current = false;
-      formDecisionMadeRef.current = false; // ✅ NEW: Reset form decision on unmount
+      formDecisionMadeRef.current = false;
     };
   }, []);
 
@@ -497,11 +503,11 @@ const MainApp = () => {
     }
   }, []);
 
-  // ✅ NEW: Memoize the decision about whether to show profile completion form
+  // ✅ CLEAN: Simple form decision - purely ref-based, no state updates
   const shouldShowProfileForm = useMemo(() => {
     // ✅ CRITICAL FIX: Once decision is made, stick with it until profile is completed
     if (formDecisionMadeRef.current) {
-      console.log('🔒 Form decision locked - already decided to show form');
+      console.log('🔒 Form decision already locked - showing form');
       return true;
     }
 
@@ -539,14 +545,6 @@ const MainApp = () => {
     return null;
   }, [hasRole, profile?.roles]);
 
-  // ✅ NEW: Update formShown flag when we decide to show the form
-  useEffect(() => {
-    if (shouldShowProfileForm && !profileSetup.formShown && isMountedRef.current) {
-      console.log('🔒 Setting formShown flag to prevent re-evaluation');
-      setProfileSetup(prev => ({ ...prev, formShown: true }));
-    }
-  }, [shouldShowProfileForm, profileSetup.formShown]);
-
   // Redirect unauthenticated users
   if (!isAuthenticated) {
     console.log('User not authenticated, redirecting to landing');
@@ -576,7 +574,7 @@ const MainApp = () => {
     )
   }
 
-  // ✅ CRITICAL FIX: Use memoized decision instead of re-evaluating conditions
+  // ✅ CLEAN: Use memoized decision - no extra state updates
   if (shouldShowProfileForm) {
     console.log('🎯 User needs to complete comprehensive profile for role:', primaryRole);
     
@@ -594,7 +592,7 @@ const MainApp = () => {
       return null;
     };
     
-    // ✅ CRITICAL FIX: Use switch statement with memoized role to prevent re-evaluation
+    // ✅ CLEAN: Use switch statement with memoized role
     switch (primaryRole) {
       case 'applicant':
         console.log('🎯 Showing applicant profile form');
