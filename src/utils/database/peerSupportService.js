@@ -48,15 +48,41 @@ const createPeerSupportService = (supabaseClient) => {
     /**
      * Get peer support profile by user ID (registrant_profiles.id)
      */
-    getByUserId: async (userId) => {
+getByUserId: async (userId) => {
       try {
         console.log('🤝 PeerSupport: Fetching profile for user:', userId);
+
+        // 🔍 DEBUG: Check authentication context
+        try {
+          const sessionResult = await supabaseClient.auth.getSession();
+          console.log('🔍 DEBUG: Auth session check:', {
+            hasClient: !!supabaseClient,
+            hasApiKey: !!supabaseClient.supabaseKey,
+            hasUrl: !!supabaseClient.supabaseUrl,
+            sessionExists: !!sessionResult?.data?.session,
+            userExists: !!sessionResult?.data?.session?.user,
+            userId: sessionResult?.data?.session?.user?.id || 'No user ID',
+            accessToken: sessionResult?.data?.session?.access_token ? 'Has token' : 'Missing token'
+          });
+        } catch (authError) {
+          console.error('🔍 DEBUG: Auth check failed:', authError);
+        }
 
         const { data, error } = await supabaseClient
           .from(tableName)
           .select('*')
           .eq('user_id', userId)
           .single();
+
+        // 🔍 DEBUG: Log the raw response
+        console.log('🔍 DEBUG: Raw database response:', {
+          hasData: !!data,
+          hasError: !!error,
+          errorCode: error?.code,
+          errorMessage: error?.message,
+          errorDetails: error?.details,
+          errorHint: error?.hint
+        });
 
         if (error) {
           if (error.code === 'PGRST116') {
