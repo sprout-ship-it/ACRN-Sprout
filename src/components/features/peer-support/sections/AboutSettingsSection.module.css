@@ -1,0 +1,557 @@
+/* AboutSettingsSection.module.css - About Content & Settings Styles */
+
+/* ==================== SECTION LAYOUT ==================== */
+.sectionContainer {
+  width: 100%;
+}
+
+.sectionTitle {
+  font-size: 1.3rem;
+  color: var(--primary-purple);
+  margin-bottom: var(--spacing-lg);
+  font-weight: 600;
+  font-family: var(--font-serif);
+}
+
+.sectionSubtitle {
+  font-size: 1.1rem;
+  color: var(--secondary-teal);
+  margin-bottom: var(--spacing-lg);
+  padding-bottom: 10px;
+  border-bottom: 2px solid var(--border-beige);
+  font-weight: 600;
+}
+
+/* ==================== FORM LAYOUT ==================== */
+.formGroup {
+  margin-bottom: var(--spacing-lg);
+}
+
+.formLabel {
+  display: block;
+  margin-bottom: 8px;
+  font-weight: 600;
+  color: var(--gray-800);
+  font-size: 0.9rem;
+}
+
+.requiredAsterisk {
+  color: #dc3545;
+  margin-left: 3px;
+}
+
+/* ==================== TEXTAREA STYLES ==================== */
+.formTextarea {
+  width: 100%;
+  padding: var(--spacing-md);
+  border: 2px solid var(--border-beige);
+  border-radius: var(--radius-md);
+  background: white;
+  font-size: 1rem;
+  transition: var(--transition-normal);
+  font-family: var(--font-sans);
+  resize: vertical;
+  line-height: 1.6;
+}
+
+.formTextarea:focus {
+  border-color: var(--primary-purple);
+  box-shadow: 0 0 0 3px rgba(160, 32, 240, 0.1);
+  outline: none;
+}
+
+.formTextarea:disabled {
+  background: var(--gray-100);
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+
+.formTextareaError {
+  border-color: #dc3545;
+  box-shadow: 0 0 0 3px rgba(220, 53, 69, 0.1);
+}
+
+.textareaBio {
+  min-height: 120px;
+  font-size: 0.95rem;
+}
+
+.textareaAdditional {
+  min-height: 80px;
+  font-size: 0.95rem;
+}
+
+/* ==================== CHARACTER COUNTS ==================== */
+.characterCountContainer {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-top: var(--spacing-xs);
+  gap: var(--spacing-sm);
+}
+
+.characterCount {
+  color: var(--gray-500);
+  font-size: 0.85rem;
+  text-align: right;
+  flex-shrink: 0;
+}
+
+.characterCountWarning {
+  color: var(--warning-text);
+  font-weight: 600;
+}
+
+.minimumLengthWarning {
+  background: var(--warning-bg);
+  color: var(--warning-text);
+  border: 1px solid var(--warning-border);
+  padding: var(--spacing-sm);
+  border-radius: var(--radius-sm);
+  font-size: 0.85rem;
+  margin-top: var(--spacing-xs);
+  line-height: 1.4;
+}
+
+/* ==================== CHECKBOX CONTROL ==================== */
+.checkboxControl {
+  display: flex;
+  align-items: flex-start;
+  padding: var(--spacing-md);
+  border: 2px solid var(--border-beige);
+  border-radius: var(--radius-md);
+  cursor: pointer;
+  transition: var(--transition-normal);
+  background: white;
+  margin-bottom: var(--spacing-md);
+}
+
+.checkboxControl:hover {
+  border-color: var(--secondary-teal);
+  background: rgba(32, 178, 170, 0.02);
+}
+
+.checkboxControl.selected {
+  border-color: var(--secondary-teal);
+  background: rgba(32, 178, 170, 0.05);
+  box-shadow: 0 0 0 1px rgba(32, 178, 170, 0.1);
+}
+
+.checkboxInput {
+  margin-right: var(--spacing-sm);
+  margin-top: 2px;
+  accent-color: var(--secondary-teal);
+  flex-shrink: 0;
+}
+
+.checkboxContent {
+  flex: 1;
+}
+
+.checkboxTitle {
+  font-weight: 600;
+  color: var(--gray-800);
+  margin-bottom: 4px;
+  font-size: 0.95rem;
+}
+
+.checkboxDescription {
+  color: var(--gray-500);
+  font-size: 0.85rem;
+  line-height: 1.4;
+  margin: 0;
+}
+
+/* ==================== SERVICE SUMMARY ==================== */
+.serviceSummary {
+  background: var(--info-bg);
+  color: var(--info-text);
+  border: 1px solid var(--info-border);
+  padding: var(--spacing-lg);
+  border-radius: var(--radius-md);
+  margin-bottom: var(--spacing-lg);
+}
+
+.summaryTitle {
+  font-weight: 700;
+  margin-bottom: var(--spacing-md);
+  color: var(--info-text);
+  font-size: 1rem;
+}
+
+.summaryGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: var(--spacing-md);
+  font-size: 0.9rem;
+}
+
+.summaryItem {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.summaryLabel {
+  font-weight: 600;
+  color: var(--info-text);
+  font-size: 0.85rem;
+}
+
+.summaryValue {
+  color: var(--info-text);
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-xs);
+}
+
+/* ==================== STATUS BADGES ==================== */
+.statusBadgeActive {
+  background: var(--success-bg);
+  color: var(--success-text);
+  border: 1px solid var(--success-border);
+  padding: 4px 8px;
+  border-radius: 12px;
+  font-size: 0.7rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  display: inline-block;
+}
+
+.statusBadgeInactive {
+  background: var(--gray-200);
+  color: var(--gray-700);
+  border: 1px solid var(--gray-300);
+  padding: 4px 8px;
+  border-radius: 12px;
+  font-size: 0.7rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  display: inline-block;
+}
+
+.statusBadgeAccepting {
+  background: var(--success-bg);
+  color: var(--success-text);
+  border: 1px solid var(--success-border);
+  padding: 4px 8px;
+  border-radius: 12px;
+  font-size: 0.7rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  display: inline-block;
+}
+
+.statusBadgeNotAccepting {
+  background: var(--warning-bg);
+  color: var(--warning-text);
+  border: 1px solid var(--warning-border);
+  padding: 4px 8px;
+  border-radius: 12px;
+  font-size: 0.7rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  display: inline-block;
+}
+
+/* ==================== ALERT CONTAINERS ==================== */
+.alertContainer {
+  margin-bottom: var(--spacing-lg);
+}
+
+.successAlert {
+  background: var(--success-bg);
+  color: var(--success-text);
+  border: 1px solid var(--success-border);
+  padding: var(--spacing-md);
+  border-radius: var(--radius-md);
+  line-height: 1.5;
+}
+
+.infoAlert {
+  background: var(--info-bg);
+  color: var(--info-text);
+  border: 1px solid var(--info-border);
+  padding: var(--spacing-md);
+  border-radius: var(--radius-md);
+  line-height: 1.5;
+}
+
+.alertTitle {
+  font-weight: 700;
+  margin-bottom: var(--spacing-xs);
+}
+
+.alertList {
+  margin: 0;
+  padding-left: var(--spacing-lg);
+}
+
+.alertListItem {
+  margin-bottom: var(--spacing-xs);
+  line-height: 1.4;
+}
+
+.alertListItem:last-child {
+  margin-bottom: 0;
+}
+
+/* ==================== NOTICES ==================== */
+.completionNotice {
+  background: var(--warning-bg);
+  color: var(--warning-text);
+  border: 1px solid var(--warning-border);
+  padding: var(--spacing-lg);
+  border-radius: var(--radius-md);
+  margin-bottom: var(--spacing-lg);
+}
+
+.helpNotice {
+  background: var(--info-bg);
+  color: var(--info-text);
+  border: 1px solid var(--info-border);
+  padding: var(--spacing-lg);
+  border-radius: var(--radius-md);
+  margin-bottom: var(--spacing-lg);
+}
+
+.noticeTitle {
+  font-weight: 700;
+  margin-bottom: var(--spacing-sm);
+}
+
+.noticeText {
+  font-size: 0.9rem;
+  line-height: 1.5;
+  margin: 0;
+}
+
+/* ==================== COMPLETION STATUS ==================== */
+.completionStatus {
+  background: linear-gradient(135deg, var(--bg-light-cream) 0%, var(--bg-light-purple) 100%);
+  border: 2px solid var(--border-beige);
+  padding: var(--spacing-lg);
+  border-radius: var(--radius-lg);
+  margin-bottom: var(--spacing-lg);
+}
+
+.completionGrid {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: var(--spacing-md);
+  align-items: center;
+}
+
+.completionContent {
+  flex: 1;
+}
+
+.completionTitle {
+  font-weight: 700;
+  margin-bottom: var(--spacing-xs);
+  color: var(--primary-purple);
+  font-size: 1.1rem;
+  font-family: var(--font-serif);
+}
+
+.completionText {
+  font-size: 0.9rem;
+  line-height: 1.5;
+  margin: 0;
+  color: var(--gray-700);
+}
+
+.completionBadge {
+  flex-shrink: 0;
+}
+
+.badgeReady {
+  background: var(--success-bg);
+  color: var(--success-text);
+  border: 2px solid var(--success-border);
+  padding: 8px 16px;
+  border-radius: 16px;
+  font-size: 0.8rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  display: inline-block;
+  box-shadow: var(--shadow-sm);
+}
+
+.badgeIncomplete {
+  background: var(--warning-bg);
+  color: var(--warning-text);
+  border: 2px solid var(--warning-border);
+  padding: 8px 16px;
+  border-radius: 16px;
+  font-size: 0.8rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  display: inline-block;
+  box-shadow: var(--shadow-sm);
+}
+
+/* ==================== HELP TEXT AND VALIDATION ==================== */
+.helpText {
+  color: var(--gray-500);
+  font-size: 0.85rem;
+  margin-top: 5px;
+  margin-bottom: var(--spacing-sm);
+  line-height: 1.4;
+}
+
+.errorText {
+  color: #dc3545;
+  font-size: 0.85rem;
+  line-height: 1.4;
+  font-weight: 500;
+}
+
+/* ==================== RESPONSIVE DESIGN ==================== */
+@media (max-width: 768px) {
+  .summaryGrid {
+    grid-template-columns: repeat(2, 1fr);
+    gap: var(--spacing-sm);
+  }
+  
+  .completionGrid {
+    grid-template-columns: 1fr;
+    gap: var(--spacing-sm);
+    text-align: center;
+  }
+  
+  .characterCountContainer {
+    flex-direction: column;
+    align-items: stretch;
+    gap: var(--spacing-xs);
+  }
+  
+  .characterCount {
+    text-align: left;
+  }
+  
+  .sectionTitle {
+    font-size: 1.2rem;
+  }
+  
+  .sectionSubtitle {
+    font-size: 1rem;
+  }
+}
+
+@media (max-width: 480px) {
+  .formGroup {
+    margin-bottom: var(--spacing-md);
+  }
+  
+  .formTextarea {
+    padding: var(--spacing-sm);
+    font-size: 0.9rem;
+  }
+  
+  .textareaBio {
+    min-height: 100px;
+  }
+  
+  .textareaAdditional {
+    min-height: 60px;
+  }
+  
+  .checkboxControl {
+    padding: var(--spacing-sm);
+  }
+  
+  .checkboxTitle {
+    font-size: 0.85rem;
+  }
+  
+  .checkboxDescription,
+  .helpText,
+  .errorText {
+    font-size: 0.8rem;
+  }
+  
+  .sectionTitle {
+    font-size: 1.1rem;
+  }
+  
+  .sectionSubtitle {
+    font-size: 0.95rem;
+  }
+  
+  .serviceSummary,
+  .completionNotice,
+  .helpNotice,
+  .completionStatus {
+    padding: var(--spacing-sm);
+  }
+  
+  .summaryTitle,
+  .noticeTitle,
+  .completionTitle {
+    font-size: 0.9rem;
+  }
+  
+  .summaryGrid {
+    grid-template-columns: 1fr;
+    gap: var(--spacing-xs);
+  }
+  
+  .summaryLabel,
+  .summaryValue {
+    font-size: 0.8rem;
+  }
+  
+  .statusBadgeActive,
+  .statusBadgeInactive,
+  .statusBadgeAccepting,
+  .statusBadgeNotAccepting,
+  .badgeReady,
+  .badgeIncomplete {
+    padding: 3px 6px;
+    font-size: 0.65rem;
+  }
+}
+
+/* ==================== ACCESSIBILITY AND FOCUS STATES ==================== */
+.formTextarea:focus-visible {
+  outline: 2px solid var(--primary-purple);
+  outline-offset: 2px;
+}
+
+.checkboxControl:focus-within {
+  border-color: var(--secondary-teal);
+  box-shadow: 0 0 0 3px rgba(32, 178, 170, 0.1);
+}
+
+/* ==================== SPECIAL STATES ==================== */
+.formGroup:last-child {
+  margin-bottom: 0;
+}
+
+.checkboxControl:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+  background: var(--gray-100);
+}
+
+.checkboxControl:disabled:hover {
+  border-color: var(--border-beige);
+  background: var(--gray-100);
+}
+
+/* ==================== ANIMATIONS ==================== */
+.badgeReady {
+  animation: subtle-pulse 2s ease-in-out infinite;
+}
+
+@keyframes subtle-pulse {
+  0%, 100% {
+    transform: scale(1);
+    box-shadow: var(--shadow-sm);
+  }
+  50% {
+    transform: scale(1.02);
+    box-shadow: var(--shadow-md);
+  }
+}

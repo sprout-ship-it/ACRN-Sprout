@@ -1,4 +1,4 @@
-// src/components/features/peer-support/hooks/usePeerSupportProfileForm.js - FIXED TO USE STANDALONE FUNCTION
+// src/components/features/peer-support/hooks/usePeerSupportProfileForm.js - MINIMAL UPDATES FOR SCHEMA ALIGNMENT
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { useAuth } from '../../../../hooks/useAuth';
 
@@ -6,50 +6,19 @@ import { useAuth } from '../../../../hooks/useAuth';
 import { getPeerSupportProfile } from '../../../../utils/database/peerSupportService';
 import { supabase } from '../../../../utils/supabase';
 
+// ✅ UPDATED: Use constants for consistency and remove is_verified
+import { DEFAULT_FORM_DATA, VALIDATION_RULES } from '../constants/peerSupportConstants';
+
 const INITIAL_FORM_DATA = {
-  // Contact Information
-  primary_phone: '',
-  contact_email: '',
-  
-  // Professional Information
-  professional_title: 'Peer Support Specialist',
-  is_licensed: false,
-  years_experience: '',
-  
-  // Service Areas
-  service_city: '',
-  service_state: '',
-  service_areas: [],
-  
-  // Specialties & Methods
-  specialties: [],
-  supported_recovery_methods: [],
-  
-  // Recovery Background
-  recovery_stage: '',
-  time_in_recovery: '',
-  primary_issues: [],
-  spiritual_affiliation: '',
-  
-  // Service Settings
-  accepting_clients: true,
-  
-  // About
-  bio: '',
-  about_me: '',
-  additional_info: '',
-  
-  // Status
-  is_active: true,
-  profile_completed: false,
-  is_accepting_clients: true,
-  is_verified: false
+  ...DEFAULT_FORM_DATA,
+  // Keep professional title default for UX
+  professional_title: 'Peer Support Specialist'
 };
 
 export const usePeerSupportProfileForm = ({ editMode = false, onComplete } = {}) => {
   const { user, profile } = useAuth();
   
-  // ✅ FIXED: Add refs to prevent infinite re-renders
+  // ✅ PRESERVED: Add refs to prevent infinite re-renders
   const isLoadingRef = useRef(false);
   const hasAttemptedLoadRef = useRef(false);
   const isMountedRef = useRef(true);
@@ -64,7 +33,7 @@ export const usePeerSupportProfileForm = ({ editMode = false, onComplete } = {})
   const [hasLoadedData, setHasLoadedData] = useState(false);
   const [serviceError, setServiceError] = useState(null);
 
-  // ✅ FIXED: Enhanced data loading using standalone function pattern
+  // ✅ PRESERVED: Enhanced data loading using standalone function pattern
   useEffect(() => {
     // ✅ CRITICAL FIX: Prevent multiple simultaneous loads
     if (isLoadingRef.current || !isMountedRef.current) {
@@ -105,7 +74,7 @@ export const usePeerSupportProfileForm = ({ editMode = false, onComplete } = {})
       try {
         console.log('🤝 Hook: Loading peer support profile using standalone function for registrant ID:', profile.id);
         
-        // ✅ FIXED: Use standalone function like applicant does
+        // ✅ PRESERVED: Use standalone function like applicant does
         const result = await getPeerSupportProfile(profile.id, supabase);
         
         if (!isMountedRef.current) return;
@@ -133,19 +102,16 @@ export const usePeerSupportProfileForm = ({ editMode = false, onComplete } = {})
             spiritual_affiliation: peerProfile.spiritual_affiliation || '',
             accepting_clients: peerProfile.accepting_clients !== false,
             bio: peerProfile.bio || '',
-            about_me: peerProfile.about_me || '',
             additional_info: peerProfile.additional_info || '',
             is_active: peerProfile.is_active !== false,
-            profile_completed: peerProfile.profile_completed || false,
-            is_accepting_clients: peerProfile.accepting_clients !== false,
-            is_verified: peerProfile.is_verified || false
+            // ✅ REMOVED: is_verified field (doesn't exist in schema)
           }));
           
           // Clear any service errors on successful load
           setServiceError(null);
           
         } else if (result.error) {
-          // ✅ FIXED: Handle "not found" gracefully vs real errors
+          // ✅ PRESERVED: Handle "not found" gracefully vs real errors
           if (result.code === 'NOT_FOUND' || result.error?.includes('No peer support profile found')) {
             console.log('ℹ️ Hook: No existing peer support profile found - starting fresh');
             // This is normal for new users, don't set an error
@@ -154,7 +120,7 @@ export const usePeerSupportProfileForm = ({ editMode = false, onComplete } = {})
             console.warn('⚠️ Hook: Error loading peer support profile:', result.error);
             setErrors({ load: 'Unable to load your existing profile data.' });
             
-            // ✅ FIXED: Handle service unavailable errors specifically
+            // ✅ PRESERVED: Handle service unavailable errors specifically
             if (result.error?.includes('not available')) {
               setServiceError(result.error);
             }
@@ -167,7 +133,7 @@ export const usePeerSupportProfileForm = ({ editMode = false, onComplete } = {})
       } catch (error) {
         console.error('❌ Hook: Error loading peer support profile:', error);
         if (isMountedRef.current) {
-          // ✅ FIXED: Better error categorization
+          // ✅ PRESERVED: Better error categorization
           if (error.message?.includes('not available') || error.message?.includes('undefined')) {
             setServiceError('Peer support service is temporarily unavailable. Please refresh the page.');
           } else if (!error.message?.includes('not found') && !error.message?.includes('No peer support profile')) {
@@ -186,7 +152,7 @@ export const usePeerSupportProfileForm = ({ editMode = false, onComplete } = {})
     loadExistingData();
   }, [profile?.id]);
 
-  // ✅ FIXED: Cleanup to prevent memory leaks and stale updates
+  // ✅ PRESERVED: Cleanup to prevent memory leaks and stale updates
   useEffect(() => {
     isMountedRef.current = true;
     return () => {
@@ -194,48 +160,32 @@ export const usePeerSupportProfileForm = ({ editMode = false, onComplete } = {})
     };
   }, []);
 
-  // Calculate completion percentage
+  // ✅ UPDATED: Calculate completion percentage using constants
   const completionPercentage = useCallback(() => {
-    const requiredFields = [
-      'primary_phone', 'bio', 'specialties'
-    ];
-    
-    const optionalButImportantFields = [
-      'professional_title', 'years_experience', 'service_city', 'service_state',
-      'supported_recovery_methods', 'about_me'
-    ];
-
+    const requiredFields = Object.keys(VALIDATION_RULES);
     let score = 0;
-    const totalPossible = requiredFields.length * 20 + optionalButImportantFields.length * 4;
+    let totalPossible = 0;
 
-    // Required fields (20 points each)
     requiredFields.forEach(field => {
-      if (field === 'specialties') {
-        if (formData[field]?.length > 0) score += 20;
-      } else if (formData[field]?.toString().trim()) {
-        score += 20;
+      const rule = VALIDATION_RULES[field];
+      if (rule.required) {
+        totalPossible += 20;
+        if (field === 'specialties' || field === 'supported_recovery_methods') {
+          if (formData[field]?.length >= (rule.minItems || 1)) score += 20;
+        } else if (formData[field]?.toString().trim()) {
+          score += 20;
+        }
       }
     });
 
-    // Optional but important fields (4 points each)
-    optionalButImportantFields.forEach(field => {
-      if (field === 'supported_recovery_methods') {
-        if (formData[field]?.length > 0) score += 4;
-      } else if (formData[field]?.toString().trim()) {
-        score += 4;
-      }
-    });
-
-    return Math.min(100, Math.round((score / totalPossible) * 100));
+    return totalPossible > 0 ? Math.min(100, Math.round((score / totalPossible) * 100)) : 0;
   }, [formData]);
 
-  // Handle input changes
+  // ✅ PRESERVED: Handle input changes
   const handleInputChange = useCallback((field, value) => {
     setFormData(prev => ({ 
       ...prev, 
-      [field]: value,
-      // Sync related fields for compatibility
-      ...(field === 'accepting_clients' && { is_accepting_clients: value })
+      [field]: value
     }));
     
     // Clear error when user starts typing
@@ -249,7 +199,7 @@ export const usePeerSupportProfileForm = ({ editMode = false, onComplete } = {})
     }
   }, [errors, serviceError]);
 
-  // Handle array field changes
+  // ✅ PRESERVED: Handle array field changes
   const handleArrayChange = useCallback((field, value, checked) => {
     setFormData(prev => {
       const currentArray = prev[field] || [];
@@ -274,53 +224,44 @@ export const usePeerSupportProfileForm = ({ editMode = false, onComplete } = {})
     }
   }, [errors, serviceError]);
 
-  // Validation
+  // ✅ UPDATED: Validation using constants
   const validateForm = useCallback((isSubmission = false) => {
     const newErrors = {};
     
-    // Required fields
-    if (!formData.primary_phone?.trim()) {
-      newErrors.primary_phone = 'Phone number is required';
-    } else {
-      // Phone validation
-      const phoneRegex = /^[\d\s\-\(\)\+]{10,}$/;
-      if (!phoneRegex.test(formData.primary_phone.replace(/\D/g, ''))) {
-        newErrors.primary_phone = 'Please enter a valid phone number';
+    // Use validation rules from constants
+    Object.entries(VALIDATION_RULES).forEach(([field, rules]) => {
+      if (rules.required) {
+        if (field === 'specialties' || field === 'supported_recovery_methods') {
+          if (!formData[field]?.length || formData[field].length < (rules.minItems || 1)) {
+            newErrors[field] = rules.message || `${field} is required`;
+          } else if (rules.maxItems && formData[field].length > rules.maxItems) {
+            newErrors[field] = `Please select no more than ${rules.maxItems} items`;
+          }
+        } else if (!formData[field]?.toString().trim()) {
+          newErrors[field] = rules.message || `${field} is required`;
+        } else if (rules.pattern && !rules.pattern.test(formData[field])) {
+          newErrors[field] = rules.message;
+        } else if (rules.minLength && formData[field].length < rules.minLength) {
+          newErrors[field] = rules.message;
+        } else if (rules.maxLength && formData[field].length > rules.maxLength) {
+          newErrors[field] = rules.message;
+        }
       }
-    }
-
-    if (!formData.bio?.trim()) {
-      newErrors.bio = 'Bio is required';
-    }
-
-    if (!formData.specialties?.length) {
-      newErrors.specialties = 'Please select at least one specialty';
-    }
-
-    // Additional validation for final submission
-    if (isSubmission) {
-      if (!formData.professional_title?.trim()) {
-        newErrors.professional_title = 'Professional title is recommended for profile completion';
+      
+      // Number validation
+      if (field === 'years_experience' && formData[field] !== null && formData[field] !== '') {
+        const value = Number(formData[field]);
+        if (isNaN(value) || value < (rules.min || 0) || value > (rules.max || 50)) {
+          newErrors[field] = rules.message;
+        }
       }
-
-      if (!formData.service_city?.trim()) {
-        newErrors.service_city = 'Service city is helpful for client matching';
-      }
-
-      if (!formData.service_state?.trim()) {
-        newErrors.service_state = 'Service state is helpful for client matching';
-      }
-
-      if (formData.years_experience && formData.years_experience < 0) {
-        newErrors.years_experience = 'Years of experience cannot be negative';
-      }
-    }
+    });
 
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   }, [formData]);
 
-  // ✅ FIXED: Enhanced form submission using direct supabase calls to match working pattern
+  // ✅ PRESERVED: Enhanced form submission using direct supabase calls to match working pattern
   const submitForm = useCallback(async (isSubmission = true) => {
     if (!profile?.id) {
       setErrors({ submit: 'You must be logged in to save your profile' });
@@ -370,18 +311,16 @@ export const usePeerSupportProfileForm = ({ editMode = false, onComplete } = {})
         
         // About
         bio: formData.bio.trim(),
-        about_me: formData.about_me?.trim() || null,
         additional_info: formData.additional_info?.trim() || null,
         
         // Status
-        is_active: formData.is_active !== false,
-        profile_completed: isSubmission && completionPercentage() >= 80,
-        is_verified: formData.is_verified || false
+        is_active: formData.is_active !== false
+        // ✅ REMOVED: is_verified field (doesn't exist in schema)
       };
 
       console.log('💾 Hook: Submitting peer support profile data:', peerProfileData);
 
-      // ✅ FIXED: Use direct supabase calls like landlord does (since it works)
+      // ✅ PRESERVED: Use direct supabase calls like landlord does (since it works)
       let result;
       try {
         if (editMode) {
@@ -411,7 +350,7 @@ export const usePeerSupportProfileForm = ({ editMode = false, onComplete } = {})
           };
         }
       } catch (serviceError) {
-        // ✅ FIXED: Handle service-level errors specifically
+        // ✅ PRESERVED: Handle service-level errors specifically
         console.error('❌ Hook: Service call failed:', serviceError);
         throw new Error(serviceError.message?.includes('not available') 
           ? 'Peer support service is temporarily unavailable'
@@ -429,7 +368,7 @@ export const usePeerSupportProfileForm = ({ editMode = false, onComplete } = {})
       
       setSuccessMessage(successMsg);
       
-      // ✅ CRITICAL FIX: Mark as loaded after successful save to prevent re-loading
+      // ✅ PRESERVED: Mark as loaded after successful save to prevent re-loading
       setHasLoadedData(true);
       profileIdRef.current = profile.id;
       
@@ -443,7 +382,7 @@ export const usePeerSupportProfileForm = ({ editMode = false, onComplete } = {})
     } catch (error) {
       console.error('❌ Hook: Error saving peer support profile:', error);
       
-      // ✅ FIXED: Better error categorization for user feedback
+      // ✅ PRESERVED: Better error categorization for user feedback
       let errorMessage;
       if (error.message?.includes('not available') || error.message?.includes('undefined')) {
         errorMessage = 'Peer support service is temporarily unavailable. Please refresh the page and try again.';
@@ -459,14 +398,14 @@ export const usePeerSupportProfileForm = ({ editMode = false, onComplete } = {})
     } finally {
       setLoading(false);
     }
-  }, [profile?.id, formData, validateForm, completionPercentage, editMode, onComplete]);
+  }, [profile?.id, formData, validateForm, editMode, onComplete]);
   
-  // Clear success message
+  // ✅ PRESERVED: Clear success message
   const clearSuccessMessage = useCallback(() => {
     setSuccessMessage('');
   }, []);
 
-  // ✅ ADDED: Function to retry service initialization
+  // ✅ PRESERVED: Function to retry service initialization
   const retryServiceConnection = useCallback(() => {
     setServiceError(null);
     setErrors({});
@@ -474,6 +413,60 @@ export const usePeerSupportProfileForm = ({ editMode = false, onComplete } = {})
     profileIdRef.current = null;
     setHasLoadedData(false);
     setInitialLoading(true);
+  }, []);
+
+  // ✅ NEW: Scroll to field functionality for section navigation
+  const scrollToField = useCallback((fieldName) => {
+    if (!fieldName) return;
+    
+    // Wait for render, then scroll
+    setTimeout(() => {
+      // Try multiple selector strategies
+      const selectors = [
+        `[name="${fieldName}"]`,
+        `#${fieldName}`,
+        `[data-field="${fieldName}"]`,
+        `input[name="${fieldName}"]`,
+        `select[name="${fieldName}"]`,
+        `textarea[name="${fieldName}"]`
+      ];
+      
+      let element = null;
+      for (const selector of selectors) {
+        element = document.querySelector(selector);
+        if (element) break;
+      }
+      
+      if (!element) {
+        // Fallback: look for any element with the field name in its attributes
+        const allInputs = document.querySelectorAll('input, select, textarea, [data-field]');
+        for (const input of allInputs) {
+          if (input.name === fieldName || 
+              input.id === fieldName || 
+              input.getAttribute('data-field') === fieldName) {
+            element = input;
+            break;
+          }
+        }
+      }
+      
+      if (element) {
+        element.scrollIntoView({
+          behavior: 'smooth',
+          block: 'center',
+          inline: 'nearest'
+        });
+        
+        // Focus the element if it's focusable
+        if (element.focus && typeof element.focus === 'function') {
+          setTimeout(() => element.focus(), 300);
+        }
+        
+        console.log(`📍 Scrolled to field: ${fieldName}`);
+      } else {
+        console.warn(`⚠️ Could not find field to scroll to: ${fieldName}`);
+      }
+    }, 100);
   }, []);
 
   return {
@@ -494,6 +487,7 @@ export const usePeerSupportProfileForm = ({ editMode = false, onComplete } = {})
     handleArrayChange,
     submitForm,
     validateForm,
+    scrollToField,
     
     // Utils
     setSuccessMessage,

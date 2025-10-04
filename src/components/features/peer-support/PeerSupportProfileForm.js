@@ -1,14 +1,15 @@
-// src/components/features/peer-support/PeerSupportProfileForm.js - UPDATED WITH CSS MODULE
+// src/components/features/peer-support/PeerSupportProfileForm.js - UPDATED WITH SCROLL & CONSOLIDATED SECTIONS
 import React, { useState } from 'react';
-import { useAuth } from '../../../context/AuthContext';
+import { useAuth } from '../../../hooks/useAuth';
 import { usePeerSupportProfileForm } from './hooks/usePeerSupportProfileForm';
 
-// Import section components
-import ContactInfoSection from './sections/ContactInfoSection';
-import ProfessionalInfoSection from './sections/ProfessionalInfoSection';
-import ServiceInfoSection from './sections/ServiceInfoSection';
-import AboutSection from './sections/AboutSection';
-import ServiceSettingsSection from './sections/ServiceSettingsSection';
+// ✅ UPDATED: Import consolidated sections from constants
+import { FORM_SECTIONS } from './constants/peerSupportConstants';
+
+// Import section components - consolidated structure
+import ProfileContactSection from './sections/ProfileContactSection';
+import ExpertiseServicesSection from './sections/ExpertiseServicesSection';
+import AboutSettingsSection from './sections/AboutSettingsSection';
 
 // Import shared components
 import LoadingSpinner from '../../ui/LoadingSpinner';
@@ -17,46 +18,15 @@ import LoadingSpinner from '../../ui/LoadingSpinner';
 import '../../../styles/main.css';
 import styles from './PeerSupportProfileForm.module.css';
 
-const FORM_SECTIONS = [
-  {
-    id: 'contact',
-    title: 'Contact Information',
-    component: ContactInfoSection,
-    icon: '📞'
-  },
-  {
-    id: 'professional',
-    title: 'Professional Information',
-    component: ProfessionalInfoSection,
-    icon: '🎓'
-  },
-  {
-    id: 'services',
-    title: 'Services & Specialties',
-    component: ServiceInfoSection,
-    icon: '🤝'
-  },
-  {
-    id: 'about',
-    title: 'About You',
-    component: AboutSection,
-    icon: '💫'
-  },
-  {
-    id: 'settings',
-    title: 'Service Settings',
-    component: ServiceSettingsSection,
-    icon: '⚙️'
-  }
-];
+// ✅ UPDATED: Section component mapping for consolidated structure
+const SECTION_COMPONENTS = {
+  'profile': ProfileContactSection,      // Contact + Professional info
+  'expertise': ExpertiseServicesSection, // Services + Specialties  
+  'settings': AboutSettingsSection       // About + Settings
+};
 
 const PeerSupportProfileForm = ({ editMode = false, onComplete, onCancel }) => {
-  const { user, profile, hasRole } = useAuth(); // ✅ Add user and profile
-  console.log('🔍 Form useAuth state:', {
-    userId: user?.id,
-    profileId: profile?.id,
-    authTimestamp: Date.now()
-  });
+  const { user, profile, hasRole } = useAuth();
   const [currentSectionIndex, setCurrentSectionIndex] = useState(0);
   const [isSubmitting, setIsSubmitting] = useState(false);
   
@@ -71,8 +41,10 @@ const PeerSupportProfileForm = ({ editMode = false, onComplete, onCancel }) => {
     handleInputChange,
     handleArrayChange,
     submitForm,
-    setSuccessMessage
+    setSuccessMessage,
+    scrollToField
   } = usePeerSupportProfileForm({ editMode, onComplete });
+  
   console.log('🎯 PeerSupportProfileForm rendering:', {
     initialLoading,
     hasErrors: Object.keys(errors).length > 0,
@@ -80,6 +52,7 @@ const PeerSupportProfileForm = ({ editMode = false, onComplete, onCancel }) => {
     formDataReady: !!formData,
     canRender: !initialLoading && Object.keys(errors).length === 0
   });
+
   // Authorization check
   if (!hasRole('peer-support')) {
     return (
@@ -104,31 +77,61 @@ const PeerSupportProfileForm = ({ editMode = false, onComplete, onCancel }) => {
   }
 
   const currentSection = FORM_SECTIONS[currentSectionIndex];
-  const CurrentSectionComponent = currentSection.component;
+  const CurrentSectionComponent = SECTION_COMPONENTS[currentSection.id];
   const isFirstSection = currentSectionIndex === 0;
   const isLastSection = currentSectionIndex === FORM_SECTIONS.length - 1;
   const hasErrors = Object.keys(errors).length > 0;
 
-  // Navigation handlers
+  // ✅ UPDATED: Navigation handlers with scroll functionality
   const handleNext = () => {
     if (currentSectionIndex < FORM_SECTIONS.length - 1) {
-      setCurrentSectionIndex(prev => prev + 1);
-      window.scrollTo({ top: 0, behavior: 'smooth' });
+      const nextSectionIndex = currentSectionIndex + 1;
+      const nextSection = FORM_SECTIONS[nextSectionIndex];
+      
+      setCurrentSectionIndex(nextSectionIndex);
+      
+      // ✅ NEW: Scroll to first field of next section
+      if (nextSection.firstField && scrollToField) {
+        scrollToField(nextSection.firstField);
+      } else {
+        // Fallback scroll to top
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+      }
     }
   };
 
   const handlePrevious = () => {
     if (currentSectionIndex > 0) {
-      setCurrentSectionIndex(prev => prev - 1);
-      window.scrollTo({ top: 0, behavior: 'smooth' });
+      const prevSectionIndex = currentSectionIndex - 1;
+      const prevSection = FORM_SECTIONS[prevSectionIndex];
+      
+      setCurrentSectionIndex(prevSectionIndex);
+      
+      // ✅ NEW: Scroll to first field of previous section
+      if (prevSection.firstField && scrollToField) {
+        scrollToField(prevSection.firstField);
+      } else {
+        // Fallback scroll to top
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+      }
     }
   };
 
   const handleSectionClick = (index) => {
+    const targetSection = FORM_SECTIONS[index];
+    
     setCurrentSectionIndex(index);
-    window.scrollTo({ top: 0, behavior: 'smooth' });
+    
+    // ✅ NEW: Scroll to first field of target section
+    if (targetSection.firstField && scrollToField) {
+      scrollToField(targetSection.firstField);
+    } else {
+      // Fallback scroll to top
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
   };
 
+  // ✅ PRESERVED: Save progress handler
   const handleSave = async (e) => {
     e.preventDefault();
     if (loading || isSubmitting) return;
@@ -140,9 +143,18 @@ const PeerSupportProfileForm = ({ editMode = false, onComplete, onCancel }) => {
     }
   };
 
+  // ✅ FIXED: Submit handler - prevent premature submission
   const handleSubmit = async (e) => {
     e.preventDefault();
+    e.stopPropagation(); // Prevent event bubbling
+    
     if (loading || isSubmitting) return;
+    
+    // ✅ CRITICAL: Only allow submission if explicitly triggered
+    if (!isLastSection) {
+      console.log('🚫 Form submission blocked - not on final section');
+      return;
+    }
     
     setIsSubmitting(true);
     setSuccessMessage('');
@@ -156,6 +168,7 @@ const PeerSupportProfileForm = ({ editMode = false, onComplete, onCancel }) => {
       setIsSubmitting(false);
     }
   };
+
   if (initialLoading) {
     console.log('🎯 Form showing loading spinner');
     return <LoadingSpinner message="Loading your profile..." />;
@@ -164,10 +177,11 @@ const PeerSupportProfileForm = ({ editMode = false, onComplete, onCancel }) => {
   if (Object.keys(errors).length > 0) {
     console.log('🎯 Form has errors, might not render properly:', errors);
   }
+
   return (
     <div className="content">
       <div className={styles.formContainer}>
-        {/* ✅ UPDATED: Header using CSS module */}
+        {/* ✅ PRESERVED: Header using CSS module */}
         <div className={styles.formHeader}>
           <h2 className={styles.formTitle}>
             {editMode ? 'Edit Your Peer Support Profile' : 'Create Your Peer Support Profile'}
@@ -177,7 +191,7 @@ const PeerSupportProfileForm = ({ editMode = false, onComplete, onCancel }) => {
           </p>
         </div>
 
-        {/* ✅ UPDATED: Progress Indicator using CSS module */}
+        {/* ✅ PRESERVED: Progress Indicator using CSS module */}
         <div className={styles.progressSection}>
           <div className={styles.progressHeader}>
             <div className={styles.progressTitle}>Profile Completion</div>
@@ -191,7 +205,7 @@ const PeerSupportProfileForm = ({ editMode = false, onComplete, onCancel }) => {
           </div>
         </div>
 
-        {/* ✅ UPDATED: Section Navigation using CSS module */}
+        {/* ✅ UPDATED: Section Navigation using consolidated sections */}
         <nav className={styles.sectionNavigation}>
           <ul className={styles.navList}>
             {FORM_SECTIONS.map((section, index) => (
@@ -210,7 +224,7 @@ const PeerSupportProfileForm = ({ editMode = false, onComplete, onCancel }) => {
           </ul>
         </nav>
 
-        {/* ✅ UPDATED: Messages using CSS module */}
+        {/* ✅ PRESERVED: Messages using CSS module */}
         {(errors.submit || successMessage) && (
           <div className={styles.messageContainer}>
             {errors.submit && (
@@ -223,7 +237,7 @@ const PeerSupportProfileForm = ({ editMode = false, onComplete, onCancel }) => {
           </div>
         )}
 
-        {/* ✅ UPDATED: Form using CSS module */}
+        {/* ✅ UPDATED: Form with proper submission handling */}
         <form onSubmit={handleSubmit}>
           <div className={styles.formContent}>
             <div className={`${styles.sectionContainer} ${styles.sectionActive}`}>
@@ -231,22 +245,32 @@ const PeerSupportProfileForm = ({ editMode = false, onComplete, onCancel }) => {
                 <h3 className={styles.sectionTitle}>
                   {currentSection.icon} {currentSection.title}
                 </h3>
+                <p className={styles.sectionDescription}>
+                  {currentSection.description}
+                </p>
               </div>
 
               <div className={styles.sectionBody}>
-                {/* Current Section Component */}
-                <CurrentSectionComponent
-                  formData={formData}
-                  errors={errors}
-                  loading={loading || isSubmitting}
-                  onInputChange={handleInputChange}
-                  onArrayChange={handleArrayChange}
-                />
+                {/* ✅ UPDATED: Current Section Component with error handling */}
+                {CurrentSectionComponent ? (
+                  <CurrentSectionComponent
+                    formData={formData}
+                    errors={errors}
+                    loading={loading || isSubmitting}
+                    onInputChange={handleInputChange}
+                    onArrayChange={handleArrayChange}
+                  />
+                ) : (
+                  <div className={styles.sectionError}>
+                    <p>Section component not found: {currentSection.id}</p>
+                    <p>Available sections: {Object.keys(SECTION_COMPONENTS).join(', ')}</p>
+                  </div>
+                )}
               </div>
             </div>
           </div>
 
-          {/* ✅ UPDATED: Form Actions using CSS module */}
+          {/* ✅ UPDATED: Form Actions with proper submission controls */}
           <div className={styles.formActions}>
             <button
               type="button"
@@ -340,8 +364,8 @@ const PeerSupportProfileForm = ({ editMode = false, onComplete, onCancel }) => {
           <div className={styles.statusItem}>
             <div className={styles.statusLabel}>Accepting Clients</div>
             <div className={styles.statusValue}>
-              <span className={formData.is_accepting_clients ? styles.acceptingClientsActive : styles.acceptingClientsInactive}>
-                {formData.is_accepting_clients ? 'Yes' : 'No'}
+              <span className={formData.accepting_clients ? styles.acceptingClientsActive : styles.acceptingClientsInactive}>
+                {formData.accepting_clients ? 'Yes' : 'No'}
               </span>
             </div>
           </div>

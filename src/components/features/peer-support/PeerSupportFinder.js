@@ -1,9 +1,17 @@
-// src/components/features/peer-support/PeerSupportFinder.js - UPDATED FOR PHASE 6
+// src/components/features/peer-support/PeerSupportFinder.js - UPDATED FOR CONSOLIDATED FORM ALIGNMENT
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../../../hooks/useAuth';
 import { db } from '../../../utils/supabase';
 import LoadingSpinner from '../../ui/LoadingSpinner';
 import styles from './PeerSupportFinder.module.css';
+
+// ✅ UPDATED: Import aligned constants
+import { 
+  specialtyOptions, 
+  recoveryMethodOptions,
+  spiritualAffiliationOptions,
+  serviceAreaOptions 
+} from './constants/peerSupportConstants';
 
 const PeerSupportFinder = ({ onBack }) => {
   const { user, profile } = useAuth();
@@ -19,32 +27,11 @@ const PeerSupportFinder = ({ onBack }) => {
     location: '', // Changed from serviceArea to location for better UX
     zipCode: '',
     minExperience: '',
-    acceptingClients: true
+    acceptingClients: true,
+    recoveryMethods: [], // ✅ NEW: Add recovery methods filter
+    spiritualAffiliation: '', // ✅ NEW: Add spiritual affiliation filter
+    serviceAreas: [] // ✅ NEW: Add service areas filter
   });
-
-  // Available specialty options (expanded based on common peer support areas)
-  const specialtyOptions = [
-    'AA/NA Programs',
-    'SMART Recovery',
-    'Trauma-Informed Care',
-    'Family Therapy',
-    'Mindfulness',
-    'Career Counseling',
-    'Women in Recovery',
-    'Men in Recovery',
-    'LGBTQ+ Support',
-    'Secular Programs',
-    'Housing Support',
-    'Mental Health',
-    'Addiction Counseling',
-    'Group Facilitation',
-    'Crisis Intervention',
-    'Relapse Prevention',
-    'Life Skills Training',
-    'Medication Assisted Treatment',
-    'Dual Diagnosis Support',
-    'Grief & Loss Counseling'
-  ];
 
   // Load peer specialists on component mount
   useEffect(() => {
@@ -121,6 +108,19 @@ const PeerSupportFinder = ({ onBack }) => {
       
       if (filters.specialties.length > 0) {
         dbFilters.specialties = filters.specialties;
+      }
+      
+      // ✅ UPDATED: Add new filter options
+      if (filters.recoveryMethods.length > 0) {
+        dbFilters.supported_recovery_methods = filters.recoveryMethods;
+      }
+      
+      if (filters.spiritualAffiliation) {
+        dbFilters.spiritual_affiliation = filters.spiritualAffiliation;
+      }
+      
+      if (filters.serviceAreas.length > 0) {
+        dbFilters.service_areas = filters.serviceAreas;
       }
       
       // Use location for both city/state and service area matching
@@ -208,6 +208,33 @@ const PeerSupportFinder = ({ onBack }) => {
         });
       }
 
+      // ✅ NEW: Recovery methods filtering
+      if (filters.recoveryMethods.length > 0) {
+        availableSpecialists = availableSpecialists.filter(specialist => {
+          const specialistMethods = specialist.supported_recovery_methods || [];
+          return filters.recoveryMethods.some(filterMethod =>
+            specialistMethods.includes(filterMethod)
+          );
+        });
+      }
+
+      // ✅ NEW: Spiritual affiliation filtering
+      if (filters.spiritualAffiliation) {
+        availableSpecialists = availableSpecialists.filter(specialist => 
+          specialist.spiritual_affiliation === filters.spiritualAffiliation
+        );
+      }
+
+      // ✅ NEW: Service areas filtering
+      if (filters.serviceAreas.length > 0) {
+        availableSpecialists = availableSpecialists.filter(specialist => {
+          const specialistAreas = specialist.service_areas || [];
+          return filters.serviceAreas.some(filterArea =>
+            specialistAreas.includes(filterArea)
+          );
+        });
+      }
+
       // Exclude current user if they're also a peer specialist
       availableSpecialists = availableSpecialists.filter(specialist => 
         specialist.user_id !== profile.id
@@ -247,6 +274,26 @@ const PeerSupportFinder = ({ onBack }) => {
     }));
   };
 
+  // ✅ NEW: Recovery methods filter handler
+  const handleRecoveryMethodChange = (method, isChecked) => {
+    setFilters(prev => ({
+      ...prev,
+      recoveryMethods: isChecked
+        ? [...prev.recoveryMethods, method]
+        : prev.recoveryMethods.filter(m => m !== method)
+    }));
+  };
+
+  // ✅ NEW: Service areas filter handler
+  const handleServiceAreaChange = (area, isChecked) => {
+    setFilters(prev => ({
+      ...prev,
+      serviceAreas: isChecked
+        ? [...prev.serviceAreas, area]
+        : prev.serviceAreas.filter(a => a !== area)
+    }));
+  };
+
   /**
    * Handle other filter changes
    */
@@ -272,6 +319,9 @@ const PeerSupportFinder = ({ onBack }) => {
             ...prev,
             location: location,
             specialties: [], // Clear other filters for broader search
+            recoveryMethods: [], // ✅ UPDATED: Clear new filters too
+            serviceAreas: [],
+            spiritualAffiliation: '',
             minExperience: ''
           }));
           return;
@@ -291,6 +341,9 @@ const PeerSupportFinder = ({ onBack }) => {
         ...prev, 
         location: userLocation,
         specialties: [], // Clear other filters for broader search
+        recoveryMethods: [], // ✅ UPDATED: Clear new filters too
+        serviceAreas: [],
+        spiritualAffiliation: '',
         minExperience: ''
       }));
     } else {
@@ -381,7 +434,10 @@ I would appreciate the opportunity to discuss how your support could help me in 
       location: '',
       zipCode: '',
       minExperience: '',
-      acceptingClients: true
+      acceptingClients: true,
+      recoveryMethods: [], // ✅ NEW: Clear new filters
+      spiritualAffiliation: '',
+      serviceAreas: []
     });
   };
 
@@ -419,6 +475,13 @@ I would appreciate the opportunity to discuss how your support could help me in 
       return specialist.service_areas.join(', ');
     }
     return 'Location not specified';
+  };
+
+  // ✅ NEW: Format spiritual affiliation for display
+  const formatSpiritualAffiliation = (affiliation) => {
+    if (!affiliation) return 'Not specified';
+    const option = spiritualAffiliationOptions.find(opt => opt.value === affiliation);
+    return option ? option.label : affiliation;
   };
 
   return (
@@ -473,6 +536,21 @@ I would appreciate the opportunity to discuss how your support could help me in 
                 <option value="3">3+ years</option>
                 <option value="5">5+ years</option>
                 <option value="10">10+ years</option>
+              </select>
+            </div>
+
+            {/* ✅ NEW: Spiritual Affiliation Filter */}
+            <div className="form-group">
+              <label className="label">Spiritual Affiliation (optional)</label>
+              <select
+                className="input"
+                value={filters.spiritualAffiliation}
+                onChange={(e) => handleFilterChange('spiritualAffiliation', e.target.value)}
+              >
+                <option value="">Any affiliation</option>
+                {spiritualAffiliationOptions.map(option => (
+                  <option key={option.value} value={option.value}>{option.label}</option>
+                ))}
               </select>
             </div>
             
@@ -538,14 +616,58 @@ I would appreciate the opportunity to discuss how your support could help me in 
             </div>
           </div>
 
+          {/* ✅ NEW: Recovery Methods Filter */}
+          <div className="form-group">
+            <label className="label">Recovery Methods (optional)</label>
+            <div className={styles.specialtiesGrid}>
+              {recoveryMethodOptions.map(method => (
+                <div key={method} className="checkbox-item">
+                  <input
+                    type="checkbox"
+                    id={`method-${method}`}
+                    checked={filters.recoveryMethods.includes(method)}
+                    onChange={(e) => handleRecoveryMethodChange(method, e.target.checked)}
+                  />
+                  <label htmlFor={`method-${method}`}>
+                    {method}
+                  </label>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* ✅ NEW: Service Areas Filter */}
+          <div className="form-group">
+            <label className="label">Service Areas (optional)</label>
+            <div className={styles.specialtiesGrid}>
+              {serviceAreaOptions.map(area => (
+                <div key={area} className="checkbox-item">
+                  <input
+                    type="checkbox"
+                    id={`area-${area}`}
+                    checked={filters.serviceAreas.includes(area)}
+                    onChange={(e) => handleServiceAreaChange(area, e.target.checked)}
+                  />
+                  <label htmlFor={`area-${area}`}>
+                    {area}
+                  </label>
+                </div>
+              ))}
+            </div>
+          </div>
+
           {/* Active Filters Display */}
-          {(filters.specialties.length > 0 || filters.location || filters.zipCode || filters.minExperience) && (
+          {(filters.specialties.length > 0 || filters.location || filters.zipCode || filters.minExperience || 
+            filters.recoveryMethods.length > 0 || filters.spiritualAffiliation || filters.serviceAreas.length > 0) && (
             <div className={styles.activeFiltersDisplay}>
               <strong>Active Filters:</strong> 
               {filters.location && ` Location: ${filters.location} •`}
               {filters.zipCode && ` Zip: ${filters.zipCode} •`}
               {filters.minExperience && ` Min Experience: ${filters.minExperience}+ years •`}
               {filters.specialties.length > 0 && ` Specialties: ${filters.specialties.length} selected •`}
+              {filters.recoveryMethods.length > 0 && ` Recovery Methods: ${filters.recoveryMethods.length} selected •`}
+              {filters.spiritualAffiliation && ` Spiritual: ${formatSpiritualAffiliation(filters.spiritualAffiliation)} •`}
+              {filters.serviceAreas.length > 0 && ` Service Areas: ${filters.serviceAreas.length} selected •`}
               {filters.acceptingClients && ` Accepting clients only`}
             </div>
           )}
@@ -663,6 +785,18 @@ I would appreciate the opportunity to discuss how your support could help me in 
                         </div>
                       </div>
 
+                      {/* ✅ UPDATED: Show spiritual affiliation if present */}
+                      {specialist.spiritual_affiliation && (
+                        <div className={styles.experienceInfo}>
+                          <div>
+                            <span className={styles.experienceLabel}>Spiritual Background:</span>
+                            <span className={styles.experienceValue}>
+                              {formatSpiritualAffiliation(specialist.spiritual_affiliation)}
+                            </span>
+                          </div>
+                        </div>
+                      )}
+
                       {/* Specialties */}
                       {specialist.specialties?.length > 0 && (
                         <div className={styles.specialtiesSection}>
@@ -677,6 +811,25 @@ I would appreciate the opportunity to discuss how your support could help me in 
                           {specialist.specialties.length > 4 && (
                             <div className={styles.moreSpecialties}>
                               +{specialist.specialties.length - 4} more
+                            </div>
+                          )}
+                        </div>
+                      )}
+
+                      {/* ✅ NEW: Recovery Methods */}
+                      {specialist.supported_recovery_methods?.length > 0 && (
+                        <div className={styles.specialtiesSection}>
+                          <div className="label mb-2">Recovery Methods</div>
+                          <div className={styles.specialtiesList}>
+                            {specialist.supported_recovery_methods.slice(0, 3).map((method, i) => (
+                              <span key={i} className={styles.recoveryMethodBadge}>
+                                {method}
+                              </span>
+                            ))}
+                          </div>
+                          {specialist.supported_recovery_methods.length > 3 && (
+                            <div className={styles.moreSpecialties}>
+                              +{specialist.supported_recovery_methods.length - 3} more
                             </div>
                           )}
                         </div>
@@ -783,6 +936,13 @@ I would appreciate the opportunity to discuss how your support could help me in 
                     <span className={styles.infoLabel}>Accepting Clients:</span>
                     <span className={styles.infoValue}>{selectedSpecialist.accepting_clients ? 'Yes' : 'No'}</span>
                   </div>
+                  {/* ✅ NEW: Show spiritual affiliation in modal */}
+                  {selectedSpecialist.spiritual_affiliation && (
+                    <div className={styles.infoItem}>
+                      <span className={styles.infoLabel}>Spiritual Background:</span>
+                      <span className={styles.infoValue}>{formatSpiritualAffiliation(selectedSpecialist.spiritual_affiliation)}</span>
+                    </div>
+                  )}
                 </div>
               </div>
 
@@ -799,6 +959,9 @@ I would appreciate the opportunity to discuss how your support could help me in 
                 <h4 className={styles.detailSectionTitle}>Service Areas</h4>
                 <div className={styles.tagsList}>
                   <span className={styles.detailBadge}>{formatLocationText(selectedSpecialist)}</span>
+                  {selectedSpecialist.service_areas?.map((area, i) => (
+                    <span key={i} className={styles.detailBadge}>{area}</span>
+                  ))}
                 </div>
               </div>
 

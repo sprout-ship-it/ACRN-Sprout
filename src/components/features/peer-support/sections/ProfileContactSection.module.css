@@ -1,4 +1,4 @@
-/* ProfessionalInfoSection.module.css - Component-specific styles */
+/* ProfileContactSection.module.css - Contact & Professional Info Styles */
 
 /* ==================== SECTION LAYOUT ==================== */
 .sectionContainer {
@@ -47,6 +47,7 @@
   margin-left: 3px;
 }
 
+/* ==================== FORM INPUTS ==================== */
 .formInput {
   width: 100%;
   padding: 12px;
@@ -75,7 +76,7 @@
   box-shadow: 0 0 0 3px rgba(220, 53, 69, 0.1);
 }
 
-.formTextarea {
+.formSelect {
   width: 100%;
   padding: 12px;
   border: 2px solid var(--border-beige);
@@ -84,60 +85,67 @@
   font-size: 1rem;
   transition: var(--transition-normal);
   font-family: var(--font-sans);
-  resize: vertical;
-  min-height: 80px;
+  cursor: pointer;
 }
 
-.formTextarea:focus {
+.formSelect:focus {
   border-color: var(--primary-purple);
   box-shadow: 0 0 0 3px rgba(160, 32, 240, 0.1);
   outline: none;
 }
 
-.formTextarea:disabled {
+.formSelect:disabled {
   background: var(--gray-100);
   cursor: not-allowed;
   opacity: 0.6;
 }
 
-/* ==================== CERTIFICATION GRID ==================== */
-.certificationsGrid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-  gap: var(--spacing-sm);
-  margin-top: var(--spacing-md);
-}
-
-.certificationItem {
+/* ==================== CHECKBOX CONTROL ==================== */
+.checkboxControl {
   display: flex;
-  align-items: center;
-  padding: var(--spacing-sm);
+  align-items: flex-start;
+  padding: var(--spacing-md);
   border: 2px solid var(--border-beige);
   border-radius: var(--radius-md);
   cursor: pointer;
   transition: var(--transition-normal);
   background: white;
+  margin-bottom: var(--spacing-md);
 }
 
-.certificationItem:hover {
-  border-color: var(--primary-purple);
-  background: rgba(160, 32, 240, 0.02);
+.checkboxControl:hover {
+  border-color: var(--secondary-teal);
+  background: rgba(32, 178, 170, 0.02);
 }
 
-.certificationItem.selected {
-  border-color: var(--primary-purple);
-  background: rgba(160, 32, 240, 0.05);
+.checkboxControl.selected {
+  border-color: var(--secondary-teal);
+  background: rgba(32, 178, 170, 0.05);
 }
 
-.certificationCheckbox {
+.checkboxInput {
   margin-right: var(--spacing-sm);
-  accent-color: var(--primary-purple);
+  margin-top: 2px;
+  accent-color: var(--secondary-teal);
+  flex-shrink: 0;
 }
 
-.certificationLabel {
-  font-size: 0.9rem;
+.checkboxContent {
+  flex: 1;
+}
+
+.checkboxTitle {
+  font-weight: 600;
   color: var(--gray-800);
+  margin-bottom: 4px;
+  font-size: 0.95rem;
+}
+
+.checkboxDescription {
+  color: var(--gray-500);
+  font-size: 0.85rem;
   line-height: 1.4;
+  margin: 0;
 }
 
 /* ==================== HELP TEXT AND VALIDATION ==================== */
@@ -156,18 +164,42 @@
   line-height: 1.4;
 }
 
-.characterCount {
-  color: var(--gray-500);
-  font-size: 0.85rem;
-  margin-top: 5px;
-  text-align: right;
-}
-
-/* ==================== VERIFICATION ALERT ==================== */
-.verificationAlert {
+/* ==================== INFO ALERTS ==================== */
+.infoAlert {
   background: var(--info-bg);
   color: var(--info-text);
   border: 1px solid var(--info-border);
+  padding: var(--spacing-md);
+  border-radius: var(--radius-md);
+  margin-bottom: var(--spacing-lg);
+  line-height: 1.5;
+}
+
+.alertTitle {
+  font-weight: 700;
+  margin-bottom: var(--spacing-xs);
+  color: var(--info-text);
+}
+
+.alertList {
+  margin: 0;
+  padding-left: var(--spacing-lg);
+}
+
+.alertListItem {
+  margin-bottom: var(--spacing-xs);
+  line-height: 1.4;
+}
+
+.alertListItem:last-child {
+  margin-bottom: 0;
+}
+
+/* ==================== VERIFICATION NOTICE ==================== */
+.verificationAlert {
+  background: var(--warning-bg);
+  color: var(--warning-text);
+  border: 1px solid var(--warning-border);
   padding: var(--spacing-lg);
   border-radius: var(--radius-md);
   margin-bottom: var(--spacing-lg);
@@ -176,30 +208,29 @@
 .verificationGrid {
   display: grid;
   grid-template-columns: 1fr auto;
-  gap: var(--spacing-lg);
+  gap: var(--spacing-md);
   align-items: center;
 }
 
 .verificationContent {
-  display: flex;
-  flex-direction: column;
-  gap: var(--spacing-sm);
+  flex: 1;
 }
 
 .verificationTitle {
   font-weight: 700;
-  color: var(--info-text);
+  margin-bottom: var(--spacing-xs);
+  color: var(--warning-text);
 }
 
 .verificationText {
   font-size: 0.9rem;
-  line-height: 1.4;
+  line-height: 1.5;
   margin: 0;
+  color: var(--warning-text);
 }
 
 .verificationBadge {
-  text-align: center;
-  padding: var(--spacing-md);
+  flex-shrink: 0;
 }
 
 .badgeVerified {
@@ -207,20 +238,20 @@
   color: var(--success-text);
   border: 1px solid var(--success-border);
   padding: 6px 12px;
-  border-radius: 16px;
-  font-size: 0.8rem;
+  border-radius: 12px;
+  font-size: 0.75rem;
   font-weight: 600;
   text-transform: uppercase;
   display: inline-block;
 }
 
 .badgePending {
-  background: var(--warning-bg);
-  color: var(--warning-text);
-  border: 1px solid var(--warning-border);
+  background: var(--gray-200);
+  color: var(--gray-700);
+  border: 1px solid var(--gray-300);
   padding: 6px 12px;
-  border-radius: 16px;
-  font-size: 0.8rem;
+  border-radius: 12px;
+  font-size: 0.75rem;
   font-weight: 600;
   text-transform: uppercase;
   display: inline-block;
@@ -233,14 +264,9 @@
     gap: var(--spacing-md);
   }
   
-  .certificationsGrid {
-    grid-template-columns: 1fr;
-    gap: var(--spacing-xs);
-  }
-  
   .verificationGrid {
     grid-template-columns: 1fr;
-    gap: var(--spacing-md);
+    gap: var(--spacing-sm);
     text-align: center;
   }
   
@@ -259,13 +285,23 @@
   }
   
   .formInput,
-  .formTextarea {
+  .formSelect {
     padding: 10px;
     font-size: 0.9rem;
   }
   
-  .formTextarea {
-    min-height: 60px;
+  .checkboxControl {
+    padding: var(--spacing-sm);
+  }
+  
+  .checkboxTitle {
+    font-size: 0.85rem;
+  }
+  
+  .checkboxDescription,
+  .helpText,
+  .errorText {
+    font-size: 0.8rem;
   }
   
   .sectionTitle {
@@ -276,15 +312,47 @@
     font-size: 0.95rem;
   }
   
-  .certificationItem {
-    padding: var(--spacing-xs);
-  }
-  
-  .certificationLabel {
-    font-size: 0.85rem;
-  }
-  
+  .infoAlert,
   .verificationAlert {
-    padding: var(--spacing-md);
+    padding: var(--spacing-sm);
   }
+  
+  .alertTitle,
+  .verificationTitle {
+    font-size: 0.9rem;
+  }
+  
+  .badgeVerified,
+  .badgePending {
+    padding: 4px 8px;
+    font-size: 0.7rem;
+  }
+}
+
+/* ==================== ACCESSIBILITY AND FOCUS STATES ==================== */
+.formInput:focus-visible,
+.formSelect:focus-visible {
+  outline: 2px solid var(--primary-purple);
+  outline-offset: 2px;
+}
+
+.checkboxControl:focus-within {
+  border-color: var(--secondary-teal);
+  box-shadow: 0 0 0 3px rgba(32, 178, 170, 0.1);
+}
+
+/* ==================== SPECIAL STATES ==================== */
+.formGroup:last-child {
+  margin-bottom: 0;
+}
+
+.checkboxControl:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+  background: var(--gray-100);
+}
+
+.checkboxControl:disabled:hover {
+  border-color: var(--border-beige);
+  background: var(--gray-100);
 }
