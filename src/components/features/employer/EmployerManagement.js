@@ -268,12 +268,33 @@ const EmployerManagement = () => {
 
       console.log('💼 Saving employer profile:', employerData);
 
-      let result;
-      if (editingEmployer) {
-        result = await db.employerProfiles.update(editingEmployer.id, employerData);
-      } else {
-        result = await db.employerProfiles.create(employerData);
-      }
+let result;
+if (editingEmployer) {
+  const { data, error } = await supabase
+    .from('employer_profiles')
+    .update(employerData)
+    .eq('id', editingEmployer.id)
+    .select()
+    .single();
+  
+  result = {
+    success: !error,
+    data: data,
+    error: error
+  };
+} else {
+  const { data, error } = await supabase
+    .from('employer_profiles')
+    .insert(employerData)
+    .select()
+    .single();
+  
+  result = {
+    success: !error,
+    data: data,
+    error: error
+  };
+}
 
       if (result.error) {
         throw new Error(result.error.message || 'Failed to save employer profile');
@@ -367,7 +388,16 @@ const EmployerManagement = () => {
       setError(null);
       console.log('🗑️ Deleting employer profile:', employerId);
       
-      const result = await db.employerProfiles.delete(employerId);
+      const { data, error } = await supabase
+        .from('employer_profiles')
+        .delete()
+        .eq('id', employerId);
+
+      const result = {
+        success: !error,
+        data: data,
+        error: error
+      };
       
       if (result.error) {
         throw new Error(result.error.message || 'Failed to delete employer profile');
