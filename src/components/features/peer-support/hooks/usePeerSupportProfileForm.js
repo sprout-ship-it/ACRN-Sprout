@@ -3,7 +3,7 @@ import { useState, useEffect, useCallback, useRef } from 'react';
 import { useAuth } from '../../../../hooks/useAuth';
 
 // ✅ FIXED: Import the db object with defensive fallback
-import { db, supabase } from '../../../../utils/supabase';
+import { supabase } from '../../../../utils/supabase';
 
 const INITIAL_FORM_DATA = {
   // Contact Information
@@ -142,7 +142,17 @@ export const usePeerSupportProfileForm = ({ editMode = false, onComplete } = {})
       try {
         console.log('🤝 Hook: Loading peer support profile for registrant ID:', profile.id);
         
-        const result = await db.peerSupportProfiles.getByUserId(profile.id);
+        const { data, error } = await supabase
+          .from('peer_support_profiles')
+          .select('*')
+          .eq('user_id', profile.id)
+          .single();
+
+        const result = {
+          success: !error || error.code === 'PGRST116',
+          data: error?.code === 'PGRST116' ? null : data,
+          error: error?.code === 'PGRST116' ? { code: 'NOT_FOUND', message: 'No peer support profile found' } : error
+        };
         
         if (!isMountedRef.current) return;
 
@@ -426,9 +436,30 @@ export const usePeerSupportProfileForm = ({ editMode = false, onComplete } = {})
       let result;
       try {
         if (editMode) {
-          result = await db.peerSupportProfiles.update(profile.id, peerProfileData);
+          const { data, error } = await supabase
+            .from('peer_support_profiles')
+            .update(peerProfileData)
+            .eq('user_id', profile.id)
+            .select()
+            .single();
+
+          const result = {
+            success: !error,
+            data: data,
+            error: error
+          };
         } else {
-          result = await db.peerSupportProfiles.create(peerProfileData);
+          const { data, error } = await supabase
+            .from('peer_support_profiles')
+            .insert(peerProfileData)
+            .select()
+            .single();
+
+          const result = {
+            success: !error,
+            data: data,
+            error: error
+          };
         }
       } catch (serviceError) {
         // ✅ FIXED: Handle service-level errors specifically

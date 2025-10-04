@@ -92,7 +92,16 @@ const EmployerManagement = () => {
       setError(null);
       console.log('📊 Fetching employer profiles for user:', user.id);
       
-      const result = await db.employerProfiles.getByUserId(user.id);
+      const { data, error } = await supabase
+        .from('employer_profiles')
+        .select('*')
+        .eq('user_id', user.id);
+
+      const result = {
+        success: !error,
+        data: data || [],
+        error: error
+      };
       
       if (result.error && !result.data) {
         throw new Error(result.error.message || 'Failed to fetch employer profiles');
