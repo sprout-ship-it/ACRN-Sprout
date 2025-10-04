@@ -1,14 +1,15 @@
-// src/pages/MainApp.js - FINAL CLEAN FIX - NO EXTRA STATE UPDATES
+// src/pages/MainApp.js - FIXED PEER SUPPORT TO USE STANDALONE FUNCTION
 import React, { useEffect, useState, useRef, useCallback, useMemo } from 'react'
 import { Routes, Route, Navigate, useNavigate, useLocation } from 'react-router-dom'
 import { useAuth } from '../hooks/useAuth';
 
-// ✅ UPDATED: Import authenticated supabase client
+// ✅ FIXED: Import standalone functions that work
 import { supabase, db } from '../utils/supabase';
-
-// ✅ UPDATED: Import individual schema-compliant services instead of db object
 import { getMatchingProfile } from '../utils/database/matchingProfilesService';
 import { getEmployerProfilesByUserId } from '../utils/database/employerService';
+
+// ✅ FIXED: Import the standalone peer support function
+import { getPeerSupportProfile } from '../utils/database/peerSupportService';
 
 // Layout
 import Header from '../components/layout/Header'
@@ -52,7 +53,7 @@ const CandidateManagement = () => (
 )
 
 const MainApp = () => {
-  console.log('MainApp rendering with schema-compliant services, current URL:', window.location.pathname);
+  console.log('MainApp rendering with consistent service patterns, current URL:', window.location.pathname);
   const { user, profile, isAuthenticated, hasRole } = useAuth()
   const navigate = useNavigate()
   const location = useLocation();
@@ -96,18 +97,6 @@ const MainApp = () => {
     checkInProgress: false
   }));
 
-  // ✅ FIXED: Memoized service availability check
-  const serviceAvailability = useMemo(() => {
-    const services = {
-      peerSupport: !!(db && db.peerSupportProfiles && typeof db.peerSupportProfiles.getByUserId === 'function'),
-      matching: typeof getMatchingProfile === 'function',
-      employer: typeof getEmployerProfilesByUserId === 'function'
-    };
-    
-    console.log('🔧 Service availability check:', services);
-    return services;
-  }, []); // Empty dependency array - this rarely changes
-
   // ✅ FIXED: Landlord profile check with stable callback
   const checkLandlordProfile = useCallback(async (profileId) => {
     try {
@@ -147,7 +136,7 @@ const MainApp = () => {
     }
   }, []); // No dependencies - supabase client is stable
 
-  // ✅ FIXED: Stable profile completion check
+  // ✅ FIXED: Stable profile completion check using standalone functions
   const checkProfileCompletion = useCallback(async (currentProfileKey) => {
     try {
       // ✅ CRITICAL FIX: Prevent multiple simultaneous checks
@@ -244,67 +233,47 @@ const MainApp = () => {
           }
         }
         
-        // ✅ CRITICAL FIX: Simplified peer support check with better loop prevention
+        // ✅ FIXED: Peer support check using standalone function
         else if (hasRole('peer-support')) {
-          console.log('Checking peer support comprehensive profile...');
+          console.log('Checking peer support comprehensive profile using standalone function...');
           
-          if (!serviceAvailability.peerSupport) {
-            console.warn('⚠️ Peer support service not available, assuming incomplete profile');
-            profileError = 'Peer support service temporarily unavailable';
-            hasCompleteProfile = false;
-          } else {
-            try {
-                const { data, error } = await supabase
-                  .from('peer_support_profiles')
-                  .select('primary_phone, bio, specialties, profile_completed')
-                  .eq('user_id', profile.id)
-                  .single();
-
-                const result = {
-                  success: !error || error.code === 'PGRST116',
-                  data: error?.code === 'PGRST116' ? null : data,
-                  error: error?.code === 'PGRST116' ? { code: 'NOT_FOUND', message: 'No peer support profile found' } : error
-                };
-              if (result.success && result.data) {
-                const peerProfile = result.data;
-                
-                hasCompleteProfile = !!(
-                  peerProfile?.primary_phone && 
-                  peerProfile?.bio && 
-                  peerProfile?.specialties &&
-                  peerProfile?.specialties?.length > 0 &&
-                  peerProfile?.profile_completed
-                );
-                
-                console.log('✅ Peer profile check complete:', hasCompleteProfile, {
-                  hasPhone: !!peerProfile?.primary_phone,
-                  hasBio: !!peerProfile?.bio,
-                  hasSpecialties: !!(peerProfile?.specialties?.length > 0),
-                  isCompleted: !!peerProfile?.profile_completed
-                });
-              } else if (result.error) {
-                // ✅ FIXED: Handle specific error types without causing loops
-                if (result.error.code === 'NOT_FOUND' || result.error.message?.includes('No peer support profile found')) {
-                  console.log('ℹ️ No peer support profile found (normal for new users)');
-                  hasCompleteProfile = false;
-                  profileError = null; // Don't treat "not found" as an error
-                } else if (result.error.message?.includes('not available')) {
-                  console.warn('⚠️ Peer support service temporarily unavailable');
-                  profileError = 'Peer support service temporarily unavailable';
-                  hasCompleteProfile = false;
-                } else {
-                  console.error('❌ Unexpected peer support profile error:', result.error);
-                  profileError = 'Failed to check peer support profile';
-                  hasCompleteProfile = false;
-                }
+          try {
+            // ✅ FIXED: Use the standalone function like applicant does
+            const result = await getPeerSupportProfile(profile.id, supabase);
+            
+            if (result.success && result.data) {
+              const peerProfile = result.data;
+              
+              hasCompleteProfile = !!(
+                peerProfile?.primary_phone && 
+                peerProfile?.bio && 
+                peerProfile?.specialties &&
+                peerProfile?.specialties?.length > 0 &&
+                peerProfile?.profile_completed
+              );
+              
+              console.log('✅ Peer profile check complete using standalone function:', hasCompleteProfile, {
+                hasPhone: !!peerProfile?.primary_phone,
+                hasBio: !!peerProfile?.bio,
+                hasSpecialties: !!(peerProfile?.specialties?.length > 0),
+                isCompleted: !!peerProfile?.profile_completed
+              });
+            } else if (result.error) {
+              // ✅ FIXED: Handle specific error types without causing loops
+              if (result.code === 'NOT_FOUND' || result.error?.includes('No peer support profile found')) {
+                console.log('ℹ️ No peer support profile found (normal for new users)');
+                hasCompleteProfile = false;
+                profileError = null; // Don't treat "not found" as an error
+              } else {
+                console.error('❌ Unexpected peer support profile error:', result.error);
+                profileError = 'Failed to check peer support profile';
+                hasCompleteProfile = false;
               }
-            } catch (error) {
-              console.error('❌ Error checking peer support profile:', error);
-              profileError = error.message?.includes('not available') 
-                ? 'Peer support service temporarily unavailable'
-                : 'Failed to check peer support profile';
-              hasCompleteProfile = false;
             }
+          } catch (error) {
+            console.error('❌ Error checking peer support profile:', error);
+            profileError = 'Failed to check peer support profile';
+            hasCompleteProfile = false;
           }
         }
         
@@ -420,7 +389,7 @@ const MainApp = () => {
       console.error('💥 Outer error in profile completion check:', outerError);
       isCheckingProfileRef.current = false;
     }
-  }, [user, profile, hasRole, serviceAvailability, checkLandlordProfile]);
+  }, [user, profile, hasRole, checkLandlordProfile]);
   
   // ✅ CRITICAL FIX: Very restrictive effect - only trigger when absolutely necessary
   useEffect(() => {

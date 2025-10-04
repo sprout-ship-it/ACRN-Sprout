@@ -1,8 +1,9 @@
-// src/components/features/peer-support/hooks/usePeerSupportProfileForm.js - FIXED INFINITE LOOP VERSION
+// src/components/features/peer-support/hooks/usePeerSupportProfileForm.js - FIXED TO USE STANDALONE FUNCTION
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { useAuth } from '../../../../hooks/useAuth';
 
-// ✅ FIXED: Import the db object with defensive fallback
+// ✅ FIXED: Import the standalone function like applicant does
+import { getPeerSupportProfile } from '../../../../utils/database/peerSupportService';
 import { supabase } from '../../../../utils/supabase';
 
 const INITIAL_FORM_DATA = {
@@ -52,7 +53,7 @@ export const usePeerSupportProfileForm = ({ editMode = false, onComplete } = {})
   const isLoadingRef = useRef(false);
   const hasAttemptedLoadRef = useRef(false);
   const isMountedRef = useRef(true);
-  const profileIdRef = useRef(null); // ✅ NEW: Track profile ID changes
+  const profileIdRef = useRef(null);
   
   // State
   const [formData, setFormData] = useState(INITIAL_FORM_DATA);
@@ -63,7 +64,7 @@ export const usePeerSupportProfileForm = ({ editMode = false, onComplete } = {})
   const [hasLoadedData, setHasLoadedData] = useState(false);
   const [serviceError, setServiceError] = useState(null);
 
-  // ✅ CRITICAL FIX: Enhanced data loading with much better re-render prevention
+  // ✅ FIXED: Enhanced data loading using standalone function pattern
   useEffect(() => {
     // ✅ CRITICAL FIX: Prevent multiple simultaneous loads
     if (isLoadingRef.current || !isMountedRef.current) {
@@ -82,7 +83,7 @@ export const usePeerSupportProfileForm = ({ editMode = false, onComplete } = {})
         console.log('🤝 Hook: No profile ID, setting initial loading to false');
         if (isMountedRef.current) {
           setInitialLoading(false);
-          setHasLoadedData(true); // Prevent further attempts
+          setHasLoadedData(true);
         }
         return;
       }
@@ -102,19 +103,10 @@ export const usePeerSupportProfileForm = ({ editMode = false, onComplete } = {})
       profileIdRef.current = profile.id;
 
       try {
-        console.log('🤝 Hook: Loading peer support profile for registrant ID:', profile.id);
+        console.log('🤝 Hook: Loading peer support profile using standalone function for registrant ID:', profile.id);
         
-        const { data, error } = await supabase
-          .from('peer_support_profiles')
-          .select('*')
-          .eq('user_id', profile.id)
-          .single();
-
-        const result = {
-          success: !error || error.code === 'PGRST116',
-          data: error?.code === 'PGRST116' ? null : data,
-          error: error?.code === 'PGRST116' ? { code: 'NOT_FOUND', message: 'No peer support profile found' } : error
-        };
+        // ✅ FIXED: Use standalone function like applicant does
+        const result = await getPeerSupportProfile(profile.id, supabase);
         
         if (!isMountedRef.current) return;
 
@@ -154,7 +146,7 @@ export const usePeerSupportProfileForm = ({ editMode = false, onComplete } = {})
           
         } else if (result.error) {
           // ✅ FIXED: Handle "not found" gracefully vs real errors
-          if (result.error.code === 'NOT_FOUND' || result.error.message?.includes('No peer support profile found')) {
+          if (result.code === 'NOT_FOUND' || result.error?.includes('No peer support profile found')) {
             console.log('ℹ️ Hook: No existing peer support profile found - starting fresh');
             // This is normal for new users, don't set an error
             setServiceError(null);
@@ -163,8 +155,8 @@ export const usePeerSupportProfileForm = ({ editMode = false, onComplete } = {})
             setErrors({ load: 'Unable to load your existing profile data.' });
             
             // ✅ FIXED: Handle service unavailable errors specifically
-            if (result.error.message?.includes('not available')) {
-              setServiceError(result.error.message);
+            if (result.error?.includes('not available')) {
+              setServiceError(result.error);
             }
           }
         } else {
@@ -193,6 +185,7 @@ export const usePeerSupportProfileForm = ({ editMode = false, onComplete } = {})
 
     loadExistingData();
   }, [profile?.id]);
+
   // ✅ FIXED: Cleanup to prevent memory leaks and stale updates
   useEffect(() => {
     isMountedRef.current = true;
@@ -327,7 +320,7 @@ export const usePeerSupportProfileForm = ({ editMode = false, onComplete } = {})
     return Object.keys(newErrors).length === 0;
   }, [formData]);
 
-  // ✅ FIXED: Enhanced form submission with better service checks and error handling
+  // ✅ FIXED: Enhanced form submission using direct supabase calls to match working pattern
   const submitForm = useCallback(async (isSubmission = true) => {
     if (!profile?.id) {
       setErrors({ submit: 'You must be logged in to save your profile' });
@@ -388,7 +381,7 @@ export const usePeerSupportProfileForm = ({ editMode = false, onComplete } = {})
 
       console.log('💾 Hook: Submitting peer support profile data:', peerProfileData);
 
-      // ✅ FIXED: Use the db object services with enhanced error handling
+      // ✅ FIXED: Use direct supabase calls like landlord does (since it works)
       let result;
       try {
         if (editMode) {
@@ -399,7 +392,7 @@ export const usePeerSupportProfileForm = ({ editMode = false, onComplete } = {})
             .select()
             .single();
 
-          const result = {
+          result = {
             success: !error,
             data: data,
             error: error
@@ -411,7 +404,7 @@ export const usePeerSupportProfileForm = ({ editMode = false, onComplete } = {})
             .select()
             .single();
 
-          const result = {
+          result = {
             success: !error,
             data: data,
             error: error
@@ -466,9 +459,9 @@ export const usePeerSupportProfileForm = ({ editMode = false, onComplete } = {})
     } finally {
       setLoading(false);
     }
-    }, [profile?.id, formData, validateForm, completionPercentage, editMode, onComplete]);
+  }, [profile?.id, formData, validateForm, completionPercentage, editMode, onComplete]);
   
-    // Clear success message
+  // Clear success message
   const clearSuccessMessage = useCallback(() => {
     setSuccessMessage('');
   }, []);
