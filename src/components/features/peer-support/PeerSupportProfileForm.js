@@ -81,7 +81,7 @@ const PeerSupportProfileForm = ({ editMode = false, onComplete, onCancel }) => {
     canRender: !initialLoading && Object.keys(errors).length === 0
   });
   // Authorization check
-  if (!hasRole('peer')) {
+  if (!hasRole('peer-support')) {
     return (
       <div className="content">
         <div className={styles.authMessage}>
