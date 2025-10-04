@@ -522,7 +522,94 @@ getByUserId: async (userId) => {
 
   return service;
 };
+// ADD THESE EXPORTS TO THE END OF YOUR EXISTING peerSupportService.js FILE
+// (After the existing createPeerSupportService function)
 
+// ✅ MISSING STANDALONE FUNCTIONS - Add these to your existing file
+
+/**
+ * ✅ PRIMARY STANDALONE FUNCTION: Get peer support profile by user ID
+ * This matches the pattern of getMatchingProfile() and getRegistrantProfile()
+ * @param {string} userId - registrant_profiles.id (user_id in peer_support_profiles)
+ * @param {Object} supabaseClient - Optional authenticated supabase client
+ * @returns {Object} Database response
+ */
+export const getPeerSupportProfile = async (userId, supabaseClient) => {
+  try {
+    console.log('🤝 Fetching peer support profile for user:', userId);
+    
+    // Create client if not provided (like other working services)
+    if (!supabaseClient) {
+      const { createClient } = await import('@supabase/supabase-js');
+      const supabaseUrl = process.env.REACT_APP_SUPABASE_URL;
+      const supabaseKey = process.env.REACT_APP_SUPABASE_ANON_KEY;
+      supabaseClient = createClient(supabaseUrl, supabaseKey);
+    }
+
+    const { data, error } = await supabaseClient
+      .from('peer_support_profiles')
+      .select('*')
+      .eq('user_id', userId)
+      .single();
+
+    if (error) {
+      if (error.code === 'PGRST116') {
+        console.log('ℹ️ No peer support profile found for user:', userId);
+        return { success: false, error: 'No peer support profile found', code: 'NOT_FOUND' };
+      }
+      console.error('❌ Error fetching peer support profile:', error);
+      return { success: false, error: error.message };
+    }
+
+    console.log('✅ Peer support profile retrieved successfully');
+    return { success: true, data };
+
+  } catch (err) {
+    console.error('💥 Error in getPeerSupportProfile:', err);
+    return { success: false, error: err.message };
+  }
+};
+
+/**
+ * ✅ SECONDARY STANDALONE FUNCTION: Get profile by peer_support_profiles.id
+ * @param {string} profileId - peer_support_profiles.id
+ * @param {Object} supabaseClient - Optional authenticated supabase client
+ * @returns {Object} Database response
+ */
+export const getPeerSupportProfileById = async (profileId, supabaseClient) => {
+  try {
+    console.log('🤝 Fetching peer support profile by ID:', profileId);
+    
+    if (!supabaseClient) {
+      const { createClient } = await import('@supabase/supabase-js');
+      const supabaseUrl = process.env.REACT_APP_SUPABASE_URL;
+      const supabaseKey = process.env.REACT_APP_SUPABASE_ANON_KEY;
+      supabaseClient = createClient(supabaseUrl, supabaseKey);
+    }
+
+    const { data, error } = await supabaseClient
+      .from('peer_support_profiles')
+      .select(`
+        *,
+        registrant_profiles!inner(id, first_name, last_name, email)
+      `)
+      .eq('id', profileId)
+      .single();
+
+    if (error) {
+      if (error.code === 'PGRST116') {
+        return { success: false, error: 'Profile not found', code: 'NOT_FOUND' };
+      }
+      return { success: false, error: error.message };
+    }
+
+    return { success: true, data };
+
+  } catch (err) {
+    console.error('💥 Error in getPeerSupportProfileById:', err);
+    return { success: false, error: err.message };
+  }
+};
 // ✅ REMOVED: Conflicting standalone function that created its own supabase client
 
 export default createPeerSupportService;
