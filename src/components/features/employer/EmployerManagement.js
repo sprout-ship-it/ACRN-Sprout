@@ -1,7 +1,7 @@
 // src/components/features/employer/EmployerManagement.js
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../../../context/AuthContext';
-import { db } from '../../../utils/supabase';
+import { supabase } from '../../../utils/supabase';
 import styles from './EmployerManagement.module.css';
 
 // Import form sections

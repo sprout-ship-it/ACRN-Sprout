@@ -66,16 +66,6 @@ export const usePeerSupportProfileForm = ({ editMode = false, onComplete } = {})
   // ✅ FIXED: Service availability check with better error handling
   const checkServiceAvailability = useCallback(() => {
     try {
-      if (!db || !db.peerSupportProfiles) {
-        console.error('❌ PeerSupport: db.peerSupportProfiles is not available');
-        setServiceError('Peer support service is not available. Please refresh the page.');
-        return false;
-      }
-
-      const requiredMethods = ['getByUserId', 'create', 'update'];
-      const missingMethods = requiredMethods.filter(method => 
-        typeof db.peerSupportProfiles[method] !== 'function'
-      );
 
       if (missingMethods.length > 0) {
         console.error('❌ PeerSupport: Missing methods:', missingMethods);
