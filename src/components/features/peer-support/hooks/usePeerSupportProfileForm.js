@@ -220,8 +220,8 @@ export const usePeerSupportProfileForm = ({ editMode = false, onComplete } = {})
     };
 
     loadExistingData();
-  }, [profile?.id, checkServiceAvailability]); // ✅ CRITICAL FIX: Only depend on profile.id
-
+  }, [profile?.id]);
+  
   // ✅ FIXED: Cleanup to prevent memory leaks and stale updates
   useEffect(() => {
     isMountedRef.current = true;
