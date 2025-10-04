@@ -254,8 +254,17 @@ const MainApp = () => {
             hasCompleteProfile = false;
           } else {
             try {
-              const result = await db.peerSupportProfiles.getByUserId(profile.id);
-              
+                const { data, error } = await supabase
+                  .from('peer_support_profiles')
+                  .select('primary_phone, bio, specialties, profile_completed')
+                  .eq('user_id', profile.id)
+                  .single();
+
+                const result = {
+                  success: !error || error.code === 'PGRST116',
+                  data: error?.code === 'PGRST116' ? null : data,
+                  error: error?.code === 'PGRST116' ? { code: 'NOT_FOUND', message: 'No peer support profile found' } : error
+                };
               if (result.success && result.data) {
                 const peerProfile = result.data;
                 

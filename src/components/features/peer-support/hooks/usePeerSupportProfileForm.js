@@ -221,7 +221,6 @@ export const usePeerSupportProfileForm = ({ editMode = false, onComplete } = {})
 
     loadExistingData();
   }, [profile?.id]);
-  
   // ✅ FIXED: Cleanup to prevent memory leaks and stale updates
   useEffect(() => {
     isMountedRef.current = true;
