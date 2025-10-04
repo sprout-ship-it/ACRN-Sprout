@@ -63,24 +63,6 @@ export const usePeerSupportProfileForm = ({ editMode = false, onComplete } = {})
   const [hasLoadedData, setHasLoadedData] = useState(false);
   const [serviceError, setServiceError] = useState(null);
 
-  // ✅ FIXED: Service availability check with better error handling
-  const checkServiceAvailability = useCallback(() => {
-    try {
-
-      if (missingMethods.length > 0) {
-        console.error('❌ PeerSupport: Missing methods:', missingMethods);
-        setServiceError(`Peer support service is incomplete. Missing: ${missingMethods.join(', ')}`);
-        return false;
-      }
-
-      return true;
-    } catch (error) {
-      console.error('❌ PeerSupport: Service check failed:', error);
-      setServiceError('Failed to verify peer support service availability.');
-      return false;
-    }
-  }, []);
-
   // ✅ CRITICAL FIX: Enhanced data loading with much better re-render prevention
   useEffect(() => {
     // ✅ CRITICAL FIX: Prevent multiple simultaneous loads
@@ -110,16 +92,6 @@ export const usePeerSupportProfileForm = ({ editMode = false, onComplete } = {})
         console.log('🤝 Hook: Already loaded data for profile:', profile.id);
         if (isMountedRef.current) {
           setInitialLoading(false);
-        }
-        return;
-      }
-
-      // ✅ FIXED: Check service availability before attempting to use it
-      if (!checkServiceAvailability()) {
-        if (isMountedRef.current) {
-          setInitialLoading(false);
-          setHasLoadedData(true);
-          profileIdRef.current = profile.id;
         }
         return;
       }
@@ -362,12 +334,6 @@ export const usePeerSupportProfileForm = ({ editMode = false, onComplete } = {})
       return false;
     }
 
-    // ✅ FIXED: Check service availability before submission
-    if (!checkServiceAvailability()) {
-      setErrors({ submit: 'Peer support service is currently unavailable. Please try again later.' });
-      return false;
-    }
-
     // Validate form
     if (!validateForm(isSubmission)) {
       return false;
@@ -500,9 +466,9 @@ export const usePeerSupportProfileForm = ({ editMode = false, onComplete } = {})
     } finally {
       setLoading(false);
     }
-  }, [profile?.id, formData, validateForm, completionPercentage, editMode, onComplete, checkServiceAvailability]);
-
-  // Clear success message
+    }, [profile?.id, formData, validateForm, completionPercentage, editMode, onComplete]);
+  
+    // Clear success message
   const clearSuccessMessage = useCallback(() => {
     setSuccessMessage('');
   }, []);
@@ -540,6 +506,5 @@ export const usePeerSupportProfileForm = ({ editMode = false, onComplete } = {})
     setSuccessMessage,
     clearSuccessMessage,
     retryServiceConnection,
-    checkServiceAvailability
   };
 };
