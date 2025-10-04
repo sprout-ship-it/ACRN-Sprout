@@ -1,4 +1,4 @@
-// src/components/forms/sections/peer-support/AboutSection.js - UPDATED WITH CSS MODULE
+// src/components/forms/sections/peer-support/AboutSection.js - FIXED FIELD NAMES
 import React from 'react';
 import PropTypes from 'prop-types';
 import { HELP_TEXT, VALIDATION_RULES } from '../constants/peerSupportConstants';
@@ -14,9 +14,8 @@ const AboutSection = ({
   onInputChange
 }) => {
   const bioLength = formData.bio?.length || 0;
-  const recoveryStoryLength = formData.recovery_story?.length || 0;
-  const philosophyLength = formData.philosophy?.length || 0;
-  const qualitiesLength = formData.unique_qualities?.length || 0;
+  const aboutMeLength = formData.about_me?.length || 0;
+  const additionalInfoLength = formData.additional_info?.length || 0;
   
   const bioMaxLength = VALIDATION_RULES.bio.maxLength;
   const bioMinLength = VALIDATION_RULES.bio.minLength;
@@ -35,7 +34,7 @@ const AboutSection = ({
         </div>
         <textarea
           className={`${styles.formTextarea} ${styles.textareaBio} ${errors.bio ? styles.formTextareaError : ''}`}
-          value={formData.bio}
+          value={formData.bio || ''}
           onChange={(e) => onInputChange('bio', e.target.value)}
           placeholder="Tell people about your approach to peer support, what makes you unique, and how you help others in their recovery journey..."
           disabled={loading}
@@ -57,57 +56,49 @@ const AboutSection = ({
         )}
       </div>
 
-      {/* Recovery Story - Optional */}
+      {/* About Me - Required */}
       <div className={styles.formGroup}>
-        <label className={styles.formLabel}>Your Recovery Story (Optional)</label>
+        <label className={styles.formLabel}>
+          About Your Professional Background <span className={styles.requiredAsterisk}>*</span>
+        </label>
         <div className={styles.helpText}>
-          {HELP_TEXT.recovery_story}
+          Describe your professional background, training, experience, and what qualifies you as a peer support specialist
         </div>
         <textarea
-          className={`${styles.formTextarea} ${styles.textareaStory}`}
-          value={formData.recovery_story}
-          onChange={(e) => onInputChange('recovery_story', e.target.value)}
-          placeholder="Share what you're comfortable sharing about your recovery journey, challenges you've overcome, and what drives your passion for peer support..."
+          className={`${styles.formTextarea} ${styles.textareaStory} ${errors.about_me ? styles.formTextareaError : ''}`}
+          value={formData.about_me || ''}
+          onChange={(e) => onInputChange('about_me', e.target.value)}
+          placeholder="Share your professional background, relevant training, certifications, work experience, or educational background that qualifies you to provide peer support..."
+          disabled={loading}
+          required
+          maxLength="1000"
+        />
+        <div className={styles.characterCountContainer}>
+          {errors.about_me && (
+            <div className={styles.errorText}>{errors.about_me}</div>
+          )}
+          <div className={styles.characterCount}>
+            {aboutMeLength}/1000 characters
+          </div>
+        </div>
+      </div>
+
+      {/* Additional Information - Optional */}
+      <div className={styles.formGroup}>
+        <label className={styles.formLabel}>Additional Information (Optional)</label>
+        <div className={styles.helpText}>
+          Any other information you'd like to share about yourself, your approach, or your services
+        </div>
+        <textarea
+          className={`${styles.formTextarea} ${styles.textareaPhilosophy}`}
+          value={formData.additional_info || ''}
+          onChange={(e) => onInputChange('additional_info', e.target.value)}
+          placeholder="Share any additional information about your approach, philosophy, special areas of focus, or anything else you'd like potential clients to know..."
           disabled={loading}
           maxLength="1000"
         />
         <div className={styles.characterCount}>
-          {recoveryStoryLength}/1000 characters
-        </div>
-      </div>
-
-      {/* Personal Approach */}
-      <h4 className={styles.sectionSubtitle}>
-        Your Approach to Peer Support
-      </h4>
-
-      <div className={styles.formGroup}>
-        <label className={styles.formLabel}>Philosophy & Methods (Optional)</label>
-        <textarea
-          className={`${styles.formTextarea} ${styles.textareaPhilosophy}`}
-          value={formData.philosophy || ''}
-          onChange={(e) => onInputChange('philosophy', e.target.value)}
-          placeholder="Describe your philosophy about recovery, your methods for supporting others, or any specific techniques you use..."
-          disabled={loading}
-          maxLength="500"
-        />
-        <div className={styles.characterCount}>
-          {philosophyLength}/500 characters
-        </div>
-      </div>
-
-      <div className={styles.formGroup}>
-        <label className={styles.formLabel}>What Makes You Unique (Optional)</label>
-        <textarea
-          className={`${styles.formTextarea} ${styles.textareaQualities}`}
-          value={formData.unique_qualities || ''}
-          onChange={(e) => onInputChange('unique_qualities', e.target.value)}
-          placeholder="What sets you apart as a peer support specialist? Special skills, experiences, or perspectives you bring..."
-          disabled={loading}
-          maxLength="400"
-        />
-        <div className={styles.characterCount}>
-          {qualitiesLength}/400 characters
+          {additionalInfoLength}/1000 characters
         </div>
       </div>
 
@@ -116,8 +107,8 @@ const AboutSection = ({
         <div className={styles.infoAlert}>
           <span className={styles.alertTitle}>Privacy & Sharing:</span>
           <ul className={styles.alertList}>
-            <li className={styles.alertListItem}>Your bio will be visible to potential clients browsing peer support specialists</li>
-            <li className={styles.alertListItem}>Your recovery story is optional and only shared if you choose to include it</li>
+            <li className={styles.alertListItem}>Your bio and professional background will be visible to potential clients</li>
+            <li className={styles.alertListItem}>Additional information is optional and only shared if you choose to include it</li>
             <li className={styles.alertListItem}>You can edit or update this information at any time</li>
             <li className={styles.alertListItem}>All information is kept confidential and only shared with verified users</li>
           </ul>
@@ -127,14 +118,30 @@ const AboutSection = ({
       {/* Writing Tips */}
       <div className={styles.alertContainer}>
         <div className={styles.successAlert}>
-          <span className={styles.alertTitle}>Tips for writing your bio:</span>
+          <span className={styles.alertTitle}>Tips for writing your profile:</span>
           <ul className={styles.alertList}>
-            <li className={styles.alertListItem}>Focus on your experience and approach rather than personal details</li>
+            <li className={styles.alertListItem}>Focus on your professional experience and approach to peer support</li>
             <li className={styles.alertListItem}>Mention specific areas where you excel or have special experience</li>
             <li className={styles.alertListItem}>Use warm, welcoming language that makes people feel comfortable</li>
             <li className={styles.alertListItem}>Include what someone can expect when working with you</li>
             <li className={styles.alertListItem}>Keep it professional but personal - let your personality show through</li>
+            <li className={styles.alertListItem}>Highlight your qualifications and what makes you effective as a peer specialist</li>
           </ul>
+        </div>
+      </div>
+
+      {/* Profile Completion Status */}
+      <div className={styles.alertContainer}>
+        <div className={formData.profile_completed ? styles.successAlert : styles.infoAlert}>
+          <span className={styles.alertTitle}>
+            Profile Status: {formData.profile_completed ? 'Complete' : 'In Progress'}
+          </span>
+          <p style={{ margin: '8px 0 0 0', fontSize: '0.9rem', lineHeight: '1.4' }}>
+            {formData.profile_completed 
+              ? 'Your profile is complete and ready for client matching!'
+              : 'Complete all required fields to activate your profile for client searches.'
+            }
+          </p>
         </div>
       </div>
     </div>
@@ -143,10 +150,10 @@ const AboutSection = ({
 
 AboutSection.propTypes = {
   formData: PropTypes.shape({
-    bio: PropTypes.string.isRequired,
-    recovery_story: PropTypes.string,
-    philosophy: PropTypes.string,
-    unique_qualities: PropTypes.string
+    bio: PropTypes.string,
+    about_me: PropTypes.string,
+    additional_info: PropTypes.string,
+    profile_completed: PropTypes.bool
   }).isRequired,
   errors: PropTypes.object.isRequired,
   loading: PropTypes.bool.isRequired,

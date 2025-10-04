@@ -1,12 +1,9 @@
-// src/components/forms/sections/peer-support/ServiceInfoSection.js - UPDATED WITH CSS MODULE
+// src/components/forms/sections/peer-support/ServiceInfoSection.js - FIXED FIELD NAMES
 import React from 'react';
 import PropTypes from 'prop-types';
 import { 
   specialtyOptions, 
-  recoveryApproachOptions, 
-  ageGroupOptions, 
-  populationOptions,
-  serviceDeliveryOptions,
+  recoveryApproachOptions,
   HELP_TEXT 
 } from '../constants/peerSupportConstants';
 
@@ -56,9 +53,11 @@ const ServiceInfoSection = ({
         )}
       </div>
 
-      {/* Recovery Approaches */}
+      {/* Recovery Approaches - Required */}
       <div className={styles.formGroup}>
-        <label className={styles.formLabel}>Recovery Approaches You Support</label>
+        <label className={styles.formLabel}>
+          Recovery Methods You Support <span className={styles.requiredAsterisk}>*</span>
+        </label>
         <div className={styles.helpText}>
           {HELP_TEXT.recovery_approach}
         </div>
@@ -66,13 +65,13 @@ const ServiceInfoSection = ({
           {recoveryApproachOptions.map(approach => (
             <div
               key={approach}
-              className={`${styles.specialtyItem} ${formData.recovery_approach?.includes(approach) ? styles.selected : ''}`}
-              onClick={() => onArrayChange('recovery_approach', approach, !formData.recovery_approach?.includes(approach))}
+              className={`${styles.specialtyItem} ${formData.supported_recovery_methods?.includes(approach) ? styles.selected : ''}`}
+              onClick={() => onArrayChange('supported_recovery_methods', approach, !formData.supported_recovery_methods?.includes(approach))}
             >
               <input
                 type="checkbox"
                 className={styles.specialtyCheckbox}
-                checked={formData.recovery_approach?.includes(approach) || false}
+                checked={formData.supported_recovery_methods?.includes(approach) || false}
                 onChange={() => {}}
                 disabled={loading}
               />
@@ -80,137 +79,125 @@ const ServiceInfoSection = ({
             </div>
           ))}
         </div>
-        {errors.recovery_approach && (
-          <div className={styles.errorText}>{errors.recovery_approach}</div>
+        {errors.supported_recovery_methods && (
+          <div className={styles.errorText}>{errors.supported_recovery_methods}</div>
         )}
       </div>
 
-      {/* Age Groups and Populations */}
+      {/* Recovery Background */}
       <h4 className={styles.sectionSubtitle}>
-        Who You Serve
+        Your Recovery Background
       </h4>
 
       <div className={styles.formGrid}>
-        {/* Age Groups */}
         <div className={styles.formGroup}>
-          <label className={styles.formLabel}>Age Groups You Serve</label>
-          <div className={styles.helpText}>
-            Select the age ranges you're comfortable supporting
-          </div>
-          <div className={styles.checkboxColumns}>
-            {ageGroupOptions.map(ageGroup => (
-              <div key={ageGroup} className={styles.checkboxItem}>
-                <input
-                  type="checkbox"
-                  className={styles.checkboxItemInput}
-                  checked={formData.age_groups_served?.includes(ageGroup) || false}
-                  onChange={(e) => onArrayChange('age_groups_served', ageGroup, e.target.checked)}
-                  disabled={loading}
-                />
-                <span className={styles.checkboxItemText}>{ageGroup}</span>
-              </div>
-            ))}
-          </div>
-          {errors.age_groups_served && (
-            <div className={styles.errorText}>{errors.age_groups_served}</div>
+          <label className={styles.formLabel}>Recovery Stage</label>
+          <select
+            className={`${styles.formSelect} ${errors.recovery_stage ? styles.formInputError : ''}`}
+            value={formData.recovery_stage || ''}
+            onChange={(e) => onInputChange('recovery_stage', e.target.value)}
+            disabled={loading}
+          >
+            <option value="">Select your recovery stage</option>
+            <option value="early_recovery">Early Recovery (0-1 years)</option>
+            <option value="sustained_recovery">Sustained Recovery (1-5 years)</option>
+            <option value="long_term_recovery">Long-term Recovery (5+ years)</option>
+            <option value="stable_recovery">Stable Recovery (10+ years)</option>
+            <option value="prefer_not_to_say">Prefer not to say</option>
+          </select>
+          {errors.recovery_stage && (
+            <div className={styles.errorText}>{errors.recovery_stage}</div>
           )}
+          <div className={styles.helpText}>
+            Your current stage of recovery (this helps clients relate to your experience)
+          </div>
         </div>
 
-        {/* Population Specializations */}
         <div className={styles.formGroup}>
-          <label className={styles.formLabel}>Population Specializations</label>
-          <div className={styles.helpText}>
-            Specific populations you have experience supporting
-          </div>
-          <div className={styles.checkboxColumns}>
-            {populationOptions.map(population => (
-              <div key={population} className={styles.checkboxItem}>
-                <input
-                  type="checkbox"
-                  className={styles.checkboxItemInput}
-                  checked={formData.populations_served?.includes(population) || false}
-                  onChange={(e) => onArrayChange('populations_served', population, e.target.checked)}
-                  disabled={loading}
-                />
-                <span className={styles.checkboxItemText}>{population}</span>
-              </div>
-            ))}
-          </div>
-          {errors.populations_served && (
-            <div className={styles.errorText}>{errors.populations_served}</div>
+          <label className={styles.formLabel}>Time in Recovery (Optional)</label>
+          <input
+            className={`${styles.formInput} ${errors.time_in_recovery ? styles.formInputError : ''}`}
+            type="text"
+            value={formData.time_in_recovery || ''}
+            onChange={(e) => onInputChange('time_in_recovery', e.target.value)}
+            placeholder="e.g., 3 years, 18 months"
+            disabled={loading}
+          />
+          {errors.time_in_recovery && (
+            <div className={styles.errorText}>{errors.time_in_recovery}</div>
           )}
+          <div className={styles.helpText}>
+            How long you've been in recovery (optional, share what you're comfortable with)
+          </div>
         </div>
       </div>
 
-      {/* Service Types */}
-      <h4 className={styles.sectionSubtitle}>
-        Types of Services You Provide
-      </h4>
-
+      {/* Primary Issues */}
       <div className={styles.formGroup}>
-        <div className={styles.serviceDeliveryGrid}>
-          {serviceDeliveryOptions.map(service => (
-            <div key={service.key} className={styles.checkboxItem}>
+        <label className={styles.formLabel}>Primary Issues You Have Experience With (Optional)</label>
+        <div className={styles.helpText}>
+          Select the primary issues you have personal or professional experience supporting (optional)
+        </div>
+        <div className={styles.checkboxColumns}>
+          {[
+            'Substance Use',
+            'Alcohol Use',
+            'Mental Health',
+            'Dual Diagnosis',
+            'Trauma Recovery',
+            'Family Issues',
+            'Housing Instability',
+            'Employment Challenges',
+            'Legal Issues',
+            'Relationship Issues',
+            'Financial Struggles',
+            'Health Issues'
+          ].map(issue => (
+            <div key={issue} className={styles.checkboxItem}>
               <input
                 type="checkbox"
                 className={styles.checkboxItemInput}
-                checked={formData[service.key] || false}
-                onChange={(e) => onInputChange(service.key, e.target.checked)}
+                checked={formData.primary_issues?.includes(issue) || false}
+                onChange={(e) => onArrayChange('primary_issues', issue, e.target.checked)}
                 disabled={loading}
               />
-              <div className={styles.checkboxItemText}>
-                <div className={styles.serviceOptionTitle}>{service.label}</div>
-                <div className={styles.checkboxItemDescription}>
-                  {service.description}
-                </div>
-              </div>
+              <span className={styles.checkboxItemText}>{issue}</span>
             </div>
           ))}
         </div>
+        {errors.primary_issues && (
+          <div className={styles.errorText}>{errors.primary_issues}</div>
+        )}
       </div>
 
-      {/* Service Delivery Methods */}
+      {/* Spiritual Affiliation */}
       <div className={styles.formGroup}>
-        <label className={styles.formLabel}>Service Delivery Methods</label>
-        <div className={styles.serviceDeliveryGrid}>
-          <div className={styles.serviceOption}>
-            <input
-              type="checkbox"
-              className={styles.serviceOptionInput}
-              checked={formData.offers_telehealth || false}
-              onChange={(e) => onInputChange('offers_telehealth', e.target.checked)}
-              disabled={loading}
-            />
-            <div className={styles.serviceOptionContent}>
-              <div className={styles.serviceOptionTitle}>Telehealth Services</div>
-              <div className={styles.serviceOptionDescription}>
-                Remote support via phone, video, or messaging
-              </div>
-            </div>
-          </div>
-          
-          <div className={styles.serviceOption}>
-            <input
-              type="checkbox"
-              className={styles.serviceOptionInput}
-              checked={formData.offers_in_person || false}
-              onChange={(e) => onInputChange('offers_in_person', e.target.checked)}
-              disabled={loading}
-            />
-            <div className={styles.serviceOptionContent}>
-              <div className={styles.serviceOptionTitle}>In-Person Services</div>
-              <div className={styles.serviceOptionDescription}>
-                Face-to-face meetings at office or community locations
-              </div>
-            </div>
-          </div>
+        <label className={styles.formLabel}>Spiritual/Religious Affiliation (Optional)</label>
+        <input
+          className={`${styles.formInput} ${errors.spiritual_affiliation ? styles.formInputError : ''}`}
+          type="text"
+          value={formData.spiritual_affiliation || ''}
+          onChange={(e) => onInputChange('spiritual_affiliation', e.target.value)}
+          placeholder="e.g., Christian, Buddhist, Secular, Spiritual but not religious"
+          disabled={loading}
+        />
+        {errors.spiritual_affiliation && (
+          <div className={styles.errorText}>{errors.spiritual_affiliation}</div>
+        )}
+        <div className={styles.helpText}>
+          Your spiritual or religious background, if relevant to your recovery approach (completely optional)
         </div>
       </div>
 
-      {/* Service Coverage Notice */}
+      {/* Information Notice */}
       <div className={styles.infoAlert}>
-        <div className={styles.alertTitle}>Service Coverage:</div>
-        Make sure to select at least one service delivery method (telehealth or in-person) so clients know how they can access your support.
+        <div className={styles.alertTitle}>About Your Service Information:</div>
+        <ul className={styles.alertList}>
+          <li className={styles.alertListItem}>Your specialties and recovery methods help clients find the right support</li>
+          <li className={styles.alertListItem}>Recovery background information is optional but helps build trust</li>
+          <li className={styles.alertListItem}>You can update this information at any time</li>
+          <li className={styles.alertListItem}>All personal information shared is kept confidential</li>
+        </ul>
       </div>
     </div>
   );
@@ -219,16 +206,11 @@ const ServiceInfoSection = ({
 ServiceInfoSection.propTypes = {
   formData: PropTypes.shape({
     specialties: PropTypes.arrayOf(PropTypes.string),
-    recovery_approach: PropTypes.arrayOf(PropTypes.string),
-    age_groups_served: PropTypes.arrayOf(PropTypes.string),
-    populations_served: PropTypes.arrayOf(PropTypes.string),
-    individual_sessions: PropTypes.bool,
-    group_sessions: PropTypes.bool,
-    crisis_support: PropTypes.bool,
-    housing_assistance: PropTypes.bool,
-    employment_support: PropTypes.bool,
-    offers_telehealth: PropTypes.bool,
-    offers_in_person: PropTypes.bool
+    supported_recovery_methods: PropTypes.arrayOf(PropTypes.string),
+    recovery_stage: PropTypes.string,
+    time_in_recovery: PropTypes.string,
+    primary_issues: PropTypes.arrayOf(PropTypes.string),
+    spiritual_affiliation: PropTypes.string
   }).isRequired,
   errors: PropTypes.object.isRequired,
   loading: PropTypes.bool.isRequired,

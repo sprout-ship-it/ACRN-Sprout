@@ -1,4 +1,4 @@
-// src/components/forms/sections/peer-support/ContactInfoSection.js - UPDATED WITH CSS MODULE
+// src/components/forms/sections/peer-support/ContactInfoSection.js - FIXED FIELD NAMES
 import React from 'react';
 import PropTypes from 'prop-types';
 import { stateOptions, HELP_TEXT } from '../constants/peerSupportConstants';
@@ -23,16 +23,16 @@ const ContactInfoSection = ({
             Phone <span className={styles.requiredAsterisk}>*</span>
           </label>
           <input
-            className={`${styles.formInput} ${errors.phone ? styles.formInputError : ''}`}
+            className={`${styles.formInput} ${errors.primary_phone ? styles.formInputError : ''}`}
             type="tel"
-            value={formData.phone}
-            onChange={(e) => onInputChange('phone', e.target.value)}
+            value={formData.primary_phone}
+            onChange={(e) => onInputChange('primary_phone', e.target.value)}
             placeholder="(555) 123-4567"
             disabled={loading}
             required
           />
-          {errors.phone && (
-            <div className={styles.errorText}>{errors.phone}</div>
+          {errors.primary_phone && (
+            <div className={styles.errorText}>{errors.primary_phone}</div>
           )}
           <div className={styles.helpText}>
             {HELP_TEXT.phone}
@@ -42,15 +42,15 @@ const ContactInfoSection = ({
         <div className={styles.formGroup}>
           <label className={styles.formLabel}>Professional Title</label>
           <input
-            className={`${styles.formInput} ${errors.title ? styles.formInputError : ''}`}
+            className={`${styles.formInput} ${errors.professional_title ? styles.formInputError : ''}`}
             type="text"
-            value={formData.title}
-            onChange={(e) => onInputChange('title', e.target.value)}
+            value={formData.professional_title}
+            onChange={(e) => onInputChange('professional_title', e.target.value)}
             placeholder="e.g., Certified Peer Specialist"
             disabled={loading}
           />
-          {errors.title && (
-            <div className={styles.errorText}>{errors.title}</div>
+          {errors.professional_title && (
+            <div className={styles.errorText}>{errors.professional_title}</div>
           )}
           <div className={styles.helpText}>
             {HELP_TEXT.title}
@@ -58,45 +58,55 @@ const ContactInfoSection = ({
         </div>
       </div>
 
-      {/* Office/Service Address */}
-      <h4 className={styles.sectionSubtitle}>
-        Service Location (Optional)
-      </h4>
-      
+      {/* Contact Email */}
       <div className={styles.formGroup}>
-        <label className={styles.formLabel}>Street Address</label>
+        <label className={styles.formLabel}>Contact Email (Optional)</label>
         <input
-          className={styles.formInput}
-          type="text"
-          value={formData.address}
-          onChange={(e) => onInputChange('address', e.target.value)}
-          placeholder="123 Recovery Way"
+          className={`${styles.formInput} ${errors.contact_email ? styles.formInputError : ''}`}
+          type="email"
+          value={formData.contact_email || ''}
+          onChange={(e) => onInputChange('contact_email', e.target.value)}
+          placeholder="your.email@example.com"
           disabled={loading}
         />
+        {errors.contact_email && (
+          <div className={styles.errorText}>{errors.contact_email}</div>
+        )}
         <div className={styles.helpText}>
-          Office or primary service location (leave blank if services are primarily remote)
+          Alternative contact email for professional communications (optional)
         </div>
       </div>
 
-      <div className={styles.formGridThree}>
+      {/* Service Location */}
+      <h4 className={styles.sectionSubtitle}>
+        Primary Service Location
+      </h4>
+      
+      <div className={styles.formGrid}>
         <div className={styles.formGroup}>
-          <label className={styles.formLabel}>City</label>
+          <label className={styles.formLabel}>Service City</label>
           <input
-            className={styles.formInput}
+            className={`${styles.formInput} ${errors.service_city ? styles.formInputError : ''}`}
             type="text"
-            value={formData.city}
-            onChange={(e) => onInputChange('city', e.target.value)}
-            placeholder="City"
+            value={formData.service_city}
+            onChange={(e) => onInputChange('service_city', e.target.value)}
+            placeholder="City where you provide services"
             disabled={loading}
           />
+          {errors.service_city && (
+            <div className={styles.errorText}>{errors.service_city}</div>
+          )}
+          <div className={styles.helpText}>
+            Primary city where you provide peer support services
+          </div>
         </div>
         
         <div className={styles.formGroup}>
-          <label className={styles.formLabel}>State</label>
+          <label className={styles.formLabel}>Service State</label>
           <select
-            className={styles.formSelect}
-            value={formData.state}
-            onChange={(e) => onInputChange('state', e.target.value)}
+            className={`${styles.formSelect} ${errors.service_state ? styles.formInputError : ''}`}
+            value={formData.service_state}
+            onChange={(e) => onInputChange('service_state', e.target.value)}
             disabled={loading}
           >
             <option value="">Select State</option>
@@ -104,26 +114,19 @@ const ContactInfoSection = ({
               <option key={state} value={state}>{state}</option>
             ))}
           </select>
-        </div>
-        
-        <div className={styles.formGroup}>
-          <label className={styles.formLabel}>ZIP Code</label>
-          <input
-            className={styles.formInput}
-            type="text"
-            value={formData.zip_code}
-            onChange={(e) => onInputChange('zip_code', e.target.value)}
-            placeholder="12345"
-            disabled={loading}
-            maxLength="10"
-          />
+          {errors.service_state && (
+            <div className={styles.errorText}>{errors.service_state}</div>
+          )}
+          <div className={styles.helpText}>
+            State where you are licensed/authorized to provide services
+          </div>
         </div>
       </div>
 
       {/* Service Area Information */}
       <div className={styles.infoAlert}>
-        <div className={styles.alertTitle}>Note about service location:</div>
-        Your address information helps clients understand your service area and is used for location-based matching. If you provide remote services only, you can leave the address fields blank and specify your service coverage in the Service Settings section.
+        <div className={styles.alertTitle}>About Service Location:</div>
+        Your service location helps clients understand your primary service area. If you provide remote services across multiple areas, you can specify additional service regions in the Service Settings section.
       </div>
     </div>
   );
@@ -131,12 +134,11 @@ const ContactInfoSection = ({
 
 ContactInfoSection.propTypes = {
   formData: PropTypes.shape({
-    phone: PropTypes.string.isRequired,
-    title: PropTypes.string,
-    address: PropTypes.string,
-    city: PropTypes.string,
-    state: PropTypes.string,
-    zip_code: PropTypes.string
+    primary_phone: PropTypes.string.isRequired,
+    professional_title: PropTypes.string.isRequired,
+    contact_email: PropTypes.string,
+    service_city: PropTypes.string.isRequired,
+    service_state: PropTypes.string.isRequired
   }).isRequired,
   errors: PropTypes.object.isRequired,
   loading: PropTypes.bool.isRequired,

@@ -1,4 +1,4 @@
-// src/components/forms/sections/peer-support/ProfessionalInfoSection.js - UPDATED WITH CSS MODULE
+// src/components/forms/sections/peer-support/ProfessionalInfoSection.js - FIXED FIELD NAMES
 import React from 'react';
 import PropTypes from 'prop-types';
 import { certificationOptions, HELP_TEXT } from '../constants/peerSupportConstants';
@@ -26,8 +26,8 @@ const ProfessionalInfoSection = ({
             type="number"
             min="0"
             max="50"
-            value={formData.years_experience}
-            onChange={(e) => onInputChange('years_experience', parseInt(e.target.value) || 0)}
+            value={formData.years_experience || ''}
+            onChange={(e) => onInputChange('years_experience', parseInt(e.target.value) || null)}
             disabled={loading}
           />
           {errors.years_experience && (
@@ -39,98 +39,93 @@ const ProfessionalInfoSection = ({
         </div>
         
         <div className={styles.formGroup}>
-          <label className={styles.formLabel}>License/Certification Number</label>
-          <input
-            className={styles.formInput}
-            type="text"
-            value={formData.license_number}
-            onChange={(e) => onInputChange('license_number', e.target.value)}
-            placeholder="Optional"
-            disabled={loading}
-          />
-          <div className={styles.helpText}>
-            Your professional license or certification number (if applicable)
-          </div>
-        </div>
-      </div>
-
-      {/* Certifications */}
-      <div className={styles.formGroup}>
-        <label className={styles.formLabel}>Certifications & Licenses</label>
-        <div className={styles.helpText}>
-          {HELP_TEXT.certifications}
-        </div>
-        <div className={styles.certificationsGrid}>
-          {certificationOptions.map(cert => (
-            <div
-              key={cert}
-              className={`${styles.certificationItem} ${formData.certifications?.includes(cert) ? styles.selected : ''}`}
-              onClick={() => onArrayChange('certifications', cert, !formData.certifications?.includes(cert))}
-            >
-              <input
-                type="checkbox"
-                className={styles.certificationCheckbox}
-                checked={formData.certifications?.includes(cert) || false}
-                onChange={() => {}}
-                disabled={loading}
-              />
-              <span className={styles.certificationLabel}>{cert}</span>
+          <label className={styles.formLabel}>Licensed Professional</label>
+          <div className={styles.checkboxControl}>
+            <input
+              type="checkbox"
+              className={styles.checkboxInput}
+              checked={formData.is_licensed || false}
+              onChange={(e) => onInputChange('is_licensed', e.target.checked)}
+              disabled={loading}
+            />
+            <div className={styles.checkboxContent}>
+              <div className={styles.checkboxTitle}>I am a licensed professional</div>
+              <div className={styles.checkboxDescription}>
+                Check this if you hold any professional licenses or certifications
+              </div>
             </div>
-          ))}
+          </div>
+          {errors.is_licensed && (
+            <div className={styles.errorText}>{errors.is_licensed}</div>
+          )}
         </div>
-        {errors.certifications && (
-          <div className={styles.errorText}>{errors.certifications}</div>
-        )}
       </div>
 
-      {/* Additional Professional Information */}
+      {/* Professional Background Information */}
       <h4 className={styles.sectionSubtitle}>
         Professional Background
       </h4>
 
       <div className={styles.formGroup}>
-        <label className={styles.formLabel}>Educational Background (Optional)</label>
+        <label className={styles.formLabel}>About Your Professional Background (Optional)</label>
         <textarea
           className={styles.formTextarea}
-          value={formData.education || ''}
-          onChange={(e) => onInputChange('education', e.target.value)}
-          placeholder="Describe your relevant education, training programs, or professional development..."
+          value={formData.about_me || ''}
+          onChange={(e) => onInputChange('about_me', e.target.value)}
+          placeholder="Describe your professional background, training, certifications, education, or other relevant experience that qualifies you as a peer support specialist..."
           disabled={loading}
-          maxLength="500"
+          maxLength="1000"
         />
         <div className={styles.characterCount}>
-          {(formData.education?.length || 0)}/500 characters
+          {(formData.about_me?.length || 0)}/1000 characters
+        </div>
+        <div className={styles.helpText}>
+          Use this space to describe your qualifications, training, certifications, education, or professional affiliations
         </div>
       </div>
 
       <div className={styles.formGroup}>
-        <label className={styles.formLabel}>Professional Affiliations (Optional)</label>
+        <label className={styles.formLabel}>Additional Information (Optional)</label>
         <textarea
           className={styles.formTextarea}
-          value={formData.affiliations || ''}
-          onChange={(e) => onInputChange('affiliations', e.target.value)}
-          placeholder="Professional organizations, associations, or groups you belong to..."
+          value={formData.additional_info || ''}
+          onChange={(e) => onInputChange('additional_info', e.target.value)}
+          placeholder="Any additional professional information, special training, or credentials you'd like to share..."
           style={{ minHeight: '60px' }}
           disabled={loading}
-          maxLength="300"
+          maxLength="500"
         />
         <div className={styles.characterCount}>
-          {(formData.affiliations?.length || 0)}/300 characters
+          {(formData.additional_info?.length || 0)}/500 characters
+        </div>
+        <div className={styles.helpText}>
+          Optional space for any other relevant professional information
         </div>
       </div>
 
-      {/* Verification Status */}
+      {/* Information Notice */}
+      <div className={styles.infoAlert}>
+        <div className={styles.alertTitle}>Professional Information:</div>
+        <ul className={styles.alertList}>
+          <li className={styles.alertListItem}>Your professional background helps clients understand your qualifications</li>
+          <li className={styles.alertListItem}>All information provided will be reviewed for accuracy</li>
+          <li className={styles.alertListItem}>You can update this information at any time</li>
+          <li className={styles.alertListItem}>Specific certifications and licenses may require verification</li>
+        </ul>
+      </div>
+
+      {/* Profile Status */}
       <div className={styles.verificationAlert}>
         <div className={styles.verificationGrid}>
           <div className={styles.verificationContent}>
-            <div className={styles.verificationTitle}>Profile Verification:</div>
+            <div className={styles.verificationTitle}>Profile Status:</div>
             <p className={styles.verificationText}>
-              Your professional credentials will be verified by our team to ensure quality and safety for all users.
+              Your profile completion status is tracked to help ensure you provide comprehensive information to potential clients.
             </p>
           </div>
           <div className={styles.verificationBadge}>
-            <span className={formData.is_verified ? styles.badgeVerified : styles.badgePending}>
-              {formData.is_verified ? 'Verified' : 'Pending Verification'}
+            <span className={formData.profile_completed ? styles.badgeVerified : styles.badgePending}>
+              {formData.profile_completed ? 'Complete' : 'In Progress'}
             </span>
           </div>
         </div>
@@ -142,11 +137,10 @@ const ProfessionalInfoSection = ({
 ProfessionalInfoSection.propTypes = {
   formData: PropTypes.shape({
     years_experience: PropTypes.number,
-    license_number: PropTypes.string,
-    certifications: PropTypes.arrayOf(PropTypes.string),
-    education: PropTypes.string,
-    affiliations: PropTypes.string,
-    is_verified: PropTypes.bool
+    is_licensed: PropTypes.bool,
+    about_me: PropTypes.string,
+    additional_info: PropTypes.string,
+    profile_completed: PropTypes.bool
   }).isRequired,
   errors: PropTypes.object.isRequired,
   loading: PropTypes.bool.isRequired,
