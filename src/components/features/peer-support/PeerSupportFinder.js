@@ -373,6 +373,9 @@ const PeerSupportFinder = ({ onBack }) => {
   /**
    * Peer support connection request with better error handling
    */
+/**
+   * ✅ FIXED: Peer support connection request with correct role-specific IDs
+   */
   const handleRequestConnection = async (specialist) => {
     if (!profile?.id) return;
 
@@ -398,12 +401,63 @@ const PeerSupportFinder = ({ onBack }) => {
       if (!db.matchRequests || typeof db.matchRequests.create !== 'function') {
         throw new Error('Connection request service is temporarily unavailable. Please try again later.');
       }
+
+      // ✅ FIXED: Get role-specific profile IDs for proper schema compliance
+      console.log('🔍 Getting role-specific profile IDs...');
       
+      // Get the requester's applicant_matching_profiles.id
+      let requesterProfileId = null;
+      try {
+        if (db.matchingProfiles && typeof db.matchingProfiles.getByUserId === 'function') {
+          const applicantResult = await db.matchingProfiles.getByUserId(profile.id);
+          if (applicantResult.data && !applicantResult.error) {
+            requesterProfileId = applicantResult.data.id;
+            console.log('👤 Found requester applicant profile ID:', requesterProfileId);
+          } else {
+            throw new Error('Could not find your applicant profile. Please complete your applicant profile first.');
+          }
+        } else {
+          throw new Error('Profile service is not available. Please refresh the page and try again.');
+        }
+      } catch (profileError) {
+        console.error('Error getting requester profile:', profileError);
+        throw new Error(`Unable to get your profile information: ${profileError.message}`);
+      }
+
+      // Get the recipient's peer_support_profiles.id
+      let recipientProfileId = null;
+      try {
+        if (db.peerSupportProfiles && typeof db.peerSupportProfiles.getByUserId === 'function') {
+          const peerResult = await db.peerSupportProfiles.getByUserId(specialist.user_id);
+          if (peerResult.data && !peerResult.error) {
+            recipientProfileId = peerResult.data.id;
+            console.log('🤝 Found recipient peer support profile ID:', recipientProfileId);
+          } else {
+            throw new Error('Could not find the specialist\'s profile information.');
+          }
+        } else {
+          throw new Error('Peer support service is not available. Please refresh the page and try again.');
+        }
+      } catch (peerError) {
+        console.error('Error getting peer support profile:', peerError);
+        throw new Error(`Unable to get specialist profile information: ${peerError.message}`);
+      }
+
+      // Validate we have both IDs
+      if (!requesterProfileId) {
+        throw new Error('Could not determine your applicant profile ID. Please complete your profile setup.');
+      }
+
+      if (!recipientProfileId) {
+        throw new Error('Could not determine the specialist\'s profile ID. This specialist may have an incomplete profile.');
+      }
+      
+      // ✅ FIXED: Use role-specific profile IDs instead of registrant_profiles.id
       const requestData = {
         requester_type: 'applicant',
-        requester_id: profile.id,
+        requester_id: requesterProfileId,    // ✅ Now using applicant_matching_profiles.id
         recipient_type: 'peer-support', 
-        recipient_id: specialist.user_id,
+        recipient_id: recipientProfileId,    // ✅ Now using peer_support_profiles.id
         request_type: 'peer-support',
         message: `Hi ${specialist.first_name || 'there'}! I'm interested in connecting with you for peer support services. Your experience with ${specialist.specialties?.slice(0, 2).join(' and ') || 'recovery support'} aligns well with what I'm looking for in my recovery journey.
 
@@ -411,7 +465,13 @@ I would appreciate the opportunity to discuss how your support could help me in 
         status: 'pending'
       };
       
-      console.log('📤 Sending peer support request:', requestData);
+      console.log('📤 Sending peer support request with role-specific IDs:', {
+        requester_type: requestData.requester_type,
+        requester_id: requestData.requester_id,
+        recipient_type: requestData.recipient_type,
+        recipient_id: requestData.recipient_id,
+        request_type: requestData.request_type
+      });
       
       const result = await db.matchRequests.create(requestData);
       
@@ -423,8 +483,9 @@ I would appreciate the opportunity to discuss how your support could help me in 
         throw new Error('No response received from peer support request');
       }
       
-      console.log('✅ Peer support request sent successfully:', result.data);
+      console.log('✅ Peer support request sent successfully with correct IDs:', result.data);
       
+      // ✅ FIXED: Use specialist.user_id for tracking (registrant_profiles.id for UI consistency)
       setConnectionRequests(prev => new Set([...prev, specialist.user_id]));
       
       alert(`Peer support request sent to ${specialist.first_name || 'the specialist'}! They will be notified and can respond through their dashboard.`);

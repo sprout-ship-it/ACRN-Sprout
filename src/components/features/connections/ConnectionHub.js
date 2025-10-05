@@ -90,7 +90,7 @@ const ConnectionHub = ({ onBack }) => {
   };
 
   /**
-   * ✅ FIXED: Load connections with proper role-based checking and clean syntax
+   * ✅ FIXED: Load both match requests (pending) and match groups (active) connections
    */
   const loadConnections = async () => {
     if (!user?.id || !profile?.id) return;
@@ -148,7 +148,119 @@ const ConnectionHub = ({ onBack }) => {
         console.log('ℹ️ User is not a peer specialist, skipping peer support profile check');
       }
 
-      // Load match_groups if we have profile IDs
+      // 1. ✅ LOAD PENDING REQUESTS from match_requests table
+      console.log('🔄 Loading pending match requests...');
+      
+      // First try with role-specific IDs (correct schema)
+      if (peerSupportProfileId) {
+        try {
+          const { data: pendingRequests, error: requestsError } = await supabase
+            .from('match_requests')
+            .select('*')
+            .eq('recipient_type', 'peer-support')
+            .eq('recipient_id', peerSupportProfileId)
+            .eq('status', 'pending');
+
+          if (!requestsError && pendingRequests && pendingRequests.length > 0) {
+            console.log(`📋 Found ${pendingRequests.length} pending requests with role-specific IDs`);
+            
+            // Process pending requests here
+            for (const request of pendingRequests) {
+              try {
+                // Get requester's profile (should be applicant)
+                const { data: requesterProfile, error: profileError } = await supabase
+                  .from('applicant_matching_profiles')
+                  .select(`
+                    id,
+                    user_id,
+                    primary_phone,
+                    registrant_profiles!inner(
+                      id,
+                      first_name,
+                      last_name,
+                      email
+                    )
+                  `)
+                  .eq('id', request.requester_id)
+                  .single();
+
+                if (requesterProfile && !profileError) {
+                  allConnections.push({
+                    id: `request_${request.id}`,
+                    profile_id: request.requester_id,
+                    name: `${requesterProfile.registrant_profiles.first_name} ${requesterProfile.registrant_profiles.last_name}`,
+                    type: 'peer_support',
+                    status: 'pending_request',
+                    source: 'match_request',
+                    request_id: request.id,
+                    created_at: request.created_at,
+                    last_activity: request.updated_at || request.created_at,
+                    shared_contact: false,
+                    contact_info: null,
+                    avatar: '🤝',
+                    request_message: request.message
+                  });
+                }
+              } catch (profileErr) {
+                console.warn('Error loading requester profile:', profileErr);
+              }
+            }
+          } else {
+            console.log('ℹ️ No pending requests found with role-specific IDs, trying fallback...');
+            
+            // Fallback: Try with registrant_profiles.id (current wrong data)
+            const { data: pendingRequestsFallback, error: requestsErrorFallback } = await supabase
+              .from('match_requests')
+              .select('*')
+              .eq('recipient_type', 'peer-support')
+              .eq('recipient_id', profile.id)  // Using registrant_profiles.id
+              .eq('status', 'pending');
+
+            if (!requestsErrorFallback && pendingRequestsFallback && pendingRequestsFallback.length > 0) {
+              console.log(`📋 Found ${pendingRequestsFallback.length} pending requests with registrant IDs (DATA ISSUE)`);
+              
+              // Process pending requests with wrong ID format
+              for (const request of pendingRequestsFallback) {
+                try {
+                  // Get requester's profile (using registrant_profiles.id)
+                  const { data: requesterProfile, error: profileError } = await supabase
+                    .from('registrant_profiles')
+                    .select('id, first_name, last_name, email, user_id')
+                    .eq('id', request.requester_id)
+                    .single();
+
+                  if (requesterProfile && !profileError) {
+                    allConnections.push({
+                      id: `request_${request.id}`,
+                      profile_id: request.requester_id,
+                      name: `${requesterProfile.first_name} ${requesterProfile.last_name}`,
+                      type: 'peer_support',
+                      status: 'pending_request',
+                      source: 'match_request',
+                      request_id: request.id,
+                      created_at: request.created_at,
+                      last_activity: request.updated_at || request.created_at,
+                      shared_contact: false,
+                      contact_info: null,
+                      avatar: '🤝',
+                      request_message: request.message,
+                      data_issue: true // Flag for data inconsistency
+                    });
+                  }
+                } catch (profileErr) {
+                  console.warn('Error loading requester profile (fallback):', profileErr);
+                }
+              }
+            }
+          }
+        } catch (requestErr) {
+          console.warn('Error loading match requests:', requestErr);
+        }
+      }
+
+      // 2. ✅ LOAD ACTIVE CONNECTIONS from match_groups table
+      console.log('🔄 Loading active connections from match_groups...');
+      
       const orConditions = [];
       
       if (applicantProfileId) {
@@ -164,25 +276,14 @@ const ConnectionHub = ({ onBack }) => {
         try {
           const { data: matchGroups, error: matchError } = await supabase
             .from('match_groups')
-            .select(`
-              *,
-              properties (
-                id,
-                title,
-                address,
-                city,
-                state,
-                monthly_rent,
-                landlord_id
-              )
-            `)
+            .select('*')
             .or(orConditions.join(','))
-            .eq('status', 'confirmed');
+            .in('status', ['confirmed', 'active']);
 
           if (matchError) {
             console.warn('Error loading match groups:', matchError);
           } else if (matchGroups && matchGroups.length > 0) {
-            console.log(`📊 Found ${matchGroups.length} match groups`);
+            console.log(`📊 Found ${matchGroups.length} active match groups`);
             
             for (const match of matchGroups) {
               let otherProfileId = null;
@@ -200,10 +301,6 @@ const ConnectionHub = ({ onBack }) => {
                   // Current user is the applicant
                   otherProfileId = match.peer_support_id;
                 }
-              } else if (match.property_id && match.properties) {
-                // This is an approved housing connection - skip for now
-                console.log('🏠 Skipping housing connection processing');
-                continue;
               } else {
                 // This is a roommate connection
                 connectionType = 'roommate';
@@ -222,18 +319,17 @@ const ConnectionHub = ({ onBack }) => {
                   
                   if (otherProfile && !profileError) {
                     allConnections.push({
-                      id: match.id,
+                      id: `active_${match.id}`,
                       profile_id: otherProfileId,
                       name: `${otherProfile.first_name} ${otherProfile.last_name}` || 'Anonymous',
                       type: connectionType,
-                      status: match.status === 'confirmed' ? 'active' : match.status,
+                      status: 'active_connection',
                       source: 'match_group',
                       match_group_id: match.id,
                       created_at: match.created_at,
                       last_activity: match.updated_at || match.created_at,
                       shared_contact: match.contact_shared || false,
                       contact_info: match.shared_contact_info || null,
-                      property_id: match.property_id || null,
                       avatar: avatar
                     });
                   }
@@ -250,26 +346,20 @@ const ConnectionHub = ({ onBack }) => {
         console.log('ℹ️ No matching profile IDs found, skipping match_groups query');
       }
 
-      // Load employer favorites (simplified for now)
-      try {
-        const { data: employerFavorites, error: favoritesError } = await supabase
-          .from('employer_favorites')
-          .select('*')
-          .eq('user_id', profile.id)
-          .limit(5);
+      // Sort connections by most recent activity, with pending requests first
+      allConnections.sort((a, b) => {
+        // Pending requests first
+        if (a.status === 'pending_request' && b.status !== 'pending_request') return -1;
+        if (b.status === 'pending_request' && a.status !== 'pending_request') return 1;
+        
+        // Then by most recent activity
+        return new Date(b.last_activity) - new Date(a.last_activity);
+      });
 
-        if (!favoritesError && employerFavorites && employerFavorites.length > 0) {
-          console.log(`📊 Found ${employerFavorites.length} employer favorites`);
-          // Process employer favorites here if needed
-        }
-      } catch (empErr) {
-        console.warn('Error loading employer favorites:', empErr);
-      }
-
-      // Sort connections by most recent activity
-      allConnections.sort((a, b) => new Date(b.last_activity) - new Date(a.last_activity));
-
-      console.log(`✅ Loaded ${allConnections.length} connections:`, allConnections);
+      console.log(`✅ Loaded ${allConnections.length} total connections:`);
+      console.log('- Pending requests:', allConnections.filter(c => c.status === 'pending_request').length);
+      console.log('- Active connections:', allConnections.filter(c => c.status === 'active_connection').length);
+      console.log('- Data issues found:', allConnections.filter(c => c.data_issue).length);
       setConnections(allConnections);
 
     } catch (err) {
@@ -277,6 +367,79 @@ const ConnectionHub = ({ onBack }) => {
       setError(err.message || 'Failed to load connections');
     } finally {
       setLoading(false);
+    }
+  };
+
+  /**
+   * Accept a peer support request
+   */
+  const handleAcceptRequest = async (connection) => {
+    if (!user?.id || !profile?.id) return;
+
+    try {
+      console.log('✅ Accepting request from:', connection.name);
+
+      // Update the match request status to 'accepted'
+      const { error: updateError } = await supabase
+        .from('match_requests')
+        .update({
+          status: 'accepted',
+          responded_at: new Date().toISOString(),
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', connection.request_id);
+
+      if (updateError) {
+        throw new Error(updateError.message);
+      }
+
+      // Remove from connections list (it will become a match_group)
+      setConnections(prev => prev.filter(conn => conn.id !== connection.id));
+      
+      alert(`Request from ${connection.name} accepted! They can now connect with you.`);
+      
+      // Refresh connections to pick up any new match_groups
+      setTimeout(() => {
+        loadConnections();
+      }, 1000);
+
+    } catch (err) {
+      console.error('💥 Error accepting request:', err);
+      alert(`Failed to accept request: ${err.message}`);
+    }
+  };
+
+  /**
+   * Decline a peer support request
+   */
+  const handleDeclineRequest = async (connection) => {
+    if (!user?.id || !profile?.id) return;
+
+    try {
+      console.log('❌ Declining request from:', connection.name);
+
+      // Update the match request status to 'rejected'
+      const { error: updateError } = await supabase
+        .from('match_requests')
+        .update({
+          status: 'rejected',
+          responded_at: new Date().toISOString(),
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', connection.request_id);
+
+      if (updateError) {
+        throw new Error(updateError.message);
+      }
+
+      // Remove from connections list
+      setConnections(prev => prev.filter(conn => conn.id !== connection.id));
+      
+      alert(`Request from ${connection.name} declined.`);
+
+    } catch (err) {
+      console.error('💥 Error declining request:', err);
+      alert(`Failed to decline request: ${err.message}`);
     }
   };
 
@@ -448,8 +611,20 @@ const ConnectionHub = ({ onBack }) => {
           <div className="card mb-4">
             <div className={styles.connectionStats}>
               <h3 className="card-title">
-                {connections.length} Active Connection{connections.length !== 1 ? 's' : ''}
+                {connections.length} Connection{connections.length !== 1 ? 's' : ''}
               </h3>
+              <div className={styles.connectionTypes}>
+                {connections.filter(c => c.status === 'pending_request').length > 0 && (
+                  <span className="badge badge-warning">
+                    {connections.filter(c => c.status === 'pending_request').length} Pending
+                  </span>
+                )}
+                {connections.filter(c => c.status === 'active_connection').length > 0 && (
+                  <span className="badge badge-success">
+                    {connections.filter(c => c.status === 'active_connection').length} Active
+                  </span>
+                )}
+              </div>
               <button 
                 className={`btn btn-outline btn-sm ${styles.refreshButton}`}
                 onClick={loadConnections}
@@ -480,8 +655,14 @@ const ConnectionHub = ({ onBack }) => {
                         {connection.type === 'employer' && 'Employer'}
                       </span>
                       
-                      {connection.status === 'active' && (
+                      {connection.status === 'active_connection' && (
                         <span className="badge badge-success">✓ Connected</span>
+                      )}
+                      {connection.status === 'pending_request' && (
+                        <span className="badge badge-warning">⏳ Pending</span>
+                      )}
+                      {connection.data_issue && (
+                        <span className="badge badge-error" title="Data inconsistency - contact admin">⚠️ Data Issue</span>
                       )}
                     </div>
                   </div>
@@ -490,53 +671,96 @@ const ConnectionHub = ({ onBack }) => {
                 {/* Connection Info */}
                 <div className="mb-4">
                   <div className={styles.sourceInfo}>
-                    <span className={styles.sourceLabel}>Source:</span> Match Groups
+                    <span className={styles.sourceLabel}>Source:</span> {
+                      connection.source === 'match_request' ? 'Peer Support Request' :
+                      connection.source === 'match_group' ? 'Active Connection' :
+                      'Unknown'
+                    }
                   </div>
 
-                  {/* Contact Status */}
-                  <div className={styles.contactStatus}>
-                    {connection.shared_contact ? (
-                      <div className={styles.contactShared}>
-                        <strong>📞 Contact Available:</strong> You can communicate directly with {connection.name}
-                      </div>
-                    ) : (
-                      <div className={styles.contactPending}>
-                        <strong>⏳ Contact Pending:</strong> Share your contact information to enable direct communication
-                      </div>
-                    )}
-                  </div>
+                  {/* Request Message for pending requests */}
+                  {connection.status === 'pending_request' && connection.request_message && (
+                    <div className={styles.requestMessage}>
+                      <span className={styles.requestLabel}>Message:</span>
+                      <div className={styles.requestText}>"{connection.request_message}"</div>
+                    </div>
+                  )}
+
+                  {/* Contact Status for active connections */}
+                  {connection.status === 'active_connection' && (
+                    <div className={styles.contactStatus}>
+                      {connection.shared_contact ? (
+                        <div className={styles.contactShared}>
+                          <strong>📞 Contact Available:</strong> You can communicate directly with {connection.name}
+                        </div>
+                      ) : (
+                        <div className={styles.contactPending}>
+                          <strong>⏳ Contact Pending:</strong> Share your contact information to enable direct communication
+                        </div>
+                      )}
+                    </div>
+                  )}
+
+                  {/* Data issue warning */}
+                  {connection.data_issue && (
+                    <div className={styles.dataIssueWarning}>
+                      <strong>⚠️ Data Issue:</strong> This connection has inconsistent data format. Please contact support.
+                    </div>
+                  )}
                 </div>
 
                 {/* Action Buttons */}
                 <div className="button-grid">
-                  {connection.shared_contact ? (
-                    <button
-                      className="btn btn-primary"
-                      onClick={() => {
-                        setSelectedConnection(connection);
-                        setActiveModal('contact');
-                      }}
-                    >
-                      📞 Contact Info
-                    </button>
+                  {connection.status === 'pending_request' ? (
+                    // Pending request actions
+                    <>
+                      <button
+                        className="btn btn-primary"
+                        onClick={() => handleAcceptRequest(connection)}
+                      >
+                        ✅ Accept Request
+                      </button>
+                      
+                      <button
+                        className="btn btn-outline"
+                        onClick={() => handleDeclineRequest(connection)}
+                      >
+                        ❌ Decline
+                      </button>
+                    </>
                   ) : (
-                    <button
-                      className="btn btn-secondary"
-                      onClick={() => handleShareContact(connection)}
-                    >
-                      📞 Share Contact
-                    </button>
+                    // Active connection actions
+                    <>
+                      {connection.shared_contact ? (
+                        <button
+                          className="btn btn-primary"
+                          onClick={() => {
+                            setSelectedConnection(connection);
+                            setActiveModal('contact');
+                          }}
+                        >
+                          📞 Contact Info
+                        </button>
+                      ) : (
+                        <button
+                          className="btn btn-secondary"
+                          onClick={() => handleShareContact(connection)}
+                        >
+                          📞 Share Contact
+                        </button>
+                      )}
+                      
+                      <button
+                        className="btn btn-outline"
+                        onClick={() => {
+                          setSelectedConnection(connection);
+                          setActiveModal('templates');
+                        }}
+                      >
+                        💬 Message Templates
+                      </button>
+                    </>
                   )}
-                  
-                  <button
-                    className="btn btn-outline"
-                    onClick={() => {
-                      setSelectedConnection(connection);
-                      setActiveModal('templates');
-                    }}
-                  >
-                    💬 Message Templates
-                  </button>
                 </div>
               </div>
             ))}
@@ -647,4 +871,4 @@ const ConnectionHub = ({ onBack }) => {
   );
 };
 
-export default ConnectionHub;   
+export default ConnectionHub;  
