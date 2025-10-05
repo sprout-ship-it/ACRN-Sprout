@@ -1,4 +1,4 @@
-// src/components/features/peer-support/PeerSupportHub.js - UPDATED FOR PHASE 6
+// src/components/features/peer-support/PeerSupportHub.js - FIXED FOR PHASE 6
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../../../hooks/useAuth';
 import { db } from '../../../utils/supabase';
@@ -53,9 +53,9 @@ const PeerSupportHub = ({ onBack }) => {
             clientData = result.data;
           }
         } else {
-          // Fallback: Get peer support connections from match_groups
+          // ✅ FIXED: Pass correct parameters to matchGroups service
           console.log('🔄 Using fallback method via match_groups...');
-          const matchResult = await db.matchGroups.getByUserId(profile.id);
+          const matchResult = await db.matchGroups.getByUserId('peer-support', profile.id);
           
           if (matchResult.data && !matchResult.error) {
             // Filter for peer support connections where current user is the peer specialist
@@ -154,8 +154,8 @@ const PeerSupportHub = ({ onBack }) => {
     try {
       console.log('🔄 Loading available peer support connections...');
       
-      // Get match_groups where user is the peer specialist
-      const result = await db.matchGroups.getByUserId(profile.id);
+      // ✅ FIXED: Pass correct parameters to matchGroups service
+      const result = await db.matchGroups.getByUserId('peer-support', profile.id);
       
       if (result.data && !result.error) {
         const peerSupportConnections = result.data.filter(match => 
