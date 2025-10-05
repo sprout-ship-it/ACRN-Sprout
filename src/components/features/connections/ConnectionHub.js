@@ -1,4 +1,4 @@
-// src/components/features/connections/ConnectionHub.js - UPDATED WITH HOUSING APPROVAL INTEGRATION
+// src/components/features/connections/ConnectionHub.js - FIXED FOR PEER SUPPORT PROFILE IDS
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../../../hooks/useAuth';
 import { supabase } from '../../../utils/supabase';
@@ -108,7 +108,7 @@ const ConnectionHub = ({ onBack }) => {
   };
 
   /**
-   * ✅ UPDATED: Enhanced connection loading with housing approval integration
+   * ✅ FIXED: Enhanced connection loading with proper peer support profile ID handling
    */
   const loadConnections = async () => {
     if (!user?.id || !profile?.id) return;
@@ -121,133 +121,205 @@ const ConnectionHub = ({ onBack }) => {
       
       const allConnections = [];
 
-      // ✅ UPDATED: Load match_groups with enhanced housing connection handling
+      // ✅ FIXED: Get role-specific profile IDs first
+      let applicantProfileId = null;
+      let peerSupportProfileId = null;
+      let landlordProfileId = null;
+
+      // Check if user has an applicant profile
       try {
-        const { data: matchGroups, error: matchError } = await supabase
-          .from('match_groups')
-          .select(`
-            *,
-            properties (
-              id,
-              title,
-              address,
-              city,
-              state,
-              monthly_rent,
-              landlord_id
-            )
-          `)
-          .or(`applicant_1_id.eq.${profile.id},applicant_2_id.eq.${profile.id},peer_support_id.eq.${profile.id}`)
-          .eq('status', 'confirmed');
+        const { data: applicantProfile } = await supabase
+          .from('applicant_matching_profiles')
+          .select('id')
+          .eq('user_id', profile.id)
+          .single();
+        
+        if (applicantProfile) {
+          applicantProfileId = applicantProfile.id;
+          console.log('👤 Found applicant profile ID:', applicantProfileId);
+        }
+      } catch (err) {
+        console.log('ℹ️ No applicant profile found (this is normal for non-applicants)');
+      }
 
-        if (matchError) {
-          console.warn('Error loading match groups:', matchError);
-        } else if (matchGroups && matchGroups.length > 0) {
-          for (const match of matchGroups) {
-            let otherProfileId = null;
-            let connectionType = 'roommate';
-            let avatar = '👥';
-            let isHousingConnection = false;
+      // Check if user has a peer support profile
+      try {
+        const { data: peerProfile } = await supabase
+          .from('peer_support_profiles')
+          .select('id')
+          .eq('user_id', profile.id)
+          .single();
+        
+        if (peerProfile) {
+          peerSupportProfileId = peerProfile.id;
+          console.log('🤝 Found peer support profile ID:', peerSupportProfileId);
+        }
+      } catch (err) {
+        console.log('ℹ️ No peer support profile found (this is normal for non-peer specialists)');
+      }
+
+      // Check if user has a landlord profile
+      try {
+        const { data: landlordProfile } = await supabase
+          .from('landlord_profiles')
+          .select('id')
+          .eq('user_id', profile.id)
+          .single();
+        
+        if (landlordProfile) {
+          landlordProfileId = landlordProfile.id;
+          console.log('🏠 Found landlord profile ID:', landlordProfileId);
+        }
+      } catch (err) {
+        console.log('ℹ️ No landlord profile found (this is normal for non-landlords)');
+      }
+
+      // ✅ FIXED: Load match_groups with proper role-specific ID matching
+      try {
+        // Build the OR clause based on which profiles the user has
+        const orConditions = [];
+        
+        if (applicantProfileId) {
+          orConditions.push(`applicant_1_id.eq.${applicantProfileId}`);
+          orConditions.push(`applicant_2_id.eq.${applicantProfileId}`);
+        }
+        
+        if (peerSupportProfileId) {
+          orConditions.push(`peer_support_id.eq.${peerSupportProfileId}`);
+        }
+
+        // Only query if we have at least one profile ID
+        if (orConditions.length === 0) {
+          console.log('ℹ️ No matching profile IDs found, skipping match_groups query');
+        } else {
+          const { data: matchGroups, error: matchError } = await supabase
+            .from('match_groups')
+            .select(`
+              *,
+              properties (
+                id,
+                title,
+                address,
+                city,
+                state,
+                monthly_rent,
+                landlord_id
+              )
+            `)
+            .or(orConditions.join(','))
+            .eq('status', 'confirmed');
+
+          if (matchError) {
+            console.warn('Error loading match groups:', matchError);
+          } else if (matchGroups && matchGroups.length > 0) {
+            console.log(`📊 Found ${matchGroups.length} match groups`);
             
-            // ✅ ENHANCED: Better handling of different match group types
-            if (match.peer_support_id) {
-              // This is a peer support connection
-              connectionType = 'peer_support';
-              avatar = '🤝';
-              if (match.peer_support_id === profile.id) {
-                // Current user is the peer supporter
-                otherProfileId = match.applicant_1_id || match.applicant_2_id;
-              } else {
-                // Current user is the applicant
-                otherProfileId = match.peer_support_id;
-              }
-            } else if (match.property_id && match.properties) {
-              // ✅ NEW: This is an approved housing connection
-              connectionType = 'housing_approved';
-              avatar = '🏠';
-              isHousingConnection = true;
+            for (const match of matchGroups) {
+              let otherProfileId = null;
+              let connectionType = 'roommate';
+              let avatar = '👥';
+              let isHousingConnection = false;
               
-              // Get landlord profile from property
-              const { data: landlordProfile, error: landlordError } = await supabase
-                .from('landlord_profiles')
-                .select(`
-                  id,
-                  user_id,
-                  primary_phone,
-                  contact_email,
-                  registrant_profiles!inner(
-                    id,
-                    first_name,
-                    last_name,
-                    email
-                  )
-                `)
-                .eq('id', match.properties.landlord_id)
-                .single();
-
-              if (landlordProfile && !landlordError) {
-                otherProfileId = landlordProfile.user_id;
+              // ✅ ENHANCED: Better handling of different match group types
+              if (match.peer_support_id) {
+                // This is a peer support connection
+                connectionType = 'peer_support';
+                avatar = '🤝';
+                if (match.peer_support_id === peerSupportProfileId) {
+                  // Current user is the peer supporter
+                  otherProfileId = match.applicant_1_id || match.applicant_2_id;
+                } else {
+                  // Current user is the applicant
+                  otherProfileId = match.peer_support_id;
+                }
+              } else if (match.property_id && match.properties) {
+                // ✅ NEW: This is an approved housing connection
+                connectionType = 'housing_approved';
+                avatar = '🏠';
+                isHousingConnection = true;
                 
-                // Add the connection with full property and landlord context
-                allConnections.push({
-                  id: `housing_${match.id}`,
-                  profile_id: landlordProfile.user_id,
-                  name: `${landlordProfile.registrant_profiles.first_name} ${landlordProfile.registrant_profiles.last_name}`,
-                  type: connectionType,
-                  status: 'approved',
-                  source: 'housing_approval',
-                  match_group_id: match.id,
-                  property_title: match.properties.title,
-                  property_address: `${match.properties.address}, ${match.properties.city}, ${match.properties.state}`,
-                  property_rent: match.properties.monthly_rent,
-                  property_id: match.properties.id,
-                  created_at: match.created_at,
-                  last_activity: match.updated_at || match.created_at,
-                  shared_contact: true, // Approved housing connections have shared contact
-                  contact_info: {
-                    phone: landlordProfile.primary_phone,
-                    email: landlordProfile.contact_email || landlordProfile.registrant_profiles.email,
-                    preferred_contact: 'email',
-                    availability: 'Business hours'
-                  },
-                  avatar: avatar,
-                  // ✅ NEW: Add landlord-specific context
-                  landlord_profile: landlordProfile
-                });
+                // Get landlord profile from property
+                const { data: landlordProfile, error: landlordError } = await supabase
+                  .from('landlord_profiles')
+                  .select(`
+                    id,
+                    user_id,
+                    primary_phone,
+                    contact_email,
+                    registrant_profiles!inner(
+                      id,
+                      first_name,
+                      last_name,
+                      email
+                    )
+                  `)
+                  .eq('id', match.properties.landlord_id)
+                  .single();
+
+                if (landlordProfile && !landlordError) {
+                  otherProfileId = landlordProfile.user_id;
+                  
+                  // Add the connection with full property and landlord context
+                  allConnections.push({
+                    id: `housing_${match.id}`,
+                    profile_id: landlordProfile.user_id,
+                    name: `${landlordProfile.registrant_profiles.first_name} ${landlordProfile.registrant_profiles.last_name}`,
+                    type: connectionType,
+                    status: 'approved',
+                    source: 'housing_approval',
+                    match_group_id: match.id,
+                    property_title: match.properties.title,
+                    property_address: `${match.properties.address}, ${match.properties.city}, ${match.properties.state}`,
+                    property_rent: match.properties.monthly_rent,
+                    property_id: match.properties.id,
+                    created_at: match.created_at,
+                    last_activity: match.updated_at || match.created_at,
+                    shared_contact: true, // Approved housing connections have shared contact
+                    contact_info: {
+                      phone: landlordProfile.primary_phone,
+                      email: landlordProfile.contact_email || landlordProfile.registrant_profiles.email,
+                      preferred_contact: 'email',
+                      availability: 'Business hours'
+                    },
+                    avatar: avatar,
+                    // ✅ NEW: Add landlord-specific context
+                    landlord_profile: landlordProfile
+                  });
+                }
+                continue; // Skip the general processing since we handled it above
+              } else {
+                // This is a roommate connection
+                connectionType = 'roommate';
+                avatar = '👥';
+                otherProfileId = match.applicant_1_id === applicantProfileId ? match.applicant_2_id : match.applicant_1_id;
               }
-              continue; // Skip the general processing since we handled it above
-            } else {
-              // This is a roommate connection
-              connectionType = 'roommate';
-              avatar = '👥';
-              otherProfileId = match.applicant_1_id === profile.id ? match.applicant_2_id : match.applicant_1_id;
-            }
-            
-            // Process non-housing connections
-            if (otherProfileId && !isHousingConnection) {
-              // Get other user's registrant profile
-              const { data: otherProfile, error: profileError } = await supabase
-                .from('registrant_profiles')
-                .select('id, first_name, last_name, email, user_id')
-                .eq('id', otherProfileId)
-                .single();
               
-              if (otherProfile && !profileError) {
-                allConnections.push({
-                  id: match.id,
-                  profile_id: otherProfileId,
-                  name: `${otherProfile.first_name} ${otherProfile.last_name}` || 'Anonymous',
-                  type: connectionType,
-                  status: match.status === 'confirmed' ? 'active' : match.status,
-                  source: 'match_group',
-                  match_group_id: match.id,
-                  created_at: match.created_at,
-                  last_activity: match.updated_at || match.created_at,
-                  shared_contact: match.contact_shared || false,
-                  contact_info: match.shared_contact_info || null,
-                  property_id: match.property_id || null,
-                  avatar: avatar
-                });
+              // Process non-housing connections
+              if (otherProfileId && !isHousingConnection) {
+                // Get other user's registrant profile
+                const { data: otherProfile, error: profileError } = await supabase
+                  .from('registrant_profiles')
+                  .select('id, first_name, last_name, email, user_id')
+                  .eq('id', otherProfileId)
+                  .single();
+                
+                if (otherProfile && !profileError) {
+                  allConnections.push({
+                    id: match.id,
+                    profile_id: otherProfileId,
+                    name: `${otherProfile.first_name} ${otherProfile.last_name}` || 'Anonymous',
+                    type: connectionType,
+                    status: match.status === 'confirmed' ? 'active' : match.status,
+                    source: 'match_group',
+                    match_group_id: match.id,
+                    created_at: match.created_at,
+                    last_activity: match.updated_at || match.created_at,
+                    shared_contact: match.contact_shared || false,
+                    contact_info: match.shared_contact_info || null,
+                    property_id: match.property_id || null,
+                    avatar: avatar
+                  });
+                }
               }
             }
           }
