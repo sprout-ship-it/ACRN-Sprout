@@ -1,4 +1,4 @@
-// src/components/features/peer-support/PeerSupportFinder.js - IMPROVED UX WITH EXPANDABLE FILTERS
+// src/components/features/peer-support/PeerSupportFinder.js - FIXED: Correct getByUserId parameters
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../../../hooks/useAuth';
 import { db } from '../../../utils/supabase';
@@ -71,7 +71,7 @@ const PeerSupportFinder = ({ onBack }) => {
   };
 
   /**
-   * Load existing peer support connections with better error handling
+   * ✅ FIXED: Load existing peer support connections with correct parameters
    */
   const loadConnectionRequests = async () => {
     if (!profile?.id) return;
@@ -84,30 +84,47 @@ const PeerSupportFinder = ({ onBack }) => {
         return;
       }
       
-      const result = await db.matchRequests.getByUserId(profile.id);
+      // ✅ FIXED: Pass correct parameters - userType first, then userId
+      const result = await db.matchRequests.getByUserId('applicant', profile.id);
       
-      if (result.data && !result.error) {
+      if (result.success && result.data && !result.error) {
         const sentRequests = new Set();
         const activeConnections = new Set();
         
         result.data
           .filter(req => req.request_type === 'peer-support')
           .forEach(req => {
-            const otherProfileId = req.requester_id === profile.id ? req.recipient_id : req.requester_id;
+            // For peer support requests:
+            // - requester_type = 'applicant', requester_id = applicant_matching_profiles.id
+            // - recipient_type = 'peer-support', recipient_id = peer_support_profiles.id
+            // We need to track by the registrant_profiles.id (user_id) for UI consistency
             
-            if (req.status === 'pending' && req.requester_id === profile.id) {
-              sentRequests.add(otherProfileId);
+            // Since we're calling as 'applicant' type, we need to get the peer support specialist's user_id
+            // This requires a different approach - we'll track by the profile IDs but map to user_ids
+            
+            if (req.requester_type === 'applicant' && req.status === 'pending') {
+              // This is a request we sent - track by recipient_id (peer_support_profiles.id)
+              sentRequests.add(req.recipient_id);
             } else if (req.status === 'accepted') {
-              activeConnections.add(otherProfileId);
+              // This is an active connection
+              if (req.requester_type === 'applicant') {
+                activeConnections.add(req.recipient_id);
+              } else {
+                activeConnections.add(req.requester_id);
+              }
             }
           });
         
+        // ✅ NOTE: We're now tracking by role-specific profile IDs, not user_ids
+        // This means we need to update the connection checking logic too
         setConnectionRequests(sentRequests);
         setActiveConnections(activeConnections);
         console.log('📊 Loaded peer support connections:', {
           pending: sentRequests.size,
           active: activeConnections.size
         });
+      } else if (result.error) {
+        console.error('Error loading connections:', result.error);
       }
     } catch (err) {
       console.error('💥 Error loading peer support connections:', err);
@@ -371,20 +388,20 @@ const PeerSupportFinder = ({ onBack }) => {
   };
 
   /**
-   * Peer support connection request with better error handling
-   */
-/**
    * ✅ FIXED: Peer support connection request with correct role-specific IDs
    */
   const handleRequestConnection = async (specialist) => {
     if (!profile?.id) return;
 
-    if (connectionRequests.has(specialist.user_id)) {
+    // ✅ UPDATED: Check by peer_support_profiles.id instead of user_id
+    const specialistPeerProfileId = specialist.id; // This is peer_support_profiles.id
+    
+    if (connectionRequests.has(specialistPeerProfileId)) {
       alert(`You've already sent a peer support request to ${specialist.first_name || 'this specialist'}.`);
       return;
     }
 
-    if (activeConnections.has(specialist.user_id)) {
+    if (activeConnections.has(specialistPeerProfileId)) {
       alert(`You already have an active peer support connection with ${specialist.first_name || 'this specialist'}.`);
       return;
     }
@@ -424,24 +441,10 @@ const PeerSupportFinder = ({ onBack }) => {
         throw new Error(`Unable to get your profile information: ${profileError.message}`);
       }
 
-      // Get the recipient's peer_support_profiles.id
-      let recipientProfileId = null;
-      try {
-        if (db.peerSupportProfiles && typeof db.peerSupportProfiles.getByUserId === 'function') {
-          const peerResult = await db.peerSupportProfiles.getByUserId(specialist.user_id);
-          if (peerResult.data && !peerResult.error) {
-            recipientProfileId = peerResult.data.id;
-            console.log('🤝 Found recipient peer support profile ID:', recipientProfileId);
-          } else {
-            throw new Error('Could not find the specialist\'s profile information.');
-          }
-        } else {
-          throw new Error('Peer support service is not available. Please refresh the page and try again.');
-        }
-      } catch (peerError) {
-        console.error('Error getting peer support profile:', peerError);
-        throw new Error(`Unable to get specialist profile information: ${peerError.message}`);
-      }
+      // ✅ SIMPLIFIED: Use specialist.id directly (it's already peer_support_profiles.id)
+      const recipientProfileId = specialist.id; // This is peer_support_profiles.id
+      
+      console.log('🤝 Using specialist peer support profile ID:', recipientProfileId);
 
       // Validate we have both IDs
       if (!requesterProfileId) {
@@ -485,8 +488,8 @@ I would appreciate the opportunity to discuss how your support could help me in 
       
       console.log('✅ Peer support request sent successfully with correct IDs:', result.data);
       
-      // ✅ FIXED: Use specialist.user_id for tracking (registrant_profiles.id for UI consistency)
-      setConnectionRequests(prev => new Set([...prev, specialist.user_id]));
+      // ✅ FIXED: Track by peer_support_profiles.id for consistency
+      setConnectionRequests(prev => new Set([...prev, specialistPeerProfileId]));
       
       alert(`Peer support request sent to ${specialist.first_name || 'the specialist'}! They will be notified and can respond through their dashboard.`);
       
@@ -513,11 +516,12 @@ I would appreciate the opportunity to discuss how your support could help me in 
   };
 
   /**
-   * Get connection status for display
+   * ✅ UPDATED: Get connection status for display - now using peer_support_profiles.id
    */
   const getConnectionStatus = (specialist) => {
-    const hasRequest = connectionRequests.has(specialist.user_id);
-    const hasConnection = activeConnections.has(specialist.user_id);
+    const specialistPeerProfileId = specialist.id; // peer_support_profiles.id
+    const hasRequest = connectionRequests.has(specialistPeerProfileId);
+    const hasConnection = activeConnections.has(specialistPeerProfileId);
     const isAcceptingClients = specialist.accepting_clients;
     
     if (hasConnection) {
@@ -949,10 +953,10 @@ I would appreciate the opportunity to discuss how your support could help me in 
                         ) : (
                           <span className="badge badge-warning">Not Accepting</span>
                         )}
-                        {activeConnections.has(specialist.user_id) && (
+                        {activeConnections.has(specialist.id) && (
                           <span className="badge badge-info">Connected</span>
                         )}
-                        {connectionRequests.has(specialist.user_id) && !activeConnections.has(specialist.user_id) && (
+                        {connectionRequests.has(specialist.id) && !activeConnections.has(specialist.id) && (
                           <span className="badge badge-warning">Request Sent</span>
                         )}
                       </div>
@@ -1090,14 +1094,14 @@ I would appreciate the opportunity to discuss how your support could help me in 
 
             <div className={styles.modalBody}>
               {/* Connection Status */}
-              {activeConnections.has(selectedSpecialist.user_id) && (
+              {activeConnections.has(selectedSpecialist.id) && (
                 <div className="alert alert-success mb-4">
                   <strong>✅ Active Connection:</strong> You have an active peer support connection with this specialist. 
                   Check your connections page to exchange contact information and coordinate support sessions.
                 </div>
               )}
               
-              {connectionRequests.has(selectedSpecialist.user_id) && !activeConnections.has(selectedSpecialist.user_id) && (
+              {connectionRequests.has(selectedSpecialist.id) && !activeConnections.has(selectedSpecialist.id) && (
                 <div className="alert alert-info mb-4">
                   <strong>📤 Request Sent:</strong> You've sent a peer support request to this specialist. 
                   They will review your request and respond through their dashboard.
@@ -1185,7 +1189,7 @@ I would appreciate the opportunity to discuss how your support could help me in 
               )}
 
               {/* Connection Process Explanation */}
-              {!activeConnections.has(selectedSpecialist.user_id) && !connectionRequests.has(selectedSpecialist.user_id) && (
+              {!activeConnections.has(selectedSpecialist.id) && !connectionRequests.has(selectedSpecialist.id) && (
                 <div className={styles.connectionProcess}>
                   <div className={styles.connectionProcessTitle}>🤝 Peer Support Connection Process:</div>
                   <ol className={styles.connectionProcessList}>
@@ -1205,7 +1209,7 @@ I would appreciate the opportunity to discuss how your support could help me in 
                   Close
                 </button>
                 
-                {!activeConnections.has(selectedSpecialist.user_id) && !connectionRequests.has(selectedSpecialist.user_id) ? (
+                {!activeConnections.has(selectedSpecialist.id) && !connectionRequests.has(selectedSpecialist.id) ? (
                   <button
                     className="btn btn-secondary"
                     onClick={() => {
@@ -1218,7 +1222,7 @@ I would appreciate the opportunity to discuss how your support could help me in 
                   </button>
                 ) : (
                   <div className={styles.connectionStatusDisplay}>
-                    {activeConnections.has(selectedSpecialist.user_id) ? '✅ Active Connection' : '📤 Request Sent'}
+                    {activeConnections.has(selectedSpecialist.id) ? '✅ Active Connection' : '📤 Request Sent'}
                   </div>
                 )}
               </div>
