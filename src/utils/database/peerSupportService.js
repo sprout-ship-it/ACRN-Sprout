@@ -141,20 +141,22 @@ getByUserId: async (userId) => {
      * Get available peer support profiles with filters
      * ✅ FIXED: Uses correct field name 'accepting_clients'
      */
+/**
+     * Get available peer support profiles with filters
+     * ✅ FIXED: Fetch name data separately to avoid RLS JOIN issues
+     */
     getAvailable: async (filters = {}) => {
       try {
         console.log('🤝 PeerSupport: Fetching available profiles with filters:', filters);
 
+        // ✅ STEP 1: Get peer support profiles without JOIN first
         let query = supabaseClient
           .from(tableName)
-          .select(`
-            *,
-            registrant_profiles!inner(id, first_name, last_name, email)
-          `)
+          .select('*')  // Get peer support data without JOIN
           .eq('accepting_clients', true)
           .eq('is_active', true);
 
-        const { data, error } = await query
+        const { data: peerProfiles, error } = await query
           .order('years_experience', { ascending: false })
           .order('updated_at', { ascending: false });
 
@@ -163,9 +165,47 @@ getByUserId: async (userId) => {
           return { success: false, data: [], error };
         }
 
-        let filteredData = data || [];
+        if (!peerProfiles || peerProfiles.length === 0) {
+          console.log('✅ PeerSupport: Found 0 available profiles');
+          return { success: true, data: [], error: null };
+        }
 
-        // Apply JavaScript filters for complex logic
+        // ✅ STEP 2: Get user info separately for each peer specialist
+        const enrichedProfiles = await Promise.all(
+          peerProfiles.map(async (profile) => {
+            try {
+              // Fetch the registrant profile data separately
+              const { data: userInfo } = await supabaseClient
+                .from('registrant_profiles')
+                .select('id, first_name, last_name, email')
+                .eq('id', profile.user_id)
+                .single();
+
+              // Combine the data like the original JOIN would have done
+              return {
+                ...profile,
+                first_name: userInfo?.first_name || null,
+                last_name: userInfo?.last_name || null,
+                email: userInfo?.email || null,
+                registrant_profiles: userInfo || null
+              };
+            } catch (userError) {
+              console.warn('⚠️ Could not fetch user info for peer specialist:', profile.user_id, userError);
+              // Return profile without user info rather than failing completely
+              return {
+                ...profile,
+                first_name: null,
+                last_name: null,
+                email: null,
+                registrant_profiles: null
+              };
+            }
+          })
+        );
+
+        // ✅ STEP 3: Apply JavaScript filters for complex logic (existing logic)
+        let filteredData = enrichedProfiles;
+
         if (filters.specialties && filters.specialties.length > 0) {
           filteredData = filteredData.filter(profile => {
             if (!profile.specialties || !Array.isArray(profile.specialties)) return false;
