@@ -1,4 +1,4 @@
-// src/components/features/connections/ConnectionHub.js - FIXED SYNTAX VERSION
+// src/components/features/connections/ConnectionHub.js - FIXED: User ID queries
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../../../hooks/useAuth';
 import { supabase } from '../../../utils/supabase';
@@ -91,6 +91,7 @@ const ConnectionHub = ({ onBack }) => {
 
   /**
    * ✅ FIXED: Load both match requests (pending) and match groups (active) connections
+   * Key Fix: Use user.id (auth user ID) for peer_support_profiles queries, not profile.id
    */
   const loadConnections = async () => {
     if (!user?.id || !profile?.id) return;
@@ -99,8 +100,8 @@ const ConnectionHub = ({ onBack }) => {
     setError(null);
 
     try {
-      console.log('🔄 Loading all connections for profile:', profile.id);
-      console.log('🔍 User roles:', profile.roles);
+      console.log('🔄 Loading all connections for user:', user.id);
+      console.log('🔍 Profile info:', { profileId: profile.id, roles: profile.roles });
       
       const allConnections = [];
 
@@ -111,18 +112,21 @@ const ConnectionHub = ({ onBack }) => {
       // Only check for applicant profile if user has 'applicant' role
       if (profile.roles && profile.roles.includes('applicant')) {
         try {
-          const { data: applicantProfile } = await supabase
+          console.log('🔍 Querying applicant_matching_profiles for user_id:', user.id);
+          const { data: applicantProfile, error: applicantError } = await supabase
             .from('applicant_matching_profiles')
-            .select('id')
-            .eq('user_id', profile.id)
+            .select('id, user_id')
+            .eq('user_id', user.id)  // ✅ FIXED: Use auth user ID
             .single();
           
-          if (applicantProfile) {
+          if (applicantProfile && !applicantError) {
             applicantProfileId = applicantProfile.id;
             console.log('👤 Found applicant profile ID:', applicantProfileId);
+          } else {
+            console.log('ℹ️ No applicant profile found for auth user:', user.id);
           }
         } catch (err) {
-          console.log('ℹ️ No applicant profile found');
+          console.log('ℹ️ No applicant profile found:', err.message);
         }
       } else {
         console.log('ℹ️ User is not an applicant, skipping applicant profile check');
@@ -131,18 +135,23 @@ const ConnectionHub = ({ onBack }) => {
       // Only check for peer support profile if user has 'peer-support' role
       if (profile.roles && profile.roles.includes('peer-support')) {
         try {
-          const { data: peerProfile } = await supabase
+          console.log('🔍 Querying peer_support_profiles for user_id (registrant profile ID):', profile.id);
+          const { data: peerProfile, error: peerError } = await supabase
             .from('peer_support_profiles')
-            .select('id')
-            .eq('user_id', profile.id)
+            .select('id, user_id')
+            .eq('user_id', profile.id)  // ✅ CORRECT: Use registrant profile ID
             .single();
           
-          if (peerProfile) {
+          if (peerProfile && !peerError) {
             peerSupportProfileId = peerProfile.id;
             console.log('🤝 Found peer support profile ID:', peerSupportProfileId);
+            console.log('🔗 peer_support_profiles.user_id:', peerProfile.user_id, '(should match registrant profile ID)');
+          } else {
+            console.log('ℹ️ No peer support profile found for registrant profile:', profile.id);
+            console.log('Error details:', peerError);
           }
         } catch (err) {
-          console.log('ℹ️ No peer support profile found');
+          console.log('ℹ️ No peer support profile found:', err.message);
         }
       } else {
         console.log('ℹ️ User is not a peer specialist, skipping peer support profile check');
@@ -151,9 +160,11 @@ const ConnectionHub = ({ onBack }) => {
       // 1. ✅ LOAD PENDING REQUESTS from match_requests table
       console.log('🔄 Loading pending match requests...');
       
-      // First try with role-specific IDs (correct schema)
+      // Query for requests where this user is the recipient (peer specialist receiving requests)
       if (peerSupportProfileId) {
         try {
+          console.log('🔍 Looking for requests with recipient_type=peer-support and recipient_id:', peerSupportProfileId);
+          
           const { data: pendingRequests, error: requestsError } = await supabase
             .from('match_requests')
             .select('*')
@@ -161,79 +172,41 @@ const ConnectionHub = ({ onBack }) => {
             .eq('recipient_id', peerSupportProfileId)
             .eq('status', 'pending');
 
-          if (!requestsError && pendingRequests && pendingRequests.length > 0) {
-            console.log(`📋 Found ${pendingRequests.length} pending requests with role-specific IDs`);
-            
-            // Process pending requests here
-            for (const request of pendingRequests) {
-              try {
-                // Get requester's profile (should be applicant)
-                const { data: requesterProfile, error: profileError } = await supabase
-                  .from('applicant_matching_profiles')
-                  .select(`
-                    id,
-                    user_id,
-                    primary_phone,
-                    registrant_profiles!inner(
-                      id,
-                      first_name,
-                      last_name,
-                      email
-                    )
-                  `)
-                  .eq('id', request.requester_id)
-                  .single();
-
-                if (requesterProfile && !profileError) {
-                  allConnections.push({
-                    id: `request_${request.id}`,
-                    profile_id: request.requester_id,
-                    name: `${requesterProfile.registrant_profiles.first_name} ${requesterProfile.registrant_profiles.last_name}`,
-                    type: 'peer_support',
-                    status: 'pending_request',
-                    source: 'match_request',
-                    request_id: request.id,
-                    created_at: request.created_at,
-                    last_activity: request.updated_at || request.created_at,
-                    shared_contact: false,
-                    contact_info: null,
-                    avatar: '🤝',
-                    request_message: request.message
-                  });
-                }
-              } catch (profileErr) {
-                console.warn('Error loading requester profile:', profileErr);
-              }
-            }
+          if (requestsError) {
+            console.error('❌ Error querying match_requests:', requestsError);
           } else {
-            console.log('ℹ️ No pending requests found with role-specific IDs, trying fallback...');
+            console.log(`📋 Found ${pendingRequests?.length || 0} pending requests with role-specific IDs`);
             
-            // Fallback: Try with registrant_profiles.id (current wrong data)
-            const { data: pendingRequestsFallback, error: requestsErrorFallback } = await supabase
-              .from('match_requests')
-              .select('*')
-              .eq('recipient_type', 'peer-support')
-              .eq('recipient_id', profile.id)  // Using registrant_profiles.id
-              .eq('status', 'pending');
-
-            if (!requestsErrorFallback && pendingRequestsFallback && pendingRequestsFallback.length > 0) {
-              console.log(`📋 Found ${pendingRequestsFallback.length} pending requests with registrant IDs (DATA ISSUE)`);
-              
-              // Process pending requests with wrong ID format
-              for (const request of pendingRequestsFallback) {
+            if (pendingRequests && pendingRequests.length > 0) {
+              // Process pending requests
+              for (const request of pendingRequests) {
                 try {
-                  // Get requester's profile (using registrant_profiles.id)
+                  console.log('🔍 Processing request:', request);
+                  
+                  // Get requester's profile (should be applicant)
                   const { data: requesterProfile, error: profileError } = await supabase
-                    .from('registrant_profiles')
-                    .select('id, first_name, last_name, email, user_id')
+                    .from('applicant_matching_profiles')
+                    .select(`
+                      id,
+                      user_id,
+                      primary_phone,
+                      registrant_profiles!inner(
+                        id,
+                        first_name,
+                        last_name,
+                        email
+                      )
+                    `)
                     .eq('id', request.requester_id)
                     .single();
 
                   if (requesterProfile && !profileError) {
+                    console.log('👤 Found requester profile:', requesterProfile);
+                    
                     allConnections.push({
                       id: `request_${request.id}`,
                       profile_id: request.requester_id,
-                      name: `${requesterProfile.first_name} ${requesterProfile.last_name}`,
+                      name: `${requesterProfile.registrant_profiles.first_name} ${requesterProfile.registrant_profiles.last_name}`,
                       type: 'peer_support',
                       status: 'pending_request',
                       source: 'match_request',
@@ -243,18 +216,78 @@ const ConnectionHub = ({ onBack }) => {
                       shared_contact: false,
                       contact_info: null,
                       avatar: '🤝',
-                      request_message: request.message,
-                      data_issue: true // Flag for data inconsistency
+                      request_message: request.message
                     });
+                  } else {
+                    console.warn('⚠️ Could not find requester profile for request:', request.id, profileError);
                   }
                 } catch (profileErr) {
-                  console.warn('Error loading requester profile (fallback):', profileErr);
+                  console.warn('⚠️ Error loading requester profile:', profileErr);
                 }
               }
             }
           }
         } catch (requestErr) {
-          console.warn('Error loading match requests:', requestErr);
+          console.warn('⚠️ Error loading match requests:', requestErr);
+        }
+      } else {
+        console.log('ℹ️ No peer support profile ID found, skipping peer support request check');
+      }
+
+      // Also check if this user has sent requests (as an applicant)
+      if (applicantProfileId) {
+        try {
+          console.log('🔍 Looking for requests sent by this user with requester_type=applicant and requester_id:', applicantProfileId);
+          
+          const { data: sentRequests, error: sentError } = await supabase
+            .from('match_requests')
+            .select('*')
+            .eq('requester_type', 'applicant')
+            .eq('requester_id', applicantProfileId)
+            .eq('request_type', 'peer-support')
+            .in('status', ['pending', 'accepted']);
+
+          if (!sentError && sentRequests && sentRequests.length > 0) {
+            console.log(`📤 Found ${sentRequests.length} requests sent by this user`);
+            
+            for (const request of sentRequests) {
+              try {
+                // Get recipient's profile (should be peer support)
+                const { data: recipientProfile, error: recipientError } = await supabase
+                  .from('peer_support_profiles')
+                  .select(`
+                    id,
+                    user_id,
+                    first_name,
+                    professional_title
+                  `)
+                  .eq('id', request.recipient_id)
+                  .single();
+
+                if (recipientProfile && !recipientError) {
+                  allConnections.push({
+                    id: `sent_request_${request.id}`,
+                    profile_id: request.recipient_id,
+                    name: recipientProfile.first_name || 'Anonymous',
+                    type: 'peer_support',
+                    status: request.status === 'pending' ? 'request_sent' : 'active_connection',
+                    source: 'match_request',
+                    request_id: request.id,
+                    created_at: request.created_at,
+                    last_activity: request.updated_at || request.created_at,
+                    shared_contact: request.status === 'accepted',
+                    contact_info: null,
+                    avatar: '🤝',
+                    request_message: request.message
+                  });
+                }
+              } catch (recipientErr) {
+                console.warn('⚠️ Error loading recipient profile:', recipientErr);
+              }
+            }
+          }
+        } catch (sentErr) {
+          console.warn('⚠️ Error loading sent requests:', sentErr);
         }
       }
 
@@ -281,7 +314,7 @@ const ConnectionHub = ({ onBack }) => {
             .in('status', ['confirmed', 'active']);
 
           if (matchError) {
-            console.warn('Error loading match groups:', matchError);
+            console.warn('⚠️ Error loading match groups:', matchError);
           } else if (matchGroups && matchGroups.length > 0) {
             console.log(`📊 Found ${matchGroups.length} active match groups`);
             
@@ -334,13 +367,13 @@ const ConnectionHub = ({ onBack }) => {
                     });
                   }
                 } catch (profileErr) {
-                  console.warn('Error loading other profile:', profileErr);
+                  console.warn('⚠️ Error loading other profile:', profileErr);
                 }
               }
             }
           }
         } catch (matchErr) {
-          console.warn('Error loading match groups:', matchErr);
+          console.warn('⚠️ Error loading match groups:', matchErr);
         }
       } else {
         console.log('ℹ️ No matching profile IDs found, skipping match_groups query');
@@ -358,8 +391,9 @@ const ConnectionHub = ({ onBack }) => {
 
       console.log(`✅ Loaded ${allConnections.length} total connections:`);
       console.log('- Pending requests:', allConnections.filter(c => c.status === 'pending_request').length);
+      console.log('- Sent requests:', allConnections.filter(c => c.status === 'request_sent').length);
       console.log('- Active connections:', allConnections.filter(c => c.status === 'active_connection').length);
-      console.log('- Data issues found:', allConnections.filter(c => c.data_issue).length);
+      
       setConnections(allConnections);
 
     } catch (err) {
@@ -547,10 +581,10 @@ const ConnectionHub = ({ onBack }) => {
 
   // Load connections on mount
   useEffect(() => {
-    if (profile?.id) {
+    if (profile?.id && user?.id) {
       loadConnections();
     }
-  }, [profile?.id]);
+  }, [profile?.id, user?.id]);
 
   return (
     <div className="content">
@@ -619,6 +653,11 @@ const ConnectionHub = ({ onBack }) => {
                     {connections.filter(c => c.status === 'pending_request').length} Pending
                   </span>
                 )}
+                {connections.filter(c => c.status === 'request_sent').length > 0 && (
+                  <span className="badge badge-info">
+                    {connections.filter(c => c.status === 'request_sent').length} Sent
+                  </span>
+                )}
                 {connections.filter(c => c.status === 'active_connection').length > 0 && (
                   <span className="badge badge-success">
                     {connections.filter(c => c.status === 'active_connection').length} Active
@@ -661,8 +700,8 @@ const ConnectionHub = ({ onBack }) => {
                       {connection.status === 'pending_request' && (
                         <span className="badge badge-warning">⏳ Pending</span>
                       )}
-                      {connection.data_issue && (
-                        <span className="badge badge-error" title="Data inconsistency - contact admin">⚠️ Data Issue</span>
+                      {connection.status === 'request_sent' && (
+                        <span className="badge badge-info">📤 Sent</span>
                       )}
                     </div>
                   </div>
@@ -672,14 +711,15 @@ const ConnectionHub = ({ onBack }) => {
                 <div className="mb-4">
                   <div className={styles.sourceInfo}>
                     <span className={styles.sourceLabel}>Source:</span> {
-                      connection.source === 'match_request' ? 'Peer Support Request' :
+                      connection.source === 'match_request' && connection.status === 'pending_request' ? 'Incoming Request' :
+                      connection.source === 'match_request' && connection.status === 'request_sent' ? 'Sent Request' :
                       connection.source === 'match_group' ? 'Active Connection' :
                       'Unknown'
                     }
                   </div>
 
                   {/* Request Message for pending requests */}
-                  {connection.status === 'pending_request' && connection.request_message && (
+                  {(connection.status === 'pending_request' || connection.status === 'request_sent') && connection.request_message && (
                     <div className={styles.requestMessage}>
                       <span className={styles.requestLabel}>Message:</span>
                       <div className={styles.requestText}>"{connection.request_message}"</div>
@@ -700,19 +740,12 @@ const ConnectionHub = ({ onBack }) => {
                       )}
                     </div>
                   )}
-
-                  {/* Data issue warning */}
-                  {connection.data_issue && (
-                    <div className={styles.dataIssueWarning}>
-                      <strong>⚠️ Data Issue:</strong> This connection has inconsistent data format. Please contact support.
-                    </div>
-                  )}
                 </div>
 
                 {/* Action Buttons */}
                 <div className="button-grid">
                   {connection.status === 'pending_request' ? (
-                    // Pending request actions
+                    // Pending request actions (for incoming requests)
                     <>
                       <button
                         className="btn btn-primary"
@@ -728,6 +761,11 @@ const ConnectionHub = ({ onBack }) => {
                         ❌ Decline
                       </button>
                     </>
+                  ) : connection.status === 'request_sent' ? (
+                    // Sent request status (waiting for response)
+                    <div className={styles.requestSentStatus}>
+                      <span className="badge badge-info">⏳ Waiting for response...</span>
+                    </div>
                   ) : (
                     // Active connection actions
                     <>
