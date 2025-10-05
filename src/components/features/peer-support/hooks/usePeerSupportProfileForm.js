@@ -309,8 +309,9 @@ export const usePeerSupportProfileForm = ({ editMode = false, onComplete } = {})
         // Service Settings
         accepting_clients: formData.accepting_clients !== false,
         
-        // About
+        // About - ✅ FIXED: Map bio to about_me for database schema compatibility
         bio: formData.bio.trim(),
+        about_me: formData.bio.trim(), // Database expects this field to be NOT NULL
         additional_info: formData.additional_info?.trim() || null,
         
         // Status
