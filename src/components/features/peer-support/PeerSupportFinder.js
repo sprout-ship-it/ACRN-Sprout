@@ -1,4 +1,4 @@
-// src/components/features/peer-support/PeerSupportFinder.js - FIXED: Correct getByUserId parameters
+// src/components/features/peer-support/PeerSupportFinder.js - FIXED: Direct database queries
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../../../hooks/useAuth';
 import { db } from '../../../utils/supabase';
@@ -388,7 +388,16 @@ const PeerSupportFinder = ({ onBack }) => {
   };
 
   /**
-   * ✅ FIXED: Peer support connection request with correct role-specific IDs
+   * ✅ FIXED: Peer support connection request with direct database queries
+   * 
+   * Issue: The matchingProfiles service was trying to lookup registrant_profiles first,
+   * but some users don't have registrant_profiles records, causing the service to fail.
+   * 
+   * Solution: Bypass the service chain and directly query:
+   * - applicant_matching_profiles table for requester_id
+   * - peer_support_profiles table for recipient_id
+   * 
+   * Then populate these role-specific IDs into match_requests table.
    */
   const handleRequestConnection = async (specialist) => {
     if (!profile?.id) return;
@@ -419,26 +428,65 @@ const PeerSupportFinder = ({ onBack }) => {
         throw new Error('Connection request service is temporarily unavailable. Please try again later.');
       }
 
-      // ✅ FIXED: Get role-specific profile IDs for proper schema compliance
-      console.log('🔍 Getting role-specific profile IDs...');
+      // ✅ FIXED: Bypass service chain and directly query role-specific profile tables
+      console.log('🔍 Getting role-specific profile IDs for match request...');
       
-      // Get the requester's applicant_matching_profiles.id
+      // Get the requester's applicant_matching_profiles.id (bypassing registrant_profiles lookup)
+      
+      // ✅ FIXED: Direct query to applicant_matching_profiles by user_id
       let requesterProfileId = null;
       try {
-        if (db.matchingProfiles && typeof db.matchingProfiles.getByUserId === 'function') {
-          const applicantResult = await db.matchingProfiles.getByUserId(profile.id);
-          if (applicantResult.data && !applicantResult.error) {
-            requesterProfileId = applicantResult.data.id;
-            console.log('👤 Found requester applicant profile ID:', requesterProfileId);
-          } else {
+        console.log('🔍 Directly querying applicant_matching_profiles for user_id:', profile.id);
+        
+        // Access supabase client through db object or create direct client
+        const supabase = db.client || db._client || db.supabase;
+        if (!supabase) {
+          // Fallback: create direct client
+          const { createClient } = await import('@supabase/supabase-js');
+          const supabaseUrl = process.env.REACT_APP_SUPABASE_URL;
+          const supabaseKey = process.env.REACT_APP_SUPABASE_ANON_KEY;
+          const directClient = createClient(supabaseUrl, supabaseKey);
+          
+          const { data: applicantProfile, error: applicantError } = await directClient
+            .from('applicant_matching_profiles')
+            .select('id')
+            .eq('user_id', profile.id)
+            .single();
+
+          if (applicantError) {
+            console.error('❌ Error querying applicant_matching_profiles:', applicantError);
             throw new Error('Could not find your applicant profile. Please complete your applicant profile first.');
           }
+
+          if (!applicantProfile?.id) {
+            throw new Error('Your applicant profile exists but has no ID. Please contact support.');
+          }
+
+          requesterProfileId = applicantProfile.id;
         } else {
-          throw new Error('Profile service is not available. Please refresh the page and try again.');
+          const { data: applicantProfile, error: applicantError } = await supabase
+            .from('applicant_matching_profiles')
+            .select('id')
+            .eq('user_id', profile.id)
+            .single();
+
+          if (applicantError) {
+            console.error('❌ Error querying applicant_matching_profiles:', applicantError);
+            throw new Error('Could not find your applicant profile. Please complete your applicant profile first.');
+          }
+
+          if (!applicantProfile?.id) {
+            throw new Error('Your applicant profile exists but has no ID. Please contact support.');
+          }
+
+          requesterProfileId = applicantProfile.id;
         }
+        
+        console.log('✅ Found requester applicant profile ID:', requesterProfileId);
+        
       } catch (profileError) {
         console.error('Error getting requester profile:', profileError);
-        throw new Error(`Unable to get your profile information: ${profileError.message}`);
+        throw new Error(`Unable to get your applicant profile: ${profileError.message}`);
       }
 
       // ✅ SIMPLIFIED: Use specialist.id directly (it's already peer_support_profiles.id)
