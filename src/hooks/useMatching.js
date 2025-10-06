@@ -1,4 +1,4 @@
-// src/hooks/useMatching.js - SCHEMA COMPLIANT VERSION
+// src/hooks/useMatching.js - FIXED: Role-aware initialization
 
 import { useState, useCallback, useEffect, useRef } from 'react';
 import { useAuth } from './useAuth';
@@ -9,12 +9,8 @@ import { generateDetailedFlags, getCompatibilitySummary } from '../utils/matchin
 /**
  * SCHEMA COMPLIANT: React hook for matching functionality
  * 
- * Integrates with schemaCompliantMatchingService for all data operations
- * Provides React-specific state management and lifecycle integration
- * Uses exact database table names from schema.sql
- * 
- * Architecture Flow:
- * auth.users.id → registrant_profiles.user_id → registrant_profiles.id → applicant_matching_profiles.user_id
+ * ✅ FIXED: Now only initializes for applicant users
+ * Other user types (peer-support, landlord, employer) skip matching initialization
  */
 export const useMatching = () => {
   const { user, profile } = useAuth(); // profile = registrant_profiles record
@@ -30,6 +26,13 @@ export const useMatching = () => {
   const initializationRef = useRef({ isInitializing: false, isInitialized: false });
 
   /**
+   * ✅ FIXED: Check if user has applicant role
+   */
+  const isApplicantUser = useCallback(() => {
+    return profile?.roles && Array.isArray(profile.roles) && profile.roles.includes('applicant');
+  }, [profile?.roles]);
+
+  /**
    * SCHEMA COMPLIANT: Clear error state
    */
   const clearError = useCallback(() => {
@@ -37,27 +40,34 @@ export const useMatching = () => {
   }, []);
 
   /**
-   * SCHEMA COMPLIANT: Load user's matching profile
-   * Uses registrant_profiles.id (not auth.users.id)
+   * ✅ FIXED: Load user's matching profile (only for applicants)
    */
-  
-const loadUserProfile = useCallback(async () => {
-  if (!profile?.id) {
-    console.log('⚠️ useMatching: No registrant profile found:', { 
-      profile, 
-      user: user?.id,
-      profileId: profile?.id,
-      userIsAuthenticated: !!user
-    })
-    setError('No registrant profile found. Please complete account setup.');
-    return null;
-  }
+  const loadUserProfile = useCallback(async () => {
+    if (!profile?.id) {
+      console.log('⚠️ useMatching: No registrant profile found:', { 
+        profile, 
+        user: user?.id,
+        profileId: profile?.id,
+        userIsAuthenticated: !!user
+      });
+      setError('No registrant profile found. Please complete account setup.');
+      return null;
+    }
 
-  try {
-    setError(null);
-    console.log('🔍 useMatching: Loading with registrant_profile.id:', profile.id)
-    console.log('🔍 Loading schema-compliant user matching profile...');
-      
+    // ✅ FIXED: Only load matching profile for applicant users
+    if (!isApplicantUser()) {
+      console.log('ℹ️ useMatching: User is not an applicant, skipping matching profile load:', {
+        roles: profile.roles,
+        isApplicant: isApplicantUser()
+      });
+      return null;
+    }
+
+    try {
+      setError(null);
+      console.log('🔍 useMatching: Loading with registrant_profile.id:', profile.id);
+      console.log('🔍 Loading schema-compliant user matching profile...');
+        
       // SCHEMA COMPLIANT: Pass registrant_profiles.id to matching service
       const userMatchingProfile = await schemaCompliantMatchingService.loadUserProfile(profile.id);
       
@@ -75,7 +85,7 @@ const loadUserProfile = useCallback(async () => {
       setError(err.message || 'Failed to load your matching profile');
       return null;
     }
-  }, [profile?.id]);
+  }, [profile?.id, isApplicantUser]);
 
   /**
    * SCHEMA COMPLIANT: Find matches using the updated matching service
@@ -83,6 +93,12 @@ const loadUserProfile = useCallback(async () => {
   const findMatches = useCallback(async (filters = {}) => {
     if (!profile?.id) {
       setError('No registrant profile available for matching');
+      return [];
+    }
+
+    if (!isApplicantUser()) {
+      console.log('ℹ️ useMatching: User is not an applicant, cannot find matches');
+      setError('Matching is only available for applicant users');
       return [];
     }
 
@@ -102,7 +118,7 @@ const loadUserProfile = useCallback(async () => {
       
       // Update state
       setMatches(matches);
-      if (userProfile && !userMatchingProfile) {
+      if (userProfile && !userProfile) {
         setUserProfile(userProfile);
       }
       setLastFilters(filters);
@@ -116,7 +132,7 @@ const loadUserProfile = useCallback(async () => {
     } finally {
       setLoading(false);
     }
-  }, [profile?.id, userProfile]);
+  }, [profile?.id, isApplicantUser]);
 
   /**
    * SCHEMA COMPLIANT: Send match request
@@ -124,6 +140,10 @@ const loadUserProfile = useCallback(async () => {
   const sendMatchRequest = useCallback(async (targetMatch, customMessage = '') => {
     if (!profile?.id || !targetMatch?.user_id) {
       throw new Error('Invalid profile or target match');
+    }
+
+    if (!isApplicantUser()) {
+      throw new Error('Only applicant users can send match requests');
     }
 
     try {
@@ -152,13 +172,18 @@ const loadUserProfile = useCallback(async () => {
       setError(err.message || 'Failed to send match request');
       return { success: false, error: err.message };
     }
-  }, [profile?.id, findMatches, lastFilters]);
+  }, [profile?.id, isApplicantUser, findMatches, lastFilters]);
 
   /**
    * SCHEMA COMPLIANT: Load user's match requests and connections
    */
   const loadMatchRequests = useCallback(async () => {
     if (!profile?.id) return [];
+
+    if (!isApplicantUser()) {
+      console.log('ℹ️ useMatching: User is not an applicant, skipping match requests load');
+      return [];
+    }
 
     try {
       setError(null);
@@ -178,13 +203,18 @@ const loadUserProfile = useCallback(async () => {
       setError(err.message || 'Failed to load match requests');
       return [];
     }
-  }, [profile?.id]);
+  }, [profile?.id, isApplicantUser]);
 
   /**
    * SCHEMA COMPLIANT: Get matching statistics
    */
   const loadStatistics = useCallback(async () => {
     if (!profile?.id) return null;
+
+    if (!isApplicantUser()) {
+      console.log('ℹ️ useMatching: User is not an applicant, skipping statistics load');
+      return null;
+    }
 
     try {
       setError(null);
@@ -201,7 +231,7 @@ const loadUserProfile = useCallback(async () => {
       setError(err.message || 'Failed to load statistics');
       return null;
     }
-  }, [profile?.id]);
+  }, [profile?.id, isApplicantUser]);
 
   /**
    * SCHEMA COMPLIANT: Calculate compatibility between any two profiles
@@ -244,6 +274,10 @@ const loadUserProfile = useCallback(async () => {
       throw new Error('No registrant profile available');
     }
 
+    if (!isApplicantUser()) {
+      throw new Error('Only applicant users have matching profiles to update');
+    }
+
     try {
       setError(null);
       console.log('📝 Updating user matching profile...');
@@ -266,10 +300,10 @@ const loadUserProfile = useCallback(async () => {
       setError(err.message || 'Failed to update profile');
       return { success: false, error: err.message };
     }
-  }, [profile?.id, loadUserProfile]);
+  }, [profile?.id, isApplicantUser, loadUserProfile]);
 
   /**
-   * SCHEMA COMPLIANT: Initialize the matching system
+   * ✅ FIXED: Initialize the matching system (only for applicants)
    */
   const initialize = useCallback(async () => {
     // Prevent duplicate initialization
@@ -282,12 +316,22 @@ const loadUserProfile = useCallback(async () => {
       return false;
     }
 
+    // ✅ FIXED: Only initialize for applicant users
+    if (!isApplicantUser()) {
+      console.log('ℹ️ useMatching: User is not an applicant, skipping matching initialization:', {
+        roles: profile.roles,
+        isApplicant: isApplicantUser()
+      });
+      initializationRef.current.isInitialized = true; // Mark as "initialized" to prevent retries
+      return true; // Return success for non-applicant users
+    }
+
     initializationRef.current.isInitializing = true;
     setLoading(true);
     setError(null);
 
     try {
-      console.log('🚀 Initializing schema-compliant matching system...');
+      console.log('🚀 Initializing schema-compliant matching system for applicant user...');
       
       // Load user profile first
       const userMatchingProfile = await loadUserProfile();
@@ -314,7 +358,7 @@ const loadUserProfile = useCallback(async () => {
       initializationRef.current.isInitializing = false;
       setLoading(false);
     }
-  }, [profile?.id, loadUserProfile, loadStatistics]);
+  }, [profile?.id, isApplicantUser, loadUserProfile, loadStatistics]);
 
   /**
    * Reset initialization state when user changes
@@ -324,11 +368,22 @@ const loadUserProfile = useCallback(async () => {
   }, [profile?.id]);
 
   /**
-   * Auto-initialize when registrant profile is available
+   * ✅ FIXED: Auto-initialize when registrant profile is available (only for applicants)
    */
   useEffect(() => {
     if (profile?.id && !initializationRef.current.isInitialized && !initializationRef.current.isInitializing) {
-      initialize();
+      // ✅ FIXED: Check if user is an applicant before initializing
+      if (isApplicantUser()) {
+        console.log('🚀 Auto-initializing matching for applicant user');
+        initialize();
+      } else {
+        console.log('ℹ️ User is not an applicant, skipping matching auto-initialization:', {
+          roles: profile.roles,
+          isApplicant: isApplicantUser()
+        });
+        // Mark as initialized to prevent retries
+        initializationRef.current.isInitialized = true;
+      }
     } else if (!profile?.id) {
       // Clear data when no profile
       setUserProfile(null);
@@ -338,7 +393,7 @@ const loadUserProfile = useCallback(async () => {
       setError(null);
       initializationRef.current = { isInitializing: false, isInitialized: false };
     }
-  }, [profile?.id, initialize]);
+  }, [profile?.id, isApplicantUser, initialize]);
 
   /**
    * Refresh all data
@@ -399,7 +454,8 @@ const loadUserProfile = useCallback(async () => {
     hasProfile: userProfile !== null,
     profileCompletion: userProfile?.completion_percentage || 0,
     matchCount: matches.length,
-    algorithmVersion: '2.0_schema_compliant'
+    algorithmVersion: '2.0_schema_compliant',
+    isApplicantUser: isApplicantUser() // ✅ ADDED: Expose role check
   };
 };
 
@@ -442,8 +498,7 @@ export const useCompatibilityCalculation = () => {
 };
 
 /**
- * SCHEMA COMPLIANT: Hook for matching statistics only
- * Useful for dashboard components that only need stats
+ * ✅ FIXED: Hook for matching statistics only (role-aware)
  */
 export const useMatchingStatistics = () => {
   const { profile } = useAuth();
@@ -451,9 +506,18 @@ export const useMatchingStatistics = () => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
 
+  const isApplicantUser = useCallback(() => {
+    return profile?.roles && Array.isArray(profile.roles) && profile.roles.includes('applicant');
+  }, [profile?.roles]);
+
   const loadStatistics = useCallback(async () => {
     if (!profile?.id) {
       setError('No registrant profile available');
+      return null;
+    }
+
+    if (!isApplicantUser()) {
+      console.log('ℹ️ useMatchingStatistics: User is not an applicant, skipping statistics');
       return null;
     }
 
@@ -471,13 +535,13 @@ export const useMatchingStatistics = () => {
     } finally {
       setLoading(false);
     }
-  }, [profile?.id]);
+  }, [profile?.id, isApplicantUser]);
 
   useEffect(() => {
-    if (profile?.id) {
+    if (profile?.id && isApplicantUser()) {
       loadStatistics();
     }
-  }, [profile?.id, loadStatistics]);
+  }, [profile?.id, isApplicantUser, loadStatistics]);
 
   return {
     statistics,
