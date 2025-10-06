@@ -748,7 +748,7 @@ const MainApp = () => {
 
             {/* Universal Routes */}
             <Route path="/property-search" element={<PropertySearch />} />
-            <Route path="/connections" element={<ConnectionHub />} />
+            <Route path="/connections" element={<MatchRequests />} />
             <Route path="/communications" element={<ConnectionHub />} />
             <Route path="/settings" element={<Settings />} />
             <Route path="/match-requests" element={<MatchRequests />} />
