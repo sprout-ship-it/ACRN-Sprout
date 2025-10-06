@@ -62,14 +62,26 @@ const RequestCard = ({
 
   const isSent = !isRecipient;
 
-  // Get display name from profile data
+  // Get display name from profile data - show the OTHER person's name
   const getDisplayName = () => {
-    if (request.requester_profile?.registrant_profiles?.first_name) {
-      return request.requester_profile.registrant_profiles.first_name;
+    // If current user is recipient, show requester's name
+    // If current user is requester, show recipient's name
+    const otherProfile = isRecipient 
+      ? request.requester_profile?.registrant_profiles
+      : request.recipient_profile?.registrant_profiles;
+    
+    if (otherProfile?.first_name) {
+      return otherProfile.first_name;
     }
-    if (request.recipient_profile?.registrant_profiles?.first_name) {
+    
+    // Fallback: try to get any available name that's not the current user
+    if (!isRecipient && request.recipient_profile?.registrant_profiles?.first_name) {
       return request.recipient_profile.registrant_profiles.first_name;
     }
+    if (isRecipient && request.requester_profile?.registrant_profiles?.first_name) {
+      return request.requester_profile.registrant_profiles.first_name;
+    }
+    
     return 'Unknown User';
   };
 
