@@ -100,8 +100,11 @@ const ConnectionHub = ({ onBack }) => {
     setError(null);
 
     try {
-      console.log('🔄 Loading all connections for user:', user.id);
-      console.log('🔍 Profile info:', { profileId: profile.id, roles: profile.roles });
+      console.log('🔄 Loading all connections for:', {
+        authUserId: user.id,
+        registrantProfileId: profile.id, 
+        roles: profile.roles
+      });
       
       const allConnections = [];
 
@@ -252,24 +255,59 @@ const ConnectionHub = ({ onBack }) => {
             
             for (const request of sentRequests) {
               try {
-                // Get recipient's profile (should be peer support)
-                const { data: recipientProfile, error: recipientError } = await supabase
-                  .from('peer_support_profiles')
-                  .select(`
-                    id,
-                    user_id,
-                    first_name,
-                    professional_title
-                  `)
-                  .eq('id', request.recipient_id)
-                  .single();
+                // ✅ FIXED: Query correct table based on recipient_type
+                let recipientProfile = null;
+                
+                if (request.recipient_type === 'peer-support') {
+                  // Query peer_support_profiles table
+                  const { data: peerProfile, error: peerError } = await supabase
+                    .from('peer_support_profiles')
+                    .select('id, user_id, first_name, last_name, professional_title')
+                    .eq('id', request.recipient_id)
+                    .single();
+                    
+                  if (peerProfile && !peerError) {
+                    recipientProfile = {
+                      id: peerProfile.id,
+                      name: `${peerProfile.first_name || 'Anonymous'} ${peerProfile.last_name || ''}`.trim(),
+                      title: peerProfile.professional_title || 'Peer Support Specialist'
+                    };
+                  } else {
+                    console.warn('⚠️ Could not find peer support profile for recipient_id:', request.recipient_id, peerError);
+                  }
+                } else if (request.recipient_type === 'applicant') {
+                  // Query applicant_matching_profiles table
+                  const { data: applicantProfile, error: applicantError } = await supabase
+                    .from('applicant_matching_profiles')
+                    .select(`
+                      id,
+                      user_id,
+                      registrant_profiles!inner(
+                        first_name,
+                        last_name,
+                        email
+                      )
+                    `)
+                    .eq('id', request.recipient_id)
+                    .single();
+                    
+                  if (applicantProfile && !applicantError) {
+                    recipientProfile = {
+                      id: applicantProfile.id,
+                      name: `${applicantProfile.registrant_profiles.first_name} ${applicantProfile.registrant_profiles.last_name}`,
+                      title: 'Applicant'
+                    };
+                  } else {
+                    console.warn('⚠️ Could not find applicant profile for recipient_id:', request.recipient_id, applicantError);
+                  }
+                }
 
-                if (recipientProfile && !recipientError) {
+                if (recipientProfile) {
                   allConnections.push({
                     id: `sent_request_${request.id}`,
                     profile_id: request.recipient_id,
-                    name: recipientProfile.first_name || 'Anonymous',
-                    type: 'peer_support',
+                    name: recipientProfile.name,
+                    type: request.request_type.replace('-', '_'), // peer-support -> peer_support
                     status: request.status === 'pending' ? 'request_sent' : 'active_connection',
                     source: 'match_request',
                     request_id: request.id,
@@ -277,9 +315,13 @@ const ConnectionHub = ({ onBack }) => {
                     last_activity: request.updated_at || request.created_at,
                     shared_contact: request.status === 'accepted',
                     contact_info: null,
-                    avatar: '🤝',
-                    request_message: request.message
+                    avatar: request.request_type === 'peer-support' ? '🤝' : '👥',
+                    request_message: request.message,
+                    recipient_type: request.recipient_type
                   });
+                  console.log('✅ Added sent request:', recipientProfile.name, 'Type:', request.recipient_type);
+                } else {
+                  console.warn('⚠️ Could not load recipient profile for request:', request.id);
                 }
               } catch (recipientErr) {
                 console.warn('⚠️ Error loading recipient profile:', recipientErr);
@@ -909,4 +951,4 @@ const ConnectionHub = ({ onBack }) => {
   );
 };
 
-export default ConnectionHub;  
+export default ConnectionHub;
