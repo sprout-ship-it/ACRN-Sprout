@@ -9,6 +9,7 @@
  * 
  * Status flow: forming → confirmed → active → completed/disbanded
  */
+import { supabase } from '../supabase';
 
 const createMatchGroupsService = (supabaseClient) => {
   if (!supabaseClient) {
@@ -570,14 +571,12 @@ getGroupComposition: (matchGroup) => {
   return service;
 };
 
-export const getMatchGroupsByUserId = async (userType, userId) => {
+export const getMatchGroupsByUserId = async (userType, userId, authenticatedSupabase = null) => {
   try {
     console.log('🏠 Fetching match groups for user:', userType, userId);
     
-    const { createClient } = await import('@supabase/supabase-js');
-    const supabaseUrl = process.env.REACT_APP_SUPABASE_URL;
-    const supabaseKey = process.env.REACT_APP_SUPABASE_ANON_KEY;
-    const supabase = createClient(supabaseUrl, supabaseKey);
+    // ✅ FIXED: Use authenticated client instead of creating new one
+    const supabaseClient = authenticatedSupabase || supabase;
 
     let orClause;
     switch (userType) {
@@ -586,7 +585,7 @@ export const getMatchGroupsByUserId = async (userType, userId) => {
         break;
       case 'landlord':
         // Need to join through properties table
-        const { data: properties, error: propsError } = await supabase
+        const { data: properties, error: propsError } = await supabaseClient
           .from('properties')
           .select('id')
           .eq('landlord_id', userId);
@@ -609,7 +608,7 @@ export const getMatchGroupsByUserId = async (userType, userId) => {
         return { success: false, error: `Invalid user type: ${userType}` };
     }
 
-    const { data, error } = await supabase
+    const { data, error } = await supabaseClient
       .from('match_groups')
       .select(`
         *,
@@ -659,14 +658,13 @@ export const getMatchGroupsByUserId = async (userType, userId) => {
   }
 };
 
-export const createMatchGroup = async (groupData) => {
+
+export const createMatchGroup = async (groupData, authenticatedSupabase = null) => {
   try {
     console.log('🏠 Creating match group:', groupData);
     
-    const { createClient } = await import('@supabase/supabase-js');
-    const supabaseUrl = process.env.REACT_APP_SUPABASE_URL;
-    const supabaseKey = process.env.REACT_APP_SUPABASE_ANON_KEY;
-    const supabase = createClient(supabaseUrl, supabaseKey);
+    // ✅ FIXED: Use authenticated client instead of creating new one
+    const supabaseClient = authenticatedSupabase || supabase;
 
     // Validate required fields
     if (!groupData.applicant_1_id) {
@@ -682,7 +680,7 @@ export const createMatchGroup = async (groupData) => {
       return { success: false, error: 'applicant_1_id and applicant_2_id must be different' };
     }
 
-    const { data, error } = await supabase
+    const { data, error } = await supabaseClient
       .from('match_groups')
       .insert({
         applicant_1_id: groupData.applicant_1_id,
@@ -711,14 +709,12 @@ export const createMatchGroup = async (groupData) => {
   }
 };
 
-export const updateMatchGroupStatus = async (groupId, status) => {
+export const updateMatchGroupStatus = async (groupId, status, authenticatedSupabase = null) => {
   try {
     console.log('🏠 Updating match group status:', groupId, status);
     
-    const { createClient } = await import('@supabase/supabase-js');
-    const supabaseUrl = process.env.REACT_APP_SUPABASE_URL;
-    const supabaseKey = process.env.REACT_APP_SUPABASE_ANON_KEY;
-    const supabase = createClient(supabaseUrl, supabaseKey);
+    // ✅ FIXED: Use authenticated client instead of creating new one
+    const supabaseClient = authenticatedSupabase || supabase;
 
     const validStatuses = ['forming', 'confirmed', 'active', 'completed', 'disbanded'];
     if (!validStatuses.includes(status)) {
@@ -731,7 +727,7 @@ export const updateMatchGroupStatus = async (groupId, status) => {
       last_activity: new Date().toISOString()
     };
 
-    const { data, error } = await supabase
+    const { data, error } = await supabaseClient
       .from('match_groups')
       .update(updateData)
       .eq('id', groupId)
@@ -750,16 +746,15 @@ export const updateMatchGroupStatus = async (groupId, status) => {
   }
 };
 
-export const getMatchGroupById = async (groupId) => {
+
+export const getMatchGroupById = async (groupId, authenticatedSupabase = null) => {
   try {
     console.log('🏠 Fetching match group by ID:', groupId);
     
-    const { createClient } = await import('@supabase/supabase-js');
-    const supabaseUrl = process.env.REACT_APP_SUPABASE_URL;
-    const supabaseKey = process.env.REACT_APP_SUPABASE_ANON_KEY;
-    const supabase = createClient(supabaseUrl, supabaseKey);
+    // ✅ FIXED: Use authenticated client instead of creating new one
+    const supabaseClient = authenticatedSupabase || supabase;
 
-    const { data, error } = await supabase
+    const { data, error } = await supabaseClient
       .from('match_groups')
       .select(`
         *,

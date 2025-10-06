@@ -1,6 +1,6 @@
 // src/utils/matching/matchingService.js - SCHEMA COMPLIANT VERSION
 
-import { supabase } from '../supabase.js';
+import { supabase } from '../supabase';
 import { calculateDetailedCompatibility } from './algorithm.js';
 import { transformProfileForAlgorithm, calculateAge } from './dataTransform.js';
 import { generateDetailedFlags } from './compatibility.js';

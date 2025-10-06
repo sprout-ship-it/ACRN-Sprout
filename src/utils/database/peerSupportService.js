@@ -5,6 +5,7 @@
  * ✅ FIXED: Removed conflicting standalone function
  * ✅ FIXED: Consistent service factory pattern
  */
+import { supabase } from '../supabase';
 
 const createPeerSupportService = (supabaseClient) => {
   if (!supabaseClient) {
@@ -574,17 +575,13 @@ getByUserId: async (userId) => {
  * @param {Object} supabaseClient - Optional authenticated supabase client
  * @returns {Object} Database response
  */
-export const getPeerSupportProfile = async (userId, supabaseClient) => {
+export const getPeerSupportProfile = async (userId, authenticatedSupabase = null) => {
   try {
     console.log('🤝 Fetching peer support profile for user:', userId);
     
     // Create client if not provided (like other working services)
-    if (!supabaseClient) {
-      const { createClient } = await import('@supabase/supabase-js');
-      const supabaseUrl = process.env.REACT_APP_SUPABASE_URL;
-      const supabaseKey = process.env.REACT_APP_SUPABASE_ANON_KEY;
-      supabaseClient = createClient(supabaseUrl, supabaseKey);
-    }
+// ✅ FIXED: Use authenticated client instead of creating new one
+const supabaseClient = authenticatedSupabase || supabase;
 
     const { data, error } = await supabaseClient
       .from('peer_support_profiles')
@@ -616,16 +613,11 @@ export const getPeerSupportProfile = async (userId, supabaseClient) => {
  * @param {Object} supabaseClient - Optional authenticated supabase client
  * @returns {Object} Database response
  */
-export const getPeerSupportProfileById = async (profileId, supabaseClient) => {
+export const getPeerSupportProfileById = async (profileId, authenticatedSupabase = null) => {
   try {
     console.log('🤝 Fetching peer support profile by ID:', profileId);
     
-    if (!supabaseClient) {
-      const { createClient } = await import('@supabase/supabase-js');
-      const supabaseUrl = process.env.REACT_APP_SUPABASE_URL;
-      const supabaseKey = process.env.REACT_APP_SUPABASE_ANON_KEY;
-      supabaseClient = createClient(supabaseUrl, supabaseKey);
-    }
+const supabaseClient = authenticatedSupabase || supabase;
 
     const { data, error } = await supabaseClient
       .from('peer_support_profiles')
