@@ -135,7 +135,9 @@ const handleApprove = async (requestId) => {
           applicantId = request.recipient_id; 
           peerSupportId = request.requester_id;
         }
-        
+  // In useMatchActions.js, right before the peer_support_matches insert:
+console.log('🔍 Auth check before peer_support_matches:', await supabase.auth.getUser());
+      
         const { data: peerMatch, error: peerError } = await supabase
           .from('peer_support_matches')
           .insert({
