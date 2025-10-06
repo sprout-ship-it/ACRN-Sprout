@@ -1,4 +1,4 @@
-// src/hooks/useMatchActions.js
+// src/hooks/useMatchActions.js - FIXED ID MAPPING
 import { useState } from 'react';
 import { supabase } from '../utils/supabase';
 import createMatchRequestsService from '../utils/database/matchRequestsService';
@@ -81,7 +81,8 @@ const determineMatchGroupStructure = async (request) => {
 export const useMatchActions = (reloadRequests) => {
   const [actionLoading, setActionLoading] = useState(false);
 
-const handleApprove = async (requestId) => {
+// ✅ FIXED: Updated function signature to accept profileIds for correct ID mapping
+const handleApprove = async (requestId, profileIds = null) => {
   setActionLoading(true);
   try {
     // ✅ STEP 1: Get the full request details first
@@ -99,7 +100,8 @@ const handleApprove = async (requestId) => {
       requestId,
       requester: request.requester_id,
       recipient: request.recipient_id,
-      requestType: request.request_type
+      requestType: request.request_type,
+      profileIds: profileIds
     });
 
     // ✅ STEP 2: Create match group for certain request types
@@ -121,36 +123,71 @@ const handleApprove = async (requestId) => {
 
       console.log('✅ Match group created:', matchGroup);
 
-      // ✅ STEP 3: Create peer_support_matches entry for PSS service
+      // ✅ STEP 3: Create peer_support_matches entry with CORRECT ID MAPPING
       if (request.request_type === 'peer-support') {
-        console.log('🤝 Creating peer_support_matches entry...');
+        console.log('🤝 Creating peer_support_matches entry with correct IDs...');
         
-        let applicantId, peerSupportId;
+        // ✅ FIXED: Use correct role-specific profile IDs for foreign keys
+        let applicantMatchingProfileId, peerSupportProfileId;
         
-        // Use same logic as match group creation
         if (request.requester_type === 'applicant') {
-          applicantId = request.requester_id;
-          peerSupportId = request.recipient_id;
+          // Requester is applicant, recipient is peer support
+          applicantMatchingProfileId = request.requester_id; // Should be applicant_matching_profiles.id
+          peerSupportProfileId = profileIds?.peerSupport || request.recipient_id; // Use correct peer_support_profiles.id
         } else {
-          applicantId = request.recipient_id; 
-          peerSupportId = request.requester_id;
+          // Requester is peer support, recipient is applicant  
+          applicantMatchingProfileId = request.recipient_id; // Should be applicant_matching_profiles.id
+          peerSupportProfileId = profileIds?.peerSupport || request.requester_id; // Use correct peer_support_profiles.id
         }
-  // In useMatchActions.js, right before the peer_support_matches insert:
-console.log('🔍 Auth check before peer_support_matches:', await supabase.auth.getUser());
+
+        // Validate we have the required IDs
+        if (!applicantMatchingProfileId) {
+          throw new Error('Applicant matching profile ID not found for peer support match');
+        }
+        
+        if (!peerSupportProfileId) {
+          throw new Error('Peer support profile ID not found. Ensure current user has peer support role.');
+        }
+
+        console.log('🔍 Creating peer_support_matches with correct foreign key IDs:', {
+          applicant_id: applicantMatchingProfileId,     // FK to applicant_matching_profiles.id
+          peer_support_id: peerSupportProfileId,       // FK to peer_support_profiles.id
+          originalRequestId: requestId
+        });
+
+        // ✅ FIXED: Check auth status before creating peer_support_matches
+        const authCheck = await supabase.auth.getUser();
+        console.log('🔍 Auth check before peer_support_matches:', authCheck.data?.user?.id);
       
         const { data: peerMatch, error: peerError } = await supabase
           .from('peer_support_matches')
           .insert({
-            applicant_id: applicantId,
-            peer_support_id: peerSupportId,
+            applicant_id: applicantMatchingProfileId,    // ✅ CORRECT FK to applicant_matching_profiles.id
+            peer_support_id: peerSupportProfileId,      // ✅ CORRECT FK to peer_support_profiles.id
             status: 'mutual',
+            compatibility_factors: {
+              request_message: request.message,
+              request_type: request.request_type,
+              match_source: 'match_request',
+              original_request_id: requestId
+            },
+            notes: `Created from approved match request ${requestId}`,
             created_at: new Date().toISOString(),
             updated_at: new Date().toISOString()
           })
           .select();
 
         if (peerError) {
-          console.warn('⚠️ Could not create peer_support_matches entry:', peerError);
+          console.error('💥 Could not create peer_support_matches entry:', peerError);
+          console.log('🔍 Error details:', {
+            code: peerError.code,
+            message: peerError.message,
+            details: peerError.details,
+            hint: peerError.hint
+          });
+          
+          // Don't throw here - let the match group creation succeed even if peer support match fails
+          console.warn('⚠️ Continuing without peer_support_matches entry');
         } else {
           console.log('✅ Created peer_support_matches entry:', peerMatch);
         }
@@ -238,10 +275,11 @@ console.log('🔍 Auth check before peer_support_matches:', await supabase.auth.
     }
   };
 
+  // ✅ FIXED: Updated handleReconnect to use correct profile IDs
   const handleReconnect = async (formerMatch, userProfileIds) => {
     setActionLoading(true);
     try {
-      // Determine current user's role and ID in this former match
+      // Determine current user's role and ID in this former match using correct profile IDs
       const isRequester = (
         (formerMatch.requester_type === 'applicant' && formerMatch.requester_id === userProfileIds.applicant) ||
         (formerMatch.requester_type === 'peer-support' && formerMatch.requester_id === userProfileIds.peerSupport) ||
@@ -263,6 +301,13 @@ console.log('🔍 Auth check before peer_support_matches:', await supabase.auth.
         otherUserId = formerMatch.requester_id;
       }
 
+      // ✅ FIXED: Ensure we use the correct role-specific profile ID
+      if (currentUserType === 'peer-support' && userProfileIds.peerSupport) {
+        currentUserId = userProfileIds.peerSupport;
+      } else if (currentUserType === 'applicant' && userProfileIds.applicant) {
+        currentUserId = userProfileIds.applicant;
+      }
+
       const requestData = {
         requester_type: currentUserType,
         requester_id: currentUserId,
@@ -272,6 +317,8 @@ console.log('🔍 Auth check before peer_support_matches:', await supabase.auth.
         message: `I'd like to reconnect with you.`,
         status: 'pending'
       };
+
+      console.log('🔄 Sending reconnection request with data:', requestData);
 
       const result = await matchRequestsService.create(requestData);
       

@@ -1,4 +1,4 @@
-// src/components/features/matching/MatchRequests.js - REFACTORED
+// src/components/features/matching/MatchRequests.js - FIXED ID MAPPING
 import React, { useState } from 'react';
 import { useAuth } from '../../../context/AuthContext';
 import { supabase } from '../../../utils/supabase';
@@ -311,10 +311,11 @@ const MatchRequests = () => {
     }
   };
 
-  // Define action handlers
+  // ✅ FIXED: Define action handlers with correct ID mapping
   const actions = {
     onApprove: async (requestId) => {
-      const result = await handleApprove(requestId);
+      console.log('🔄 Approving request with profile IDs:', profileIds);
+      const result = await handleApprove(requestId, profileIds); // ✅ FIXED: Pass profileIds
       if (result.success) {
         alert('Connection approved successfully!');
       } else {
@@ -350,7 +351,8 @@ const MatchRequests = () => {
     },
     
     onReconnect: async (formerMatch) => {
-      const result = await handleReconnect(formerMatch, profileIds);
+      console.log('🔄 Reconnecting with profile IDs:', profileIds);
+      const result = await handleReconnect(formerMatch, profileIds); // ✅ FIXED: Pass profileIds
       if (result.success) {
         alert('Reconnection request sent successfully!');
       } else {
