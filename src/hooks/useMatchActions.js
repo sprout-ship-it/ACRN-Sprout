@@ -17,8 +17,8 @@ const determineMatchGroupStructure = async (request) => {
       created_at: new Date().toISOString()
     };
 
-    // ✅ FIXED: For roommate requests, we know both are applicants
-    if (request.request_type === 'roommate' || request.requester_type === 'applicant') {
+    // ✅ FIXED: Handle each request type separately
+    if (request.request_type === 'roommate') {
       console.log('🏠 Creating roommate match group');
       return {
         ...baseData,
@@ -27,18 +27,16 @@ const determineMatchGroupStructure = async (request) => {
       };
     }
 
-    // ✅ FIXED: For peer support requests, determine correct direction
+    // ✅ FIXED: Handle peer support separately  
     if (request.request_type === 'peer-support') {
       console.log('🤝 Creating peer support match group');
       
       let applicantId, peerSupportId;
       
-      // Correctly determine who is who based on actual types
       if (request.requester_type === 'applicant') {
         applicantId = request.requester_id;
         peerSupportId = request.recipient_id;
       } else {
-        // Peer specialist initiated the request
         applicantId = request.recipient_id; 
         peerSupportId = request.requester_id;
       }
