@@ -52,7 +52,7 @@ export const useMatchRequests = (profileIds) => {
         requesterProfile = data;
       }
 
-      // Load recipient profile based on type (similar pattern)
+      // Load recipient profile based on type
       if (request.recipient_type === 'applicant') {
         const { data } = await supabase
           .from('applicant_matching_profiles')
@@ -60,8 +60,44 @@ export const useMatchRequests = (profileIds) => {
           .eq('id', request.recipient_id)
           .single();
         recipientProfile = data;
+      } else if (request.recipient_type === 'peer-support') {
+        const { data } = await supabase
+          .from('peer_support_profiles')
+          .select(`
+            id,
+            user_id,
+            professional_title,
+            registrant_profiles!inner(first_name, last_name, email)
+          `)
+          .eq('id', request.recipient_id)
+          .single();
+        recipientProfile = data;
+      } else if (request.recipient_type === 'landlord') {
+        const { data } = await supabase
+          .from('landlord_profiles')
+          .select(`
+            id,
+            user_id,
+            contact_person,
+            registrant_profiles!inner(first_name, last_name, email)
+          `)
+          .eq('id', request.recipient_id)
+          .single();
+        recipientProfile = data;
+      } else if (request.recipient_type === 'employer') {
+        const { data } = await supabase
+          .from('employer_profiles')
+          .select(`
+            id,
+            user_id,
+            contact_person,
+            company_name,
+            registrant_profiles!inner(first_name, last_name, email)
+          `)
+          .eq('id', request.recipient_id)
+          .single();
+        recipientProfile = data;
       }
-      // ... repeat for other types
 
       return {
         ...request,
