@@ -217,7 +217,7 @@ const handleApprove = async (requestId, profileIds = null) => {
         console.log('🤝 Creating peer_support_matches entry with essential columns only...');
         
         // ✅ ADD DEBUG FUNCTION CALL HERE (right before the peer_support_matches insert)
-        await debugRLSPolicy();
+        //await debugRLSPolicy();
         
         // ✅ FIXED: Use correct role-specific profile IDs for foreign keys
         let applicantMatchingProfileId, peerSupportProfileId;
