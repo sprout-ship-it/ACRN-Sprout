@@ -424,24 +424,28 @@ const Dashboard = () => {
     }
     
     // Universal cards
-    cards.push(
-      { 
-        id: 'connections', 
-        label: 'Connections', 
-        description: 'View and manage your match requests and connection status', 
-        className: styles.roleCardConnections,
-        path: '/app/connections',
-        icon: '🤝'
-      },
-      { 
-        id: 'communications', 
-        label: 'Communications', 
-        description: 'Secure communication hub for your active connections', 
-        className: styles.roleCardPeerSupport,
-        path: '/app/communications',
-        icon: '💬'
-      }
-    )
+cards.push(
+  { 
+    id: 'connections', 
+    label: 'Connections', 
+    description: hasRole('peer-support') 
+      ? 'Review incoming peer support requests and manage your connections'
+      : 'View and manage your match requests and connection status', 
+    className: styles.roleCardConnections,
+    path: '/app/connections',  // Everyone goes to ConnectionHub
+    icon: '🤝'
+  },
+  { 
+    id: 'communications', 
+    label: hasRole('peer-support') ? 'Message Hub' : 'Communications', 
+    description: hasRole('peer-support') 
+      ? 'Secure messaging hub for all your connections'
+      : 'Secure communication hub for your active connections', 
+    className: styles.roleCardPeerSupport,
+    path: '/app/communications',
+    icon: '💬'
+  }
+)
     
     return cards
   }
