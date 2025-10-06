@@ -162,6 +162,7 @@ const ConnectionHub = ({ onBack }) => {
 
       // 1. ✅ LOAD PENDING REQUESTS from match_requests table
       console.log('🔄 Loading pending match requests...');
+      console.log('📊 Profile IDs found:', { applicantProfileId, peerSupportProfileId });
       
       // Query for requests where this user is the recipient (peer specialist receiving requests)
       if (peerSupportProfileId) {
@@ -178,7 +179,8 @@ const ConnectionHub = ({ onBack }) => {
           if (requestsError) {
             console.error('❌ Error querying match_requests:', requestsError);
           } else {
-            console.log(`📋 Found ${pendingRequests?.length || 0} pending requests with role-specific IDs`);
+            console.log(`📋 Found ${pendingRequests?.length || 0} pending requests for peer support specialist`);
+            console.log('📋 Raw pending requests:', pendingRequests);
             
             if (pendingRequests && pendingRequests.length > 0) {
               // Process pending requests
@@ -221,6 +223,7 @@ const ConnectionHub = ({ onBack }) => {
                       avatar: '🤝',
                       request_message: request.message
                     });
+                    console.log('✅ Added pending request from:', requesterProfile.registrant_profiles.first_name);
                   } else {
                     console.warn('⚠️ Could not find requester profile for request:', request.id, profileError);
                   }
@@ -228,6 +231,8 @@ const ConnectionHub = ({ onBack }) => {
                   console.warn('⚠️ Error loading requester profile:', profileErr);
                 }
               }
+            } else {
+              console.log('ℹ️ No pending requests found for this peer support specialist');
             }
           }
         } catch (requestErr) {
