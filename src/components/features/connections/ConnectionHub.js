@@ -103,7 +103,12 @@ const ConnectionHub = ({ onBack }) => {
       console.log('🔄 Loading all connections for:', {
         authUserId: user.id,
         registrantProfileId: profile.id, 
-        roles: profile.roles
+        roles: profile.roles,
+        rolesArray: Array.isArray(profile.roles) ? profile.roles : 'NOT_ARRAY',
+        rolesLength: profile.roles?.length,
+        hasApplicantRole: profile.roles?.includes('applicant'),
+        hasPeerSupportRole: profile.roles?.includes('peer-support'),
+        roleCheck: profile.roles && profile.roles.includes('applicant')
       });
       
       const allConnections = [];
