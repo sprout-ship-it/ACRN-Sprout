@@ -124,7 +124,7 @@ const ConnectionHub = ({ onBack }) => {
           const { data: applicantProfile, error: applicantError } = await supabase
             .from('applicant_matching_profiles')
             .select('id, user_id')
-            .eq('user_id', user.id)  // ✅ FIXED: Use auth user ID
+            .eq('user_id', profile.id)  // ✅ FIXED: Use auth user ID
             .single();
           
           if (applicantProfile && !applicantError) {
