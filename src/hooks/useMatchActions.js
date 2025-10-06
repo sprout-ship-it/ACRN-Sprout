@@ -6,62 +6,94 @@ import createMatchRequestsService from '../utils/database/matchRequestsService';
 const matchRequestsService = createMatchRequestsService(supabase);
 
 // ✅ ADD DEBUG FUNCTION HERE (after imports, before other functions)
-const debugRLSPolicy = async () => {
+// Add this to your debug function to test the EXACT RLS policy logic
+
+const debugExactRLSPolicy = async () => {
   try {
-    console.log('🔍 Debugging RLS Policy from authenticated context...');
+    console.log('🔍 Testing EXACT RLS policy logic...');
     
-    // 1. Check current auth user
     const { data: { user }, error: authError } = await supabase.auth.getUser();
-    console.log('🔍 Current auth user:', user?.id);
+    console.log('🔍 Auth user for exact test:', user?.id);
     
-    // 2. Check what peer support profiles the policy finds for current user
-    const { data: peerProfilesQuery, error: queryError } = await supabase
-      .from('peer_support_profiles')
-      .select(`
-        id,
-        user_id,
-        registrant_profiles!inner(
+    // Test the EXACT peer support part of the RLS policy
+    const { data: rlsPeerCheck, error: rlsPeerError } = await supabase
+      .rpc('test_rls_peer_support_check', {
+        test_peer_support_id: '980a59be-6999-4052-a83f-2fd78aaece39',
+        test_auth_uid: user?.id
+      });
+    
+    if (rlsPeerError) {
+      // If RPC doesn't exist, use raw SQL
+      console.log('🔍 RPC not available, testing with raw query...');
+      
+      // Test exact RLS logic for peer support check
+      const { data: exactPeerCheck, error: exactPeerError } = await supabase
+        .from('peer_support_profiles')
+        .select(`
           id,
-          user_id
-        )
-      `)
-      .eq('registrant_profiles.user_id', user?.id);
+          user_id,
+          registrant_profiles!inner(
+            id,
+            user_id
+          )
+        `)
+        .eq('id', '980a59be-6999-4052-a83f-2fd78aaece39')
+        .eq('registrant_profiles.user_id', user?.id)
+        .single();
+      
+      console.log('🔍 Exact peer support RLS check result:', exactPeerCheck);
+      console.log('🔍 Exact peer support RLS check error:', exactPeerError);
+      
+      // Test if the peer support ID would be found by the RLS subquery
+      const { data: rlsSubquery, error: rlsSubqueryError } = await supabase
+        .from('peer_support_profiles')
+        .select('id')
+        .eq('registrant_profiles.user_id', user?.id);
+      
+      console.log('🔍 RLS subquery would find these peer support IDs:', rlsSubquery?.map(p => p.id));
+      console.log('🔍 Does it include our target ID?', rlsSubquery?.some(p => p.id === '980a59be-6999-4052-a83f-2fd78aaece39'));
+    }
     
-    console.log('🔍 Peer support profiles for current user:', peerProfilesQuery);
-    console.log('🔍 Query error:', queryError);
-    
-    // 3. Test if we can query the specific peer support profile
-    const testPeerSupportId = '980a59be-6999-4052-a83f-2fd78aaece39';
-    const { data: specificPeer, error: specificError } = await supabase
-      .from('peer_support_profiles')
-      .select(`
-        id,
-        user_id,
-        registrant_profiles!inner(
-          id,
-          user_id
-        )
-      `)
-      .eq('id', testPeerSupportId)
-      .single();
-    
-    console.log('🔍 Specific peer support profile:', specificPeer);
-    console.log('🔍 Does it belong to current user?', specificPeer?.registrant_profiles?.user_id === user?.id);
-    
-    // 4. Test the applicant profile
-    const testApplicantId = 'ec99777e-2760-4c41-9075-4a80b9d691fe';
-    const { data: applicantProfile, error: applicantError } = await supabase
+    // Test the EXACT applicant part of the RLS policy
+    const { data: rlsApplicantCheck, error: rlsApplicantError } = await supabase
       .from('applicant_matching_profiles')
-      .select('id, user_id')
-      .eq('id', testApplicantId)
-      .single();
+      .select('id')
+      .eq('id', 'ec99777e-2760-4c41-9075-4a80b9d691fe')
+      .not('id', 'is', null);
     
-    console.log('🔍 Applicant profile:', applicantProfile);
+    console.log('🔍 RLS applicant check result:', rlsApplicantCheck);
+    console.log('🔍 RLS applicant check error:', rlsApplicantError);
+    
+    // Try a direct insert test (this will fail but show us the exact error)
+    console.log('🔍 Attempting direct insert test...');
+    const { data: insertTest, error: insertTestError } = await supabase
+      .from('peer_support_matches')
+      .insert({
+        applicant_id: 'ec99777e-2760-4c41-9075-4a80b9d691fe',
+        peer_support_id: '980a59be-6999-4052-a83f-2fd78aaece39', 
+        status: 'debug_test'
+      })
+      .select();
+    
+    console.log('🔍 Direct insert test result:', insertTest);
+    console.log('🔍 Direct insert test error:', insertTestError);
+    
+    // If it succeeded, delete the test record
+    if (insertTest && insertTest.length > 0) {
+      await supabase
+        .from('peer_support_matches')
+        .delete()
+        .eq('id', insertTest[0].id);
+      console.log('🔍 Cleaned up test record');
+    }
     
   } catch (err) {
-    console.error('💥 Debug error:', err);
+    console.error('💥 Exact RLS test error:', err);
   }
 };
+
+// Call this in your handleApprove function right after the existing debug call:
+// await debugExactRLSPolicy();
 
 /**
  * Determine match group structure based on request type and participants
