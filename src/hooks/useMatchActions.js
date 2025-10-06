@@ -1,9 +1,67 @@
-// src/hooks/useMatchActions.js - FINAL: Only essential columns
+// src/hooks/useMatchActions.js - WITH DEBUG FUNCTION
 import { useState } from 'react';
 import { supabase } from '../utils/supabase';
 import createMatchRequestsService from '../utils/database/matchRequestsService';
 
 const matchRequestsService = createMatchRequestsService(supabase);
+
+// ✅ ADD DEBUG FUNCTION HERE (after imports, before other functions)
+const debugRLSPolicy = async () => {
+  try {
+    console.log('🔍 Debugging RLS Policy from authenticated context...');
+    
+    // 1. Check current auth user
+    const { data: { user }, error: authError } = await supabase.auth.getUser();
+    console.log('🔍 Current auth user:', user?.id);
+    
+    // 2. Check what peer support profiles the policy finds for current user
+    const { data: peerProfilesQuery, error: queryError } = await supabase
+      .from('peer_support_profiles')
+      .select(`
+        id,
+        user_id,
+        registrant_profiles!inner(
+          id,
+          user_id
+        )
+      `)
+      .eq('registrant_profiles.user_id', user?.id);
+    
+    console.log('🔍 Peer support profiles for current user:', peerProfilesQuery);
+    console.log('🔍 Query error:', queryError);
+    
+    // 3. Test if we can query the specific peer support profile
+    const testPeerSupportId = '980a59be-6999-4052-a83f-2fd78aaece39';
+    const { data: specificPeer, error: specificError } = await supabase
+      .from('peer_support_profiles')
+      .select(`
+        id,
+        user_id,
+        registrant_profiles!inner(
+          id,
+          user_id
+        )
+      `)
+      .eq('id', testPeerSupportId)
+      .single();
+    
+    console.log('🔍 Specific peer support profile:', specificPeer);
+    console.log('🔍 Does it belong to current user?', specificPeer?.registrant_profiles?.user_id === user?.id);
+    
+    // 4. Test the applicant profile
+    const testApplicantId = 'ec99777e-2760-4c41-9075-4a80b9d691fe';
+    const { data: applicantProfile, error: applicantError } = await supabase
+      .from('applicant_matching_profiles')
+      .select('id, user_id')
+      .eq('id', testApplicantId)
+      .single();
+    
+    console.log('🔍 Applicant profile:', applicantProfile);
+    
+  } catch (err) {
+    console.error('💥 Debug error:', err);
+  }
+};
 
 /**
  * Determine match group structure based on request type and participants
@@ -81,7 +139,6 @@ const determineMatchGroupStructure = async (request) => {
 export const useMatchActions = (reloadRequests) => {
   const [actionLoading, setActionLoading] = useState(false);
 
-// ✅ FINAL: Updated function with only essential peer_support_matches columns
 const handleApprove = async (requestId, profileIds = null) => {
   setActionLoading(true);
   try {
@@ -126,6 +183,9 @@ const handleApprove = async (requestId, profileIds = null) => {
       // ✅ STEP 3: Create peer_support_matches entry with ONLY ESSENTIAL COLUMNS
       if (request.request_type === 'peer-support') {
         console.log('🤝 Creating peer_support_matches entry with essential columns only...');
+        
+        // ✅ ADD DEBUG FUNCTION CALL HERE (right before the peer_support_matches insert)
+        await debugRLSPolicy();
         
         // ✅ FIXED: Use correct role-specific profile IDs for foreign keys
         let applicantMatchingProfileId, peerSupportProfileId;
