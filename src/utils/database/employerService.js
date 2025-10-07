@@ -321,9 +321,9 @@ const createEmployerService = (supabaseClient) => {
       try {
         console.log('⭐ Employer Favorites: Fetching for user:', userId);
 
-        const { data, error } = await supabaseClient
-          .from(favorites.viewName)
-          .select('*')
+      const { data, error } = await supabaseClient
+        .from(favorites.tableName)  // <-- Use tableName instead of viewName
+        .select('*')
           .eq('user_id', userId)
           .order('created_at', { ascending: false });
 
