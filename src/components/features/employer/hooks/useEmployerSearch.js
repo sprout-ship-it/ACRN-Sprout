@@ -40,7 +40,14 @@ const loadConnections = useCallback(async () => {
 
   try {
     console.log('📊 Loading existing employer connections...');
-    // ✅ FIXED: Use profile.id instead of user.id
+    
+    // ✅ FIXED: Check if service exists and handle gracefully
+    if (!db.matchRequests || typeof db.matchRequests.getByUserId !== 'function') {
+      console.warn('⚠️ Match requests service not available, skipping connection status');
+      setConnections(new Set());
+      return;
+    }
+    
     const result = await db.matchRequests.getByUserId(profile.id);
     
     if (result.success !== false && result.data) {
@@ -56,12 +63,16 @@ const loadConnections = useCallback(async () => {
       
       setConnections(existingConnections);
       console.log('📊 Loaded employer connections:', existingConnections.size);
+    } else {
+      console.log('📊 No existing connections found');
+      setConnections(new Set());
     }
   } catch (err) {
-    console.error('💥 Error loading employer connections:', err);
-    setConnections(new Set()); // Don't fail completely
+    console.warn('⚠️ Could not load employer connections (non-critical):', err.message);
+    setConnections(new Set()); // Don't fail completely - just disable connection status
   }
 }, [user?.id, profile?.id]);
+
 
   /**
    * Load user's favorite employers
@@ -73,15 +84,21 @@ const loadFavorites = useCallback(async () => {
   try {
     console.log('⭐ Loading favorite employers...');
     
-    // ✅ FIXED: Check if service exists and use correct path
-    if (!db.employerProfiles || !db.employerProfiles.favorites) {
+    // ✅ FIXED: Check multiple possible service paths
+    let favoritesService = null;
+    if (db.employerProfiles?.favorites) {
+      favoritesService = db.employerProfiles.favorites;
+    } else if (db.employerFavorites) {
+      favoritesService = db.employerFavorites;
+    }
+    
+    if (!favoritesService) {
       console.warn('⚠️ Employer favorites service not available');
       setFavorites(new Set());
       return;
     }
     
-    // ✅ FIXED: Use profile.id instead of user.id
-    const result = await db.employerProfiles.favorites.getByUserId(profile.id);
+    const result = await favoritesService.getByUserId(profile.id);
     
     if (result.error && !result.data) {
       throw new Error(result.error.message || 'Failed to load favorites');
@@ -94,7 +111,7 @@ const loadFavorites = useCallback(async () => {
     setFavorites(favoriteEmployerIds);
     console.log('⭐ Loaded favorite employers:', favoriteEmployerIds.size);
   } catch (err) {
-    console.error('💥 Error loading favorite employers:', err);
+    console.warn('⚠️ Could not load favorite employers (non-critical):', err.message);
     setFavorites(new Set());
   } finally {
     setFavoritesLoading(false);
@@ -322,8 +339,15 @@ const toggleFavorite = useCallback(async (employerId) => {
   if (!user?.id || !profile?.id) return;
 
   try {
-    // ✅ FIXED: Check service exists
-    if (!db.employerProfiles || !db.employerProfiles.favorites) {
+    // ✅ FIXED: Check for service availability
+    let favoritesService = null;
+    if (db.employerProfiles?.favorites) {
+      favoritesService = db.employerProfiles.favorites;
+    } else if (db.employerFavorites) {
+      favoritesService = db.employerFavorites;
+    }
+    
+    if (!favoritesService) {
       setError('Favorites feature is not available at this time.');
       return;
     }
@@ -331,8 +355,7 @@ const toggleFavorite = useCallback(async (employerId) => {
     const isFavorited = favorites.has(employerId);
     
     if (isFavorited) {
-      // ✅ FIXED: Use profile.id and correct service path
-      const result = await db.employerProfiles.favorites.remove(profile.id, employerId);
+      const result = await favoritesService.remove(profile.id, employerId);
       
       if (result.error) {
         throw new Error(result.error.message || 'Failed to remove favorite');
@@ -346,8 +369,7 @@ const toggleFavorite = useCallback(async (employerId) => {
       
       console.log('⭐ Removed employer from favorites:', employerId);
     } else {
-      // ✅ FIXED: Use profile.id and correct service path
-      const result = await db.employerProfiles.favorites.add(profile.id, employerId);
+      const result = await favoritesService.add(profile.id, employerId);
       
       if (result.error) {
         throw new Error(result.error.message || 'Failed to add favorite');
@@ -368,7 +390,7 @@ const toggleFavorite = useCallback(async (employerId) => {
 const connectWithEmployer = useCallback(async (employer) => {
   if (!user?.id || !profile?.id) return false;
 
-  // Check if already connected
+  // Check if already connected (only if service is available)
   if (connections.has(employer.user_id)) {
     setError(`You already have an active connection with ${employer.company_name}.`);
     return false;
@@ -385,9 +407,14 @@ const connectWithEmployer = useCallback(async (employer) => {
   try {
     console.log('💼 Connecting with employer:', employer.company_name);
     
-    // ✅ FIXED: Use profile.id consistently
+    // ✅ FIXED: Check if service exists
+    if (!db.matchRequests || typeof db.matchRequests.create !== 'function') {
+      setError('Connection feature is not available at this time. Please contact the employer directly.');
+      return false;
+    }
+    
     const connectionData = {
-      requester_id: profile.id,  // ✅ FIXED: profile.id instead of user.id
+      requester_id: profile.id,
       target_id: employer.user_id,
       request_type: 'employment',
       message: `I'm interested in potential opportunities at ${employer.company_name}. I'd appreciate the chance to connect and learn more about how my skills and recovery journey could contribute to your team.`,
@@ -423,34 +450,34 @@ const connectWithEmployer = useCallback(async (employer) => {
   /**
    * Get connection status for an employer
    */
-  const getConnectionStatus = useCallback((employer) => {
-    const isConnected = connections.has(employer.user_id);
-    const isFavorited = favorites.has(employer.user_id);
-    const isHiring = employer.is_actively_hiring;
-    
-    if (isConnected) {
-      return { 
-        text: 'Connected', 
-        disabled: true, 
-        className: 'btn btn-success',
-        type: 'connected'
-      };
-    } else if (!isHiring) {
-      return { 
-        text: 'Connect', 
-        disabled: false, 
-        className: 'btn btn-outline',
-        type: 'connect-not-hiring'
-      };
-    } else {
-      return { 
-        text: 'Connect', 
-        disabled: false, 
-        className: 'btn btn-primary',
-        type: 'connect'
-      };
-    }
-  }, [connections, favorites]);
+const getConnectionStatus = useCallback((employer) => {
+  const isConnected = connections.has(employer.user_id);
+  const isFavorited = favorites.has(employer.user_id);
+  const isHiring = employer.is_actively_hiring;
+  
+  if (isConnected) {
+    return { 
+      text: 'Connected', 
+      disabled: true, 
+      className: 'btn btn-success',
+      type: 'connected'
+    };
+  } else if (!isHiring) {
+    return { 
+      text: 'Send Inquiry', 
+      disabled: false, 
+      className: 'btn btn-outline',
+      type: 'connect-not-hiring'
+    };
+  } else {
+    return { 
+      text: 'Connect Now', 
+      disabled: false, 
+      className: 'btn btn-primary',
+      type: 'connect'
+    };
+  }
+}, [connections, favorites]);
 
   // Load initial data
   useEffect(() => {
