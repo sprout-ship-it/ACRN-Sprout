@@ -1,13 +1,17 @@
-// src/components/features/employer/components/EmployerResultsGrid.js
+// src/components/features/employer/components/EmployerResultsGrid.js - FAVORITES AS MAIN ACTION
 import React from 'react';
-import EmployerCard from './EmployerCard';
-import LoadingSpinner from '../../../ui/LoadingSpinner';
-import { hasActiveFilters } from '../utils/employerUtils';
-import styles from './EmployerResultsGrid.module.css';
+import { 
+  formatFeature, 
+  formatBusinessType, 
+  formatRemoteWork, 
+  formatIndustry,
+  formatFeatureList,
+  hasActiveFilters
+} from '../utils/employerUtils';
 
-const EmployerResultsGrid = ({
-  employers = [],
-  loading = false,
+const EmployerResultsGrid = ({ 
+  employers = [], 
+  loading = false, 
   error = null,
   filters = {},
   favorites = new Set(),
@@ -19,231 +23,294 @@ const EmployerResultsGrid = ({
   onFindNearby,
   getConnectionStatus
 }) => {
-  // Calculate stats for display
-  const totalEmployers = employers.length;
-  const activelyHiring = employers.filter(e => e.is_actively_hiring).length;
-  const connectedCount = connections.size;
-  const favoritedCount = favorites.size;
-  const hasFilters = hasActiveFilters(filters);
 
-  // Loading State
+  // Handle main action - now favorites instead of connect
+  const handleCardMainAction = (employer) => {
+    console.log('🎯 Card main action - toggling favorite for employer:', {
+      employer_id: employer.id,
+      employer_user_id: employer.user_id,
+      company_name: employer.company_name,
+      currently_favorited: favorites.has(employer.user_id)
+    });
+    onToggleFavorite(employer.user_id);
+  };
+
+  // Secondary action - view details (keep existing)
+  const handleViewDetails = (employer) => {
+    onViewDetails(employer);
+  };
+
+  // Loading state
   if (loading) {
     return (
-      <div className={styles.resultsContainer}>
-        <div className={styles.loadingState}>
-          <LoadingSpinner size="large" />
-          <div className={styles.loadingMessage}>
-            <h3>Finding Recovery-Friendly Employers</h3>
-            <p>Searching for employers that match your criteria...</p>
-          </div>
+      <div className="results-section">
+        <div className="text-center py-5">
+          <div className="spinner"></div>
+          <p className="text-muted mt-3">Finding recovery-friendly employers...</p>
         </div>
       </div>
     );
   }
 
-  // Error State
+  // Error state
   if (error) {
     return (
-      <div className={styles.resultsContainer}>
-        <div className={`card ${styles.errorState}`}>
-          <div className={styles.errorIcon}>⚠️</div>
-          <h3 className={styles.errorTitle}>Unable to Load Employers</h3>
-          <p className={styles.errorMessage}>{error}</p>
-          <div className={styles.errorActions}>
-            <button 
-              className="btn btn-primary"
-              onClick={() => window.location.reload()}
-            >
-              🔄 Try Again
-            </button>
-          </div>
+      <div className="results-section">
+        <div className="alert alert-danger">
+          <h4>⚠️ Unable to Load Employers</h4>
+          <p>{error}</p>
+          <button className="btn btn-outline mt-3" onClick={() => window.location.reload()}>
+            Try Again
+          </button>
         </div>
       </div>
     );
   }
 
-  // No Results State
-  if (totalEmployers === 0) {
+  // No results state
+  if (employers.length === 0) {
+    const hasFilters = hasActiveFilters(filters);
+    
     return (
-      <div className={styles.resultsContainer}>
-        <div className={`card ${styles.emptyState}`}>
-          <div className={styles.emptyIcon}>🔍</div>
-          <h3 className={styles.emptyTitle}>
-            {hasFilters ? 'No Employers Found' : 'No Employers Available'}
+      <div className="results-section">
+        <div className="empty-state">
+          <div className="empty-state-icon">💼</div>
+          <h3 className="empty-state-title">
+            {hasFilters ? 'No employers match your criteria' : 'No employers available'}
           </h3>
-          <p className={styles.emptyMessage}>
-            {hasFilters ? (
-              <>
-                No employers match your current search criteria. 
-                Try adjusting your filters or expanding your search area.
-              </>
-            ) : (
-              <>
-                There are currently no recovery-friendly employers in our network. 
-                Check back soon as we're always adding new partners.
-              </>
-            )}
+          <p className="empty-state-text">
+            {hasFilters 
+              ? 'Try adjusting your filters or expanding your search area.'
+              : 'There are currently no recovery-friendly employers in our directory.'
+            }
           </p>
-          
-          <div className={styles.emptyActions}>
+          <div className="empty-state-actions">
             {hasFilters ? (
               <>
-                <button
-                  className="btn btn-primary"
-                  onClick={onFindNearby}
-                >
-                  📍 Find Nearby Employers
+                <button className="btn btn-primary" onClick={onClearFilters}>
+                  Clear All Filters
                 </button>
-                <button
-                  className="btn btn-outline"
-                  onClick={onClearFilters}
-                >
-                  🗑️ Clear All Filters
+                <button className="btn btn-outline ml-2" onClick={onFindNearby}>
+                  Find Nearby Employers
                 </button>
               </>
             ) : (
-              <button
-                className="btn btn-primary"
-                onClick={onFindNearby}
-              >
-                📍 Search by Location
+              <button className="btn btn-primary" onClick={onFindNearby}>
+                Search by Location
               </button>
             )}
-          </div>
-
-          {/* Helpful Tips */}
-          <div className={styles.searchTips}>
-            <h4>💡 Search Tips</h4>
-            <ul>
-              <li>Try searching by state instead of city for broader results</li>
-              <li>Remove specific recovery feature requirements</li>
-              <li>Include employers not currently marked as "actively hiring"</li>
-              <li>Consider remote work opportunities</li>
-            </ul>
           </div>
         </div>
       </div>
     );
   }
 
-  // Results State
+  // Results display
   return (
-    <div className={styles.resultsContainer}>
+    <div className="results-section">
       {/* Results Header */}
-      <div className={`card ${styles.resultsHeader}`}>
-        <div className={styles.resultsSummary}>
-          <div className={styles.summaryMain}>
-            <h3 className={styles.resultsTitle}>
-              {totalEmployers} Employer{totalEmployers !== 1 ? 's' : ''} Found
-            </h3>
-            <div className={styles.resultsStats}>
-              {activelyHiring > 0 && (
-                <span className={`${styles.statBadge} ${styles.hiring}`}>
-                  🟢 {activelyHiring} actively hiring
-                </span>
-              )}
-              {connectedCount > 0 && (
-                <span className={`${styles.statBadge} ${styles.connected}`}>
-                  ✅ {connectedCount} connected
-                </span>
-              )}
-              {favoritedCount > 0 && (
-                <span className={`${styles.statBadge} ${styles.favorited}`}>
-                  ❤️ {favoritedCount} favorited
-                </span>
-              )}
-            </div>
-          </div>
-
-          {/* Quick Actions */}
-          <div className={styles.resultsActions}>
-            {hasFilters && (
-              <button
-                className="btn btn-outline btn-sm"
-                onClick={onClearFilters}
-                title="Clear all active filters"
-              >
-                🗑️ Clear Filters
-              </button>
-            )}
-            <button
-              className="btn btn-outline btn-sm"
-              onClick={onFindNearby}
-              title="Find employers near your location"
-            >
-              📍 Find Nearby
-            </button>
-          </div>
-        </div>
-
-        {/* Filter Summary Bar */}
-        {hasFilters && (
-          <div className={styles.filterSummary}>
-            <div className={styles.filterLabel}>Active Filters:</div>
-            <div className={styles.filterIndicators}>
-              {filters.industry && (
-                <span className={styles.filterTag}>Industry: {filters.industry}</span>
-              )}
-              {filters.location && (
-                <span className={styles.filterTag}>Location: {filters.location}</span>
-              )}
-              {filters.state && (
-                <span className={styles.filterTag}>State: {filters.state}</span>
-              )}
-              {filters.businessType && (
-                <span className={styles.filterTag}>Business Type</span>
-              )}
-              {filters.remoteWork && (
-                <span className={styles.filterTag}>Remote Work</span>
-              )}
-              {filters.recoveryFeatures?.length > 0 && (
-                <span className={styles.filterTag}>
-                  {filters.recoveryFeatures.length} Recovery Features
-                </span>
-              )}
-              {filters.jobTypes?.length > 0 && (
-                <span className={styles.filterTag}>
-                  {filters.jobTypes.length} Job Types
-                </span>
-              )}
-              {filters.hasOpenings && (
-                <span className={styles.filterTag}>Has Job Openings</span>
-              )}
-            </div>
-          </div>
+      <div className="results-header mb-4">
+        <h3 className="results-title">
+          💼 Found {employers.length} Recovery-Friendly Employer{employers.length !== 1 ? 's' : ''}
+        </h3>
+        {hasActiveFilters(filters) && (
+          <p className="results-subtitle text-muted">
+            Showing results matching your search criteria
+          </p>
         )}
       </div>
 
-      {/* Employer Grid */}
-      <div className={styles.employersGrid}>
-        {employers.map((employer) => (
-          <EmployerCard
-            key={employer.id}
-            employer={employer}
-            connectionStatus={getConnectionStatus(employer)}
-            isFavorited={favorites.has(employer.user_id)}
-            onConnect={onConnect}
-            onToggleFavorite={onToggleFavorite}
-            onViewDetails={onViewDetails}
-          />
-        ))}
+      {/* Employer Cards Grid */}
+      <div className="grid-auto">
+        {employers.map((employer) => {
+          const isFavorited = favorites.has(employer.user_id);
+          const connectionStatus = getConnectionStatus(employer);
+          const isConnected = connectionStatus?.type === 'connected';
+          
+          // Format features for display
+          const { displayFeatures: recoveryFeatures, remainingCount: recoveryRemainingCount } = 
+            formatFeatureList(employer.recovery_friendly_features || [], 3);
+          
+          const { displayFeatures: jobTypes, remainingCount: jobTypesRemainingCount } = 
+            formatFeatureList(employer.job_types_available || [], 3);
+
+          return (
+            <div key={employer.id} className="card employer-card">
+              {/* Card Header */}
+              <div className="card-header">
+                <div>
+                  <h3 className="card-title">{employer.company_name}</h3>
+                  <p className="card-subtitle">
+                    {formatIndustry(employer.industry)} • {employer.city}, {employer.state}
+                  </p>
+                </div>
+                
+                {/* Header Badges */}
+                <div className="card-badges">
+                  {employer.is_actively_hiring ? (
+                    <span className="badge badge-success">🟢 Hiring</span>
+                  ) : (
+                    <span className="badge badge-warning">⏸️ Not Hiring</span>
+                  )}
+                  
+                  {isFavorited && (
+                    <span className="badge badge-info ml-1">❤️ Favorited</span>
+                  )}
+                  
+                  {isConnected && (
+                    <span className="badge badge-success ml-1">✅ Connected</span>
+                  )}
+                </div>
+              </div>
+
+              {/* Card Body */}
+              <div className="card-body">
+                {/* Company Details */}
+                <div className="mb-3">
+                  <div className="text-sm text-gray-600 mb-2">
+                    <div className="grid-2 gap-4">
+                      <div>
+                        <strong>Type:</strong> {formatBusinessType(employer.business_type)}
+                      </div>
+                      <div>
+                        <strong>Size:</strong> {employer.company_size || 'Not specified'}
+                      </div>
+                    </div>
+                  </div>
+                  
+                  {employer.remote_work_options && (
+                    <div className="text-sm text-gray-600 mb-2">
+                      <strong>Remote Work:</strong> {formatRemoteWork(employer.remote_work_options)}
+                    </div>
+                  )}
+                </div>
+
+                {/* Description */}
+                {employer.description && (
+                  <div className="mb-3">
+                    <p className="text-gray-700 text-sm">
+                      {employer.description.length > 150 
+                        ? `${employer.description.substring(0, 150)}...` 
+                        : employer.description
+                      }
+                    </p>
+                  </div>
+                )}
+
+                {/* Job Types Available */}
+                {jobTypes.length > 0 && (
+                  <div className="mb-3">
+                    <div className="label mb-2">💼 Job Types Available</div>
+                    <div>
+                      {jobTypes.map((jobType, index) => (
+                        <span key={index} className="badge badge-success mr-1 mb-1">
+                          {jobType}
+                        </span>
+                      ))}
+                      {jobTypesRemainingCount > 0 && (
+                        <span className="text-sm text-gray-600">
+                          +{jobTypesRemainingCount} more
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                )}
+
+                {/* Recovery-Friendly Features */}
+                {recoveryFeatures.length > 0 && (
+                  <div className="mb-3">
+                    <div className="label mb-2">🤝 Recovery-Friendly Features</div>
+                    <div>
+                      {recoveryFeatures.map((feature, index) => (
+                        <span key={index} className="badge badge-info mr-1 mb-1">
+                          {feature}
+                        </span>
+                      ))}
+                      {recoveryRemainingCount > 0 && (
+                        <span className="text-sm text-gray-600">
+                          +{recoveryRemainingCount} more
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                )}
+
+                {/* Benefits Preview */}
+                {employer.benefits_offered?.length > 0 && (
+                  <div className="mb-3">
+                    <div className="label mb-2">💰 Benefits</div>
+                    <div>
+                      {employer.benefits_offered.slice(0, 2).map((benefit, index) => (
+                        <span key={index} className="badge badge-warning mr-1 mb-1">
+                          {formatFeature(benefit)}
+                        </span>
+                      ))}
+                      {employer.benefits_offered.length > 2 && (
+                        <span className="text-sm text-gray-600">
+                          +{employer.benefits_offered.length - 2} more
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              {/* ✅ CHANGED: Card Footer - Favorites as Main Action */}
+              <div className="card-footer">
+                <div className="card-actions">
+                  {/* Secondary Action - View Details */}
+                  <button
+                    className="btn btn-outline"
+                    onClick={() => handleViewDetails(employer)}
+                  >
+                    👁️ View Details
+                  </button>
+                  
+                  {/* ✅ MAIN ACTION: Add/Remove from Favorites */}
+                  <button
+                    className={`btn ${isFavorited ? 'btn-warning' : 'btn-primary'}`}
+                    onClick={() => handleCardMainAction(employer)}
+                  >
+                    {isFavorited ? (
+                      <>💔 Remove Favorite</>
+                    ) : (
+                      <>❤️ Add to Favorites</>
+                    )}
+                  </button>
+                </div>
+                
+                {/* ✅ ADDED: Helpful status text */}
+                <div className="card-status-text mt-2">
+                  <small className="text-muted">
+                    {isFavorited 
+                      ? "✅ Saved to your favorites list" 
+                      : "Save this employer to easily find them later"
+                    }
+                  </small>
+                </div>
+              </div>
+            </div>
+          );
+        })}
       </div>
 
       {/* Results Footer */}
-      <div className={styles.resultsFooter}>
-        <div className={styles.footerContent}>
-          <p className={styles.footerText}>
-            Showing {totalEmployers} recovery-friendly employer{totalEmployers !== 1 ? 's' : ''}
-            {hasFilters && ' matching your criteria'}
-          </p>
-          
-          {totalEmployers > 0 && (
-            <div className={styles.footerTip}>
-              💡 <strong>Tip:</strong> Save employers to favorites (❤️) to easily find them later, 
-              or connect directly to start the employment process.
-            </div>
-          )}
-        </div>
+      <div className="results-footer mt-5 text-center">
+        <p className="text-muted">
+          Showing {employers.length} employer{employers.length !== 1 ? 's' : ''} • 
+          <span className="ml-2">
+            {favorites.size} favorited • {connections.size} connected
+          </span>
+        </p>
+        
+        {hasActiveFilters(filters) && (
+          <button 
+            className="btn btn-outline btn-sm mt-2" 
+            onClick={onClearFilters}
+          >
+            Clear Filters to See More
+          </button>
+        )}
       </div>
     </div>
   );
