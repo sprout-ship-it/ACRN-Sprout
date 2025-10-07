@@ -1,0 +1,305 @@
+-- src/schema/schemas/employer_profiles_clean.sql
+-- Dependencies: registrant_profiles table
+-- Description: Clean employer profiles schema for recovery-friendly company directory
+
+-- ============================================================================
+-- DROP EXISTING TABLE AND POLICIES
+-- ============================================================================
+
+-- Drop existing policies
+DROP POLICY IF EXISTS "Users can view own employer profile" ON employer_profiles;
+DROP POLICY IF EXISTS "Users can insert own employer profile" ON employer_profiles;
+DROP POLICY IF EXISTS "Users can update own employer profile" ON employer_profiles;
+DROP POLICY IF EXISTS "Users can delete own employer profile" ON employer_profiles;
+DROP POLICY IF EXISTS "Verified applicants can view employer profiles" ON employer_profiles;
+DROP POLICY IF EXISTS "Active applicants can view employer profiles" ON employer_profiles;
+
+-- Drop existing table
+DROP TABLE IF EXISTS employer_profiles CASCADE;
+
+-- ============================================================================
+-- EMPLOYER PROFILES TABLE (CLEAN VERSION)
+-- ============================================================================
+-- Purpose: Recovery-friendly company directory (not job board)
+-- References: registrant_profiles.id
+-- Access: Open viewing for applicants/peer specialists, self-management for employers
+-- ============================================================================
+
+CREATE TABLE employer_profiles (
+  -- ============================================================================
+  -- PRIMARY IDENTIFIERS & METADATA
+  -- ============================================================================
+  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  user_id UUID NOT NULL REFERENCES registrant_profiles(id) ON DELETE CASCADE,
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+  
+  -- ============================================================================
+  -- SECTION 1: BASIC COMPANY INFORMATION
+  -- ============================================================================
+  company_name VARCHAR(200) NOT NULL,
+  industry VARCHAR(100) NOT NULL,
+  business_type VARCHAR(50) NOT NULL,
+  
+  -- Primary Location (always required)
+  address VARCHAR(255),
+  city VARCHAR(100) NOT NULL,
+  state VARCHAR(2) NOT NULL,
+  zip_code VARCHAR(10) NOT NULL,
+  
+  -- Additional Locations (optional - JSONB array of location objects)
+  additional_locations JSONB DEFAULT '[]',
+  
+  -- Contact Information
+  phone VARCHAR(20) NOT NULL,
+  contact_email VARCHAR(255),
+  website VARCHAR(500),
+  contact_person VARCHAR(200),
+  preferred_contact_method VARCHAR(50), -- email, phone, website, in_person
+  
+  -- ============================================================================
+  -- SECTION 2: COMPANY DETAILS
+  -- ============================================================================
+  description TEXT NOT NULL,
+  company_size VARCHAR(50), -- '1-10', '11-50', '51-200', '201-1000', '1000+'
+  founded_year INTEGER,
+  company_culture TEXT,
+  diversity_commitment TEXT,
+  
+  -- ============================================================================
+  -- SECTION 3: RECOVERY-FRIENDLY FEATURES & POLICIES
+  -- ============================================================================
+  recovery_friendly_features TEXT[] DEFAULT '{}',
+  accommodation_policies TEXT,
+  hiring_practices TEXT,
+  drug_testing_policy VARCHAR(50), -- none, pre_employment_only, random, reasonable_suspicion, post_incident
+  background_check_policy VARCHAR(50), -- none, case_by_case, standard, flexible
+  
+  -- ============================================================================
+  -- SECTION 4: EMPLOYMENT OVERVIEW
+  -- ============================================================================
+  job_types_available TEXT[] DEFAULT '{}',
+  remote_work_options VARCHAR(50), -- on_site, fully_remote, hybrid, flexible
+  benefits_offered TEXT[] DEFAULT '{}',
+  application_process TEXT,
+  is_actively_hiring BOOLEAN DEFAULT true,
+  
+  -- ============================================================================
+  -- STATUS & PROFILE MANAGEMENT
+  -- ============================================================================
+  is_active BOOLEAN DEFAULT true,
+  
+  -- ============================================================================
+  -- CONSTRAINTS
+  -- ============================================================================
+  CONSTRAINT valid_industry CHECK (
+    industry IN (
+      'Construction', 'Healthcare', 'Retail', 'Food Service', 'Manufacturing',
+      'Transportation', 'Technology', 'Education', 'Nonprofit', 'Professional Services',
+      'Hospitality', 'Agriculture', 'Finance', 'Real Estate', 'Arts & Entertainment',
+      'Government', 'Utilities', 'Other'
+    )
+  ),
+  
+  CONSTRAINT valid_business_type CHECK (
+    business_type IN (
+      'small_business', 'medium_business', 'large_corporation', 'nonprofit',
+      'startup', 'social_enterprise', 'government', 'cooperative'
+    )
+  ),
+  
+  CONSTRAINT valid_state CHECK (
+    state ~ '^[A-Z]{2}$'
+  ),
+  
+  CONSTRAINT valid_preferred_contact CHECK (
+    preferred_contact_method IS NULL OR 
+    preferred_contact_method IN ('email', 'phone', 'website', 'in_person')
+  ),
+  
+  CONSTRAINT valid_company_size CHECK (
+    company_size IS NULL OR 
+    company_size IN ('1-10', '11-50', '51-200', '201-1000', '1000+')
+  ),
+  
+  CONSTRAINT valid_remote_work_options CHECK (
+    remote_work_options IS NULL OR 
+    remote_work_options IN ('on_site', 'fully_remote', 'hybrid', 'flexible')
+  ),
+  
+  CONSTRAINT valid_drug_testing_policy CHECK (
+    drug_testing_policy IS NULL OR 
+    drug_testing_policy IN ('none', 'pre_employment_only', 'random', 'reasonable_suspicion', 'post_incident')
+  ),
+  
+  CONSTRAINT valid_background_check_policy CHECK (
+    background_check_policy IS NULL OR 
+    background_check_policy IN ('none', 'case_by_case', 'standard', 'flexible')
+  ),
+  
+  CONSTRAINT valid_founded_year CHECK (
+    founded_year IS NULL OR (founded_year >= 1800 AND founded_year <= EXTRACT(YEAR FROM CURRENT_DATE))
+  ),
+  
+  CONSTRAINT unique_user_company UNIQUE (user_id, company_name)
+);
+
+-- ============================================================================
+-- COMMENTS FOR DOCUMENTATION
+-- ============================================================================
+
+COMMENT ON TABLE employer_profiles IS 'Recovery-friendly company directory for connecting employers with applicants and peer specialists. Focus on company discovery rather than job postings.';
+
+-- Primary identifiers
+COMMENT ON COLUMN employer_profiles.user_id IS 'References registrant_profiles.id - the employer user who created this profile';
+
+-- Section 1: Basic Company Information
+COMMENT ON COLUMN employer_profiles.company_name IS 'Company or organization name';
+COMMENT ON COLUMN employer_profiles.industry IS 'Primary industry sector from predefined list';
+COMMENT ON COLUMN employer_profiles.business_type IS 'Type and size of business organization';
+COMMENT ON COLUMN employer_profiles.additional_locations IS 'JSONB array of additional company locations: [{"address":"123 St","city":"City","state":"ST","zip":"12345"}]';
+COMMENT ON COLUMN employer_profiles.preferred_contact_method IS 'How applicants should preferably contact the company';
+
+-- Section 2: Company Details  
+COMMENT ON COLUMN employer_profiles.description IS 'Comprehensive company description including mission, values, and recovery-friendly aspects';
+COMMENT ON COLUMN employer_profiles.company_size IS 'Number of employees in standardized ranges';
+COMMENT ON COLUMN employer_profiles.company_culture IS 'Description of workplace culture and environment';
+COMMENT ON COLUMN employer_profiles.diversity_commitment IS 'Statement on diversity, inclusion, and recovery support';
+
+-- Section 3: Recovery-Friendly Features
+COMMENT ON COLUMN employer_profiles.recovery_friendly_features IS 'Array of recovery-supportive workplace features';
+COMMENT ON COLUMN employer_profiles.accommodation_policies IS 'Policies for accommodating employees in recovery';
+COMMENT ON COLUMN employer_profiles.hiring_practices IS 'Approach to fair chance and second chance hiring';
+
+-- Section 4: Employment Overview
+COMMENT ON COLUMN employer_profiles.job_types_available IS 'Types of employment offered (full_time, part_time, contract, etc.)';
+COMMENT ON COLUMN employer_profiles.benefits_offered IS 'Array of employee benefits and support services';
+COMMENT ON COLUMN employer_profiles.application_process IS 'Instructions for how applicants should apply';
+
+-- ============================================================================
+-- INDEXES FOR PERFORMANCE
+-- ============================================================================
+
+-- Core search indexes
+CREATE INDEX idx_employer_profiles_user_id ON employer_profiles(user_id);
+CREATE INDEX idx_employer_profiles_industry ON employer_profiles(industry);
+CREATE INDEX idx_employer_profiles_state ON employer_profiles(state);
+CREATE INDEX idx_employer_profiles_city ON employer_profiles(city);
+CREATE INDEX idx_employer_profiles_business_type ON employer_profiles(business_type);
+
+-- Status and filtering indexes
+CREATE INDEX idx_employer_profiles_active_hiring ON employer_profiles(is_active, is_actively_hiring);
+CREATE INDEX idx_employer_profiles_updated_at ON employer_profiles(updated_at);
+
+-- Array search indexes (GIN indexes for array fields)
+CREATE INDEX idx_employer_profiles_recovery_features ON employer_profiles USING GIN(recovery_friendly_features);
+CREATE INDEX idx_employer_profiles_job_types ON employer_profiles USING GIN(job_types_available);
+CREATE INDEX idx_employer_profiles_benefits ON employer_profiles USING GIN(benefits_offered);
+CREATE INDEX idx_employer_profiles_additional_locations ON employer_profiles USING GIN(additional_locations);
+
+-- ============================================================================
+-- ROW LEVEL SECURITY POLICIES (PERMISSIVE)
+-- ============================================================================
+
+-- Enable RLS
+ALTER TABLE employer_profiles ENABLE ROW LEVEL SECURITY;
+
+-- Self-management policies (standard pattern)
+CREATE POLICY "Employers can manage own profiles" ON employer_profiles
+  FOR ALL USING (
+    user_id IN (
+      SELECT rp.id FROM registrant_profiles rp
+      WHERE rp.user_id = auth.uid()
+    )
+  );
+
+-- Open viewing for applicants and peer specialists (permissive)
+CREATE POLICY "Applicants can view active employer profiles" ON employer_profiles
+  FOR SELECT USING (
+    is_active = true
+    AND EXISTS (
+      SELECT 1 FROM applicant_matching_profiles amp
+      JOIN registrant_profiles rp ON amp.user_id = rp.id
+      WHERE rp.user_id = auth.uid() 
+        AND amp.is_active = true
+    )
+  );
+
+CREATE POLICY "Peer specialists can view active employer profiles" ON employer_profiles
+  FOR SELECT USING (
+    is_active = true
+    AND EXISTS (
+      SELECT 1 FROM peer_support_profiles psp
+      JOIN registrant_profiles rp ON psp.user_id = rp.id
+      WHERE rp.user_id = auth.uid() 
+        AND psp.is_active = true
+    )
+  );
+
+-- Public viewing for general discovery (optional - uncomment if desired)
+-- CREATE POLICY "Public can view active hiring employers" ON employer_profiles
+--   FOR SELECT USING (is_active = true AND is_actively_hiring = true);
+
+-- ============================================================================
+-- GRANT PERMISSIONS
+-- ============================================================================
+
+GRANT SELECT, INSERT, UPDATE, DELETE ON employer_profiles TO authenticated;
+GRANT USAGE, SELECT ON ALL SEQUENCES IN SCHEMA public TO authenticated;
+
+-- ============================================================================
+-- SAMPLE DATA VALIDATION
+-- ============================================================================
+
+/*
+Sample additional_locations JSONB structure:
+[
+  {
+    "address": "456 Second Ave",
+    "city": "Charlotte", 
+    "state": "NC",
+    "zip": "28202"
+  },
+  {
+    "address": "789 Third St",
+    "city": "Asheville",
+    "state": "NC", 
+    "zip": "28801"
+  }
+]
+
+Sample recovery_friendly_features array:
+['second_chance_hiring', 'flexible_schedules', 'emp_assistance_program', 'peer_support_program']
+
+Sample job_types_available array:
+['full_time', 'part_time', 'contract', 'apprenticeship']
+
+Sample benefits_offered array:
+['health_insurance', 'mental_health_coverage', 'substance_abuse_coverage', 'skills_training']
+*/
+
+-- ============================================================================
+-- ARCHITECTURE NOTES
+-- ============================================================================
+
+/*
+DESIGN PRINCIPLES:
+- Company directory, not job board
+- Open viewing with basic authentication
+- Flexible profile completion (many nullable fields)
+- Multi-location support via JSONB
+- Array fields for categorized features/benefits
+- Focus on recovery-friendly workplace discovery
+
+ACCESS PATTERNS:
+- Employers: Full CRUD on own profiles
+- Applicants: Read access to active profiles  
+- Peer Specialists: Read access to active profiles
+- Future: Public read access to actively hiring companies
+
+EXTENSIBILITY:
+- JSONB additional_locations allows unlimited locations
+- Array fields easily expandable
+- Text fields accommodate varying detail levels
+- Constraint updates can modify allowed values
+*/

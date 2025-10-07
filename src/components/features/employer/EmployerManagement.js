@@ -1,4 +1,4 @@
-// src/components/features/employer/EmployerManagement.js
+// src/components/features/employer/EmployerManagement.js - UPDATED FOR NEW SCHEMA
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../../../context/AuthContext';
 import { supabase } from '../../../utils/supabase';
@@ -11,7 +11,7 @@ import EmployerPoliciesSection from './sections/EmployerPoliciesSection';
 import EmployerJobsSection from './sections/EmployerJobsSection';
 
 const EmployerManagement = () => {
-  const { user } = useAuth();
+  const { user, profile } = useAuth();
   const [loading, setLoading] = useState(false);
   const [employers, setEmployers] = useState([]);
   const [showForm, setShowForm] = useState(false);
@@ -20,9 +20,9 @@ const EmployerManagement = () => {
   const [errors, setErrors] = useState({});
   const [error, setError] = useState(null);
 
-  // Form data structure
+  // ✅ UPDATED: Form data structure matching new schema exactly
   const [formData, setFormData] = useState({
-    // Basic Info
+    // Section 1: Basic Company Information
     company_name: '',
     industry: '',
     business_type: '',
@@ -30,39 +30,39 @@ const EmployerManagement = () => {
     city: '',
     state: '',
     zip_code: '',
+    additional_locations: [], // JSONB array
     phone: '',
     contact_email: '',
     website: '',
     contact_person: '',
+    preferred_contact_method: '',
     
-    // Company Details
+    // Section 2: Company Details
     description: '',
     company_size: '',
     founded_year: '',
     company_culture: '',
     diversity_commitment: '',
-    community_involvement: '',
     
-    // Recovery-Friendly Features & Policies
+    // Section 3: Recovery-Friendly Features & Policies
     recovery_friendly_features: [],
     accommodation_policies: '',
     hiring_practices: '',
     drug_testing_policy: '',
     background_check_policy: '',
     
-    // Employment Information
+    // Section 4: Employment Overview
     job_types_available: [],
     remote_work_options: '',
     benefits_offered: [],
-    salary_ranges: {},
-    current_openings: [],
     application_process: '',
+    is_actively_hiring: true,
     
     // Status
-    is_actively_hiring: true,
-    additional_notes: ''
+    is_active: true
   });
 
+  // ✅ UPDATED: State options (same as before)
   const stateOptions = [
     'AL', 'AK', 'AZ', 'AR', 'CA', 'CO', 'CT', 'DE', 'FL', 'GA',
     'HI', 'ID', 'IL', 'IN', 'IA', 'KS', 'KY', 'LA', 'ME', 'MD',
@@ -71,45 +71,39 @@ const EmployerManagement = () => {
     'SD', 'TN', 'TX', 'UT', 'VT', 'VA', 'WA', 'WV', 'WI', 'WY'
   ];
 
-  // Form sections for navigation
+  // ✅ UPDATED: Form sections matching new schema
   const formSections = [
     { id: 'basic', title: 'Basic Info', component: EmployerBasicInfoSection, icon: '🏢' },
     { id: 'details', title: 'Company Details', component: EmployerDetailsSection, icon: '📋' },
-    { id: 'policies', title: 'Policies & Culture', component: EmployerPoliciesSection, icon: '🤝' },
-    { id: 'jobs', title: 'Jobs & Benefits', component: EmployerJobsSection, icon: '💼' }
+    { id: 'policies', title: 'Recovery-Friendly', component: EmployerPoliciesSection, icon: '🤝' },
+    { id: 'employment', title: 'Employment Info', component: EmployerJobsSection, icon: '💼' }
   ];
 
   useEffect(() => {
-    if (user?.id) {
+    if (profile?.id) {
       fetchEmployers();
     }
-  }, [user?.id]);
+  }, [profile?.id]);
 
   const fetchEmployers = async () => {
-    if (!user?.id) return;
+    if (!profile?.id) return;
 
     try {
       setError(null);
-      console.log('📊 Fetching employer profiles for user:', user.id);
+      console.log('📊 Fetching employer profiles for user:', profile.id);
       
       const { data, error } = await supabase
         .from('employer_profiles')
         .select('*')
-        .eq('user_id', user.id);
+        .eq('user_id', profile.id)
+        .order('created_at', { ascending: false });
 
-      const result = {
-        success: !error,
-        data: data || [],
-        error: error
-      };
-      
-      if (result.error && !result.data) {
-        throw new Error(result.error.message || 'Failed to fetch employer profiles');
+      if (error) {
+        throw new Error(error.message || 'Failed to fetch employer profiles');
       }
       
-      const employerData = result.data || [];
-      console.log(`✅ Loaded ${employerData.length} employer profiles`);
-      setEmployers(employerData);
+      console.log(`✅ Loaded ${data?.length || 0} employer profiles`);
+      setEmployers(data || []);
       
     } catch (err) {
       console.error('💥 Error fetching employers:', err);
@@ -154,22 +148,19 @@ const EmployerManagement = () => {
     }
   };
 
-  // Handle special object changes (like salary ranges)
-  const handleObjectChange = (fieldName, subField, value) => {
+  // ✅ NEW: Handle additional locations (JSONB array)
+  const handleLocationChange = (locations) => {
     setFormData(prev => ({
       ...prev,
-      [fieldName]: {
-        ...prev[fieldName],
-        [subField]: value
-      }
+      additional_locations: locations
     }));
   };
 
-  // Form validation
+  // ✅ UPDATED: Form validation matching new schema
   const validateForm = () => {
     const newErrors = {};
     
-    // Required fields
+    // ✅ UPDATED: Required fields based on new schema
     const requiredFields = [
       'company_name', 'industry', 'business_type', 'city', 
       'state', 'zip_code', 'phone', 'description'
@@ -196,11 +187,20 @@ const EmployerManagement = () => {
       newErrors.website = 'Website must start with http:// or https://';
     }
 
+    // Validate founded year if provided
+    if (formData.founded_year) {
+      const year = parseInt(formData.founded_year);
+      const currentYear = new Date().getFullYear();
+      if (isNaN(year) || year < 1800 || year > currentYear) {
+        newErrors.founded_year = `Founded year must be between 1800 and ${currentYear}`;
+      }
+    }
+
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
 
-  // Handle submit
+  // ✅ UPDATED: Handle submit with correct field mapping
   const handleSubmit = async (e) => {
     e.preventDefault();
     
@@ -212,7 +212,7 @@ const EmployerManagement = () => {
           company_name: 0, industry: 0, business_type: 0, city: 0, state: 0, phone: 0,
           description: 1, company_size: 1, founded_year: 1,
           recovery_friendly_features: 2, accommodation_policies: 2, hiring_practices: 2,
-          job_types_available: 3, benefits_offered: 3, current_openings: 3
+          job_types_available: 3, benefits_offered: 3, application_process: 3
         };
         
         const firstErrorField = errorFields[0];
@@ -226,9 +226,11 @@ const EmployerManagement = () => {
     setError(null);
     
     try {
-      // Create employer data object
+      // ✅ UPDATED: Create employer data object matching new schema exactly
       const employerData = {
-        user_id: user.id,
+        user_id: profile.id,
+        
+        // Section 1: Basic Company Information
         company_name: formData.company_name,
         industry: formData.industry,
         business_type: formData.business_type,
@@ -236,65 +238,59 @@ const EmployerManagement = () => {
         city: formData.city,
         state: formData.state,
         zip_code: formData.zip_code,
+        additional_locations: formData.additional_locations.length > 0 ? formData.additional_locations : [],
         phone: formData.phone,
         contact_email: formData.contact_email || null,
         website: formData.website || null,
         contact_person: formData.contact_person || null,
+        preferred_contact_method: formData.preferred_contact_method || null,
         
+        // Section 2: Company Details
         description: formData.description,
         company_size: formData.company_size || null,
         founded_year: formData.founded_year ? parseInt(formData.founded_year) : null,
         company_culture: formData.company_culture || null,
         diversity_commitment: formData.diversity_commitment || null,
-        community_involvement: formData.community_involvement || null,
         
+        // Section 3: Recovery-Friendly Features & Policies
         recovery_friendly_features: formData.recovery_friendly_features,
         accommodation_policies: formData.accommodation_policies || null,
         hiring_practices: formData.hiring_practices || null,
         drug_testing_policy: formData.drug_testing_policy || null,
         background_check_policy: formData.background_check_policy || null,
         
+        // Section 4: Employment Overview
         job_types_available: formData.job_types_available,
         remote_work_options: formData.remote_work_options || null,
         benefits_offered: formData.benefits_offered,
-        salary_ranges: Object.keys(formData.salary_ranges).length > 0 ? formData.salary_ranges : null,
-        current_openings: formData.current_openings,
         application_process: formData.application_process || null,
-        
         is_actively_hiring: formData.is_actively_hiring,
-        additional_notes: formData.additional_notes || null,
-        profile_completed: true
+        
+        // Status
+        is_active: formData.is_active
       };
 
       console.log('💼 Saving employer profile:', employerData);
 
-let result;
-if (editingEmployer) {
-  const { data, error } = await supabase
-    .from('employer_profiles')
-    .update(employerData)
-    .eq('id', editingEmployer.id)
-    .select()
-    .single();
-  
-  result = {
-    success: !error,
-    data: data,
-    error: error
-  };
-} else {
-  const { data, error } = await supabase
-    .from('employer_profiles')
-    .insert(employerData)
-    .select()
-    .single();
-  
-  result = {
-    success: !error,
-    data: data,
-    error: error
-  };
-}
+      let result;
+      if (editingEmployer) {
+        const { data, error } = await supabase
+          .from('employer_profiles')
+          .update(employerData)
+          .eq('id', editingEmployer.id)
+          .select()
+          .single();
+        
+        result = { success: !error, data: data, error: error };
+      } else {
+        const { data, error } = await supabase
+          .from('employer_profiles')
+          .insert(employerData)
+          .select()
+          .single();
+        
+        result = { success: !error, data: data, error: error };
+      }
 
       if (result.error) {
         throw new Error(result.error.message || 'Failed to save employer profile');
@@ -316,16 +312,16 @@ if (editingEmployer) {
     }
   };
 
+  // ✅ UPDATED: Reset form with new schema fields
   const resetForm = () => {
     setFormData({
       company_name: '', industry: '', business_type: '', address: '', city: '', state: '', 
-      zip_code: '', phone: '', contact_email: '', website: '', contact_person: '',
-      description: '', company_size: '', founded_year: '', company_culture: '', 
-      diversity_commitment: '', community_involvement: '', recovery_friendly_features: [],
+      zip_code: '', additional_locations: [], phone: '', contact_email: '', website: '', 
+      contact_person: '', preferred_contact_method: '', description: '', company_size: '', 
+      founded_year: '', company_culture: '', diversity_commitment: '', recovery_friendly_features: [],
       accommodation_policies: '', hiring_practices: '', drug_testing_policy: '', 
       background_check_policy: '', job_types_available: [], remote_work_options: '', 
-      benefits_offered: [], salary_ranges: {}, current_openings: [], application_process: '',
-      is_actively_hiring: true, additional_notes: ''
+      benefits_offered: [], application_process: '', is_actively_hiring: true, is_active: true
     });
     setEditingEmployer(null);
     setShowForm(false);
@@ -334,7 +330,7 @@ if (editingEmployer) {
     setError(null);
   };
 
-  // Load employer data for editing
+  // ✅ UPDATED: Load employer data for editing with new schema fields
   const editEmployer = (employer) => {
     setFormData({
       company_name: employer.company_name || '',
@@ -344,17 +340,18 @@ if (editingEmployer) {
       city: employer.city || '',
       state: employer.state || '',
       zip_code: employer.zip_code || '',
+      additional_locations: employer.additional_locations || [],
       phone: employer.phone || '',
       contact_email: employer.contact_email || '',
       website: employer.website || '',
       contact_person: employer.contact_person || '',
+      preferred_contact_method: employer.preferred_contact_method || '',
       
       description: employer.description || '',
       company_size: employer.company_size || '',
       founded_year: employer.founded_year?.toString() || '',
       company_culture: employer.company_culture || '',
       diversity_commitment: employer.diversity_commitment || '',
-      community_involvement: employer.community_involvement || '',
       
       recovery_friendly_features: employer.recovery_friendly_features || [],
       accommodation_policies: employer.accommodation_policies || '',
@@ -365,12 +362,10 @@ if (editingEmployer) {
       job_types_available: employer.job_types_available || [],
       remote_work_options: employer.remote_work_options || '',
       benefits_offered: employer.benefits_offered || [],
-      salary_ranges: employer.salary_ranges || {},
-      current_openings: employer.current_openings || [],
       application_process: employer.application_process || '',
-      
       is_actively_hiring: employer.is_actively_hiring !== false,
-      additional_notes: employer.additional_notes || ''
+      
+      is_active: employer.is_active !== false
     });
 
     setEditingEmployer(employer);
@@ -388,19 +383,13 @@ if (editingEmployer) {
       setError(null);
       console.log('🗑️ Deleting employer profile:', employerId);
       
-      const { data, error } = await supabase
+      const { error } = await supabase
         .from('employer_profiles')
         .delete()
         .eq('id', employerId);
 
-      const result = {
-        success: !error,
-        data: data,
-        error: error
-      };
-      
-      if (result.error) {
-        throw new Error(result.error.message || 'Failed to delete employer profile');
+      if (error) {
+        throw new Error(error.message || 'Failed to delete employer profile');
       }
 
       console.log('✅ Employer profile deleted successfully');
@@ -471,12 +460,15 @@ if (editingEmployer) {
                 <div>
                   <h3 className="card-title">{employer.company_name}</h3>
                   <p className="card-subtitle">{employer.industry} • {employer.city}, {employer.state}</p>
+                  {employer.additional_locations?.length > 0 && (
+                    <p className="text-sm text-gray-600">+{employer.additional_locations.length} additional location{employer.additional_locations.length > 1 ? 's' : ''}</p>
+                  )}
                 </div>
                 <div>
                   <span className={`badge ${employer.is_actively_hiring ? 'badge-success' : 'badge-warning'}`}>
                     {employer.is_actively_hiring ? 'Hiring' : 'Not Hiring'}
                   </span>
-                  <span className="badge badge-info ml-2">{employer.business_type}</span>
+                  <span className="badge badge-info ml-2">{employer.business_type?.replace('_', ' ')}</span>
                 </div>
               </div>
               
@@ -487,23 +479,23 @@ if (editingEmployer) {
                     <span className="text-gray-800 ml-1">{employer.company_size || 'Not specified'}</span>
                   </div>
                   <div>
-                    <span>Remote Options:</span>
-                    <span className="text-gray-800 ml-1">{employer.remote_work_options || 'Not specified'}</span>
+                    <span>Contact Method:</span>
+                    <span className="text-gray-800 ml-1">{employer.preferred_contact_method?.replace('_', ' ') || 'Not specified'}</span>
                   </div>
                 </div>
                 
-                {employer.current_openings?.length > 0 && (
+                {employer.job_types_available?.length > 0 && (
                   <div className="mb-3">
-                    <div className="label mb-2">Current Openings</div>
+                    <div className="label mb-2">Job Types Available</div>
                     <div className="mb-2">
-                      {employer.current_openings.slice(0, 3).map((opening, i) => (
+                      {employer.job_types_available.slice(0, 3).map((type, i) => (
                         <span key={i} className="badge badge-success mr-1 mb-1">
-                          {opening}
+                          {type.replace('_', ' ')}
                         </span>
                       ))}
-                      {employer.current_openings.length > 3 && (
+                      {employer.job_types_available.length > 3 && (
                         <span className="text-sm text-gray-600">
-                          +{employer.current_openings.length - 3} more
+                          +{employer.job_types_available.length - 3} more
                         </span>
                       )}
                     </div>
@@ -596,7 +588,7 @@ if (editingEmployer) {
                 loading={loading}
                 onInputChange={handleInputChange}
                 onArrayChange={handleArrayChange}
-                onObjectChange={handleObjectChange}
+                onLocationChange={handleLocationChange}
                 stateOptions={stateOptions}
               />
               

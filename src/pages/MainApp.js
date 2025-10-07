@@ -289,34 +289,63 @@ const MainApp = () => {
           }
         }
 
-        else if (hasRole('employer')) {
-          console.log('Checking employer comprehensive profile...');
-          
-          try {
-            const result = await getEmployerProfilesByUserId(profile.id);
-            
-            if (result.success && result.data && result.data.length > 0) {
-              const employerProfile = result.data[0];
-              
-              hasCompleteProfile = !!(
-                employerProfile?.business_type && 
-                employerProfile?.industry && 
-                employerProfile?.description && 
-                employerProfile?.job_types_available?.length > 0 &&
-                employerProfile?.profile_completed
-              );
-              
-              console.log('Employer profile check complete:', hasCompleteProfile);
-            } else {
-              console.log('No employer profile found or error:', result.error);
-              hasCompleteProfile = false;
-            }
-          } catch (error) {
-            console.error('Error checking employer profile:', error);
-            profileError = 'Failed to check employer profile';
-            hasCompleteProfile = false;
-          }
-        }
+// MainApp.js - UPDATED EMPLOYER PROFILE COMPLETION CHECK
+// Replace the employer section in the checkProfileCompletion function
+
+else if (hasRole('employer')) {
+  console.log('Checking employer comprehensive profile...');
+  
+  try {
+    const result = await getEmployerProfilesByUserId(profile.id);
+    
+    if (result.success && result.data && result.data.length > 0) {
+      const employerProfile = result.data[0];
+      
+      // ✅ UPDATED: Check based on new schema fields and requirements
+      hasCompleteProfile = !!(
+        employerProfile?.company_name && 
+        employerProfile?.industry && 
+        employerProfile?.business_type && 
+        employerProfile?.city && 
+        employerProfile?.state && 
+        employerProfile?.zip_code && 
+        employerProfile?.phone && 
+        employerProfile?.description &&
+        employerProfile?.description.length >= 50 // Require substantial description
+      );
+      
+      console.log('✅ Employer profile check complete using new schema:', hasCompleteProfile, {
+        hasCompanyName: !!employerProfile?.company_name,
+        hasIndustry: !!employerProfile?.industry,
+        hasBusinessType: !!employerProfile?.business_type,
+        hasLocation: !!(employerProfile?.city && employerProfile?.state && employerProfile?.zip_code),
+        hasPhone: !!employerProfile?.phone,
+        hasDescription: !!employerProfile?.description,
+        descriptionLength: employerProfile?.description?.length || 0,
+        isActive: !!employerProfile?.is_active
+      });
+      
+    } else if (result.error) {
+      // ✅ FIXED: Handle specific error types without causing loops
+      if (result.error?.code === 'NOT_FOUND' || result.error?.message?.includes('No employer profiles found')) {
+        console.log('ℹ️ No employer profile found (normal for new users)');
+        hasCompleteProfile = false;
+        profileError = null; // Don't treat "not found" as an error
+      } else {
+        console.error('❌ Unexpected employer profile error:', result.error);
+        profileError = 'Failed to check employer profile';
+        hasCompleteProfile = false;
+      }
+    } else {
+      console.log('ℹ️ No employer profile found');
+      hasCompleteProfile = false;
+    }
+  } catch (error) {
+    console.error('❌ Error checking employer profile:', error);
+    profileError = 'Failed to check employer profile';
+    hasCompleteProfile = false;
+  }
+}
 
         // ✅ CRITICAL FIX: Only update state if component is still mounted AND values actually changed
         if (isMountedRef.current) {

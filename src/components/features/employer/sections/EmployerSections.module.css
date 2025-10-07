@@ -1,4 +1,4 @@
-/* EmployerSections.module.css - Shared styling for employer form sections */
+/* EmployerSections.module.css - Enhanced styling for employer form sections */
 
 /* ==================== SECTION CONTAINER ==================== */
 .section {
@@ -82,13 +82,75 @@
 /* ==================== CHECKBOX GRID LAYOUTS ==================== */
 .checkboxGrid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
   gap: var(--spacing-md);
   margin-bottom: var(--spacing-md);
 }
 
 .checkboxGrid .checkbox-item {
   margin-bottom: 0;
+}
+
+/* ==================== ENHANCED FEATURE ITEMS ==================== */
+.featureItem {
+  padding: var(--spacing-md);
+  border: 2px solid var(--border-beige);
+  border-radius: var(--radius-md);
+  background: white;
+  transition: var(--transition-normal);
+  cursor: pointer;
+}
+
+.featureItem:hover {
+  border-color: var(--secondary-teal);
+  box-shadow: var(--shadow-sm);
+  transform: translateY(-1px);
+}
+
+.featureItem input[type="checkbox"]:checked + .featureLabel {
+  color: var(--secondary-teal);
+}
+
+.featureItem:has(input[type="checkbox"]:checked) {
+  border-color: var(--secondary-teal);
+  background: rgba(32, 178, 170, 0.05);
+  box-shadow: var(--shadow-md);
+}
+
+.featureLabel {
+  display: block;
+  cursor: pointer;
+  margin-left: var(--spacing-md);
+}
+
+.featureName {
+  font-weight: 600;
+  font-size: 0.95rem;
+  color: var(--gray-800);
+  margin-bottom: var(--spacing-xs);
+}
+
+.featureDescription {
+  font-size: 0.85rem;
+  color: var(--gray-600);
+  line-height: 1.4;
+}
+
+/* ==================== HIRING STATUS LABEL ==================== */
+.hiringStatusLabel {
+  display: block;
+  padding: var(--spacing-md);
+  border: 2px solid var(--border-beige);
+  border-radius: var(--radius-md);
+  background: white;
+  transition: var(--transition-normal);
+  cursor: pointer;
+  margin-left: var(--spacing-md);
+}
+
+.hiringStatusLabel:hover {
+  border-color: var(--secondary-teal);
+  box-shadow: var(--shadow-sm);
 }
 
 /* ==================== HELPER TEXT STYLING ==================== */
@@ -124,6 +186,97 @@
   padding: 0.25rem 0.5rem;
   font-size: 0.75rem;
   min-height: auto;
+}
+
+/* ==================== POLICY NOTES & EXPLANATIONS ==================== */
+.policyNote {
+  margin-top: var(--spacing-sm);
+  padding: var(--spacing-sm);
+  background: rgba(32, 178, 170, 0.1);
+  border: 1px solid rgba(32, 178, 170, 0.2);
+  border-radius: var(--radius-sm);
+  font-size: 0.85rem;
+  color: var(--secondary-teal-dark);
+}
+
+.policyExplanations {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-sm);
+  margin-top: var(--spacing-md);
+}
+
+/* ==================== CONTENT METRICS ==================== */
+.contentMetric {
+  padding: var(--spacing-sm);
+  background: white;
+  border: 1px solid var(--border-beige);
+  border-radius: var(--radius-sm);
+}
+
+.contentMetric .label {
+  font-size: 0.85rem;
+  font-weight: 600;
+  margin-bottom: var(--spacing-xs);
+}
+
+/* ==================== GUIDANCE CONTENT ==================== */
+.guidanceContent {
+  background: rgba(160, 32, 240, 0.05);
+  border: 1px solid rgba(160, 32, 240, 0.1);
+  border-radius: var(--radius-md);
+  padding: var(--spacing-lg);
+}
+
+.guidanceContent .helperText {
+  color: var(--gray-700);
+  margin-top: 0;
+}
+
+.guidanceContent ul {
+  margin: var(--spacing-sm) 0;
+}
+
+.guidanceContent li {
+  margin-bottom: var(--spacing-xs);
+  line-height: 1.5;
+}
+
+/* ==================== SELECTION SUMMARIES ==================== */
+.summarySection {
+  margin-bottom: var(--spacing-lg);
+}
+
+.summarySection:last-child {
+  margin-bottom: 0;
+}
+
+.selectedFeatures {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--spacing-xs);
+  margin-bottom: var(--spacing-sm);
+}
+
+.selectedFeature {
+  display: inline-block;
+}
+
+/* ==================== ENHANCED BADGES ==================== */
+.selectedFeatures .badge {
+  font-size: 0.8rem;
+  padding: 0.25rem 0.5rem;
+  border-radius: var(--radius-sm);
+  font-weight: 500;
+}
+
+/* ==================== STATUS INDICATORS ==================== */
+.text-green-600 {
+  color: #059669 !important;
+}
+
+.text-gray-500 {
+  color: var(--gray-500) !important;
 }
 
 /* ==================== RESPONSIVE DESIGN ==================== */
@@ -163,6 +316,26 @@
   .listItem .badge {
     flex: none;
   }
+
+  .featureItem {
+    padding: var(--spacing-sm);
+  }
+
+  .featureName {
+    font-size: 0.9rem;
+  }
+
+  .featureDescription {
+    font-size: 0.8rem;
+  }
+
+  .guidanceContent {
+    padding: var(--spacing-md);
+  }
+
+  .selectedFeatures {
+    justify-content: center;
+  }
 }
 
 @media (max-width: 480px) {
@@ -176,5 +349,70 @@
   
   .subsection {
     padding: var(--spacing-sm);
+  }
+
+  .checkboxGrid {
+    grid-template-columns: 1fr;
+  }
+
+  .featureItem {
+    padding: var(--spacing-sm);
+  }
+
+  .featureLabel {
+    margin-left: var(--spacing-sm);
+  }
+
+  .guidanceContent {
+    padding: var(--spacing-sm);
+  }
+}
+
+/* ==================== ANIMATION ENHANCEMENTS ==================== */
+@keyframes slideIn {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.policyNote {
+  animation: slideIn 0.3s ease-out;
+}
+
+.selectedFeature {
+  animation: slideIn 0.2s ease-out;
+}
+
+/* ==================== ACCESSIBILITY IMPROVEMENTS ==================== */
+.featureItem:focus-within {
+  outline: 2px solid var(--secondary-teal);
+  outline-offset: 2px;
+}
+
+.hiringStatusLabel:focus-within {
+  outline: 2px solid var(--secondary-teal);
+  outline-offset: 2px;
+}
+
+/* ==================== PRINT STYLES ==================== */
+@media print {
+  .section {
+    break-inside: avoid;
+  }
+  
+  .subsection {
+    break-inside: avoid;
+    border: 1px solid #ccc;
+    box-shadow: none;
+  }
+  
+  .guidanceContent {
+    background: none;
+    border: 1px solid #ccc;
   }
 }
