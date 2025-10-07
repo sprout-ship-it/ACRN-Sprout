@@ -160,16 +160,16 @@ const EmployerModal = ({
             </div>
           )}
 
-          {/* Current Job Openings */}
-          {employer.current_openings?.length > 0 && (
+          {/* ✅ FIXED: Job Types Available instead of Current Job Openings */}
+          {employer.job_types_available?.length > 0 && (
             <div className={styles.infoSection}>
               <h4 className={styles.sectionTitle}>
-                💼 Current Job Openings ({employer.current_openings.length})
+                💼 Job Types Available ({employer.job_types_available.length})
               </h4>
               <div className={styles.featureTags}>
-                {employer.current_openings.map((opening, index) => (
+                {employer.job_types_available.map((jobType, index) => (
                   <span key={index} className={`badge badge-success ${styles.jobOpening}`}>
-                    {opening}
+                    {formatFeature(jobType)}
                   </span>
                 ))}
               </div>

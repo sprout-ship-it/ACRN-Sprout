@@ -106,16 +106,16 @@ const EmployerCard = ({
           </div>
         </div>
 
-        {/* Current Job Openings */}
+        {/* ✅ FIXED: Job Types Available instead of Current Job Openings */}
         {cardData.currentOpenings.length > 0 && (
           <div className={`${styles.featureSection} mb-3`}>
             <div className={styles.featureLabel}>
-              💼 Current Job Openings
+              💼 Job Types Available
             </div>
             <div className={styles.featureTags}>
-              {cardData.currentOpenings.map((opening, index) => (
+              {cardData.currentOpenings.map((jobType, index) => (
                 <span key={index} className="badge badge-success mr-1 mb-1">
-                  {opening}
+                  {jobType}
                 </span>
               ))}
               {cardData.openingsRemainingCount > 0 && (

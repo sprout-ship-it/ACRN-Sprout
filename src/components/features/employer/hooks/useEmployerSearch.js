@@ -159,10 +159,11 @@ const loadFavorites = useCallback(async () => {
 
       // Apply additional client-side filters
       if (filters.hasOpenings) {
+        // ✅ FIXED: Use job_types_available instead of current_openings for new schema
         availableEmployers = availableEmployers.filter(employer => 
-          employer.current_openings && 
-          Array.isArray(employer.current_openings) && 
-          employer.current_openings.length > 0
+          employer.job_types_available && 
+          Array.isArray(employer.job_types_available) && 
+          employer.job_types_available.length > 0
         );
       }
 

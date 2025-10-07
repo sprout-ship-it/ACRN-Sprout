@@ -243,12 +243,20 @@ export const validateFilters = (filters) => {
  * @param {object} employer - The employer object
  * @returns {object} - Formatted employer data for display
  */
+// Replace the getEmployerCardData function in src/components/features/employer/utils/employerUtils.js
+
+/**
+ * Generate employer card display data
+ * @param {object} employer - The employer object
+ * @returns {object} - Formatted employer data for display
+ */
 export const getEmployerCardData = (employer) => {
   const { displayFeatures: recoveryFeatures, remainingCount: recoveryRemainingCount } = 
     formatFeatureList(employer.recovery_friendly_features);
   
+  // ✅ FIXED: Use job_types_available instead of current_openings for new schema
   const { displayFeatures: currentOpenings, remainingCount: openingsRemainingCount } = 
-    formatFeatureList(employer.current_openings);
+    formatFeatureList(employer.job_types_available);
 
   return {
     id: employer.id,
@@ -265,7 +273,7 @@ export const getEmployerCardData = (employer) => {
     // Formatted feature lists
     recoveryFeatures,
     recoveryRemainingCount,
-    currentOpenings,
+    currentOpenings, // Now represents job types available
     openingsRemainingCount,
     
     // Raw data for modal/details
@@ -279,17 +287,26 @@ export const getEmployerCardData = (employer) => {
  * @param {Set} favorites - Set of favorite employer IDs
  * @returns {object[]} - Sorted array of employers
  */
+// Replace the sortEmployers function in src/components/features/employer/utils/employerUtils.js
+
+/**
+ * Sort employers by priority criteria
+ * @param {object[]} employers - Array of employer objects
+ * @param {Set} favorites - Set of favorite employer IDs
+ * @returns {object[]} - Sorted array of employers
+ */
 export const sortEmployers = (employers, favorites = new Set()) => {
   return [...employers].sort((a, b) => {
     // First priority: actively hiring
     if (a.is_actively_hiring && !b.is_actively_hiring) return -1;
     if (!a.is_actively_hiring && b.is_actively_hiring) return 1;
     
-    // Second priority: has current openings
-    const aHasOpenings = a.current_openings?.length > 0;
-    const bHasOpenings = b.current_openings?.length > 0;
-    if (aHasOpenings && !bHasOpenings) return -1;
-    if (!aHasOpenings && bHasOpenings) return 1;
+    // ✅ FIXED: Use job_types_available instead of current_openings for new schema
+    // Second priority: has job types available
+    const aHasJobTypes = a.job_types_available?.length > 0;
+    const bHasJobTypes = b.job_types_available?.length > 0;
+    if (aHasJobTypes && !bHasJobTypes) return -1;
+    if (!aHasJobTypes && bHasJobTypes) return 1;
     
     // Third priority: favorites first
     const aIsFavorite = favorites.has(a.user_id);
