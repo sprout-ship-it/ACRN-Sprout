@@ -7,6 +7,7 @@ import createProfilesService from './database/profileService'
 import createMatchingProfilesService from './database/matchingProfilesService'
 import createMatchRequestsService from './database/matchRequestsService'
 import createMatchGroupsService from './database/matchGroupsService'
+import createPSSClientsService from './database/pssClients'
 
 // ✅ NEW: Import properties service (critical for refactored schema)
 import createPropertiesService from './database/propertiesService'
@@ -42,7 +43,7 @@ export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
 console.log('✅ Supabase client created')
 
 // ✅ FIXED: Initialize services with proper error handling
-let authService, profilesService, matchingProfilesService, matchRequestsService, matchGroupsService, propertiesService, peerSupportService;
+let authService, profilesService, matchingProfilesService, matchRequestsService, matchGroupsService, propertiesService, peerSupportService, pssClientsService;
 
 try {
   // Initialize core services
@@ -70,7 +71,24 @@ try {
   }
   
   console.log('✅ Peer support service initialized successfully')
-  
+
+  // ✅ NEW: Initialize PSS clients service
+console.log('👥 Initializing PSS clients service...')
+pssClientsService = createPSSClientsService(supabase)
+
+if (!pssClientsService) {
+  throw new Error('PSS clients service initialization returned null/undefined')
+}
+
+const requiredPSSMethods = ['create', 'getByPeerSpecialistId', 'update', 'getById']
+const missingPSSMethods = requiredPSSMethods.filter(method => typeof pssClientsService[method] !== 'function')
+
+if (missingPSSMethods.length > 0) {
+  throw new Error(`PSS clients service missing methods: ${missingPSSMethods.join(', ')}`)
+}
+
+console.log('✅ PSS clients service initialized successfully')
+
 } catch (error) {
   console.error('💥 Error initializing services:', error)
   
@@ -93,6 +111,23 @@ try {
     }
   }
 }
+
+// ✅ NEW: Create fallback PSS clients service
+  if (!pssClientsService) {
+    console.warn('⚠️ Creating fallback PSS clients service')
+    pssClientsService = {
+      create: async () => ({ success: false, error: { message: 'PSS clients service not available' } }),
+      getByPeerSpecialistId: async () => ({ success: false, data: [], error: { message: 'PSS clients service not available' } }),
+      getById: async () => ({ success: false, error: { message: 'PSS clients service not available' } }),
+      update: async () => ({ success: false, error: { message: 'PSS clients service not available' } }),
+      getByClientId: async () => ({ success: false, data: [], error: { message: 'PSS clients service not available' } }),
+      updateStatus: async () => ({ success: false, error: { message: 'PSS clients service not available' } }),
+      addMessage: async () => ({ success: false, error: { message: 'PSS clients service not available' } }),
+      getActiveClients: async () => ({ success: false, data: [], error: { message: 'PSS clients service not available' } }),
+      getGroupsWithPeerSupport: async () => ({ success: false, data: [], error: { message: 'PSS clients service not available' } }),
+      getClientStats: async () => ({ success: false, error: { message: 'PSS clients service not available' } })
+    }
+  }
 
 // Authentication helpers
 export const auth = {
@@ -243,7 +278,30 @@ export const db = {
     endGroup: matchGroupsService.endGroup,
     completeGroup: matchGroupsService.completeGroup,
     getConnectionSummary: matchGroupsService.getConnectionSummary,
-    getStatistics: matchGroupsService.getStatistics
+    getStatistics: matchGroupsService.getStatistics,
+    // ============================================================================
+  // ✅ NEW: PSS CLIENTS - Peer Support Specialist client management (pss_clients table)
+  // Flow: peer_support_profiles.id → pss_clients.peer_specialist_id, applicant_matching_profiles.id → pss_clients.client_id
+  // ============================================================================
+  pssClients: {
+    // Core CRUD operations
+    create: pssClientsService.create,
+    getByPeerSpecialistId: pssClientsService.getByPeerSpecialistId,
+    getById: pssClientsService.getById,
+    update: pssClientsService.update,
+
+    // Client-focused operations
+    getByClientId: pssClientsService.getByClientId,
+    updateStatus: pssClientsService.updateStatus,
+    addMessage: pssClientsService.addMessage,
+    getActiveClients: pssClientsService.getActiveClients,
+
+    // Integration with match groups
+    getGroupsWithPeerSupport: pssClientsService.getGroupsWithPeerSupport,
+
+    // Analytics
+    getClientStats: pssClientsService.getClientStats
+  },
   }
 
   // ============================================================================
