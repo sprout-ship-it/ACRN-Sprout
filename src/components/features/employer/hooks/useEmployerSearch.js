@@ -48,7 +48,7 @@ const loadConnections = useCallback(async () => {
       return;
     }
     
-    const result = await db.matchRequests.getByUserId(profile.id);
+    const result = await db.matchRequests.getByUserId('applicant', profile.id);
     
     if (result.success !== false && result.data) {
       const existingConnections = new Set(
@@ -85,20 +85,13 @@ const loadFavorites = useCallback(async () => {
     console.log('⭐ Loading favorite employers...');
     
     // ✅ FIXED: Check multiple possible service paths
-    let favoritesService = null;
-    if (db.employerProfiles?.favorites) {
-      favoritesService = db.employerProfiles.favorites;
-    } else if (db.employerFavorites) {
-      favoritesService = db.employerFavorites;
-    }
-    
-    if (!favoritesService) {
-      console.warn('⚠️ Employer favorites service not available');
-      setFavorites(new Set());
-      return;
-    }
-    
-    const result = await favoritesService.getByUserId(profile.id);
+if (!db.employerProfiles?.favorites) {
+  console.warn('⚠️ Employer favorites service not available');
+  setFavorites(new Set());
+  return;
+}
+
+const result = await db.employerProfiles.favorites.getByUserId(profile.id);
     
     if (result.error && !result.data) {
       throw new Error(result.error.message || 'Failed to load favorites');
@@ -175,7 +168,10 @@ const loadFavorites = useCallback(async () => {
       }
 
       // Get available employers from database
-      const result = await db.employerProfiles.getAvailable(dbFilters);
+      if (!db.employerProfiles) {
+  throw new Error('Employer service not available');
+}
+const result = await db.employerProfiles.getAvailable(dbFilters);
       
       if (result.error && !result.data) {
         throw new Error(result.error.message || 'Failed to load employers');
@@ -340,20 +336,13 @@ const toggleFavorite = useCallback(async (employerId) => {
 
   try {
     // ✅ FIXED: Check for service availability
-    let favoritesService = null;
-    if (db.employerProfiles?.favorites) {
-      favoritesService = db.employerProfiles.favorites;
-    } else if (db.employerFavorites) {
-      favoritesService = db.employerFavorites;
-    }
-    
-    if (!favoritesService) {
-      setError('Favorites feature is not available at this time.');
-      return;
-    }
+if (!db.employerProfiles?.favorites) {
+  setError('Favorites feature is not available at this time.');
+  return;
+}
 
     const isFavorited = favorites.has(employerId);
-    
+      
     if (isFavorited) {
       const result = await favoritesService.remove(profile.id, employerId);
       

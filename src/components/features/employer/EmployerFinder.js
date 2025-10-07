@@ -5,6 +5,8 @@ import EmployerFilterPanel from './components/EmployerFilterPanel';
 import EmployerResultsGrid from './components/EmployerResultsGrid';
 import EmployerModal from './components/EmployerModal';
 
+import EmployerSearchDebug from '../../debug/EmployerSearchDebug';
+
 const EmployerFinder = ({ onBack }) => {
   // Comprehensive search hook for all employer functionality
   const {
@@ -102,6 +104,7 @@ const EmployerFinder = ({ onBack }) => {
 
   return (
     <div className="content">
+      <EmployerSearchDebug />
       {/* Header Section */}
       <div className="text-center mb-5">
         <h1 className="welcome-title">Find Recovery-Friendly Employers</h1>

@@ -1,4 +1,4 @@
-// src/utils/supabase.js - Updated for Refactored Schema with Properties Table + Peer Support
+// src/utils/supabase.js - Updated for Refactored Schema with Properties Table + Peer Support + Employer Service
 import { createClient } from '@supabase/supabase-js'
 
 // Import service modules (core services that we've verified)
@@ -15,9 +15,11 @@ import createPropertiesService from './database/propertiesService'
 // ✅ FIXED: Import peer support service with better error handling
 import createPeerSupportService from './database/peerSupportService'
 
+// ✅ ADDED: Import employer service for employment connections
+import createEmployerService from './database/employerService'
+
 // TODO: Import remaining role-specific services as we verify alignment
 // import createLandlordProfilesService from './database/landlordProfilesService'
-// import createEmployerService from './database/employerService'
 // import createCommunicationService from './database/communicationService'
 
 console.log('🔧 Supabase client initializing...')
@@ -43,7 +45,7 @@ export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
 console.log('✅ Supabase client created')
 
 // ✅ FIXED: Initialize services with proper error handling
-let authService, profilesService, matchingProfilesService, matchRequestsService, matchGroupsService, propertiesService, peerSupportService, pssClientsService;
+let authService, profilesService, matchingProfilesService, matchRequestsService, matchGroupsService, propertiesService, peerSupportService, pssClientsService, employerService;
 
 try {
   // Initialize core services
@@ -73,21 +75,47 @@ try {
   console.log('✅ Peer support service initialized successfully')
 
   // ✅ NEW: Initialize PSS clients service
-console.log('👥 Initializing PSS clients service...')
-pssClientsService = createPSSClientsService(supabase)
+  console.log('👥 Initializing PSS clients service...')
+  pssClientsService = createPSSClientsService(supabase)
 
-if (!pssClientsService) {
-  throw new Error('PSS clients service initialization returned null/undefined')
-}
+  if (!pssClientsService) {
+    throw new Error('PSS clients service initialization returned null/undefined')
+  }
 
-const requiredPSSMethods = ['create', 'getByPeerSpecialistId', 'update', 'getById']
-const missingPSSMethods = requiredPSSMethods.filter(method => typeof pssClientsService[method] !== 'function')
+  const requiredPSSMethods = ['create', 'getByPeerSpecialistId', 'update', 'getById']
+  const missingPSSMethods = requiredPSSMethods.filter(method => typeof pssClientsService[method] !== 'function')
 
-if (missingPSSMethods.length > 0) {
-  throw new Error(`PSS clients service missing methods: ${missingPSSMethods.join(', ')}`)
-}
+  if (missingPSSMethods.length > 0) {
+    throw new Error(`PSS clients service missing methods: ${missingPSSMethods.join(', ')}`)
+  }
 
-console.log('✅ PSS clients service initialized successfully')
+  console.log('✅ PSS clients service initialized successfully')
+
+  // ✅ NEW: Initialize employer service
+  console.log('💼 Initializing employer service...')
+  employerService = createEmployerService(supabase)
+  
+  if (!employerService) {
+    throw new Error('Employer service initialization returned null/undefined')
+  }
+  
+  // Verify the service has required methods
+  const requiredEmployerMethods = ['profiles', 'favorites']
+  const missingEmployerMethods = requiredEmployerMethods.filter(method => !employerService[method])
+  
+  if (missingEmployerMethods.length > 0) {
+    throw new Error(`Employer service missing sections: ${missingEmployerMethods.join(', ')}`)
+  }
+  
+  // Verify profiles service methods
+  const requiredProfilesMethods = ['create', 'getByUserId', 'update', 'delete', 'getAvailable']
+  const missingProfilesMethods = requiredProfilesMethods.filter(method => typeof employerService.profiles[method] !== 'function')
+  
+  if (missingProfilesMethods.length > 0) {
+    throw new Error(`Employer profiles service missing methods: ${missingProfilesMethods.join(', ')}`)
+  }
+  
+  console.log('✅ Employer service initialized successfully')
 
 } catch (error) {
   console.error('💥 Error initializing services:', error)
@@ -110,9 +138,8 @@ console.log('✅ PSS clients service initialized successfully')
       bulkUpdate: async () => ({ success: false, error: { message: 'Peer support service not available' } })
     }
   }
-}
 
-// ✅ NEW: Create fallback PSS clients service
+  // ✅ NEW: Create fallback PSS clients service
   if (!pssClientsService) {
     console.warn('⚠️ Creating fallback PSS clients service')
     pssClientsService = {
@@ -129,6 +156,31 @@ console.log('✅ PSS clients service initialized successfully')
     }
   }
 
+  // ✅ NEW: Create fallback employer service
+  if (!employerService) {
+    console.warn('⚠️ Creating fallback employer service')
+    employerService = {
+      profiles: {
+        create: async () => ({ success: false, error: { message: 'Employer service not available' } }),
+        getByUserId: async () => ({ success: false, data: [], error: { message: 'Employer service not available' } }),
+        getById: async () => ({ success: false, error: { message: 'Employer service not available' } }),
+        update: async () => ({ success: false, error: { message: 'Employer service not available' } }),
+        delete: async () => ({ success: false, error: { message: 'Employer service not available' } }),
+        getAvailable: async () => ({ success: false, data: [], error: { message: 'Employer service not available' } }),
+        search: async () => ({ success: false, data: [], error: { message: 'Employer service not available' } }),
+        getStatistics: async () => ({ success: false, error: { message: 'Employer service not available' } })
+      },
+      favorites: {
+        getByUserId: async () => ({ success: false, data: [], error: { message: 'Employer favorites service not available' } }),
+        add: async () => ({ success: false, error: { message: 'Employer favorites service not available' } }),
+        remove: async () => ({ success: false, error: { message: 'Employer favorites service not available' } }),
+        toggle: async () => ({ success: false, error: { message: 'Employer favorites service not available' } }),
+        isFavorited: async () => ({ success: false, data: false, error: { message: 'Employer favorites service not available' } })
+      }
+    }
+  }
+}
+
 // Authentication helpers
 export const auth = {
   signUp: authService.signUp,
@@ -143,7 +195,7 @@ export const auth = {
   getAuthStatus: authService.getAuthStatus
 }
 
-// ✅ FIXED: Database helpers with guaranteed peer support service
+// ✅ FIXED: Database helpers with guaranteed services including employer
 export const db = {
   // ============================================================================
   // CORE PROFILES - Central hub for role selection (registrant_profiles table)
@@ -245,6 +297,35 @@ export const db = {
   },
 
   // ============================================================================
+  // ✅ NEW: EMPLOYER PROFILES (employer_profiles table)
+  // Flow: registrant_profiles.id → employer_profiles.user_id → employer_profiles.id
+  // ============================================================================
+  employerProfiles: {
+    // Core CRUD operations
+    create: employerService.profiles.create,
+    getByUserId: employerService.profiles.getByUserId,
+    getById: employerService.profiles.getById,
+    update: employerService.profiles.update,
+    delete: employerService.profiles.delete,
+
+    // Employer search and filtering
+    getAvailable: employerService.profiles.getAvailable,
+    search: employerService.profiles.search,
+
+    // Analytics
+    getStatistics: employerService.profiles.getStatistics,
+
+    // Favorites functionality
+    favorites: {
+      getByUserId: employerService.favorites.getByUserId,
+      add: employerService.favorites.add,
+      remove: employerService.favorites.remove,
+      toggle: employerService.favorites.toggle,
+      isFavorited: employerService.favorites.isFavorited
+    }
+  },
+
+  // ============================================================================
   // MATCH REQUESTS - Connection requests between users
   // ✅ UPDATED: Now supports property-specific requests
   // Uses role-specific IDs + property_id for housing requests
@@ -278,8 +359,10 @@ export const db = {
     endGroup: matchGroupsService.endGroup,
     completeGroup: matchGroupsService.completeGroup,
     getConnectionSummary: matchGroupsService.getConnectionSummary,
-    getStatistics: matchGroupsService.getStatistics,
-    // ============================================================================
+    getStatistics: matchGroupsService.getStatistics
+  },
+
+  // ============================================================================
   // ✅ NEW: PSS CLIENTS - Peer Support Specialist client management (pss_clients table)
   // Flow: peer_support_profiles.id → pss_clients.peer_specialist_id, applicant_matching_profiles.id → pss_clients.client_id
   // ============================================================================
@@ -301,13 +384,11 @@ export const db = {
 
     // Analytics
     getClientStats: pssClientsService.getClientStats
-  },
   }
 
   // ============================================================================
   // TODO: Add remaining role-specific services as we verify alignment:
   // - landlordProfiles (simplified landlord_profiles table - business info only)
-  // - employerProfiles (employer_profiles table) 
   // - housingMatches (applicant_matching_profiles.id + properties.id)
   // - employmentMatches, peerSupportMatches
   // - favorites system (enhanced to support property favorites)
@@ -337,10 +418,29 @@ export const getPeerSupportProfileByUserId = async (userId, supabaseClient = nul
 export { getPeerSupportProfileByUserId as getPeerSupportProfile };
 export { getPeerSupportProfileByUserId as fetchPeerSupportProfile };
 
-// ✅ UPDATED: Schema information reflecting refactored structure + peer support
+// ✅ NEW: Legacy employer profile exports
+export const getEmployerProfilesByUserId = async (userId, supabaseClient = null) => {
+  console.log('⚠️ Using legacy getEmployerProfilesByUserId - consider updating to db.employerProfiles.getByUserId()');
+  
+  try {
+    if (db.employerProfiles && typeof db.employerProfiles.getByUserId === 'function') {
+      return await db.employerProfiles.getByUserId(userId);
+    } else {
+      // Fallback to direct service creation
+      const client = supabaseClient || supabase;
+      const service = createEmployerService(client);
+      return await service.profiles.getByUserId(userId);
+    }
+  } catch (error) {
+    console.error('❌ Legacy employer function error:', error);
+    return { success: false, data: [], error: { message: error.message } };
+  }
+};
+
+// ✅ UPDATED: Schema information reflecting refactored structure + peer support + employer
 export const getSchemaInfo = () => {
   return {
-    schemaVersion: '2.1-refactored-with-peer-support',
+    schemaVersion: '2.2-refactored-with-all-services',
     idFlow: 'auth.users.id → registrant_profiles.user_id → registrant_profiles.id → role_table.user_id → role_table.id',
     coreArchitecture: {
       userAuth: 'auth.users (managed by Supabase)',
@@ -366,17 +466,20 @@ export const getSchemaInfo = () => {
       updatedReferences: 'Housing matches/groups now reference properties.id instead of landlord_profiles.id',
       enhancedRequests: 'Match requests support property-specific housing requests',
       propertyTypes: 'Supports both general rentals and recovery housing with different field sets',
-      peerSupportService: 'Full peer support service integration with error handling and fallbacks'
+      peerSupportService: 'Full peer support service integration with error handling and fallbacks',
+      employerService: 'Full employer service integration with profiles and favorites support'
     },
     serviceStatus: {
       peerSupportInitialized: !!peerSupportService,
+      employerInitialized: !!employerService,
       peerSupportMethods: peerSupportService ? Object.keys(peerSupportService).length : 0,
-      dbExportValid: !!(db && db.peerSupportProfiles)
+      employerMethods: employerService ? Object.keys(employerService).length : 0,
+      dbExportValid: !!(db && db.peerSupportProfiles && db.employerProfiles)
     }
   }
 }
 
-console.log('✅ Supabase module loaded with refactored schema structure + peer support')
+console.log('✅ Supabase module loaded with refactored schema structure + peer support + employer service')
 console.log('📋 Schema Info:', getSchemaInfo())
 
 // ✅ ADDED: Debug export for troubleshooting
@@ -389,13 +492,15 @@ export const debugInfo = {
     requests: !!matchRequestsService,
     groups: !!matchGroupsService,
     properties: !!propertiesService,
-    peerSupport: !!peerSupportService
+    peerSupport: !!peerSupportService,
+    employer: !!employerService
   },
   dbExportStructure: {
     hasRegistrantProfiles: !!(db && db.registrantProfiles),
     hasMatchingProfiles: !!(db && db.matchingProfiles),
     hasProperties: !!(db && db.properties),
     hasPeerSupportProfiles: !!(db && db.peerSupportProfiles),
+    hasEmployerProfiles: !!(db && db.employerProfiles),
     hasMatchRequests: !!(db && db.matchRequests),
     hasMatchGroups: !!(db && db.matchGroups)
   }
