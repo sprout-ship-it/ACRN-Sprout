@@ -35,43 +35,53 @@ const useEmployerSearch = () => {
   /**
    * Load existing connections to track connection status
    */
-  const loadConnections = useCallback(async () => {
-    if (!user?.id) return;
+const loadConnections = useCallback(async () => {
+  if (!user?.id || !profile?.id) return;
 
-    try {
-      console.log('📊 Loading existing employer connections...');
-      const result = await db.matchRequests.getByUserId(user.id);
+  try {
+    console.log('📊 Loading existing employer connections...');
+    // ✅ FIXED: Use profile.id instead of user.id
+    const result = await db.matchRequests.getByUserId(profile.id);
+    
+    if (result.success !== false && result.data) {
+      const existingConnections = new Set(
+        result.data
+          .filter(req => 
+            req.requester_id === profile.id && 
+            req.request_type === 'employment' &&
+            ['pending', 'matched'].includes(req.status)
+          )
+          .map(req => req.target_id)
+      );
       
-      if (result.success !== false && result.data) {
-        const existingConnections = new Set(
-          result.data
-            .filter(req => 
-              req.requester_id === user.id && 
-              req.request_type === 'employment' &&
-              ['pending', 'matched'].includes(req.status)
-            )
-            .map(req => req.target_id)
-        );
-        
-        setConnections(existingConnections);
-        console.log('📊 Loaded employer connections:', existingConnections.size);
-      }
-    } catch (err) {
-      console.error('💥 Error loading employer connections:', err);
+      setConnections(existingConnections);
+      console.log('📊 Loaded employer connections:', existingConnections.size);
     }
-  }, [user?.id]);
+  } catch (err) {
+    console.error('💥 Error loading employer connections:', err);
+    setConnections(new Set()); // Don't fail completely
+  }
+}, [user?.id, profile?.id]);
 
   /**
    * Load user's favorite employers
    */
 const loadFavorites = useCallback(async () => {
-  if (!user?.id) return;
+  if (!user?.id || !profile?.id) return;
   
   setFavoritesLoading(true);
   try {
     console.log('⭐ Loading favorite employers...');
     
-    const result = await db.employerFavorites.getByUserId(user.id);
+    // ✅ FIXED: Check if service exists and use correct path
+    if (!db.employerProfiles || !db.employerProfiles.favorites) {
+      console.warn('⚠️ Employer favorites service not available');
+      setFavorites(new Set());
+      return;
+    }
+    
+    // ✅ FIXED: Use profile.id instead of user.id
+    const result = await db.employerProfiles.favorites.getByUserId(profile.id);
     
     if (result.error && !result.data) {
       throw new Error(result.error.message || 'Failed to load favorites');
@@ -89,7 +99,7 @@ const loadFavorites = useCallback(async () => {
   } finally {
     setFavoritesLoading(false);
   }
-}, [user?.id]);
+}, [user?.id, profile?.id]);
 
   /**
    * Debounced employer search function
@@ -264,59 +274,65 @@ const loadFavorites = useCallback(async () => {
   /**
    * Smart location search using user's preferences
    */
-  const findNearbyEmployers = useCallback(async () => {
-    try {
-      // Try to get user's location from their matching profile
-      const { data: applicantProfile } = await db.matchingProfiles.getByUserId(user.id);
-      if (applicantProfile?.preferred_city || applicantProfile?.preferred_state) {
-        // Combine city and state if both exist, otherwise use what's available
-        const location = applicantProfile.preferred_city && applicantProfile.preferred_state 
-          ? `${applicantProfile.preferred_city}, ${applicantProfile.preferred_state}`
-          : applicantProfile.preferred_city || applicantProfile.preferred_state;
-          
-        setFilters(prev => ({
-          ...prev,
-          location: location,
-          industry: '', // Clear other filters for broader search
-          businessType: '',
-          recoveryFeatures: []
-        }));
-        return;
-      }
-    } catch (err) {
-      console.error('Could not load user location preferences:', err);
-    }
-
-    // Use profile location as fallback
-    const userLocation = profile?.city && profile?.state 
-      ? `${profile.city}, ${profile.state}`
-      : profile?.state || '';
-    
-    if (userLocation) {
-      setFilters(prev => ({ 
-        ...prev, 
-        location: userLocation,
+const findNearbyEmployers = useCallback(async () => {
+  try {
+    // ✅ FIXED: Use profile.id instead of user.id
+    const { data: applicantProfile } = await db.matchingProfiles.getByUserId(profile.id);
+    if (applicantProfile?.preferred_city || applicantProfile?.preferred_state) {
+      // Combine city and state if both exist, otherwise use what's available
+      const location = applicantProfile.preferred_city && applicantProfile.preferred_state 
+        ? `${applicantProfile.preferred_city}, ${applicantProfile.preferred_state}`
+        : applicantProfile.preferred_city || applicantProfile.preferred_state;
+        
+      setFilters(prev => ({
+        ...prev,
+        location: location,
         industry: '', // Clear other filters for broader search
         businessType: '',
         recoveryFeatures: []
       }));
-    } else {
-      setError('Please set your location in filters to find nearby employers.');
+      return;
     }
-  }, [user?.id, profile]);
+  } catch (err) {
+    console.error('Could not load user location preferences:', err);
+  }
+
+  // Use profile location as fallback
+  const userLocation = profile?.city && profile?.state 
+    ? `${profile.city}, ${profile.state}`
+    : profile?.state || '';
+  
+  if (userLocation) {
+    setFilters(prev => ({ 
+      ...prev, 
+      location: userLocation,
+      industry: '', // Clear other filters for broader search
+      businessType: '',
+      recoveryFeatures: []
+    }));
+  } else {
+    setError('Please set your location in filters to find nearby employers.');
+  }
+}, [profile?.id, profile]);
 
   /**
    * Toggle favorite status for an employer
    */
 const toggleFavorite = useCallback(async (employerId) => {
-  if (!user?.id) return;
+  if (!user?.id || !profile?.id) return;
 
   try {
+    // ✅ FIXED: Check service exists
+    if (!db.employerProfiles || !db.employerProfiles.favorites) {
+      setError('Favorites feature is not available at this time.');
+      return;
+    }
+
     const isFavorited = favorites.has(employerId);
     
     if (isFavorited) {
-      // Remove from favorites
-      const result = await db.employerFavorites.remove(user.id, employerId);
+      // ✅ FIXED: Use profile.id and correct service path
+      const result = await db.employerProfiles.favorites.remove(profile.id, employerId);
       
       if (result.error) {
         throw new Error(result.error.message || 'Failed to remove favorite');
@@ -330,8 +346,8 @@ const toggleFavorite = useCallback(async (employerId) => {
       
       console.log('⭐ Removed employer from favorites:', employerId);
     } else {
-      // Add to favorites
-      const result = await db.employerFavorites.add(user.id, employerId);
+      // ✅ FIXED: Use profile.id and correct service path
+      const result = await db.employerProfiles.favorites.add(profile.id, employerId);
       
       if (result.error) {
         throw new Error(result.error.message || 'Failed to add favorite');
@@ -344,65 +360,65 @@ const toggleFavorite = useCallback(async (employerId) => {
     console.error('💥 Error toggling favorite:', err);
     setError('Failed to update favorites. Please try again.');
   }
-}, [user?.id, favorites]);
+}, [user?.id, profile?.id, favorites]);
 
   /**
    * Create connection with employer
    */
-  const connectWithEmployer = useCallback(async (employer) => {
-    if (!user?.id) return false;
+const connectWithEmployer = useCallback(async (employer) => {
+  if (!user?.id || !profile?.id) return false;
 
-    // Check if already connected
-    if (connections.has(employer.user_id)) {
-      setError(`You already have an active connection with ${employer.company_name}.`);
-      return false;
-    }
+  // Check if already connected
+  if (connections.has(employer.user_id)) {
+    setError(`You already have an active connection with ${employer.company_name}.`);
+    return false;
+  }
 
-    // Check if employer is actively hiring
-    if (!employer.is_actively_hiring) {
-      const confirmed = window.confirm(
-        `${employer.company_name} is not currently marked as actively hiring. Connect anyway?`
-      );
-      if (!confirmed) return false;
-    }
+  // Check if employer is actively hiring
+  if (!employer.is_actively_hiring) {
+    const confirmed = window.confirm(
+      `${employer.company_name} is not currently marked as actively hiring. Connect anyway?`
+    );
+    if (!confirmed) return false;
+  }
 
-    try {
-      console.log('💼 Connecting with employer:', employer.company_name);
-      
-      // Simplified connection - just create the connection record
-      const connectionData = {
-        requester_id: user.id,
-        target_id: employer.user_id,
-        request_type: 'employment',
-        message: `I'm interested in potential opportunities at ${employer.company_name}. I'd appreciate the chance to connect and learn more about how my skills and recovery journey could contribute to your team.`,
-        status: 'pending'
-      };
-      
-      console.log('📤 Creating employer connection:', connectionData);
-      
-      const result = await db.matchRequests.create(connectionData);
-      
-      if (result.error) {
-        throw new Error(result.error.message || 'Failed to create connection');
-      }
-      
-      if (!result.data) {
-        throw new Error('No response received from connection request');
-      }
-      
-      console.log('✅ Employer connection created successfully:', result.data);
-      
-      // Update local connections state
-      setConnections(prev => new Set([...prev, employer.user_id]));
-      
-      return true;
-      
-    } catch (err) {
-      console.error('💥 Error connecting with employer:', err);
-      setError(`Failed to connect with employer: ${err.message}`);
-      return false;
+  try {
+    console.log('💼 Connecting with employer:', employer.company_name);
+    
+    // ✅ FIXED: Use profile.id consistently
+    const connectionData = {
+      requester_id: profile.id,  // ✅ FIXED: profile.id instead of user.id
+      target_id: employer.user_id,
+      request_type: 'employment',
+      message: `I'm interested in potential opportunities at ${employer.company_name}. I'd appreciate the chance to connect and learn more about how my skills and recovery journey could contribute to your team.`,
+      status: 'pending'
+    };
+    
+    console.log('📤 Creating employer connection:', connectionData);
+    
+    const result = await db.matchRequests.create(connectionData);
+    
+    if (result.error) {
+      throw new Error(result.error.message || 'Failed to create connection');
     }
-  }, [user?.id, connections]);
+    
+    if (!result.data) {
+      throw new Error('No response received from connection request');
+    }
+    
+    console.log('✅ Employer connection created successfully:', result.data);
+    
+    // Update local connections state
+    setConnections(prev => new Set([...prev, employer.user_id]));
+    
+    return true;
+    
+  } catch (err) {
+    console.error('💥 Error connecting with employer:', err);
+    setError(`Failed to connect with employer: ${err.message}`);
+    return false;
+  }
+}, [user?.id, profile?.id, connections]);
 
   /**
    * Get connection status for an employer
