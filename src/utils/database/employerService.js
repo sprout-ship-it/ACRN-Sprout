@@ -1,10 +1,4 @@
-// src/utils/database/employerService.js - FIXED VERSION
-/**
- * Employer service for employer_profiles table operations
- * ✅ FIXED: Consistent with peer support service pattern
- * ✅ FIXED: Uses passed supabase client instead of creating new ones
- * ✅ FIXED: Proper standalone function pattern
- */
+// src/utils/database/employerService.js - FIXED TO MATCH EXISTING SUPABASE.JS STRUCTURE
 import { supabase } from '../supabase';
 
 const createEmployerService = (supabaseClient) => {
@@ -12,7 +6,7 @@ const createEmployerService = (supabaseClient) => {
     throw new Error('Supabase client is required for employer service');
   }
 
-  // Profiles service
+  // Profiles service (existing implementation)
   const profiles = {
     tableName: 'employer_profiles',
 
@@ -54,7 +48,6 @@ const createEmployerService = (supabaseClient) => {
       try {
         console.log('💼 Employers: Fetching profiles for user:', userId);
 
-        // ✅ FIXED: Use regular query instead of .single() for "maybe exists" queries
         const { data, error } = await supabaseClient
           .from(profiles.tableName)
           .select('*')
@@ -66,7 +59,6 @@ const createEmployerService = (supabaseClient) => {
           return { success: false, data: [], error };
         }
 
-        // ✅ FIXED: Check if any results exist
         if (!data || data.length === 0) {
           console.log('ℹ️ Employers: No profiles found for user:', userId);
           return { success: false, data: [], error: { code: 'NOT_FOUND', message: 'No employer profiles found' } };
@@ -141,7 +133,6 @@ const createEmployerService = (supabaseClient) => {
 
     /**
      * Get available employer profiles with filters
-     * ✅ FIXED: Uses correct schema field names
      */
     getAvailable: async (filters = {}) => {
       try {
@@ -202,7 +193,6 @@ const createEmployerService = (supabaseClient) => {
 
     /**
      * Search employer profiles
-     * ✅ FIXED: Uses correct schema field names
      */
     search: async (searchTerm, filters = {}) => {
       try {
@@ -211,7 +201,6 @@ const createEmployerService = (supabaseClient) => {
         let query = supabaseClient
           .from(profiles.tableName)
           .select('*')
-          .eq('profile_completed', true)
           .eq('is_active', true);
 
         // Text search with correct field names
@@ -311,42 +300,57 @@ const createEmployerService = (supabaseClient) => {
     }
   };
 
-  // Favorites service (keeping existing implementation)
+  // ✅ CRITICAL: Favorites service that matches existing supabase.js structure
   const favorites = {
     tableName: 'employer_favorites',
-    viewName: 'employer_favorites_with_details',
 
+    /**
+     * ✅ FIXED: Get user's favorite employers
+     * @param {string} userId - registrant_profiles.id of the user
+     * @returns {Object} Database response with favorites list
+     */
     getByUserId: async (userId) => {
       try {
-        console.log('⭐ Employer Favorites: Fetching for user:', userId);
+        console.log('⭐ Favorites: Getting favorites for user:', userId);
 
-      const { data, error } = await supabaseClient
-        .from(favorites.tableName)  // <-- Use tableName instead of viewName
-        .select('*')
+        const { data, error } = await supabaseClient
+          .from(favorites.tableName)
+          .select('*')
           .eq('user_id', userId)
           .order('created_at', { ascending: false });
 
         if (error) {
-          console.error('❌ Employer Favorites: GetByUserId failed:', error.message);
+          console.error('❌ Favorites: GetByUserId failed:', error);
           return { success: false, data: [], error };
         }
 
-        console.log(`✅ Employer Favorites: Found ${data?.length || 0} favorites`);
+        console.log(`✅ Favorites: Found ${data?.length || 0} favorites for user ${userId}`);
         return { success: true, data: data || [], error: null };
 
       } catch (err) {
-        console.error('💥 Employer Favorites: GetByUserId exception:', err);
+        console.error('💥 Favorites: GetByUserId exception:', err);
         return { success: false, data: [], error: { message: err.message } };
       }
     },
 
+    /**
+     * ✅ FIXED: Add employer to favorites
+     * @param {string} userId - registrant_profiles.id of the user
+     * @param {string} employerUserId - registrant_profiles.id of the employer
+     * @returns {Object} Database response
+     */
     add: async (userId, employerUserId) => {
       try {
-        console.log('⭐ Employer Favorites: Adding favorite:', { userId, employerUserId });
+        console.log('⭐ Favorites: Adding favorite:', {
+          user_id: userId,
+          employer_user_id: employerUserId,
+          table: favorites.tableName
+        });
 
-        // Check if already favorited
-        const existing = await favorites.isFavorited(userId, employerUserId);
-        if (existing.success && existing.data) {
+        // Check if already favorited to prevent duplicates
+        const existingCheck = await favorites.isFavorited(userId, employerUserId);
+        if (existingCheck.success && existingCheck.data) {
+          console.log('⚠️ Already favorited, not adding duplicate');
           return { 
             success: false, 
             data: null, 
@@ -354,33 +358,53 @@ const createEmployerService = (supabaseClient) => {
           };
         }
 
+        // Insert new favorite record
+        const favoriteData = {
+          user_id: userId,
+          employer_user_id: employerUserId,
+          created_at: new Date().toISOString()
+        };
+
+        console.log('📝 Inserting favorite data:', favoriteData);
+
         const { data, error } = await supabaseClient
           .from(favorites.tableName)
-          .insert({ 
-            user_id: userId, 
-            employer_user_id: employerUserId,
-            created_at: new Date().toISOString()
-          })
+          .insert(favoriteData)
           .select()
           .single();
 
         if (error) {
-          console.error('❌ Employer Favorites: Add failed:', error.message);
+          console.error('❌ Favorites: Add failed:', error);
+          console.error('Error details:', {
+            code: error.code,
+            message: error.message,
+            details: error.details,
+            hint: error.hint
+          });
           return { success: false, data: null, error };
         }
 
-        console.log('✅ Employer Favorites: Added successfully');
+        console.log('✅ Favorites: Favorite added successfully:', data);
         return { success: true, data, error: null };
 
       } catch (err) {
-        console.error('💥 Employer Favorites: Add exception:', err);
+        console.error('💥 Favorites: Add exception:', err);
         return { success: false, data: null, error: { message: err.message } };
       }
     },
 
+    /**
+     * ✅ FIXED: Remove employer from favorites
+     * @param {string} userId - registrant_profiles.id of the user  
+     * @param {string} employerUserId - registrant_profiles.id of the employer
+     * @returns {Object} Database response
+     */
     remove: async (userId, employerUserId) => {
       try {
-        console.log('⭐ Employer Favorites: Removing favorite:', { userId, employerUserId });
+        console.log('⭐ Favorites: Removing favorite:', {
+          user_id: userId,
+          employer_user_id: employerUserId
+        });
 
         const { data, error } = await supabaseClient
           .from(favorites.tableName)
@@ -390,21 +414,41 @@ const createEmployerService = (supabaseClient) => {
           .select();
 
         if (error) {
-          console.error('❌ Employer Favorites: Remove failed:', error.message);
+          console.error('❌ Favorites: Remove failed:', error);
           return { success: false, data: null, error };
         }
 
-        console.log('✅ Employer Favorites: Removed successfully');
+        if (!data || data.length === 0) {
+          console.log('⚠️ No favorite found to remove');
+          return { 
+            success: false, 
+            data: null, 
+            error: { message: 'Favorite not found', code: 'NOT_FOUND' }
+          };
+        }
+
+        console.log('✅ Favorites: Favorite removed successfully:', data);
         return { success: true, data, error: null };
 
       } catch (err) {
-        console.error('💥 Employer Favorites: Remove exception:', err);
+        console.error('💥 Favorites: Remove exception:', err);
         return { success: false, data: null, error: { message: err.message } };
       }
     },
 
+    /**
+     * ✅ FIXED: Check if employer is favorited
+     * @param {string} userId - registrant_profiles.id of the user
+     * @param {string} employerUserId - registrant_profiles.id of the employer  
+     * @returns {Object} Database response with boolean result
+     */
     isFavorited: async (userId, employerUserId) => {
       try {
+        console.log('🔍 Favorites: Checking if favorited:', {
+          user_id: userId,
+          employer_user_id: employerUserId
+        });
+
         const { data, error } = await supabaseClient
           .from(favorites.tableName)
           .select('id')
@@ -412,63 +456,76 @@ const createEmployerService = (supabaseClient) => {
           .eq('employer_user_id', employerUserId)
           .single();
 
-        // If data exists, it's favorited; if no data but no error, it's not favorited
-        const isFavorited = !!data && !error;
+        // Handle "no rows" as not favorited (not an error)
+        if (error && error.code === 'PGRST116') {
+          console.log('📝 Not favorited (no rows found)');
+          return { success: true, data: false, error: null };
+        }
 
-        return { 
-          success: true,
-          data: isFavorited, 
-          error: error?.code === 'PGRST116' ? null : error 
-        };
+        if (error) {
+          console.error('❌ Favorites: IsFavorited failed:', error);
+          return { success: false, data: false, error };
+        }
+
+        const isFavorited = !!data;
+        console.log(`📝 Favorited status: ${isFavorited}`);
+        return { success: true, data: isFavorited, error: null };
 
       } catch (err) {
-        console.error('💥 Employer Favorites: IsFavorited exception:', err);
+        console.error('💥 Favorites: IsFavorited exception:', err);
         return { success: false, data: false, error: { message: err.message } };
       }
     },
 
+    /**
+     * ✅ FIXED: Toggle favorite status
+     * @param {string} userId - registrant_profiles.id of the user
+     * @param {string} employerUserId - registrant_profiles.id of the employer
+     * @returns {Object} Database response
+     */
     toggle: async (userId, employerUserId) => {
       try {
-        console.log('⭐ Employer Favorites: Toggling favorite:', { userId, employerUserId });
+        console.log('🔄 Favorites: Toggling favorite:', {
+          user_id: userId,
+          employer_user_id: employerUserId
+        });
 
         const favoriteCheck = await favorites.isFavorited(userId, employerUserId);
         
         if (!favoriteCheck.success) {
+          console.error('❌ Could not check favorite status');
           return favoriteCheck;
         }
 
         if (favoriteCheck.data) {
+          // Already favorited - remove it
+          console.log('💔 Removing existing favorite');
           return await favorites.remove(userId, employerUserId);
         } else {
+          // Not favorited - add it
+          console.log('❤️ Adding new favorite');
           return await favorites.add(userId, employerUserId);
         }
 
       } catch (err) {
-        console.error('💥 Employer Favorites: Toggle exception:', err);
+        console.error('💥 Favorites: Toggle exception:', err);
         return { success: false, data: null, error: { message: err.message } };
       }
     }
   };
 
+  // ✅ CRITICAL: Return structure that matches supabase.js expectations
   return {
     profiles,
     favorites
   };
 };
 
-// ✅ FIXED STANDALONE FUNCTION: Matches peer support pattern exactly
-/**
- * ✅ PRIMARY STANDALONE FUNCTION: Get employer profiles by user ID
- * This matches the pattern of getPeerSupportProfile() and getMatchingProfile()
- * @param {string} userId - registrant_profiles.id (user_id in employer_profiles)
- * @param {Object} authenticatedSupabase - Optional authenticated supabase client
- * @returns {Object} Database response
- */
+// ✅ STANDALONE FUNCTION: Get employer profiles by user ID
 export const getEmployerProfilesByUserId = async (userId, authenticatedSupabase = null) => {
   try {
     console.log('💼 Fetching employer profiles for registrant profile ID:', userId);
     
-    // ✅ FIXED: Use authenticated client instead of creating new one
     const supabaseClient = authenticatedSupabase || supabase;
 
     const { data, error } = await supabaseClient
@@ -492,42 +549,6 @@ export const getEmployerProfilesByUserId = async (userId, authenticatedSupabase 
   } catch (err) {
     console.error('💥 Error in getEmployerProfilesByUserId:', err);
     return { success: false, error: err.message, data: [] };
-  }
-};
-
-/**
- * ✅ SECONDARY STANDALONE FUNCTION: Get profile by employer_profiles.id
- * @param {string} profileId - employer_profiles.id
- * @param {Object} authenticatedSupabase - Optional authenticated supabase client
- * @returns {Object} Database response
- */
-export const getEmployerProfileById = async (profileId, authenticatedSupabase = null) => {
-  try {
-    console.log('💼 Fetching employer profile by ID:', profileId);
-    
-    const supabaseClient = authenticatedSupabase || supabase;
-
-    const { data, error } = await supabaseClient
-      .from('employer_profiles')
-      .select(`
-        *,
-        registrant_profiles!inner(id, first_name, last_name, email)
-      `)
-      .eq('id', profileId)
-      .single();
-
-    if (error) {
-      if (error.code === 'PGRST116') {
-        return { success: false, error: 'Profile not found', code: 'NOT_FOUND' };
-      }
-      return { success: false, error: error.message };
-    }
-
-    return { success: true, data };
-
-  } catch (err) {
-    console.error('💥 Error in getEmployerProfileById:', err);
-    return { success: false, error: err.message };
   }
 };
 

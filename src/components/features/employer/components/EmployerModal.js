@@ -1,4 +1,4 @@
-// src/components/features/employer/components/EmployerModal.js
+// src/components/features/employer/components/EmployerModal.js - FAVORITES AS MAIN ACTION
 import React, { useEffect } from 'react';
 import { 
   formatFeature, 
@@ -15,7 +15,7 @@ const EmployerModal = ({
   connectionStatus,
   isFavorited = false,
   onClose,
-  onConnect,
+  onConnect, // Keep for future use
   onToggleFavorite 
 }) => {
   // Handle escape key press
@@ -47,12 +47,23 @@ const EmployerModal = ({
     }
   };
 
-  // Handle action buttons
-  const handleConnect = () => {
-    onConnect(employer);
+  // ✅ CHANGED: Main action is now favorites instead of connect
+  const handleMainAction = () => {
+    console.log('🎯 Main action - toggling favorite for employer:', {
+      employer_id: employer.id,
+      employer_user_id: employer.user_id,
+      company_name: employer.company_name,
+      currently_favorited: isFavorited
+    });
+    onToggleFavorite(employer.user_id);
   };
 
-  const handleFavoriteToggle = () => {
+  // Keep the header favorite toggle separate  
+  const handleHeaderFavoriteToggle = () => {
+    console.log('❤️ Header favorite toggle for employer:', {
+      employer_user_id: employer.user_id,
+      company_name: employer.company_name
+    });
     onToggleFavorite(employer.user_id);
   };
 
@@ -73,10 +84,10 @@ const EmployerModal = ({
             </div>
             
             <div className={styles.headerActions}>
-              {/* Favorite Button */}
+              {/* Header Favorite Button (Keep as secondary action) */}
               <button
                 className={`${styles.favoriteBtn} ${isFavorited ? styles.favorited : ''}`}
-                onClick={handleFavoriteToggle}
+                onClick={handleHeaderFavoriteToggle}
                 title={isFavorited ? 'Remove from favorites' : 'Add to favorites'}
               >
                 {isFavorited ? '❤️' : '🤍'}
@@ -109,11 +120,11 @@ const EmployerModal = ({
 
         {/* Modal Body */}
         <div className={styles.modalBody}>
-          {/* Connection Status Alert */}
-          {isConnected && (
+          {/* Favorited Status Alert */}
+          {isFavorited && (
             <div className={`alert alert-success ${styles.connectionAlert}`}>
-              <strong>✅ Connected:</strong> You have an active employment connection with this employer. 
-              Contact information is available below.
+              <strong>❤️ Favorited:</strong> This employer has been added to your favorites list. 
+              You can find them easily in your saved employers.
             </div>
           )}
 
@@ -160,7 +171,7 @@ const EmployerModal = ({
             </div>
           )}
 
-          {/* ✅ FIXED: Job Types Available instead of Current Job Openings */}
+          {/* Job Types Available */}
           {employer.job_types_available?.length > 0 && (
             <div className={styles.infoSection}>
               <h4 className={styles.sectionTitle}>
@@ -218,14 +229,15 @@ const EmployerModal = ({
             </div>
           )}
 
-          {/* Contact Information */}
-          {isConnected ? (
-            <div className={`${styles.infoSection} ${styles.contactSection}`}>
-              <h4 className={styles.sectionTitle}>📞 Contact Information</h4>
-              <div className={styles.contactInfo}>
-                <div className={styles.contactGrid}>
+          {/* ✅ CHANGED: Contact/Next Steps Section - Simplified for Favorites Flow */}
+          <div className={styles.infoSection}>
+            <h4 className={styles.sectionTitle}>📞 Contact Information</h4>
+            <div className={styles.nextStepsContent}>
+              <div className="alert alert-info">
+                <strong>💼 How to Contact This Employer:</strong>
+                <div className={styles.contactMethodsList}>
                   {employer.contact_email && (
-                    <div className={styles.contactItem}>
+                    <div className={styles.contactMethod}>
                       <span className={styles.contactLabel}>📧 Email:</span>
                       <a href={`mailto:${employer.contact_email}`} className={styles.contactLink}>
                         {employer.contact_email}
@@ -233,7 +245,7 @@ const EmployerModal = ({
                     </div>
                   )}
                   {employer.phone && (
-                    <div className={styles.contactItem}>
+                    <div className={styles.contactMethod}>
                       <span className={styles.contactLabel}>📞 Phone:</span>
                       <a href={`tel:${employer.phone}`} className={styles.contactLink}>
                         {employer.phone}
@@ -241,7 +253,7 @@ const EmployerModal = ({
                     </div>
                   )}
                   {employer.website && (
-                    <div className={styles.contactItem}>
+                    <div className={styles.contactMethod}>
                       <span className={styles.contactLabel}>🌐 Website:</span>
                       <a href={employer.website} target="_blank" rel="noopener noreferrer" className={styles.contactLink}>
                         {employer.website}
@@ -249,39 +261,30 @@ const EmployerModal = ({
                     </div>
                   )}
                   {employer.contact_person && (
-                    <div className={styles.contactItem}>
+                    <div className={styles.contactMethod}>
                       <span className={styles.contactLabel}>👤 Contact Person:</span>
                       <span className={styles.contactValue}>{employer.contact_person}</span>
                     </div>
                   )}
-                </div>
-              </div>
-            </div>
-          ) : (
-            <div className={styles.infoSection}>
-              <h4 className={styles.sectionTitle}>🔗 Next Steps</h4>
-              <div className={styles.nextStepsContent}>
-                <div className="alert alert-info">
-                  <strong>💼 Employment Connection Process:</strong>
-                  <ol className={styles.processList}>
-                    <li>Send employment inquiry to express interest in opportunities</li>
-                    <li>Employer reviews your request and profile</li>
-                    <li>If approved, contact information is exchanged automatically</li>
-                    <li>Proceed with their application process or schedule interviews</li>
-                  </ol>
-                  {isNotHiring && (
-                    <p className={styles.warningNote}>
-                      <strong>Note:</strong> This employer is not currently marked as actively hiring, 
-                      but you can still send an inquiry for future opportunities.
-                    </p>
+                  {employer.preferred_contact_method && (
+                    <div className={styles.preferredMethod}>
+                      <strong>Preferred Contact Method:</strong> {formatFeature(employer.preferred_contact_method)}
+                    </div>
                   )}
                 </div>
+                
+                {isNotHiring && (
+                  <div className={styles.warningNote}>
+                    <strong>Note:</strong> This employer is not currently marked as actively hiring, 
+                    but you can still reach out for future opportunities.
+                  </div>
+                )}
               </div>
             </div>
-          )}
+          </div>
         </div>
 
-        {/* Modal Footer */}
+        {/* ✅ CHANGED: Modal Footer - Main Action is Now Favorites */}
         <div className={styles.modalFooter}>
           <div className={styles.footerActions}>
             <button
@@ -291,23 +294,27 @@ const EmployerModal = ({
               Close
             </button>
             
-            {!isConnected ? (
-              <button
-                className={`btn ${isNotHiring ? 'btn-outline' : 'btn-secondary'}`}
-                onClick={handleConnect}
-              >
-                {isNotHiring ? (
-                  <>📩 Send Inquiry</>
-                ) : (
-                  <>💼 Connect Now</>
-                )}
-              </button>
-            ) : (
-              <div className={styles.connectedStatus}>
-                <span className={styles.successIcon}>✅</span>
-                <span className="connected-text">Already Connected</span>
-              </div>
-            )}
+            {/* ✅ MAIN ACTION: Add/Remove from Favorites */}
+            <button
+              className={`btn ${isFavorited ? 'btn-warning' : 'btn-primary'}`}
+              onClick={handleMainAction}
+            >
+              {isFavorited ? (
+                <>💔 Remove from Favorites</>
+              ) : (
+                <>❤️ Add to Favorites</>
+              )}
+            </button>
+          </div>
+          
+          {/* ✅ ADDED: Helpful action hint */}
+          <div className={styles.actionHint}>
+            <small className="text-muted">
+              {isFavorited 
+                ? "This employer is saved to your favorites list" 
+                : "Save this employer to easily find them later"
+              }
+            </small>
           </div>
         </div>
       </div>
