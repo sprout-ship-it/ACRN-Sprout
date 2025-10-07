@@ -342,9 +342,9 @@ if (!db.employerProfiles?.favorites) {
 }
 
     const isFavorited = favorites.has(employerId);
-      
+
     if (isFavorited) {
-      const result = await favoritesService.remove(profile.id, employerId);
+      const result = await db.employerProfiles.favorites.remove(profile.id, employerId);
       
       if (result.error) {
         throw new Error(result.error.message || 'Failed to remove favorite');
@@ -358,7 +358,7 @@ if (!db.employerProfiles?.favorites) {
       
       console.log('⭐ Removed employer from favorites:', employerId);
     } else {
-      const result = await favoritesService.add(profile.id, employerId);
+      const result = await db.employerProfiles.favorites.add(profile.id, employerId);
       
       if (result.error) {
         throw new Error(result.error.message || 'Failed to add favorite');
