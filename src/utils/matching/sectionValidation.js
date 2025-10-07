@@ -13,22 +13,36 @@ const SECTION_VALIDATION_RULES = {
     required: ['date_of_birth', 'primary_phone'],
     warnings: ['emergency_contact_name', 'emergency_contact_phone'],
     validations: {
-      date_of_birth: (value) => {
-        if (!value) return 'Date of birth is required';
-        const birthDate = new Date(value);
-        const today = new Date();
-        const age = today.getFullYear() - birthDate.getFullYear();
-        const monthDiff = today.getMonth() - birthDate.getMonth();
-        
-        // More precise age calculation
-        if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birthDate.getDate())) {
-          age--;
-        }
-        
-        if (age < 18) return 'Must be 18 or older to use this service';
-        if (age > 100) return 'Please enter a valid birth date';
-        return null;
-      },
+date_of_birth: (value) => {
+  if (!value) return 'Date of birth is required';
+  
+  try {
+    const birthDate = new Date(value);
+    const today = new Date();
+    
+    // Validate that the date is valid
+    if (isNaN(birthDate.getTime())) {
+      return 'Please enter a valid date';
+    }
+    
+    // Calculate age using let so it can be modified
+    let age = today.getFullYear() - birthDate.getFullYear(); // ✅ let
+    const monthDiff = today.getMonth() - birthDate.getMonth();
+    
+    // More precise age calculation - now age can be decremented
+    if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birthDate.getDate())) {
+      age--; // ✅ Now this works!
+    }
+    
+    if (age < 18) return 'Must be 18 or older to use this service';
+    if (age > 100) return 'Please enter a valid birth date';
+    
+    return null;
+  } catch (error) {
+    console.error('Date validation error:', error);
+    return 'Please enter a valid date';
+  }
+},
       primary_phone: (value) => {
         if (!value) return 'Phone number is required for potential roommate contact';
         const phoneRegex = /^\(\d{3}\)\s\d{3}-\d{4}$|^\d{10}$|^\d{3}-\d{3}-\d{4}$/;
