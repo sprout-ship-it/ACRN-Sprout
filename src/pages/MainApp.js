@@ -1,9 +1,9 @@
-// src/pages/MainApp.js - FIXED PEER SUPPORT TO USE STANDALONE FUNCTION
+// src/pages/MainApp.js - FIXED PEER SUPPORT TO USE STANDALONE FUNCTION + SAVED EMPLOYERS
 import React, { useEffect, useState, useRef, useCallback, useMemo } from 'react'
 import { Routes, Route, Navigate, useNavigate, useLocation } from 'react-router-dom'
 import { useAuth } from '../hooks/useAuth';
 
-// ✅ FIXED: Import standalone functions that work
+// ✅ FIXED: Import db object and supabase client, remove individual function imports
 import { supabase, db } from '../utils/supabase';
 import { getMatchingProfile } from '../utils/database/matchingProfilesService';
 import { getEmployerProfilesByUserId } from '../utils/database/employerService';
@@ -32,6 +32,7 @@ import PropertyManagement from '../components/features/property/PropertyManageme
 import PeerSupportFinder from '../components/features/peer-support/PeerSupportFinder'
 import EmployerManagement from '../components/features/employer/EmployerManagement'
 import EmployerFinder from '../components/features/employer/EmployerFinder'
+import SavedEmployers from '../components/features/employer/SavedEmployers'
 import ConnectionHub from '../components/features/connections/ConnectionHub'
 import PeerSupportHub from '../components/features/peer-support/PeerSupportHub'
 
@@ -289,63 +290,60 @@ const MainApp = () => {
           }
         }
 
-// MainApp.js - UPDATED EMPLOYER PROFILE COMPLETION CHECK
-// Replace the employer section in the checkProfileCompletion function
-
-else if (hasRole('employer')) {
-  console.log('Checking employer comprehensive profile...');
-  
-  try {
-    const result = await getEmployerProfilesByUserId(profile.id);
-    
-    if (result.success && result.data && result.data.length > 0) {
-      const employerProfile = result.data[0];
-      
-      // ✅ UPDATED: Check based on new schema fields and requirements
-      hasCompleteProfile = !!(
-        employerProfile?.company_name && 
-        employerProfile?.industry && 
-        employerProfile?.business_type && 
-        employerProfile?.city && 
-        employerProfile?.state && 
-        employerProfile?.zip_code && 
-        employerProfile?.phone && 
-        employerProfile?.description &&
-        employerProfile?.description.length >= 50 // Require substantial description
-      );
-      
-      console.log('✅ Employer profile check complete using new schema:', hasCompleteProfile, {
-        hasCompanyName: !!employerProfile?.company_name,
-        hasIndustry: !!employerProfile?.industry,
-        hasBusinessType: !!employerProfile?.business_type,
-        hasLocation: !!(employerProfile?.city && employerProfile?.state && employerProfile?.zip_code),
-        hasPhone: !!employerProfile?.phone,
-        hasDescription: !!employerProfile?.description,
-        descriptionLength: employerProfile?.description?.length || 0,
-        isActive: !!employerProfile?.is_active
-      });
-      
-    } else if (result.error) {
-      // ✅ FIXED: Handle specific error types without causing loops
-      if (result.error?.code === 'NOT_FOUND' || result.error?.message?.includes('No employer profiles found')) {
-        console.log('ℹ️ No employer profile found (normal for new users)');
-        hasCompleteProfile = false;
-        profileError = null; // Don't treat "not found" as an error
-      } else {
-        console.error('❌ Unexpected employer profile error:', result.error);
-        profileError = 'Failed to check employer profile';
-        hasCompleteProfile = false;
-      }
-    } else {
-      console.log('ℹ️ No employer profile found');
-      hasCompleteProfile = false;
-    }
-  } catch (error) {
-    console.error('❌ Error checking employer profile:', error);
-    profileError = 'Failed to check employer profile';
-    hasCompleteProfile = false;
-  }
-}
+        else if (hasRole('employer')) {
+          console.log('Checking employer comprehensive profile...');
+          
+          try {
+            const result = await getEmployerProfilesByUserId(profile.id);
+            
+            if (result.success && result.data && result.data.length > 0) {
+              const employerProfile = result.data[0];
+              
+              // ✅ UPDATED: Check based on new schema fields and requirements
+              hasCompleteProfile = !!(
+                employerProfile?.company_name && 
+                employerProfile?.industry && 
+                employerProfile?.business_type && 
+                employerProfile?.city && 
+                employerProfile?.state && 
+                employerProfile?.zip_code && 
+                employerProfile?.phone && 
+                employerProfile?.description &&
+                employerProfile?.description.length >= 50 // Require substantial description
+              );
+              
+              console.log('✅ Employer profile check complete using new schema:', hasCompleteProfile, {
+                hasCompanyName: !!employerProfile?.company_name,
+                hasIndustry: !!employerProfile?.industry,
+                hasBusinessType: !!employerProfile?.business_type,
+                hasLocation: !!(employerProfile?.city && employerProfile?.state && employerProfile?.zip_code),
+                hasPhone: !!employerProfile?.phone,
+                hasDescription: !!employerProfile?.description,
+                descriptionLength: employerProfile?.description?.length || 0,
+                isActive: !!employerProfile?.is_active
+              });
+              
+            } else if (result.error) {
+              // ✅ FIXED: Handle specific error types without causing loops
+              if (result.error?.code === 'NOT_FOUND' || result.error?.message?.includes('No employer profiles found')) {
+                console.log('ℹ️ No employer profile found (normal for new users)');
+                hasCompleteProfile = false;
+                profileError = null; // Don't treat "not found" as an error
+              } else {
+                console.error('❌ Unexpected employer profile error:', result.error);
+                profileError = 'Failed to check employer profile';
+                hasCompleteProfile = false;
+              }
+            } else {
+              console.log('ℹ️ No employer profile found');
+              hasCompleteProfile = false;
+            }
+          } catch (error) {
+            console.error('❌ Error checking employer profile:', error);
+            profileError = 'Failed to check employer profile';
+            hasCompleteProfile = false;
+          }
+        }
 
         // ✅ CRITICAL FIX: Only update state if component is still mounted AND values actually changed
         if (isMountedRef.current) {
@@ -724,6 +722,7 @@ else if (hasRole('employer')) {
                 <Route path="/find-matches" element={<RoommateDiscovery />} />
                 <Route path="/find-peer-support" element={<PeerSupportFinder />} />
                 <Route path="/find-employers" element={<EmployerFinder />} />
+                <Route path="/saved-employers" element={<SavedEmployers />} />
                 <Route path="/match-requests" element={<MatchRequests />} />
                 <Route path="/property-search" element={<PropertySearch />} />
                 <Route path="/saved-properties" element={<SavedProperties />} />

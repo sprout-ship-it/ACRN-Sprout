@@ -1,4 +1,4 @@
-// src/components/layout/Navigation.js - SCHEMA-ALIGNED NAVIGATION
+// src/components/layout/Navigation.js - SCHEMA-ALIGNED NAVIGATION WITH SAVED EMPLOYERS
 import React from 'react'
 import { useLocation, useNavigate } from 'react-router-dom'
 import { useAuth } from '../../context/AuthContext'
@@ -117,6 +117,14 @@ const Navigation = () => {
           icon: '💼',
           path: '/app/find-employers',
           description: 'Discover recovery-friendly job opportunities',
+          className: 'nav-employer'
+        },
+        { 
+          id: 'saved-employers', 
+          label: 'Saved Employers', 
+          icon: '💖',
+          path: '/app/saved-employers',
+          description: 'View and manage your favorited recovery-friendly employers',
           className: 'nav-employer'
         }
       )

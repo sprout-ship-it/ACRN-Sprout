@@ -1,12 +1,9 @@
-// src/components/features/employer/EmployerFinder.js - WITH DEBUG COMPONENT
+// src/components/features/employer/EmployerFinder.js - CLEANED UP (DEBUG REMOVED)
 import React, { useState } from 'react';
 import useEmployerSearch from './hooks/useEmployerSearch';
 import EmployerFilterPanel from './components/EmployerFilterPanel';
 import EmployerResultsGrid from './components/EmployerResultsGrid';
 import EmployerModal from './components/EmployerModal';
-
-import EmployerSearchDebug from '../../debug/EmployerSearchDebug';
-import EmployerFavoritesDebug from '../../debug/EmployerFavoritesDebug'; // ✅ ADDED: Debug component
 
 const EmployerFinder = ({ onBack }) => {
   // Comprehensive search hook for all employer functionality
@@ -75,7 +72,7 @@ const EmployerFinder = ({ onBack }) => {
   };
 
   /**
-   * ✅ ENHANCED: Handle toggling favorite status with detailed logging
+   * Handle toggling favorite status with detailed logging
    */
   const handleToggleFavorite = async (employerId) => {
     console.log('🎯 EmployerFinder: handleToggleFavorite called with:', {
@@ -116,10 +113,6 @@ const EmployerFinder = ({ onBack }) => {
 
   return (
     <div className="content">
-      {/* ✅ DEBUG COMPONENTS - Remove these in production */}
-      <EmployerSearchDebug />
-      <EmployerFavoritesDebug />
-      
       {/* Header Section */}
       <div className="text-center mb-5">
         <h1 className="welcome-title">Find Recovery-Friendly Employers</h1>
@@ -128,20 +121,6 @@ const EmployerFinder = ({ onBack }) => {
           flexible policies, and inclusive workplace cultures.
         </p>
       </div>
-
-      {/* ✅ ENHANCED: Show current state info for debugging */}
-      {process.env.NODE_ENV === 'development' && (
-        <div className="alert alert-info mb-4">
-          <strong>🔧 Debug Info:</strong>
-          <ul className="mb-0 mt-2">
-            <li>Employers found: <strong>{employers.length}</strong></li>
-            <li>Favorites count: <strong>{favorites.size}</strong></li>
-            <li>Connections count: <strong>{connections.size}</strong></li>
-            <li>Loading: <strong>{loading ? 'Yes' : 'No'}</strong></li>
-            <li>Error: <strong>{error || 'None'}</strong></li>
-          </ul>
-        </div>
-      )}
 
       {/* Search Filters Panel */}
       <EmployerFilterPanel
@@ -198,4 +177,4 @@ const EmployerFinder = ({ onBack }) => {
   );
 };
 
-export default EmployerFinder;
+export default EmployerFinder;  
