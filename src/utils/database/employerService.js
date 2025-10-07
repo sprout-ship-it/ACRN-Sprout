@@ -150,7 +150,6 @@ const createEmployerService = (supabaseClient) => {
         let query = supabaseClient
           .from(profiles.tableName)
           .select('*')
-          .eq('profile_completed', true)
           .eq('is_active', true);
 
         // Apply filters with correct field names from schema
