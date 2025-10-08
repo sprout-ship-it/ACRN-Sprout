@@ -150,6 +150,14 @@ const EnhancedMatchingProfileForm = ({ editMode = false, onComplete, onCancel })
     setSuccessMessage
   } = useMatchingProfileForm();
 
+useEffect(() => {
+  // Cleanup function to reset state when component unmounts
+  return () => {
+    setIsSubmitting(false);
+    setSuccessMessage('');
+    setValidationMessage('');
+  };
+}, []);
   // ✅ FIXED: Enhanced scroll to form field with proper section scoping
   const scrollToFirstFormField = useCallback(() => {
     console.log('🔄 Starting scroll to first form field...');
@@ -535,29 +543,35 @@ const showNavigationFeedback = useCallback((message, type = 'warning') => {
       console.log('🧹 Cleaned form data (removed computed fields):', cleanedData);
       const success = await submitForm(cleanedData); // Pass cleaned data if your hook accepts it
       
-      if (success) {
-        console.log('✅ Database submission successful');
-        setSuccessMessage('Matching profile completed with enhanced field structure!');
-        
-        setTimeout(() => {
-          if (editMode && onComplete) {
-            onComplete();
-          } else {
-            navigate('/app?profileComplete=true', {
-              state: { 
-                message: editMode 
-                  ? 'Matching profile updated successfully with improved data structure!' 
-                  : 'Matching profile completed successfully using our enhanced matching system!'
-              },
-              replace: true
-            });
-          }
-        }, 1500);
-      } else {
-        console.log('❌ Database submission failed');
-        setIsSubmitting(false);
-        scrollToFirstError();
-      }
+// Replace the success handling section in handleSubmit function:
+
+if (success) {
+  console.log('✅ Database submission successful');
+  setSuccessMessage('Matching profile completed with enhanced field structure!');
+  
+  // ✅ FIX: Reset submitting state immediately after success
+  setIsSubmitting(false);
+  
+  // ✅ FIX: Reduced delay and ensure cleanup
+  setTimeout(() => {
+    if (editMode && onComplete) {
+      onComplete();
+    } else {
+      navigate('/app?profileComplete=true', {
+        state: { 
+          message: editMode 
+            ? 'Matching profile updated successfully with improved data structure!' 
+            : 'Matching profile completed successfully using our enhanced matching system!'
+        },
+        replace: true
+      });
+    }
+  }, 800); // ✅ Reduced from 1500ms to 800ms
+} else {
+  console.log('❌ Database submission failed');
+  setIsSubmitting(false);
+  scrollToFirstError();
+}
     } catch (error) {
       console.error('💥 Submission error:', error);
       setIsSubmitting(false);
