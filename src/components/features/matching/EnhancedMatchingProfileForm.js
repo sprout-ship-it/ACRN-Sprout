@@ -1,5 +1,5 @@
 // src/components/features/matching/EnhancedMatchingProfileForm.js - FIXED SCROLLING VERSION
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../../context/AuthContext';
 import { useMatchingProfileForm } from './hooks/useMatchingProfileForm';
