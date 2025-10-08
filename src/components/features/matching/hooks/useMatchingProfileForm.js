@@ -468,12 +468,50 @@ export const useMatchingProfileForm = () => {
     }
 
     // ✅ SCHEMA CONSTRAINT: Budget validation 
-    if (formData.budget_max < 1) {
-      newErrors.budget_max = 'Budget must be positive (schema constraint: valid_rent CHECK)';
-    }
-    if (formData.budget_min && formData.budget_min >= formData.budget_max) {
+// ✅ FIXED: Budget validation with proper number conversion
+const validateBudgets = () => {
+  const budgetMinValue = formData.budget_min;
+  const budgetMaxValue = formData.budget_max;
+  
+  // Convert to numbers for proper comparison
+  const minBudget = parseInt(budgetMinValue) || 0;
+  const maxBudget = parseInt(budgetMaxValue) || 0;
+  
+  console.log('🔍 Budget validation:', { 
+    budgetMinValue, 
+    budgetMaxValue, 
+    minBudget, 
+    maxBudget,
+    comparison: minBudget >= maxBudget
+  });
+  
+  // Validate budget_max is positive
+  if (maxBudget < 1) {
+    newErrors.budget_max = 'Budget must be positive (schema constraint: valid_rent CHECK)';
+  }
+  
+  // Validate budget_min vs budget_max with proper number comparison
+  if (budgetMinValue && budgetMaxValue) {
+    if (minBudget >= maxBudget) {
       newErrors.budget_min = 'Minimum budget must be less than maximum (schema constraint: valid_budget_range)';
     }
+    // Add a reasonable minimum difference
+    else if (maxBudget - minBudget < 50) {
+      newErrors.budget_max = 'Budget range should be at least $50 for flexibility';
+    }
+  }
+  
+  // Validate reasonable budget ranges
+  if (minBudget > 0 && minBudget < 200) {
+    newErrors.budget_min = 'Minimum budget should be at least $200 for realistic housing';
+  }
+  if (maxBudget > 5000) {
+    newErrors.budget_max = 'Maximum budget cannot exceed $5,000 (schema constraint)';
+  }
+};
+
+// Call the budget validation function
+validateBudgets();
 
     // ✅ SCHEMA CONSTRAINT: Level validations (1-5 scale)
     const levelFields = ['social_level', 'cleanliness_level', 'noise_tolerance'];
