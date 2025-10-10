@@ -293,8 +293,8 @@ const handleOpenClientModal = (client) => {
   console.log('Opening client modal for:', client.displayName);
   
   // Call parent's callback if provided (for modal integration)
-  if (props.onClientSelect) {
-    props.onClientSelect(client);
+  if (onClientSelect) {
+    onClientSelect(client);
   }
 };
 
