@@ -389,13 +389,24 @@ const createPSSClientsService = (supabaseClient) => {
           throw new Error('Peer support match not found');
         }
 
-        // Check if PSS client record exists
-        const { data: existingClient } = await supabaseClient
-          .from('pss_clients')
-          .select('id')
-          .eq('peer_specialist_id', match.peer_support_id)
-          .eq('client_id', match.applicant_id)
-          .single();
+        // Check if PSS client record exists (handle 406 gracefully)
+        let existingClient = null;
+        try {
+          const { data, error } = await supabaseClient
+            .from('pss_clients')
+            .select('id')
+            .eq('peer_specialist_id', match.peer_support_id)
+            .eq('client_id', match.applicant_id)
+            .maybeSingle(); // Use maybeSingle instead of single to handle no results
+
+          if (!error) {
+            existingClient = data;
+          } else {
+            console.warn('Could not check for existing PSS client, will attempt create:', error);
+          }
+        } catch (checkError) {
+          console.warn('Error checking existing PSS client, will attempt create:', checkError);
+        }
 
         if (existingClient) {
           // Update existing PSS client record
