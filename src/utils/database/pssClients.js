@@ -39,7 +39,7 @@ const createPSSClientsService = (supabaseClient) => {
           return { success: false, data: [], error: peerError || { message: 'Peer support profile not found' } };
         }
 
-        // ✅ NOW THIS WORKS: Automatic JOINs with foreign key constraint
+        // ✅ ENHANCED: Get comprehensive peer support relevant data
         const { data, error } = await supabaseClient
           .from('peer_support_matches')
           .select(`
@@ -50,7 +50,24 @@ const createPSSClientsService = (supabaseClient) => {
               primary_phone,
               recovery_stage,
               time_in_recovery,
+              sobriety_date,
+              primary_substance,
               primary_issues,
+              recovery_methods,
+              support_meetings,
+              sponsor_mentor,
+              recovery_goal_timeframe,
+              recovery_context,
+              about_me,
+              looking_for,
+              spiritual_affiliation,
+              want_recovery_support,
+              comfortable_discussing_recovery,
+              attend_meetings_together,
+              recovery_accountability,
+              shared_recovery_activities,
+              mentorship_interest,
+              recovery_community,
               registrant:registrant_profiles!user_id(
                 id,
                 first_name,
@@ -62,6 +79,8 @@ const createPSSClientsService = (supabaseClient) => {
               id,
               user_id,
               professional_title,
+              specialties,
+              bio,
               registrant:registrant_profiles!user_id(
                 id,
                 first_name,

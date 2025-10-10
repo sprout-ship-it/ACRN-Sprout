@@ -89,51 +89,68 @@ const PeerSupportHub = ({ onBack }) => {
       console.log(`📊 Found ${clientData.length} PSS clients`);
 
       // Enrich client data with profile information
-      const enrichedClients = await Promise.all(
-        clientData.map(async (client) => {
-          try {
-            // Get client's registrant profile
-            const clientProfileResult = await db.profiles.getById(client.client_id);
-            const clientProfile = clientProfileResult.data;
+const enrichedClients = await Promise.all(
+  clientData.map(async (client) => {
+    try {
+      // ✅ NEW: Use the enhanced data already provided by PSS service
+      const applicantData = client.applicant;
+      const clientProfile = applicantData?.registrant;
 
-            // Get applicant matching profile for recovery details
-            let applicantProfile = null;
-            try {
-              const applicantResult = await db.matchingProfiles.getByUserId(client.client_id);
-              applicantProfile = applicantResult.data;
-            } catch (err) {
-              console.warn(`Could not load matching profile for client ${client.client_id}:`, err);
-            }
+      if (!applicantData || !clientProfile) {
+        console.warn(`Incomplete data for client:`, client);
+        return {
+          ...client,
+          displayName: 'Unknown Client',
+          recoveryGoals: [],
+          status: 'active'
+        };
+      }
 
-            return {
-              ...client,
-              profile: clientProfile,
-              applicantProfile: applicantProfile,
-              displayName: clientProfile?.first_name 
-                ? `${clientProfile.first_name} ${clientProfile.last_name?.charAt(0) || ''}.`
-                : 'Anonymous Client',
-              phone: applicantProfile?.primary_phone || 'Not provided',
-              email: clientProfile?.email,
-              primarySubstances: applicantProfile?.primary_substance ? [applicantProfile.primary_substance] : [],
-              recoveryStage: applicantProfile?.recovery_stage || 'Not specified',
-              recoveryGoals: client.recovery_goals || [],
-              nextFollowup: client.next_followup_date,
-              followupFrequency: client.followup_frequency || 'weekly',
-              lastContact: client.last_contact_date,
-              totalSessions: client.total_sessions || 0,
-              status: client.status || 'active'
-            };
-          } catch (err) {
-            console.warn(`Error enriching client data for ${client.client_id}:`, err);
-            return {
-              ...client,
-              displayName: 'Unknown Client',
-              recoveryGoals: [],
-              status: 'active'
-            };
-          }
-        })
-      );
+      return {
+        ...client,
+        profile: clientProfile,
+        applicantProfile: applicantData,
+        displayName: clientProfile.first_name 
+          ? `${clientProfile.first_name} ${clientProfile.last_name?.charAt(0) || ''}.`
+          : 'Anonymous Client',
+        phone: applicantData.primary_phone || 'Not provided',
+        email: clientProfile.email,
+        
+        // ✅ ENHANCED: More peer support relevant data
+        primarySubstances: applicantData.primary_substance ? [applicantData.primary_substance] : [],
+        recoveryStage: applicantData.recovery_stage || 'Not specified',
+        timeInRecovery: applicantData.time_in_recovery || 'Not specified',
+        sobrietyDate: applicantData.sobriety_date || null,
+        recoveryMethods: applicantData.recovery_methods || [],
+        supportMeetings: applicantData.support_meetings || 'Not specified',
+        sponsorMentor: applicantData.sponsor_mentor || 'Not specified',
+        recoveryContext: applicantData.recovery_context || '',
+        spiritualAffiliation: applicantData.spiritual_affiliation || 'Not specified',
+        wantRecoverySupport: applicantData.want_recovery_support || false,
+        comfortableDiscussing: applicantData.comfortable_discussing_recovery || false,
+        attendMeetingsTogether: applicantData.attend_meetings_together || false,
+        recoveryAccountability: applicantData.recovery_accountability || false,
+        mentorshipInterest: applicantData.mentorship_interest || false,
+        
+        // Goals and session tracking (use PSS clients data when available)
+        recoveryGoals: client.recovery_goals || [],
+        nextFollowup: client.next_followup_date,
+        followupFrequency: client.followup_frequency || 'weekly',
+        lastContact: client.last_contact_date,
+        totalSessions: client.total_sessions || 0,
+        status: client.status || 'active'
+      };
+    } catch (err) {
+      console.warn(`Error enriching client data for ${client.client_id}:`, err);
+      return {
+        ...client,
+        displayName: 'Unknown Client',
+        recoveryGoals: [],
+        status: 'active'
+      };
+    }
+  })
+);
 
       setClients(enrichedClients);
 
@@ -286,42 +303,66 @@ const PeerSupportHub = ({ onBack }) => {
   /**
    * Update client information
    */
-  const handleUpdateClient = async (clientId, updates) => {
-    if (!profile?.id) return false;
+const handleUpdateClient = async (clientId, updates) => {
+  if (!profile?.id) return false;
 
-    try {
-      console.log('📝 Updating client:', clientId, updates);
+  try {
+    console.log('📝 Updating client:', clientId, updates);
 
-      // Try to use PSS clients service if available
-      if (db.pssClients && typeof db.pssClients.update === 'function') {
-        const result = await db.pssClients.update(clientId, {
-          ...updates,
-          updated_at: new Date().toISOString()
-        });
+    // ✅ NEW: Try PSS clients service first, fall back to match updates
+    if (db.pssClients && typeof db.pssClients.update === 'function') {
+      const result = await db.pssClients.update(clientId, {
+        ...updates,
+        updated_at: new Date().toISOString()
+      });
 
-        if (result.error) {
-          throw new Error(result.error.message || 'Failed to update client');
-        }
+      if (result.error) {
+        throw new Error(result.error.message || 'Failed to update client');
+      }
 
-        // Update local state
+      // Update local state
+      setClients(prev => prev.map(client => 
+        client.id === clientId 
+          ? { ...client, ...updates }
+          : client
+      ));
+
+      return true;
+    } else {
+      // ✅ FALLBACK: Store in peer_support_matches metadata
+      console.log('Using fallback: storing in peer_support_matches');
+      
+      // Store client management data in a metadata field
+      const existingMatch = clients.find(c => c.id === clientId);
+      const metadata = {
+        ...(existingMatch.client_metadata || {}),
+        ...updates,
+        last_updated: new Date().toISOString()
+      };
+
+      // Update the peer_support_match with metadata
+      const result = await db.pssClients.update(clientId, {
+        client_metadata: metadata,
+        updated_at: new Date().toISOString()
+      });
+
+      if (result.success) {
         setClients(prev => prev.map(client => 
           client.id === clientId 
-            ? { ...client, ...updates }
+            ? { ...client, ...updates, client_metadata: metadata }
             : client
         ));
-
         return true;
       } else {
-        // Fallback: Show message that feature isn't fully available yet
-        alert('Client update features will be available when the PSS system is fully implemented.');
-        return false;
+        throw new Error(result.error?.message || 'Failed to update client metadata');
       }
-    } catch (err) {
-      console.error('💥 Error updating client:', err);
-      alert(`Failed to update client: ${err.message}`);
-      return false;
     }
-  };
+  } catch (err) {
+    console.error('💥 Error updating client:', err);
+    alert(`Failed to update client: ${err.message}`);
+    return false;
+  }
+};
 
   /**
    * Add a new recovery goal
@@ -594,7 +635,58 @@ const PeerSupportHub = ({ onBack }) => {
                         )}
                       </div>
                     )}
+<div className={styles.enhancedClientInfo}>
+  {/* Recovery Details */}
+  <div className={styles.recoverySection}>
+    <h5>Recovery Information</h5>
+    <div className={styles.recoveryGrid}>
+      <div>
+        <span className={styles.infoLabel}>Time in Recovery:</span>
+        <span className={styles.infoValue}> {client.timeInRecovery}</span>
+      </div>
+      <div>
+        <span className={styles.infoLabel}>Support Meetings:</span>
+        <span className={styles.infoValue}> {client.supportMeetings}</span>
+      </div>
+      {client.sponsorMentor && client.sponsorMentor !== 'Not specified' && (
+        <div>
+          <span className={styles.infoLabel}>Sponsor/Mentor:</span>
+          <span className={styles.infoValue}> {client.sponsorMentor}</span>
+        </div>
+      )}
+    </div>
+  </div>
 
+  {/* Recovery Preferences */}
+  <div className={styles.preferencesSection}>
+    <h5>Recovery Preferences</h5>
+    <div className={styles.preferencesTags}>
+      {client.wantRecoverySupport && (
+        <span className={styles.preferenceTag}>Wants Recovery Support</span>
+      )}
+      {client.comfortableDiscussing && (
+        <span className={styles.preferenceTag}>Comfortable Discussing Recovery</span>
+      )}
+      {client.attendMeetingsTogether && (
+        <span className={styles.preferenceTag}>Attend Meetings Together</span>
+      )}
+      {client.recoveryAccountability && (
+        <span className={styles.preferenceTag}>Recovery Accountability</span>
+      )}
+      {client.mentorshipInterest && (
+        <span className={styles.preferenceTag}>Mentorship Interest</span>
+      )}
+    </div>
+  </div>
+
+  {/* Recovery Context */}
+  {client.recoveryContext && (
+    <div className={styles.contextSection}>
+      <h5>Recovery Context</h5>
+      <p className={styles.contextText}>{client.recoveryContext}</p>
+    </div>
+  )}
+</div>
                     {/* Recovery Goals Preview */}
                     <div className={styles.goalsSection}>
                       <div className={styles.goalsHeader}>

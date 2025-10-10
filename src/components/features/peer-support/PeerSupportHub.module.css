@@ -717,3 +717,47 @@
     padding: 10px 12px;
   }
 }
+.enhancedClientInfo {
+  margin: 1rem 0;
+  padding: 1rem;
+  background: #f8f9fa;
+  border-radius: 8px;
+}
+
+.recoverySection, .preferencesSection, .contextSection {
+  margin-bottom: 1rem;
+}
+
+.recoverySection h5, .preferencesSection h5, .contextSection h5 {
+  margin-bottom: 0.5rem;
+  color: #2c3e50;
+  font-size: 0.9rem;
+  font-weight: 600;
+}
+
+.recoveryGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 0.5rem;
+}
+
+.preferencesTags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.preferenceTag {
+  background: #e3f2fd;
+  color: #1976d2;
+  padding: 0.25rem 0.5rem;
+  border-radius: 12px;
+  font-size: 0.8rem;
+  font-weight: 500;
+}
+
+.contextText {
+  font-size: 0.9rem;
+  line-height: 1.4;
+  color: #555;
+}
