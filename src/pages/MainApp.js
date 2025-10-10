@@ -34,7 +34,7 @@ import EmployerManagement from '../components/features/employer/EmployerManageme
 import EmployerFinder from '../components/features/employer/EmployerFinder'
 import SavedEmployers from '../components/features/employer/SavedEmployers'
 import ConnectionHub from '../components/features/connections/ConnectionHub'
-import PeerSupportHub from '../components/features/peer-support/PeerSupportHub'
+import PeerSupportDashboard from '../components/features/peer-support/PeerSupportDashboard'
 
 // Search Components
 import PropertySearch from '../components/features/property/PropertySearch';
@@ -58,6 +58,8 @@ const MainApp = () => {
   const { user, profile, isAuthenticated, hasRole } = useAuth()
   const navigate = useNavigate()
   const location = useLocation();
+  const [selectedClient, setSelectedClient] = useState(null);
+  const [modalOpen, setModalOpen] = useState(false);
   
   // ✅ NEW: Debug what's changing between renders
   const debugInfo = {
@@ -742,7 +744,28 @@ const MainApp = () => {
                   </div>
                 } />
                 
-                <Route path="/peer-dashboard" element={<PeerSupportHub />} />
+                <Route path="/peer-dashboard" element={
+  <>
+    <PeerSupportDashboard 
+      onClientSelect={(client) => {
+        setSelectedClient(client);
+        setModalOpen(true);
+      }}
+    />
+    {modalOpen && selectedClient && (
+      <PeerSupportModal 
+        client={selectedClient}
+        onClose={() => {
+          setModalOpen(false);
+          setSelectedClient(null);
+        }}
+        onClientUpdate={() => {
+          // Optional: trigger data refresh
+        }}
+      />
+    )}
+  </>
+} />
                 <Route path="/clients" element={<MatchRequests />} />
               </>
             )}

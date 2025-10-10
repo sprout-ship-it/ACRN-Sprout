@@ -1,0 +1,532 @@
+/* PeerSupportDashboard.module.css - Dashboard-specific styles */
+
+/* ==================== AVAILABLE CONNECTIONS SECTION ==================== */
+.availableConnectionsCard {
+  background: linear-gradient(135deg, rgba(32, 178, 170, 0.05) 0%, rgba(160, 32, 240, 0.05) 100%);
+  border: 2px solid var(--secondary-teal);
+  border-radius: var(--radius-xl);
+  padding: var(--spacing-xl);
+  margin-bottom: var(--spacing-xl);
+  position: relative;
+}
+
+.availableConnectionsCard::before {
+  content: "✨";
+  position: absolute;
+  top: -8px;
+  right: -8px;
+  font-size: 1.5rem;
+  background: var(--secondary-teal);
+  color: white;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1;
+}
+
+.availableConnectionsGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  gap: var(--spacing-lg);
+}
+
+.connectionCard {
+  background: white;
+  border-radius: var(--radius-lg);
+  padding: var(--spacing-lg);
+  border: 2px solid var(--border-beige);
+  box-shadow: var(--shadow-sm);
+  transition: var(--transition-normal);
+}
+
+.connectionCard:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-md);
+  border-color: var(--secondary-teal);
+}
+
+.connectionName {
+  font-size: 1.2rem;
+  color: var(--primary-purple);
+  margin-bottom: var(--spacing-sm);
+  font-weight: 600;
+}
+
+.connectionMeta {
+  color: var(--gray-600);
+  font-size: 0.9rem;
+  margin-bottom: var(--spacing-md);
+  line-height: 1.4;
+}
+
+/* ==================== CLIENT MANAGEMENT SECTION ==================== */
+.clientsHeader {
+  background: white;
+  border-radius: var(--radius-xl);
+  padding: var(--spacing-lg);
+  border: 2px solid var(--border-beige);
+  margin-bottom: var(--spacing-lg);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: var(--spacing-md);
+}
+
+.refreshButton {
+  background: rgba(160, 32, 240, 0.1);
+  color: var(--primary-purple);
+  border: 1px solid rgba(160, 32, 240, 0.3);
+  padding: 8px 16px;
+  border-radius: var(--radius-sm);
+  font-size: 0.85rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: var(--transition-normal);
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.refreshButton:hover:not(:disabled) {
+  background: rgba(160, 32, 240, 0.15);
+  border-color: var(--primary-purple);
+  transform: translateY(-1px);
+}
+
+.refreshButton:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.clientsGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
+  gap: var(--spacing-xl);
+  margin-bottom: var(--spacing-xl);
+}
+
+/* ==================== CLIENT CARD ENHANCEMENTS ==================== */
+.clientCard {
+  background: white;
+  border-radius: var(--radius-xl);
+  padding: var(--spacing-xl);
+  border: 2px solid var(--border-beige);
+  box-shadow: var(--shadow-md);
+  transition: var(--transition-normal);
+  position: relative;
+}
+
+.clientCard:hover {
+  transform: translateY(-3px);
+  box-shadow: var(--shadow-lg);
+}
+
+.clientCardHeader {
+  border-bottom: 2px solid var(--border-beige);
+  padding-bottom: var(--spacing-md);
+  margin-bottom: var(--spacing-lg);
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: var(--spacing-md);
+}
+
+.clientName {
+  font-size: 1.3rem;
+  color: var(--primary-purple);
+  margin: 0;
+  font-weight: 700;
+}
+
+.clientSubtitle {
+  color: var(--gray-600);
+  margin: 5px 0 0 0;
+  font-size: 0.9rem;
+  line-height: 1.4;
+}
+
+.clientStatusBadge {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-xs);
+  align-items: flex-end;
+}
+
+.clientInfo {
+  margin-bottom: var(--spacing-lg);
+}
+
+.clientInfoGrid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--spacing-md);
+  margin-bottom: var(--spacing-md);
+  font-size: 0.9rem;
+}
+
+.infoLabel {
+  font-weight: 600;
+  color: var(--gray-700);
+}
+
+.infoValue {
+  color: var(--gray-800);
+}
+
+.substancesList {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--spacing-xs);
+  margin-top: var(--spacing-xs);
+}
+
+.substanceBadge {
+  background: rgba(255, 111, 97, 0.1);
+  color: var(--coral);
+  border: 1px solid rgba(255, 111, 97, 0.3);
+  padding: 4px 8px;
+  border-radius: 12px;
+  font-size: 0.75rem;
+  font-weight: 600;
+}
+
+/* ==================== FOLLOW-UP STATUS INDICATORS ==================== */
+.followupAlert {
+  padding: var(--spacing-md);
+  border-radius: var(--radius-md);
+  margin-bottom: var(--spacing-md);
+  border: 1px solid transparent;
+  font-size: 0.9rem;
+  font-weight: 500;
+}
+
+.followupOverdue {
+  background: var(--error-bg);
+  color: var(--error-text);
+  border-color: var(--error-border);
+}
+
+.followupDueSoon {
+  background: var(--warning-bg);
+  color: var(--warning-text);
+  border-color: var(--warning-border);
+}
+
+.followupOnTrack {
+  background: var(--info-bg);
+  color: var(--info-text);
+  border-color: var(--info-border);
+}
+
+/* ==================== RECOVERY GOALS SECTION ==================== */
+.goalsSection {
+  margin-bottom: var(--spacing-md);
+}
+
+.goalsHeader {
+  font-weight: 600;
+  color: var(--gray-800);
+  margin-bottom: var(--spacing-sm);
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-xs);
+}
+
+.goalsList {
+  margin-top: var(--spacing-sm);
+}
+
+.goalItem {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-sm);
+  margin-bottom: var(--spacing-sm);
+  padding: var(--spacing-sm);
+  background: rgba(160, 32, 240, 0.02);
+  border-radius: var(--radius-sm);
+  transition: var(--transition-normal);
+}
+
+.goalItem:hover {
+  background: rgba(160, 32, 240, 0.05);
+}
+
+.goalStatus {
+  padding: 3px 8px;
+  border-radius: 10px;
+  font-size: 0.7rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  flex-shrink: 0;
+}
+
+.goalStatusActive {
+  background: var(--info-bg);
+  color: var(--info-text);
+}
+
+.goalStatusCompleted {
+  background: var(--success-bg);
+  color: var(--success-text);
+}
+
+.goalStatusPaused {
+  background: var(--warning-bg);
+  color: var(--warning-text);
+}
+
+.goalText {
+  font-size: 0.9rem;
+  color: var(--gray-700);
+  flex: 1;
+  line-height: 1.4;
+}
+
+.noGoalsText {
+  color: var(--gray-600);
+  font-size: 0.9rem;
+  font-style: italic;
+  margin-top: var(--spacing-xs);
+}
+
+.moreGoalsText {
+  font-size: 0.85rem;
+  color: var(--gray-600);
+  font-style: italic;
+  margin-top: var(--spacing-xs);
+}
+
+/* ==================== SIMPLIFIED ACTION BUTTONS ==================== */
+.clientActions {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-md);
+  margin-top: var(--spacing-lg);
+}
+
+.actionButton {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--spacing-xs);
+  padding: 12px 20px;
+  border-radius: var(--radius-md);
+  font-weight: 600;
+  font-size: 0.9rem;
+  cursor: pointer;
+  transition: var(--transition-normal);
+  text-decoration: none;
+  border: 2px solid transparent;
+  white-space: nowrap;
+  flex: 1;
+}
+
+.actionPrimary {
+  background: linear-gradient(135deg, var(--primary-purple), var(--secondary-purple));
+  color: white;
+  border-color: var(--secondary-purple);
+}
+
+.actionPrimary:hover:not(:disabled) {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(160, 32, 240, 0.3);
+}
+
+.quickActions {
+  display: flex;
+  gap: var(--spacing-xs);
+}
+
+.quickActionButton {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  border: 2px solid var(--border-beige);
+  border-radius: var(--radius-md);
+  background: white;
+  color: var(--gray-600);
+  cursor: pointer;
+  transition: var(--transition-normal);
+  font-size: 1rem;
+  text-decoration: none;
+}
+
+.quickActionButton:hover:not(:disabled) {
+  transform: translateY(-1px);
+  box-shadow: var(--shadow-sm);
+}
+
+.quickActionButton:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.phoneAction:hover:not(:disabled) {
+  border-color: var(--secondary-teal);
+  color: var(--secondary-teal);
+  background: rgba(32, 178, 170, 0.05);
+}
+
+.emailAction:hover:not(:disabled) {
+  border-color: var(--coral);
+  color: var(--coral);
+  background: rgba(255, 111, 97, 0.05);
+}
+
+/* ==================== EMPTY STATES ==================== */
+.emptyState {
+  background: white;
+  border-radius: var(--radius-xl);
+  padding: var(--spacing-xxl);
+  border: 2px solid var(--border-beige);
+  text-align: center;
+  margin-bottom: var(--spacing-xl);
+}
+
+.emptyStateIcon {
+  font-size: 3.5rem;
+  margin-bottom: var(--spacing-lg);
+  opacity: 0.6;
+}
+
+.emptyStateTitle {
+  font-size: 1.3rem;
+  color: var(--gray-800);
+  margin-bottom: var(--spacing-md);
+  font-weight: 600;
+}
+
+.emptyStateMessage {
+  color: var(--gray-600);
+  margin-bottom: var(--spacing-lg);
+  line-height: 1.6;
+  font-size: 1rem;
+}
+
+.emptyStateSubtext {
+  color: var(--gray-600);
+  margin-bottom: var(--spacing-md);
+  font-size: 0.9rem;
+  line-height: 1.5;
+}
+
+.emptyStateActions {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+  gap: var(--spacing-md);
+  margin-top: var(--spacing-lg);
+}
+
+/* ==================== LOADING STATES ==================== */
+.loadingContainer {
+  background: white;
+  border-radius: var(--radius-xl);
+  padding: var(--spacing-xxl);
+  border: 2px solid var(--border-beige);
+  text-align: center;
+}
+
+/* ==================== ERROR STATES ==================== */
+.errorContainer {
+  background: white;
+  border-radius: var(--radius-xl);
+  padding: var(--spacing-xl);
+  border: 2px solid var(--error-border);
+  margin-bottom: var(--spacing-xl);
+}
+
+/* ==================== HIDDEN DATA ELEMENT ==================== */
+.hiddenClientData {
+  display: none;
+}
+
+/* ==================== RESPONSIVE DESIGN ==================== */
+@media (max-width: 768px) {
+  .clientsGrid {
+    grid-template-columns: 1fr;
+    gap: var(--spacing-lg);
+  }
+
+  .clientsHeader {
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+  }
+
+  .clientCardHeader {
+    flex-direction: column;
+    align-items: flex-start;
+    text-align: left;
+  }
+
+  .clientStatusBadge {
+    align-items: flex-start;
+    width: 100%;
+  }
+
+  .clientInfoGrid {
+    grid-template-columns: 1fr;
+    gap: var(--spacing-sm);
+  }
+
+  .clientActions {
+    flex-direction: column;
+    gap: var(--spacing-sm);
+  }
+
+  .quickActions {
+    justify-content: center;
+    width: 100%;
+  }
+
+  .availableConnectionsGrid {
+    grid-template-columns: 1fr;
+  }
+
+  .emptyStateActions {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 480px) {
+  .clientCard {
+    padding: var(--spacing-lg);
+  }
+
+  .clientName {
+    font-size: 1.2rem;
+  }
+
+  .availableConnectionsCard {
+    padding: var(--spacing-lg);
+  }
+
+  .emptyState {
+    padding: var(--spacing-xl);
+  }
+
+  .emptyStateIcon {
+    font-size: 2.5rem;
+  }
+
+  .emptyStateTitle {
+    font-size: 1.1rem;
+  }
+
+  .actionButton {
+    font-size: 0.8rem;
+    padding: 10px 16px;
+  }
+
+  .quickActionButton {
+    width: 36px;
+    height: 36px;
+    font-size: 0.9rem;
+  }
+}
