@@ -326,26 +326,123 @@ const createPSSClientsService = (supabaseClient) => {
       try {
         console.log('📝 Updating PSS match:', matchId, updates);
 
-        const { data, error } = await supabaseClient
-          .from('peer_support_matches')
-          .update({
-            ...updates,
-            updated_at: new Date().toISOString()
-          })
-          .eq('id', matchId)
-          .select()
-          .single();
+        // ✅ SMART ROUTING: Route to appropriate table based on update type
+        const clientManagementFields = [
+          'recovery_goals', 'next_followup_date', 'followup_frequency', 
+          'last_contact_date', 'total_sessions', 'last_session_date',
+          'client_preferences', 'crisis_plan', 'progress_notes',
+          'referred_by', 'referrals_made', 'consent_to_contact', 'consent_expiry_date'
+        ];
 
-        if (error) {
-          console.error('❌ Error updating PSS match:', error);
-          return { success: false, data: null, error };
+        const isClientManagementUpdate = Object.keys(updates).some(key => 
+          clientManagementFields.includes(key)
+        );
+
+        if (isClientManagementUpdate) {
+          // Route to PSS clients table for goal/session management
+          return await service.updatePSSClient(matchId, updates);
+        } else {
+          // Route to peer_support_matches for basic match data
+          const { data, error } = await supabaseClient
+            .from('peer_support_matches')
+            .update({
+              ...updates,
+              updated_at: new Date().toISOString()
+            })
+            .eq('id', matchId)
+            .select()
+            .single();
+
+          if (error) {
+            console.error('❌ Error updating PSS match:', error);
+            return { success: false, data: null, error };
+          }
+
+          console.log('✅ Updated PSS match:', data.id);
+          return { success: true, data, error: null };
         }
-
-        console.log('✅ Updated PSS match:', data.id);
-        return { success: true, data, error: null };
 
       } catch (err) {
         console.error('💥 Exception in update:', err);
+        return { success: false, data: null, error: { message: err.message } };
+      }
+    },
+
+    /**
+     * ✅ NEW: Update or create PSS client record for goal/session management
+     * @param {string} matchId - peer_support_matches.id
+     * @param {Object} updates - Client management fields to update
+     * @returns {Promise<Object>} Update result
+     */
+    updatePSSClient: async (matchId, updates) => {
+      try {
+        console.log('📝 Updating PSS client record for match:', matchId, updates);
+
+        // First, get the peer_support_match to extract IDs
+        const { data: match } = await supabaseClient
+          .from('peer_support_matches')
+          .select('applicant_id, peer_support_id')
+          .eq('id', matchId)
+          .single();
+
+        if (!match) {
+          throw new Error('Peer support match not found');
+        }
+
+        // Check if PSS client record exists
+        const { data: existingClient } = await supabaseClient
+          .from('pss_clients')
+          .select('id')
+          .eq('peer_specialist_id', match.peer_support_id)
+          .eq('client_id', match.applicant_id)
+          .single();
+
+        if (existingClient) {
+          // Update existing PSS client record
+          const { data, error } = await supabaseClient
+            .from('pss_clients')
+            .update({
+              ...updates,
+              updated_at: new Date().toISOString()
+            })
+            .eq('id', existingClient.id)
+            .select()
+            .single();
+
+          if (error) {
+            console.error('❌ Error updating PSS client:', error);
+            return { success: false, data: null, error };
+          }
+
+          console.log('✅ Updated PSS client record:', data.id);
+          return { success: true, data, error: null };
+
+        } else {
+          // Create new PSS client record
+          const { data, error } = await supabaseClient
+            .from('pss_clients')
+            .insert([{
+              peer_specialist_id: match.peer_support_id,
+              client_id: match.applicant_id,
+              status: 'active',
+              ...updates,
+              created_at: new Date().toISOString(),
+              updated_at: new Date().toISOString()
+            }])
+            .select()
+            .single();
+
+          if (error) {
+            console.error('❌ Error creating PSS client:', error);
+            return { success: false, data: null, error };
+          }
+
+          console.log('✅ Created PSS client record:', data.id);
+          return { success: true, data, error: null };
+        }
+
+      } catch (err) {
+        console.error('💥 Exception in updatePSSClient:', err);
         return { success: false, data: null, error: { message: err.message } };
       }
     },
