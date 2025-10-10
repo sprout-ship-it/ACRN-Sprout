@@ -1,4 +1,4 @@
-// src/pages/Dashboard.js - FIXED: Enhanced service availability and error handling
+// src/pages/Dashboard.js - RESTRUCTURED: Search cards for applicants only, aligned naming
 import React, { useState, useEffect, useRef, useCallback } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../hooks/useAuth'
@@ -338,7 +338,7 @@ const Dashboard = () => {
     calculateProfileStats()
   }, [calculateProfileStats])
 
-  // Rest of the component remains the same...
+  // ✅ RESTRUCTURED: Dashboard cards with search functions for applicants only
   const getDashboardCards = () => {
     const cards = []
     
@@ -346,7 +346,7 @@ const Dashboard = () => {
       return cards
     }
     
-    // Role-specific dashboard cards
+    // ✅ APPLICANT-ONLY: Search/discovery functions as dashboard cards
     if (hasRole('applicant')) {
       cards.push(
         { 
@@ -359,7 +359,7 @@ const Dashboard = () => {
         },
         { 
           id: 'find-peer-support', 
-          label: 'Find Peer Support', 
+          label: 'Find Support', 
           description: 'Connect with experienced peer support specialists', 
           className: styles.roleCardPeerSupport,
           path: '/app/find-peer-support',
@@ -375,7 +375,7 @@ const Dashboard = () => {
         },
         { 
           id: 'browse-properties', 
-          label: 'Browse Housing', 
+          label: 'Find Housing', 
           description: 'Search for recovery-friendly housing options', 
           className: styles.roleCardPropertyOwner,
           path: '/app/property-search',
@@ -384,15 +384,16 @@ const Dashboard = () => {
       )
     }
     
+    // ✅ ROLE-SPECIFIC: Primary management functions (aligned with navigation)
     if (hasRole('peer-support')) {
       cards.push(
         { 
           id: 'peer-dashboard', 
-          label: 'Peer Support Dashboard', 
+          label: 'Support Hub', // ✅ ALIGNED with navigation
           description: 'Manage your peer support services and clients', 
           className: styles.roleCardPeerSupport,
           path: '/app/peer-dashboard',
-          icon: '👥'
+          icon: '📊'
         }
       )
     }
@@ -401,7 +402,7 @@ const Dashboard = () => {
       cards.push(
         { 
           id: 'manage-properties', 
-          label: 'Manage Properties', 
+          label: 'My Properties', // ✅ ALIGNED with navigation
           description: 'Add, edit, and manage your rental properties', 
           className: styles.roleCardPropertyOwner,
           path: '/app/properties',
@@ -414,8 +415,8 @@ const Dashboard = () => {
       cards.push(
         { 
           id: 'manage-employers', 
-          label: 'Manage Company Profiles', 
-          description: 'Add, edit, and manage your employer profiles', 
+          label: 'Manage Companies', // ✅ ALIGNED with navigation
+          description: 'Add, edit, and manage your company profiles', 
           className: styles.roleCardEmployer,
           path: '/app/employers',
           icon: '🏢'
@@ -423,29 +424,29 @@ const Dashboard = () => {
       )
     }
     
-    // Universal cards
-cards.push(
-  { 
-    id: 'connections', 
-    label: 'Connections', 
-    description: hasRole('peer-support') 
-      ? 'Review incoming peer support requests and manage your connections'
-      : 'View and manage your match requests and connection status', 
-    className: styles.roleCardConnections,
-    path: '/app/connections',  // Everyone goes to ConnectionHub
-    icon: '🤝'
-  },
-  { 
-    id: 'communications', 
-    label: hasRole('peer-support') ? 'Message Hub' : 'Communications', 
-    description: hasRole('peer-support') 
-      ? 'Secure messaging hub for all your connections'
-      : 'Secure communication hub for your active connections', 
-    className: styles.roleCardPeerSupport,
-    path: '/app/communications',
-    icon: '💬'
-  }
-)
+    // ✅ UNIVERSAL: Communication and connection tools
+    cards.push(
+      { 
+        id: 'connections', 
+        label: 'Connections', 
+        description: hasRole('peer-support') 
+          ? 'Review incoming peer support requests and manage your connections'
+          : 'View and manage your match requests and connection status', 
+        className: styles.roleCardConnections,
+        path: '/app/connections',  // Everyone goes to ConnectionHub via MatchRequests
+        icon: '🤝'
+      },
+      { 
+        id: 'communications', 
+        label: 'Messages', // ✅ ALIGNED with navigation
+        description: hasRole('peer-support') 
+          ? 'Secure messaging hub for all your connections'
+          : 'Secure communication hub for your active connections', 
+        className: styles.roleCardPeerSupport,
+        path: '/app/communications',
+        icon: '💬'
+      }
+    )
     
     return cards
   }

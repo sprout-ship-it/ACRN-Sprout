@@ -1,4 +1,4 @@
-// src/components/layout/Navigation.js - SCHEMA-ALIGNED NAVIGATION WITH SAVED EMPLOYERS
+// src/components/layout/Navigation.js - RESTRUCTURED: Clean navigation without search functions
 import React from 'react'
 import { useLocation, useNavigate } from 'react-router-dom'
 import { useAuth } from '../../context/AuthContext'
@@ -9,7 +9,7 @@ const Navigation = () => {
   const location = useLocation()
   const navigate = useNavigate()
 
-  // Get navigation items based on user roles - FIXED ROLE REFERENCES
+  // Get navigation items based on user roles - CLEAN NAVIGATION FOCUSED ON MANAGEMENT
   const getNavigationItems = () => {
     const baseItems = [
       { 
@@ -20,116 +20,48 @@ const Navigation = () => {
       }
     ]
 
-    // Role-specific profile management with CORRECT schema role names
+    // Role-specific profile management with CLEAR MULTI-ROLE NAMING
     if (hasRole('applicant')) {
       baseItems.push({
         id: 'applicant-profile',
-        label: 'My Profile',
+        label: 'Applicant Profile', // ✅ RENAMED for multi-role clarity
         icon: '👤', 
         path: '/app/profile/matching',
-        description: 'Complete applicant profile with matching preferences'
+        description: 'Manage your housing seeker profile and matching preferences'
+      })
+    }
+
+    if (hasRole('peer-support')) {
+      baseItems.push({
+        id: 'peer-profile',
+        label: 'Peer Support Profile', // ✅ RENAMED for multi-role clarity
+        icon: '👤',
+        path: '/app/profile/peer-support', 
+        description: 'Manage your peer support specialist profile and services'
       })
     }
 
     if (hasRole('landlord')) {
       baseItems.push({
         id: 'landlord-profile',
-        label: 'My Profile', 
+        label: 'Landlord Profile', // ✅ RENAMED for multi-role clarity
         icon: '👤',
         path: '/app/profile/landlord',
-        description: 'Manage your landlord profile and property information'
-      })
-    }
-
-    // ✅ FIXED: Use 'peer-support' role name from schema
-    if (hasRole('peer-support')) {
-      baseItems.push({
-        id: 'peer-profile',
-        label: 'My Profile',
-        icon: '👤',
-        path: '/app/profile/peer-support', 
-        description: 'Manage your peer support specialist profile'
+        description: 'Manage your property owner profile and business information'
       })
     }
 
     if (hasRole('employer')) {
       baseItems.push({
         id: 'employer-profile',
-        label: 'My Profile',
+        label: 'Employer Profile', // ✅ RENAMED for multi-role clarity
         icon: '👤',
         path: '/app/employers',
-        description: 'Manage your employer profile and company information'
+        description: 'Manage your company profiles and employer information'
       })
     }
 
-    // ✅ FIXED: Connections only for non-peer-support users
-    if (!hasRole('peer-support')) {
-      baseItems.push(
-        { 
-          id: 'connections', 
-          label: 'Connections', 
-          icon: '🤝',
-          path: '/app/connections',
-          description: 'View and manage your match requests and connection status',
-          className: 'nav-connections'
-        }
-      )
-    }
-
-    // Role-specific feature navigation with schema-aligned paths
-    if (hasRole('applicant')) {
-      baseItems.push(
-        { 
-          id: 'find-matches', 
-          label: 'Find Roommates', 
-          icon: '🔍',
-          path: '/app/find-matches',
-          description: 'Discover compatible roommates using our matching algorithm',
-          className: 'nav-housing-seeker'
-        },
-        { 
-          id: 'browse-housing', 
-          label: 'Find Housing', 
-          icon: '🏘️',
-          path: '/app/property-search',
-          description: 'Search for recovery-friendly housing properties',
-          className: 'nav-property-owner'
-        },
-        { 
-          id: 'saved-properties', 
-          label: 'Saved Properties', 
-          icon: '❤️',
-          path: '/app/saved-properties',
-          description: 'View and manage your favorited housing properties',
-          className: 'nav-property-owner'
-        },
-        { 
-          id: 'find-peer-support', 
-          label: 'Find Support', 
-          icon: '👥',
-          path: '/app/find-peer-support',
-          description: 'Connect with certified peer support specialists',
-          className: 'nav-peer-support'
-        },
-        { 
-          id: 'find-employers', 
-          label: 'Find Employment', 
-          icon: '💼',
-          path: '/app/find-employers',
-          description: 'Discover recovery-friendly job opportunities',
-          className: 'nav-employer'
-        },
-        { 
-          id: 'saved-employers', 
-          label: 'Saved Employers', 
-          icon: '💖',
-          path: '/app/saved-employers',
-          description: 'View and manage your favorited recovery-friendly employers',
-          className: 'nav-employer'
-        }
-      )
-    }
-
+    // Role-specific PRIMARY MANAGEMENT functions (not search/discovery)
     if (hasRole('landlord')) {
       baseItems.push(
         { 
@@ -139,19 +71,10 @@ const Navigation = () => {
           path: '/app/properties',
           description: 'Manage your rental properties and housing listings',
           className: 'nav-property-owner'
-        },
-        { 
-          id: 'tenant-requests', 
-          label: 'Tenant Requests', 
-          icon: '📋',
-          path: '/app/tenant-requests',
-          description: 'Review tenant applications and housing match requests',
-          className: 'nav-property-owner'
         }
       )
     }
 
-    // ✅ FIXED: Peer support navigation with correct role name
     if (hasRole('peer-support')) {
       baseItems.push(
         { 
@@ -159,7 +82,7 @@ const Navigation = () => {
           label: 'Support Hub', 
           icon: '📊',
           path: '/app/peer-dashboard',
-          description: 'Comprehensive peer support client management and match dashboard',
+          description: 'Comprehensive peer support client management dashboard',
           className: 'nav-peer-support'
         }
       )
@@ -169,24 +92,16 @@ const Navigation = () => {
       baseItems.push(
         { 
           id: 'employer-management', 
-          label: 'Manage Profile', 
+          label: 'Manage Companies', 
           icon: '🏢',
-          path: '/app/employer-management',
-          description: 'Manage your employer profile and job opportunities',
-          className: 'nav-employer'
-        },
-        { 
-          id: 'job-candidates', 
-          label: 'Job Candidates', 
-          icon: '👥',
-          path: '/app/job-candidates',
-          description: 'Review employment applications and candidate matches',
+          path: '/app/employers',
+          description: 'Manage your company profiles and job opportunities',
           className: 'nav-employer'
         }
       )
     }
 
-    // Universal tools - aligned with schema-based communication system
+    // Universal management tools
     baseItems.push(
       { 
         id: 'communications', 
@@ -228,19 +143,19 @@ const Navigation = () => {
     return location.pathname.startsWith(path)
   }
 
-  // ✅ FIXED: Helper to get user's role-specific greeting with correct role names
+  // Helper to get user's role-specific greeting with correct role names
   const getRoleGreeting = () => {
     if (!profile) return ''
     
     const roles = profile.roles || []
     if (roles.includes('applicant')) return '🏠 Housing Seeker'
     if (roles.includes('landlord')) return '🏢 Property Owner' 
-    if (roles.includes('peer-support')) return '🤝 Peer Support Specialist' // Fixed role name
+    if (roles.includes('peer-support')) return '🤝 Peer Support Specialist'
     if (roles.includes('employer')) return '💼 Recovery-Friendly Employer'
     return '👋 Community Member'
   }
 
-  // ✅ NEW: Helper to get completion status for profiles
+  // Helper to get completion status for profiles
   const getProfileCompletionStatus = () => {
     if (!profile) return null
     
@@ -359,12 +274,7 @@ const Navigation = () => {
           line-height: 1.2;
         }
 
-        /* Role-specific navigation colors - aligned with schema roles */
-        .nav-housing-seeker:hover,
-        .nav-housing-seeker.active {
-          background: #8b5cf6; /* Purple for applicants */
-        }
-
+        /* Role-specific navigation colors */
         .nav-peer-support:hover,
         .nav-peer-support.active {
           background: #3b82f6; /* Blue for peer support */
@@ -380,14 +290,9 @@ const Navigation = () => {
           background: #f59e0b; /* Orange for landlords */
         }
 
-        .nav-connections:hover,
-        .nav-connections.active {
-          background: #374151; /* Dark gray for connections */
-        }
-
         /* Default hover for items without specific colors */
-        .nav-grid-item:not(.nav-housing-seeker):not(.nav-peer-support):not(.nav-employer):not(.nav-property-owner):not(.nav-connections):hover,
-        .nav-grid-item:not(.nav-housing-seeker):not(.nav-peer-support):not(.nav-employer):not(.nav-property-owner):not(.nav-connections).active {
+        .nav-grid-item:not(.nav-peer-support):not(.nav-employer):not(.nav-property-owner):hover,
+        .nav-grid-item:not(.nav-peer-support):not(.nav-employer):not(.nav-property-owner).active {
           background: #6366f1; /* Default indigo */
         }
 

@@ -1,4 +1,4 @@
-// src/pages/MainApp.js - FIXED PEER SUPPORT TO USE STANDALONE FUNCTION + SAVED EMPLOYERS
+// src/pages/MainApp.js - ADDED: Prominent Connection Hub between navigation and dashboard
 import React, { useEffect, useState, useRef, useCallback, useMemo } from 'react'
 import { Routes, Route, Navigate, useNavigate, useLocation } from 'react-router-dom'
 import { useAuth } from '../hooks/useAuth';
@@ -41,6 +41,371 @@ import PeerSupportModal from '../components/features/peer-support/PeerSupportMod
 import PropertySearch from '../components/features/property/PropertySearch';
 import SavedProperties from '../components/features/property/SavedProperties';
 
+// ✅ NEW: Connection Hub Status Component
+const ConnectionHubStatus = ({ onNavigateToHub }) => {
+  const { user, profile } = useAuth();
+  const [connectionStats, setConnectionStats] = useState({
+    pending: 0,
+    active: 0,
+    sent: 0,
+    loading: true,
+    error: null
+  });
+
+  // Load connection statistics
+  const loadConnectionStats = useCallback(async () => {
+    if (!user?.id || !profile?.id) return;
+
+    try {
+      setConnectionStats(prev => ({ ...prev, loading: true, error: null }));
+      
+      let pendingCount = 0;
+      let activeCount = 0;
+      let sentCount = 0;
+
+      // Get role-specific profile IDs
+      let applicantProfileId = null;
+      let peerSupportProfileId = null;
+
+      // Check for applicant profile
+      if (profile.roles && profile.roles.includes('applicant')) {
+        try {
+          const { data: applicantProfile } = await supabase
+            .from('applicant_matching_profiles')
+            .select('id')
+            .eq('user_id', profile.id)
+            .single();
+          
+          if (applicantProfile) {
+            applicantProfileId = applicantProfile.id;
+          }
+        } catch (err) {
+          console.log('No applicant profile found');
+        }
+      }
+
+      // Check for peer support profile
+      if (profile.roles && profile.roles.includes('peer-support')) {
+        try {
+          const { data: peerProfile } = await supabase
+            .from('peer_support_profiles')
+            .select('id')
+            .eq('user_id', profile.id)
+            .single();
+          
+          if (peerProfile) {
+            peerSupportProfileId = peerProfile.id;
+          }
+        } catch (err) {
+          console.log('No peer support profile found');
+        }
+      }
+
+      // Count pending requests (incoming)
+      if (peerSupportProfileId) {
+        const { data: pendingRequests } = await supabase
+          .from('match_requests')
+          .select('id')
+          .eq('recipient_type', 'peer-support')
+          .eq('recipient_id', peerSupportProfileId)
+          .eq('status', 'pending');
+
+        pendingCount = pendingRequests?.length || 0;
+      }
+
+      // Count sent requests (outgoing)
+      if (applicantProfileId) {
+        const { data: sentRequests } = await supabase
+          .from('match_requests')
+          .select('id')
+          .eq('requester_type', 'applicant')
+          .eq('requester_id', applicantProfileId)
+          .in('status', ['pending', 'accepted']);
+
+        sentCount = sentRequests?.length || 0;
+      }
+
+      // Count active connections from match_groups
+      const orConditions = [];
+      if (applicantProfileId) {
+        orConditions.push(`applicant_1_id.eq.${applicantProfileId}`);
+        orConditions.push(`applicant_2_id.eq.${applicantProfileId}`);
+      }
+      if (peerSupportProfileId) {
+        orConditions.push(`peer_support_id.eq.${peerSupportProfileId}`);
+      }
+
+      if (orConditions.length > 0) {
+        const { data: matchGroups } = await supabase
+          .from('match_groups')
+          .select('id')
+          .or(orConditions.join(','))
+          .in('status', ['confirmed', 'active']);
+
+        activeCount = matchGroups?.length || 0;
+      }
+
+      setConnectionStats({
+        pending: pendingCount,
+        active: activeCount,
+        sent: sentCount,
+        loading: false,
+        error: null
+      });
+
+    } catch (error) {
+      console.error('Error loading connection stats:', error);
+      setConnectionStats(prev => ({
+        ...prev,
+        loading: false,
+        error: 'Unable to load connection status'
+      }));
+    }
+  }, [user?.id, profile?.id, profile?.roles]);
+
+  // Load stats on mount and when profile changes
+  useEffect(() => {
+    if (profile?.id && user?.id) {
+      loadConnectionStats();
+    }
+  }, [loadConnectionStats]);
+
+  if (connectionStats.loading) {
+    return (
+      <div className="connection-hub-status loading">
+        <div className="connection-hub-content">
+          <div className="connection-hub-icon">🤝</div>
+          <div className="connection-hub-info">
+            <div className="connection-hub-title">Connection Hub</div>
+            <div className="connection-hub-subtitle">Loading connections...</div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  if (connectionStats.error) {
+    return (
+      <div className="connection-hub-status error">
+        <div className="connection-hub-content">
+          <div className="connection-hub-icon">🤝</div>
+          <div className="connection-hub-info">
+            <div className="connection-hub-title">Connection Hub</div>
+            <div className="connection-hub-subtitle">Unable to load status</div>
+          </div>
+          <button 
+            className="connection-hub-button retry"
+            onClick={loadConnectionStats}
+          >
+            Retry
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  const totalConnections = connectionStats.pending + connectionStats.active + connectionStats.sent;
+  const hasActivity = totalConnections > 0;
+
+  return (
+    <div 
+      className={`connection-hub-status ${hasActivity ? 'has-activity' : 'no-activity'}`}
+      onClick={onNavigateToHub}
+    >
+      <div className="connection-hub-content">
+        <div className="connection-hub-icon">
+          🤝
+          {connectionStats.pending > 0 && (
+            <span className="notification-badge">{connectionStats.pending}</span>
+          )}
+        </div>
+        
+        <div className="connection-hub-info">
+          <div className="connection-hub-title">Connection Hub</div>
+          <div className="connection-hub-subtitle">
+            {!hasActivity && "No active connections"}
+            {hasActivity && (
+              <>
+                {connectionStats.pending > 0 && (
+                  <span className="status-pending">{connectionStats.pending} pending</span>
+                )}
+                {connectionStats.active > 0 && (
+                  <span className="status-active">{connectionStats.active} active</span>
+                )}
+                {connectionStats.sent > 0 && (
+                  <span className="status-sent">{connectionStats.sent} sent</span>
+                )}
+              </>
+            )}
+          </div>
+        </div>
+
+        <div className="connection-hub-action">
+          <button className="connection-hub-button">
+            {hasActivity ? 'Manage' : 'View'} →
+          </button>
+        </div>
+      </div>
+
+      <style jsx>{`
+        .connection-hub-status {
+          background: #374151;
+          border-radius: 12px;
+          padding: 16px 24px;
+          margin: 16px 0;
+          cursor: pointer;
+          transition: all 0.2s ease;
+          border: 2px solid transparent;
+          position: relative;
+          box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+
+        .connection-hub-status:hover {
+          transform: translateY(-2px);
+          box-shadow: 0 4px 20px rgba(0,0,0,0.15);
+          border-color: rgba(255,255,255,0.1);
+        }
+
+        .connection-hub-status.has-activity {
+          background: linear-gradient(135deg, #374151 0%, #4b5563 100%);
+        }
+
+        .connection-hub-status.has-activity:hover {
+          background: linear-gradient(135deg, #4b5563 0%, #6b7280 100%);
+        }
+
+        .connection-hub-status.loading,
+        .connection-hub-status.error {
+          cursor: default;
+          opacity: 0.8;
+        }
+
+        .connection-hub-status.error {
+          background: #ef4444;
+        }
+
+        .connection-hub-content {
+          display: flex;
+          align-items: center;
+          gap: 16px;
+          color: white;
+        }
+
+        .connection-hub-icon {
+          font-size: 2rem;
+          position: relative;
+          flex-shrink: 0;
+        }
+
+        .notification-badge {
+          position: absolute;
+          top: -8px;
+          right: -8px;
+          background: #ef4444;
+          color: white;
+          border-radius: 50%;
+          width: 24px;
+          height: 24px;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          font-size: 0.75rem;
+          font-weight: bold;
+          border: 2px solid #374151;
+        }
+
+        .connection-hub-info {
+          flex: 1;
+          min-width: 0;
+        }
+
+        .connection-hub-title {
+          font-size: 1.125rem;
+          font-weight: 600;
+          margin-bottom: 4px;
+        }
+
+        .connection-hub-subtitle {
+          font-size: 0.875rem;
+          opacity: 0.9;
+          display: flex;
+          gap: 12px;
+          flex-wrap: wrap;
+        }
+
+        .status-pending {
+          color: #fbbf24;
+          font-weight: 500;
+        }
+
+        .status-active {
+          color: #34d399;
+          font-weight: 500;
+        }
+
+        .status-sent {
+          color: #60a5fa;
+          font-weight: 500;
+        }
+
+        .connection-hub-action {
+          flex-shrink: 0;
+        }
+
+        .connection-hub-button {
+          background: rgba(255,255,255,0.1);
+          color: white;
+          border: 1px solid rgba(255,255,255,0.2);
+          border-radius: 8px;
+          padding: 8px 16px;
+          font-size: 0.875rem;
+          font-weight: 500;
+          cursor: pointer;
+          transition: all 0.2s ease;
+        }
+
+        .connection-hub-button:hover {
+          background: rgba(255,255,255,0.2);
+          border-color: rgba(255,255,255,0.3);
+        }
+
+        .connection-hub-button.retry {
+          background: rgba(255,255,255,0.2);
+        }
+
+        /* Mobile responsive */
+        @media (max-width: 768px) {
+          .connection-hub-status {
+            padding: 12px 16px;
+            margin: 12px 0;
+          }
+
+          .connection-hub-content {
+            gap: 12px;
+          }
+
+          .connection-hub-icon {
+            font-size: 1.5rem;
+          }
+
+          .connection-hub-title {
+            font-size: 1rem;
+          }
+
+          .connection-hub-subtitle {
+            font-size: 0.8rem;
+          }
+
+          .connection-hub-button {
+            padding: 6px 12px;
+            font-size: 0.8rem;
+          }
+        }
+      `}</style>
+    </div>
+  );
+};
+
 // Candidate Management placeholder
 const CandidateManagement = () => (
   <div className="card">
@@ -55,7 +420,7 @@ const CandidateManagement = () => (
 )
 
 const MainApp = () => {
-  console.log('MainApp rendering with consistent service patterns, current URL:', window.location.pathname);
+  console.log('MainApp rendering with prominent connection hub, current URL:', window.location.pathname);
   const { user, profile, isAuthenticated, hasRole } = useAuth()
   const navigate = useNavigate()
   const location = useLocation();
@@ -100,6 +465,19 @@ const MainApp = () => {
     profileKey: null,
     checkInProgress: false
   }));
+
+  // ✅ NEW: Check if we should show the Connection Hub (not on profile setup screens)
+  const shouldShowConnectionHub = useMemo(() => {
+    if (!isAuthenticated || !profile?.id) return false;
+    if (profileSetup.loading) return false;
+    
+    // Don't show on profile setup screens
+    const isProfileSetupRoute = location.pathname.includes('/profile/');
+    if (isProfileSetupRoute) return false;
+    
+    // Show on dashboard and main routes
+    return location.pathname === '/app' || location.pathname === '/app/';
+  }, [isAuthenticated, profile?.id, profileSetup.loading, location.pathname]);
 
   // ✅ FIXED: Landlord profile check with stable callback
   const checkLandlordProfile = useCallback(async (profileId) => {
@@ -704,6 +1082,14 @@ const MainApp = () => {
       <div className="container">
         <Header />
         <Navigation />
+        
+        {/* ✅ NEW: Prominent Connection Hub Status */}
+        {shouldShowConnectionHub && (
+          <ConnectionHubStatus 
+            onNavigateToHub={() => navigate('/app/communications')}
+          />
+        )}
+        
         <div className="content">
           <Routes>
             {/* Dashboard Routes */}
