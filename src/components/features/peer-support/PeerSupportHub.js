@@ -765,7 +765,16 @@ const handleUpdateClient = async (clientId, updates) => {
   >
     📝 Log Session & Update Info
   </button>
-
+<button
+  className={`${styles.actionButton} ${styles.actionInfo}`}
+  onClick={() => {
+    setSelectedClient(client);
+    setActiveModal('session-history');
+  }}
+  disabled={!client.progress_notes || client.progress_notes.length === 0}
+>
+  📋 View History ({(client.progress_notes || []).length})
+</button>
   <button
     className={`${styles.actionButton} ${styles.actionOutline}`}
     onClick={() => {
@@ -1136,6 +1145,168 @@ const handleUpdateClient = async (clientId, updates) => {
             disabled={!sessionType || !sessionNotes.trim()}
           >
             Log Session & Update
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+)}
+{activeModal === 'session-history' && selectedClient && (
+  <div className="modal-overlay" onClick={() => setActiveModal(null)}>
+    <div className={styles.modalContent} onClick={(e) => e.stopPropagation()}>
+      <div className={styles.modalHeader}>
+        <h3 className={styles.modalTitle}>Session History - {selectedClient.displayName}</h3>
+        <button className={styles.modalClose} onClick={() => setActiveModal(null)}>×</button>
+      </div>
+
+      <div className={styles.modalBody}>
+        <div className={styles.sessionHistoryContainer}>
+          
+          {/* Client Summary Stats */}
+          <div className={styles.historyStats}>
+            <div className={styles.statCard}>
+              <div className={styles.statNumber}>{selectedClient.totalSessions || 0}</div>
+              <div className={styles.statLabel}>Total Sessions</div>
+            </div>
+            <div className={styles.statCard}>
+              <div className={styles.statNumber}>
+                {selectedClient.last_session_date 
+                  ? new Date(selectedClient.last_session_date).toLocaleDateString()
+                  : 'No sessions'
+                }
+              </div>
+              <div className={styles.statLabel}>Last Session</div>
+            </div>
+            <div className={styles.statCard}>
+              <div className={styles.statNumber}>
+                {selectedClient.nextFollowup 
+                  ? new Date(selectedClient.nextFollowup).toLocaleDateString()
+                  : 'Not scheduled'
+                }
+              </div>
+              <div className={styles.statLabel}>Next Follow-up</div>
+            </div>
+          </div>
+
+          {/* Session History Timeline */}
+          <div className={styles.sessionsList}>
+            <h4>Session History</h4>
+            
+            {selectedClient.progress_notes && selectedClient.progress_notes.length > 0 ? (
+              <div className={styles.sessionsTimeline}>
+                {selectedClient.progress_notes
+                  .sort((a, b) => new Date(b.created_at || b.session_time) - new Date(a.created_at || a.session_time))
+                  .map((session, index) => {
+                    const sessionDate = new Date(session.created_at || session.session_time);
+                    const isRecent = (Date.now() - sessionDate.getTime()) < (7 * 24 * 60 * 60 * 1000); // Last 7 days
+                    
+                    return (
+                      <div key={session.id || index} className={`${styles.sessionCard} ${isRecent ? styles.recentSession : ''}`}>
+                        <div className={styles.sessionHeader}>
+                          <div className={styles.sessionMeta}>
+                            <span className={styles.sessionDate}>
+                              {sessionDate.toLocaleDateString()}
+                            </span>
+                            <span className={styles.sessionTime}>
+                              {sessionDate.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                            </span>
+                            {session.session_type && (
+                              <span className={styles.sessionType}>
+                                {session.session_type.replace('_', ' ').toUpperCase()}
+                              </span>
+                            )}
+                            {session.duration_minutes && (
+                              <span className={styles.sessionDuration}>
+                                {session.duration_minutes} min
+                              </span>
+                            )}
+                          </div>
+                          
+                          {session.client_mood && (
+                            <div className={`${styles.moodBadge} ${styles[`mood${session.client_mood.charAt(0).toUpperCase() + session.client_mood.slice(1)}`]}`}>
+                              {session.client_mood}
+                            </div>
+                          )}
+                        </div>
+                        
+                        <div className={styles.sessionContent}>
+                          <div className={styles.sessionNotes}>
+                            {session.notes || 'No notes recorded'}
+                          </div>
+                          
+                          {session.follow_up_scheduled && (
+                            <div className={styles.sessionFollowup}>
+                              Follow-up scheduled: {new Date(session.follow_up_scheduled).toLocaleDateString()}
+                            </div>
+                          )}
+                        </div>
+                        
+                        {isRecent && (
+                          <div className={styles.recentBadge}>Recent</div>
+                        )}
+                      </div>
+                    );
+                  })
+                }
+              </div>
+            ) : (
+              <div className={styles.noHistoryMessage}>
+                <div className={styles.emptyStateIcon}>📝</div>
+                <h4>No Session History</h4>
+                <p>No sessions have been logged for this client yet.</p>
+                <button 
+                  className="btn btn-primary"
+                  onClick={() => {
+                    setActiveModal('session-log');
+                  }}
+                >
+                  Log First Session
+                </button>
+              </div>
+            )}
+          </div>
+
+          {/* Quick Actions */}
+          {selectedClient.progress_notes && selectedClient.progress_notes.length > 0 && (
+            <div className={styles.historyActions}>
+              <h5>Quick Actions</h5>
+              <div className={styles.actionGrid}>
+                <button 
+                  className="btn btn-primary"
+                  onClick={() => setActiveModal('session-log')}
+                >
+                  Log New Session
+                </button>
+                <button 
+                  className="btn btn-outline"
+                  onClick={() => setActiveModal('goals')}
+                >
+                  Review Goals
+                </button>
+                <button 
+                  className="btn btn-outline"
+                  onClick={() => {
+                    const notes = selectedClient.progress_notes
+                      .map(session => `${new Date(session.created_at).toLocaleDateString()}: ${session.notes}`)
+                      .join('\n\n');
+                    navigator.clipboard.writeText(notes);
+                    alert('Session notes copied to clipboard');
+                  }}
+                >
+                  Copy Notes
+                </button>
+              </div>
+            </div>
+          )}
+
+        </div>
+
+        <div className={styles.modalActions}>
+          <button
+            className="btn btn-outline"
+            onClick={() => setActiveModal(null)}
+          >
+            Close
           </button>
         </div>
       </div>

@@ -784,3 +784,218 @@
   font-size: 1rem;
   font-weight: 600;
 }
+.actionInfo {
+  background-color: #17a2b8;
+  color: white;
+  border: 1px solid #17a2b8;
+}
+
+.actionInfo:hover {
+  background-color: #138496;
+  border-color: #138496;
+}
+
+.actionInfo:disabled {
+  background-color: #6c757d;
+  border-color: #6c757d;
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+
+.sessionHistoryContainer {
+  max-height: 70vh;
+  overflow-y: auto;
+}
+
+.historyStats {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 1rem;
+  margin-bottom: 2rem;
+  padding: 1rem;
+  background: #f8f9fa;
+  border-radius: 8px;
+}
+
+.statCard {
+  text-align: center;
+  padding: 0.75rem;
+  background: white;
+  border-radius: 6px;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+}
+
+.statNumber {
+  font-size: 1.5rem;
+  font-weight: bold;
+  color: #2c3e50;
+  display: block;
+}
+
+.statLabel {
+  font-size: 0.85rem;
+  color: #6c757d;
+  margin-top: 0.25rem;
+}
+
+.sessionsList h4 {
+  margin-bottom: 1rem;
+  color: #2c3e50;
+  border-bottom: 2px solid #e9ecef;
+  padding-bottom: 0.5rem;
+}
+
+.sessionsTimeline {
+  margin-bottom: 2rem;
+}
+
+.sessionCard {
+  background: white;
+  border: 1px solid #dee2e6;
+  border-radius: 8px;
+  padding: 1rem;
+  margin-bottom: 1rem;
+  position: relative;
+  transition: box-shadow 0.2s ease;
+}
+
+.sessionCard:hover {
+  box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+}
+
+.recentSession {
+  border-left: 4px solid #28a745;
+  background: #f8fff9;
+}
+
+.sessionHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 0.75rem;
+}
+
+.sessionMeta {
+  display: flex;
+  gap: 1rem;
+  flex-wrap: wrap;
+  align-items: center;
+}
+
+.sessionDate {
+  font-weight: 600;
+  color: #2c3e50;
+}
+
+.sessionTime {
+  font-size: 0.9rem;
+  color: #6c757d;
+}
+
+.sessionType {
+  background: #e9ecef;
+  color: #495057;
+  padding: 0.2rem 0.5rem;
+  border-radius: 4px;
+  font-size: 0.8rem;
+  font-weight: 500;
+}
+
+.sessionDuration {
+  color: #17a2b8;
+  font-size: 0.9rem;
+  font-weight: 500;
+}
+
+.moodBadge {
+  padding: 0.25rem 0.75rem;
+  border-radius: 12px;
+  font-size: 0.8rem;
+  font-weight: 500;
+  text-transform: capitalize;
+}
+
+.moodExcellent { 
+  background: #d4edda; 
+  color: #155724; 
+}
+
+.moodGood { 
+  background: #cce7ff; 
+  color: #0056b3; 
+}
+
+.moodStable { 
+  background: #e2e3e5; 
+  color: #383d41; 
+}
+
+.moodStruggling { 
+  background: #fff3cd; 
+  color: #856404; 
+}
+
+.moodCrisis { 
+  background: #f8d7da; 
+  color: #721c24; 
+}
+
+.sessionContent {
+  line-height: 1.5;
+}
+
+.sessionNotes {
+  color: #2c3e50;
+  margin-bottom: 0.5rem;
+  white-space: pre-wrap;
+}
+
+.sessionFollowup {
+  font-size: 0.9rem;
+  color: #1976d2;
+  background: #e3f2fd;
+  padding: 0.5rem;
+  border-radius: 4px;
+  margin-top: 0.5rem;
+}
+
+.recentBadge {
+  position: absolute;
+  top: 0.5rem;
+  right: 0.5rem;
+  background: #28a745;
+  color: white;
+  padding: 0.2rem 0.5rem;
+  border-radius: 12px;
+  font-size: 0.7rem;
+  font-weight: 500;
+}
+
+.noHistoryMessage {
+  text-align: center;
+  padding: 3rem 1rem;
+  color: #6c757d;
+}
+
+.emptyStateIcon {
+  font-size: 3rem;
+  margin-bottom: 1rem;
+}
+
+.historyActions {
+  background: #f8f9fa;
+  padding: 1rem;
+  border-radius: 8px;
+  margin-top: 1rem;
+}
+
+.historyActions h5 {
+  margin-bottom: 0.75rem;
+  color: #2c3e50;
+}
+
+.actionGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+  gap: 0.75rem;
+}
