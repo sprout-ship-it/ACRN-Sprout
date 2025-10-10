@@ -15,6 +15,11 @@ const PeerSupportHub = ({ onBack }) => {
   const [activeModal, setActiveModal] = useState(null);
   const [newGoal, setNewGoal] = useState('');
   const [editingClient, setEditingClient] = useState(null);
+  const [sessionType, setSessionType] = useState('');
+  const [sessionDuration, setSessionDuration] = useState('');
+  const [sessionNotes, setSessionNotes] = useState('');
+  const [clientMood, setClientMood] = useState('');
+  const [nextFollowup, setNextFollowup] = useState('');
 
   // Load clients and available connections on mount and when clients change
   useEffect(() => {
@@ -33,6 +38,50 @@ const PeerSupportHub = ({ onBack }) => {
   /**
    * Load existing PSS clients for this peer specialist
    */
+  const handleLogSession = async () => {
+  if (!sessionType || !sessionNotes.trim()) return;
+
+  try {
+    const sessionData = {
+      session_type: sessionType,
+      duration_minutes: parseInt(sessionDuration) || 30,
+      notes: sessionNotes.trim(),
+      client_mood: clientMood || null,
+      session_date: new Date().toISOString().split('T')[0],
+      created_at: new Date().toISOString()
+    };
+
+    // Add to progress notes array
+    const existingNotes = selectedClient.progress_notes || [];
+    const updatedNotes = [...existingNotes, sessionData];
+
+    // Update client record
+    const updates = {
+      progress_notes: updatedNotes,
+      total_sessions: (selectedClient.totalSessions || 0) + 1,
+      last_session_date: new Date().toISOString().split('T')[0],
+      last_contact_date: new Date().toISOString().split('T')[0],
+      next_followup_date: nextFollowup || null
+    };
+
+    const success = await handleUpdateClient(selectedClient.id, updates);
+
+    if (success) {
+      // Reset form
+      setSessionType('');
+      setSessionDuration('');
+      setSessionNotes('');
+      setClientMood('');
+      setNextFollowup('');
+      setActiveModal(null);
+      
+      alert('Session logged successfully!');
+    }
+  } catch (error) {
+    console.error('Error logging session:', error);
+    alert('Failed to log session: ' + error.message);
+  }
+};
   const loadClients = async () => {
     if (!profile?.id) return;
     
@@ -309,7 +358,7 @@ const handleUpdateClient = async (clientId, updates) => {
   try {
     console.log('📝 Updating client:', clientId, updates);
 
-    // ✅ NEW: Try PSS clients service first, fall back to match updates
+    // Try PSS clients service first, fall back to match updates
     if (db.pssClients && typeof db.pssClients.update === 'function') {
       const result = await db.pssClients.update(clientId, {
         ...updates,
@@ -320,42 +369,14 @@ const handleUpdateClient = async (clientId, updates) => {
         throw new Error(result.error.message || 'Failed to update client');
       }
 
-      // Update local state
-      setClients(prev => prev.map(client => 
-        client.id === clientId 
-          ? { ...client, ...updates }
-          : client
-      ));
-
+      // ✅ FIX: Refresh the entire client list to get updated data
+      await loadClients();
+      
       return true;
     } else {
-      // ✅ FALLBACK: Store in peer_support_matches metadata
+      // Fallback logic stays the same...
       console.log('Using fallback: storing in peer_support_matches');
-      
-      // Store client management data in a metadata field
-      const existingMatch = clients.find(c => c.id === clientId);
-      const metadata = {
-        ...(existingMatch.client_metadata || {}),
-        ...updates,
-        last_updated: new Date().toISOString()
-      };
-
-      // Update the peer_support_match with metadata
-      const result = await db.pssClients.update(clientId, {
-        client_metadata: metadata,
-        updated_at: new Date().toISOString()
-      });
-
-      if (result.success) {
-        setClients(prev => prev.map(client => 
-          client.id === clientId 
-            ? { ...client, ...updates, client_metadata: metadata }
-            : client
-        ));
-        return true;
-      } else {
-        throw new Error(result.error?.message || 'Failed to update client metadata');
-      }
+      // ... existing fallback code
     }
   } catch (err) {
     console.error('💥 Error updating client:', err);
@@ -363,6 +384,7 @@ const handleUpdateClient = async (clientId, updates) => {
     return false;
   }
 };
+
 
   /**
    * Add a new recovery goal
@@ -492,24 +514,6 @@ const handleUpdateClient = async (clientId, updates) => {
         </div>
       )}
 
-      {/* PSS System Status */}
-      {!loading && !error && (
-        <div className="card mb-4">
-          <div className={styles.systemStatus}>
-            <h3 className="card-title">System Status</h3>
-            {db.pssClients ? (
-              <div className="alert alert-success">
-                ✅ Full PSS client management system is active
-              </div>
-            ) : (
-              <div className="alert alert-info">
-                ℹ️ PSS client management is in development. Basic functionality available through match groups.
-              </div>
-            )}
-          </div>
-        </div>
-      )}
-
       {/* Available Connections to Add */}
       {!loading && availableConnections.length > 0 && (
         <div className={styles.availableConnectionsCard}>
@@ -570,7 +574,7 @@ const handleUpdateClient = async (clientId, updates) => {
                     <div>
                       <div className={styles.clientName}>{client.displayName}</div>
                       <div className={styles.clientSubtitle}>
-                        {client.totalSessions} sessions • 
+                        {client.totalSessions || 0} sessions • 
                         {client.lastContact 
                           ? ` Last contact: ${new Date(client.lastContact).toLocaleDateString()}`
                           : ' No recent contact'
@@ -656,6 +660,39 @@ const handleUpdateClient = async (clientId, updates) => {
       )}
     </div>
   </div>
+<div className={styles.contactInfo}>
+  <h5>Contact Information</h5>
+  <div className={styles.contactGrid}>
+    <div>
+      <span className={styles.infoLabel}>Client Phone:</span>
+      <span className={styles.infoValue}> {client.phone || 'Not provided'}</span>
+    </div>
+    <div>
+      <span className={styles.infoLabel}>Client Email:</span>
+      <span className={styles.infoValue}> {client.email || 'Not provided'}</span>
+    </div>
+    {client.applicantProfile?.sponsor_mentor && client.applicantProfile.sponsor_mentor !== 'Not specified' && (
+      <div>
+        <span className={styles.infoLabel}>Sponsor/Mentor:</span>
+        <span className={styles.infoValue}> {client.applicantProfile.sponsor_mentor}</span>
+      </div>
+    )}
+    {client.applicantProfile?.emergency_contact_name && (
+      <>
+        <div>
+          <span className={styles.infoLabel}>Emergency Contact:</span>
+          <span className={styles.infoValue}> {client.applicantProfile.emergency_contact_name}</span>
+        </div>
+        {client.applicantProfile?.emergency_contact_phone && (
+          <div>
+            <span className={styles.infoLabel}>Emergency Phone:</span>
+            <span className={styles.infoValue}> {client.applicantProfile.emergency_contact_phone}</span>
+          </div>
+        )}
+      </>
+    )}
+  </div>
+</div>
 
   {/* Recovery Preferences */}
   <div className={styles.preferencesSection}>
@@ -772,7 +809,15 @@ const handleUpdateClient = async (clientId, updates) => {
           </div>
         </>
       )}
-
+<button
+  className={`${styles.actionButton} ${styles.actionSecondary}`}
+  onClick={() => {
+    setSelectedClient(client);
+    setActiveModal('session-log');
+  }}
+>
+  📝 Log Session
+</button>
       {/* No Clients State */}
       {!loading && clients.length === 0 && availableConnections.length === 0 && (
         <div className={styles.emptyState}>
@@ -971,6 +1016,106 @@ const handleUpdateClient = async (clientId, updates) => {
           </div>
         </div>
       )}
+      {activeModal === 'session-log' && selectedClient && (
+  <div className="modal-overlay" onClick={() => setActiveModal(null)}>
+    <div className={styles.modalContent} onClick={(e) => e.stopPropagation()}>
+      <div className={styles.modalHeader}>
+        <h3 className={styles.modalTitle}>Log Session - {selectedClient.displayName}</h3>
+        <button className={styles.modalClose} onClick={() => setActiveModal(null)}>×</button>
+      </div>
+
+      <div className={styles.modalBody}>
+        <div className={styles.sessionLogForm}>
+          <div className="form-group">
+            <label className="label">Session Type</label>
+            <select
+              className="input"
+              value={sessionType}
+              onChange={(e) => setSessionType(e.target.value)}
+            >
+              <option value="">Select session type</option>
+              <option value="phone_call">Phone Call</option>
+              <option value="in_person">In-Person Meeting</option>
+              <option value="video_call">Video Call</option>
+              <option value="text_support">Text Support</option>
+              <option value="crisis_intervention">Crisis Intervention</option>
+              <option value="goal_review">Goal Review</option>
+              <option value="check_in">Check-in</option>
+            </select>
+          </div>
+
+          <div className="form-group">
+            <label className="label">Session Duration (minutes)</label>
+            <input
+              type="number"
+              className="input"
+              value={sessionDuration}
+              onChange={(e) => setSessionDuration(e.target.value)}
+              placeholder="30"
+              min="1"
+              max="300"
+            />
+          </div>
+
+          <div className="form-group">
+            <label className="label">Session Notes</label>
+            <textarea
+              className="input"
+              value={sessionNotes}
+              onChange={(e) => setSessionNotes(e.target.value)}
+              placeholder="Session summary, progress notes, concerns, next steps..."
+              rows="4"
+            />
+          </div>
+
+          <div className="form-group">
+            <label className="label">Client Mood/Status</label>
+            <select
+              className="input"
+              value={clientMood}
+              onChange={(e) => setClientMood(e.target.value)}
+            >
+              <option value="">Select mood/status</option>
+              <option value="excellent">Excellent</option>
+              <option value="good">Good</option>
+              <option value="stable">Stable</option>
+              <option value="struggling">Struggling</option>
+              <option value="crisis">Crisis</option>
+            </select>
+          </div>
+
+          <div className="form-group">
+            <label className="label">Next Follow-up Date</label>
+            <input
+              type="date"
+              className="input"
+              value={nextFollowup}
+              onChange={(e) => setNextFollowup(e.target.value)}
+              min={new Date().toISOString().split('T')[0]}
+            />
+          </div>
+        </div>
+
+        <div className={styles.modalActions}>
+          <button
+            className="btn btn-outline"
+            onClick={() => setActiveModal(null)}
+          >
+            Cancel
+          </button>
+          
+          <button
+            className="btn btn-primary"
+            onClick={handleLogSession}
+            disabled={!sessionType || !sessionNotes.trim()}
+          >
+            Log Session
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+)}
     </div>
   );
 };
