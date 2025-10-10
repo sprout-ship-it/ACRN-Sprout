@@ -772,7 +772,15 @@ const handleUpdateClient = async (clientId, updates) => {
                     >
                       📝 Update Info
                     </button>
-
+                    <button
+                      className={`${styles.actionButton} ${styles.actionSecondary}`}
+                      onClick={() => {
+                        setSelectedClient(client);
+                        setActiveModal('session-log');
+                      }}
+                    >
+                      📝 Log Session
+                    </button>
                     <button
                       className={`${styles.actionButton} ${styles.actionOutline}`}
                       onClick={() => {
@@ -809,15 +817,7 @@ const handleUpdateClient = async (clientId, updates) => {
           </div>
         </>
       )}
-<button
-  className={`${styles.actionButton} ${styles.actionSecondary}`}
-  onClick={() => {
-    setSelectedClient(client);
-    setActiveModal('session-log');
-  }}
->
-  📝 Log Session
-</button>
+
       {/* No Clients State */}
       {!loading && clients.length === 0 && availableConnections.length === 0 && (
         <div className={styles.emptyState}>
