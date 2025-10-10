@@ -846,10 +846,23 @@ const handleUpdateClient = async (clientId, updates) => {
       {activeModal === 'goals' && selectedClient && (
         <div className="modal-overlay" onClick={() => setActiveModal(null)}>
           <div className={styles.modalContent} onClick={(e) => e.stopPropagation()}>
-            <div className={styles.modalHeader}>
-              <h3 className={styles.modalTitle}>Recovery Goals - {selectedClient.displayName}</h3>
-              <button className={styles.modalClose} onClick={() => setActiveModal(null)}>×</button>
+        <div className={styles.modalHeader}>
+          <div className={styles.modalTitleContainer}>
+            <h3 className={styles.modalTitle}>Recovery Goals - {selectedClient.displayName}</h3>
+            {/* ✅ NEW: Breadcrumb navigation */}
+            <div className={styles.modalBreadcrumb}>
+              <button 
+                className={styles.breadcrumbLink}
+                onClick={() => setActiveModal('session-history')}
+              >
+                Session History
+              </button>
+              <span className={styles.breadcrumbSeparator}>→</span>
+              <span className={styles.breadcrumbCurrent}>Goals</span>
             </div>
+          </div>
+          <button className={styles.modalClose} onClick={() => setActiveModal(null)}>×</button>
+        </div>
 
             <div className={styles.modalBody}>
               {/* Current Goals */}
@@ -1155,7 +1168,24 @@ const handleUpdateClient = async (clientId, updates) => {
   <div className="modal-overlay" onClick={() => setActiveModal(null)}>
     <div className={styles.modalContent} onClick={(e) => e.stopPropagation()}>
       <div className={styles.modalHeader}>
-        <h3 className={styles.modalTitle}>Session History - {selectedClient.displayName}</h3>
+        <div className={styles.modalTitleContainer}>
+          <h3 className={styles.modalTitle}>Session History - {selectedClient.displayName}</h3>
+          {/* Navigation tabs */}
+          <div className={styles.modalTabs}>
+            <button 
+              className={`${styles.modalTab} ${styles.modalTabActive}`}
+              onClick={() => setActiveModal('session-history')}
+            >
+              Session History
+            </button>
+            <button 
+              className={styles.modalTab}
+              onClick={() => setActiveModal('goals')}
+            >
+              Recovery Goals ({selectedClient.recoveryGoals?.length || 0})
+            </button>
+          </div>
+        </div>
         <button className={styles.modalClose} onClick={() => setActiveModal(null)}>×</button>
       </div>
 
@@ -1300,13 +1330,32 @@ const handleUpdateClient = async (clientId, updates) => {
           )}
 
         </div>
+      </div>
 
-        <div className={styles.modalActions}>
+      {/* Enhanced Modal Actions with Navigation */}
+      <div className={styles.modalActions}>
+        <div className={styles.modalActionsLeft}>
+          <button
+            className="btn btn-outline"
+            onClick={() => setActiveModal('goals')}
+          >
+            View Goals ({selectedClient.recoveryGoals?.length || 0})
+          </button>
+        </div>
+        
+        <div className={styles.modalActionsRight}>
           <button
             className="btn btn-outline"
             onClick={() => setActiveModal(null)}
           >
             Close
+          </button>
+          
+          <button
+            className="btn btn-primary"
+            onClick={() => setActiveModal('session-log')}
+          >
+            Log New Session
           </button>
         </div>
       </div>
