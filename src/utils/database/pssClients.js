@@ -39,7 +39,7 @@ const createPSSClientsService = (supabaseClient) => {
           return { success: false, data: [], error: peerError || { message: 'Peer support profile not found' } };
         }
 
-        // ✅ ENHANCED: Get comprehensive peer support relevant data
+        // ✅ ENHANCED: Get comprehensive data from BOTH tables
         const { data, error } = await supabaseClient
           .from('peer_support_matches')
           .select(`
@@ -68,6 +68,8 @@ const createPSSClientsService = (supabaseClient) => {
               shared_recovery_activities,
               mentorship_interest,
               recovery_community,
+              emergency_contact_name,
+              emergency_contact_phone,
               registrant:registrant_profiles!user_id(
                 id,
                 first_name,
@@ -97,8 +99,57 @@ const createPSSClientsService = (supabaseClient) => {
           return { success: false, data: [], error };
         }
 
-        console.log(`✅ Retrieved ${data?.length || 0} PSS client matches`);
-        return { success: true, data: data || [], error: null };
+        // ✅ NEW: Enrich with PSS clients data from pss_clients table
+        const enrichedData = await Promise.all(
+          (data || []).map(async (match) => {
+            try {
+              // Get corresponding PSS client record if it exists
+              const { data: pssClientData } = await supabaseClient
+                .from('pss_clients')
+                .select('*')
+                .eq('peer_specialist_id', match.peer_support_id)
+                .eq('client_id', match.applicant_id)
+                .single();
+
+              // Merge the data, prioritizing PSS client data for enhanced fields
+              return {
+                ...match,
+                // Enhanced client management data from pss_clients table
+                recovery_goals: pssClientData?.recovery_goals || [],
+                total_sessions: pssClientData?.total_sessions || 0,
+                last_session_date: pssClientData?.last_session_date || null,
+                next_followup_date: pssClientData?.next_followup_date || null,
+                followup_frequency: pssClientData?.followup_frequency || 'weekly',
+                last_contact_date: pssClientData?.last_contact_date || null,
+                progress_notes: pssClientData?.progress_notes || [],
+                client_preferences: pssClientData?.client_preferences || {},
+                crisis_plan: pssClientData?.crisis_plan || {},
+                status: pssClientData?.status || match.status || 'active',
+                // Include PSS client ID for updates
+                pss_client_id: pssClientData?.id || null
+              };
+            } catch (pssError) {
+              console.warn('Could not fetch PSS client data for match:', match.id);
+              // Return match with default enhanced data
+              return {
+                ...match,
+                recovery_goals: [],
+                total_sessions: 0,
+                last_session_date: null,
+                next_followup_date: null,
+                followup_frequency: 'weekly',
+                last_contact_date: null,
+                progress_notes: [],
+                client_preferences: {},
+                crisis_plan: {},
+                pss_client_id: null
+              };
+            }
+          })
+        );
+
+        console.log(`✅ Retrieved ${enrichedData.length} PSS client matches with enhanced data`);
+        return { success: true, data: enrichedData, error: null };
 
       } catch (err) {
         console.error('💥 Exception in getByPeerSpecialistId:', err);

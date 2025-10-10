@@ -20,7 +20,10 @@ const PeerSupportHub = ({ onBack }) => {
   const [sessionNotes, setSessionNotes] = useState('');
   const [clientMood, setClientMood] = useState('');
   const [nextFollowup, setNextFollowup] = useState('');
+  const [followupFrequency, setFollowupFrequency] = useState('weekly');
+  const [clientStatus, setClientStatus] = useState('active');
 
+  
   // Load clients and available connections on mount and when clients change
   useEffect(() => {
     if (profile?.id) {
@@ -38,7 +41,7 @@ const PeerSupportHub = ({ onBack }) => {
   /**
    * Load existing PSS clients for this peer specialist
    */
-  const handleLogSession = async () => {
+const handleLogSession = async () => {
   if (!sessionType || !sessionNotes.trim()) return;
 
   try {
@@ -55,13 +58,15 @@ const PeerSupportHub = ({ onBack }) => {
     const existingNotes = selectedClient.progress_notes || [];
     const updatedNotes = [...existingNotes, sessionData];
 
-    // Update client record
+    // ✅ ENHANCED: Update both session and client management data
     const updates = {
       progress_notes: updatedNotes,
       total_sessions: (selectedClient.totalSessions || 0) + 1,
       last_session_date: new Date().toISOString().split('T')[0],
       last_contact_date: new Date().toISOString().split('T')[0],
-      next_followup_date: nextFollowup || null
+      next_followup_date: nextFollowup || null,
+      followup_frequency: followupFrequency,
+      status: clientStatus
     };
 
     const success = await handleUpdateClient(selectedClient.id, updates);
@@ -73,15 +78,18 @@ const PeerSupportHub = ({ onBack }) => {
       setSessionNotes('');
       setClientMood('');
       setNextFollowup('');
+      setFollowupFrequency('weekly');
+      setClientStatus('active');
       setActiveModal(null);
       
-      alert('Session logged successfully!');
+      alert('Session logged and client info updated successfully!');
     }
   } catch (error) {
     console.error('Error logging session:', error);
     alert('Failed to log session: ' + error.message);
   }
 };
+
   const loadClients = async () => {
     if (!profile?.id) return;
     
@@ -641,55 +649,40 @@ const handleUpdateClient = async (clientId, updates) => {
                     )}
 <div className={styles.enhancedClientInfo}>
   {/* Recovery Details */}
-  <div className={styles.recoverySection}>
-    <h5>Recovery Information</h5>
-    <div className={styles.recoveryGrid}>
-      <div>
-        <span className={styles.infoLabel}>Time in Recovery:</span>
-        <span className={styles.infoValue}> {client.timeInRecovery}</span>
-      </div>
-      <div>
-        <span className={styles.infoLabel}>Support Meetings:</span>
-        <span className={styles.infoValue}> {client.supportMeetings}</span>
-      </div>
-      {client.sponsorMentor && client.sponsorMentor !== 'Not specified' && (
-        <div>
-          <span className={styles.infoLabel}>Sponsor/Mentor:</span>
-          <span className={styles.infoValue}> {client.sponsorMentor}</span>
-        </div>
-      )}
-    </div>
-  </div>
-<div className={styles.contactInfo}>
-  <h5>Contact Information</h5>
-  <div className={styles.contactGrid}>
+<div className={styles.recoverySection}>
+  <h5>Recovery Information</h5>
+  <div className={styles.recoveryGrid}>
     <div>
-      <span className={styles.infoLabel}>Client Phone:</span>
-      <span className={styles.infoValue}> {client.phone || 'Not provided'}</span>
+      <span className={styles.infoLabel}>Time in Recovery:</span>
+      <span className={styles.infoValue}> {client.timeInRecovery}</span>
     </div>
     <div>
-      <span className={styles.infoLabel}>Client Email:</span>
-      <span className={styles.infoValue}> {client.email || 'Not provided'}</span>
+      <span className={styles.infoLabel}>Support Meetings:</span>
+      <span className={styles.infoValue}> {client.supportMeetings}</span>
     </div>
-    {client.applicantProfile?.sponsor_mentor && client.applicantProfile.sponsor_mentor !== 'Not specified' && (
+    {client.sponsorMentor && client.sponsorMentor !== 'Not specified' && (
       <div>
         <span className={styles.infoLabel}>Sponsor/Mentor:</span>
-        <span className={styles.infoValue}> {client.applicantProfile.sponsor_mentor}</span>
-      </div>
-    )}
-    {client.applicantProfile?.emergency_contact_name && (
-      <>
-        <div>
-          <span className={styles.infoLabel}>Emergency Contact:</span>
-          <span className={styles.infoValue}> {client.applicantProfile.emergency_contact_name}</span>
-        </div>
-        {client.applicantProfile?.emergency_contact_phone && (
-          <div>
-            <span className={styles.infoLabel}>Emergency Phone:</span>
-            <span className={styles.infoValue}> {client.applicantProfile.emergency_contact_phone}</span>
+        <span className={styles.infoValue}> {client.sponsorMentor}</span>
+        {/* ✅ NEW: Add sponsor phone if available */}
+        {client.applicantProfile?.emergency_contact_phone && client.applicantProfile?.emergency_contact_relationship === 'sponsor' && (
+          <div className={styles.sponsorPhone}>
+            📞 {client.applicantProfile.emergency_contact_phone}
           </div>
         )}
-      </>
+      </div>
+    )}
+    {/* ✅ NEW: Emergency contact section */}
+    {client.applicantProfile?.emergency_contact_name && (
+      <div>
+        <span className={styles.infoLabel}>Emergency Contact:</span>
+        <span className={styles.infoValue}> {client.applicantProfile.emergency_contact_name}</span>
+        {client.applicantProfile?.emergency_contact_phone && (
+          <div className={styles.emergencyPhone}>
+            📞 {client.applicantProfile.emergency_contact_phone}
+          </div>
+        )}
+      </div>
     )}
   </div>
 </div>
@@ -750,67 +743,59 @@ const handleUpdateClient = async (clientId, updates) => {
                   </div>
 
                   {/* Action Buttons */}
-                  <div className={styles.clientActions}>
-                    <button
-                      className={`${styles.actionButton} ${styles.actionPrimary}`}
-                      onClick={() => {
-                        setSelectedClient(client);
-                        setActiveModal('goals');
-                      }}
-                      disabled={!db.pssClients}
-                    >
-                      🎯 Manage Goals
-                    </button>
-                    
-                    <button
-                      className={`${styles.actionButton} ${styles.actionSecondary}`}
-                      onClick={() => {
-                        setEditingClient(client);
-                        setActiveModal('edit');
-                      }}
-                      disabled={!db.pssClients}
-                    >
-                      📝 Update Info
-                    </button>
-                    <button
-                      className={`${styles.actionButton} ${styles.actionSecondary}`}
-                      onClick={() => {
-                        setSelectedClient(client);
-                        setActiveModal('session-log');
-                      }}
-                    >
-                      📝 Log Session
-                    </button>
-                    <button
-                      className={`${styles.actionButton} ${styles.actionOutline}`}
-                      onClick={() => {
-                        const phoneUrl = client.phone ? `tel:${client.phone}` : '#';
-                        if (client.phone && client.phone !== 'Not provided') {
-                          window.location.href = phoneUrl;
-                        } else {
-                          alert('No phone number available for this client');
-                        }
-                      }}
-                      disabled={!client.phone || client.phone === 'Not provided'}
-                    >
-                      📞 Call
-                    </button>
+ <div className={styles.clientActions}>
+  <button
+    className={`${styles.actionButton} ${styles.actionPrimary}`}
+    onClick={() => {
+      setSelectedClient(client);
+      setActiveModal('goals');
+    }}
+    disabled={!db.pssClients}
+  >
+    🎯 Manage Goals
+  </button>
+  
+  {/* ✅ MERGED: Single comprehensive session logging button */}
+  <button
+    className={`${styles.actionButton} ${styles.actionSecondary}`}
+    onClick={() => {
+      setSelectedClient(client);
+      setActiveModal('session-log');
+    }}
+  >
+    📝 Log Session & Update Info
+  </button>
 
-                    <button
-                      className={`${styles.actionButton} ${styles.actionOutline}`}
-                      onClick={() => {
-                        const emailUrl = client.email ? `mailto:${client.email}` : '#';
-                        if (client.email) {
-                          window.location.href = emailUrl;
-                        } else {
-                          alert('No email address available for this client');
-                        }
-                      }}
-                      disabled={!client.email}
-                    >
-                      📧 Email
-                    </button>
-                  </div>
+  <button
+    className={`${styles.actionButton} ${styles.actionOutline}`}
+    onClick={() => {
+      const phoneUrl = client.phone ? `tel:${client.phone}` : '#';
+      if (client.phone && client.phone !== 'Not provided') {
+        window.location.href = phoneUrl;
+      } else {
+        alert('No phone number available for this client');
+      }
+    }}
+    disabled={!client.phone || client.phone === 'Not provided'}
+  >
+    📞 Call
+  </button>
+
+  <button
+    className={`${styles.actionButton} ${styles.actionOutline}`}
+    onClick={() => {
+      const emailUrl = client.email ? `mailto:${client.email}` : '#';
+      if (client.email) {
+        window.location.href = emailUrl;
+      } else {
+        alert('No email address available for this client');
+      }
+    }}
+    disabled={!client.email}
+  >
+    📧 Email
+  </button>
+</div>
                 </div>
               );
             })}
@@ -1016,83 +1001,124 @@ const handleUpdateClient = async (clientId, updates) => {
           </div>
         </div>
       )}
-      {activeModal === 'session-log' && selectedClient && (
+{activeModal === 'session-log' && selectedClient && (
   <div className="modal-overlay" onClick={() => setActiveModal(null)}>
     <div className={styles.modalContent} onClick={(e) => e.stopPropagation()}>
       <div className={styles.modalHeader}>
-        <h3 className={styles.modalTitle}>Log Session - {selectedClient.displayName}</h3>
+        <h3 className={styles.modalTitle}>Log Session & Update Info - {selectedClient.displayName}</h3>
         <button className={styles.modalClose} onClick={() => setActiveModal(null)}>×</button>
       </div>
 
       <div className={styles.modalBody}>
         <div className={styles.sessionLogForm}>
-          <div className="form-group">
-            <label className="label">Session Type</label>
-            <select
-              className="input"
-              value={sessionType}
-              onChange={(e) => setSessionType(e.target.value)}
-            >
-              <option value="">Select session type</option>
-              <option value="phone_call">Phone Call</option>
-              <option value="in_person">In-Person Meeting</option>
-              <option value="video_call">Video Call</option>
-              <option value="text_support">Text Support</option>
-              <option value="crisis_intervention">Crisis Intervention</option>
-              <option value="goal_review">Goal Review</option>
-              <option value="check_in">Check-in</option>
-            </select>
+          {/* Session Information */}
+          <div className={styles.formSection}>
+            <h4>Session Details</h4>
+            
+            <div className="form-group">
+              <label className="label">Session Type</label>
+              <select
+                className="input"
+                value={sessionType}
+                onChange={(e) => setSessionType(e.target.value)}
+              >
+                <option value="">Select session type</option>
+                <option value="phone_call">Phone Call</option>
+                <option value="in_person">In-Person Meeting</option>
+                <option value="video_call">Video Call</option>
+                <option value="text_support">Text Support</option>
+                <option value="crisis_intervention">Crisis Intervention</option>
+                <option value="goal_review">Goal Review</option>
+                <option value="check_in">Check-in</option>
+              </select>
+            </div>
+
+            <div className="form-group">
+              <label className="label">Session Duration (minutes)</label>
+              <input
+                type="number"
+                className="input"
+                value={sessionDuration}
+                onChange={(e) => setSessionDuration(e.target.value)}
+                placeholder="30"
+                min="1"
+                max="300"
+              />
+            </div>
+
+            <div className="form-group">
+              <label className="label">Session Notes</label>
+              <textarea
+                className="input"
+                value={sessionNotes}
+                onChange={(e) => setSessionNotes(e.target.value)}
+                placeholder="Session summary, progress notes, concerns, next steps..."
+                rows="4"
+              />
+            </div>
+
+            <div className="form-group">
+              <label className="label">Client Mood/Status</label>
+              <select
+                className="input"
+                value={clientMood}
+                onChange={(e) => setClientMood(e.target.value)}
+              >
+                <option value="">Select mood/status</option>
+                <option value="excellent">Excellent</option>
+                <option value="good">Good</option>
+                <option value="stable">Stable</option>
+                <option value="struggling">Struggling</option>
+                <option value="crisis">Crisis</option>
+              </select>
+            </div>
           </div>
 
-          <div className="form-group">
-            <label className="label">Session Duration (minutes)</label>
-            <input
-              type="number"
-              className="input"
-              value={sessionDuration}
-              onChange={(e) => setSessionDuration(e.target.value)}
-              placeholder="30"
-              min="1"
-              max="300"
-            />
-          </div>
+          {/* Client Management */}
+          <div className={styles.formSection}>
+            <h4>Update Client Info</h4>
+            
+            <div className="form-group">
+              <label className="label">Next Follow-up Date</label>
+              <input
+                type="date"
+                className="input"
+                value={nextFollowup}
+                onChange={(e) => setNextFollowup(e.target.value)}
+                min={new Date().toISOString().split('T')[0]}
+              />
+            </div>
 
-          <div className="form-group">
-            <label className="label">Session Notes</label>
-            <textarea
-              className="input"
-              value={sessionNotes}
-              onChange={(e) => setSessionNotes(e.target.value)}
-              placeholder="Session summary, progress notes, concerns, next steps..."
-              rows="4"
-            />
-          </div>
+            <div className="form-group">
+              <label className="label">Follow-up Frequency</label>
+              <select
+                className="input"
+                value={followupFrequency}
+                onChange={(e) => setFollowupFrequency(e.target.value)}
+              >
+                <option value="daily">Daily</option>
+                <option value="twice_weekly">Twice Weekly</option>
+                <option value="weekly">Weekly</option>
+                <option value="bi_weekly">Bi-weekly</option>
+                <option value="monthly">Monthly</option>
+                <option value="as_needed">As Needed</option>
+              </select>
+            </div>
 
-          <div className="form-group">
-            <label className="label">Client Mood/Status</label>
-            <select
-              className="input"
-              value={clientMood}
-              onChange={(e) => setClientMood(e.target.value)}
-            >
-              <option value="">Select mood/status</option>
-              <option value="excellent">Excellent</option>
-              <option value="good">Good</option>
-              <option value="stable">Stable</option>
-              <option value="struggling">Struggling</option>
-              <option value="crisis">Crisis</option>
-            </select>
-          </div>
-
-          <div className="form-group">
-            <label className="label">Next Follow-up Date</label>
-            <input
-              type="date"
-              className="input"
-              value={nextFollowup}
-              onChange={(e) => setNextFollowup(e.target.value)}
-              min={new Date().toISOString().split('T')[0]}
-            />
+            <div className="form-group">
+              <label className="label">Client Status</label>
+              <select
+                className="input"
+                value={clientStatus}
+                onChange={(e) => setClientStatus(e.target.value)}
+              >
+                <option value="active">Active</option>
+                <option value="on_hold">On Hold</option>
+                <option value="completed">Completed</option>
+                <option value="transferred">Transferred</option>
+                <option value="inactive">Inactive</option>
+              </select>
+            </div>
           </div>
         </div>
 
@@ -1109,7 +1135,7 @@ const handleUpdateClient = async (clientId, updates) => {
             onClick={handleLogSession}
             disabled={!sessionType || !sessionNotes.trim()}
           >
-            Log Session
+            Log Session & Update
           </button>
         </div>
       </div>

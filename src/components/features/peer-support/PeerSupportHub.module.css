@@ -761,3 +761,26 @@
   line-height: 1.4;
   color: #555;
 }
+.sponsorPhone, .emergencyPhone {
+  font-size: 0.8rem;
+  color: #1976d2;
+  margin-left: 0.5rem;
+  font-weight: 500;
+}
+
+.formSection {
+  margin-bottom: 2rem;
+  padding-bottom: 1rem;
+  border-bottom: 1px solid #e0e0e0;
+}
+
+.formSection:last-child {
+  border-bottom: none;
+}
+
+.formSection h4 {
+  margin-bottom: 1rem;
+  color: #2c3e50;
+  font-size: 1rem;
+  font-weight: 600;
+}
