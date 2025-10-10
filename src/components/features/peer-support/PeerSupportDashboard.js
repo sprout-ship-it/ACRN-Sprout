@@ -5,7 +5,7 @@ import { db } from '../../../utils/supabase';
 import LoadingSpinner from '../../ui/LoadingSpinner';
 import styles from './PeerSupportDashboard.module.css';
 
-const PeerSupportDashboard = ({ onBack }) => {
+const PeerSupportDashboard = ({ onBack, onClientSelect }) => {
   const { user, profile } = useAuth();
   const [clients, setClients] = useState([]);
   const [availableConnections, setAvailableConnections] = useState([]);
@@ -288,11 +288,15 @@ const PeerSupportDashboard = ({ onBack }) => {
   /**
    * Open the unified client management modal
    */
-  const handleOpenClientModal = (client) => {
-    setSelectedClient(client);
-    // TODO: Open modal - will be handled by parent component or separate modal component
-    console.log('Opening client modal for:', client.displayName);
-  };
+const handleOpenClientModal = (client) => {
+  setSelectedClient(client);
+  console.log('Opening client modal for:', client.displayName);
+  
+  // Call parent's callback if provided (for modal integration)
+  if (props.onClientSelect) {
+    props.onClientSelect(client);
+  }
+};
 
   /**
    * Utility functions
