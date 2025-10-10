@@ -35,6 +35,7 @@ import EmployerFinder from '../components/features/employer/EmployerFinder'
 import SavedEmployers from '../components/features/employer/SavedEmployers'
 import ConnectionHub from '../components/features/connections/ConnectionHub'
 import PeerSupportDashboard from '../components/features/peer-support/PeerSupportDashboard'
+import PeerSupportModal from '../components/features/peer-support/PeerSupportModal'
 
 // Search Components
 import PropertySearch from '../components/features/property/PropertySearch';
