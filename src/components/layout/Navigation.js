@@ -61,7 +61,29 @@ const Navigation = () => {
       })
     }
 
-    // Role-specific PRIMARY MANAGEMENT functions (not search/discovery)
+    // ✅ APPLICANT: Management functions (saved/favorites)
+    if (hasRole('applicant')) {
+      baseItems.push(
+        { 
+          id: 'saved-properties', 
+          label: 'Saved Properties', 
+          icon: '❤️',
+          path: '/app/saved-properties',
+          description: 'View and manage your favorited housing properties',
+          className: 'nav-property-owner'
+        },
+        { 
+          id: 'saved-employers', 
+          label: 'Saved Employers', 
+          icon: '💖',
+          path: '/app/saved-employers',
+          description: 'View and manage your favorited recovery-friendly employers',
+          className: 'nav-employer'
+        }
+      )
+    }
+
+    // ✅ LANDLORD: Property management
     if (hasRole('landlord')) {
       baseItems.push(
         { 
@@ -75,6 +97,7 @@ const Navigation = () => {
       )
     }
 
+    // ✅ PEER SUPPORT: Support hub
     if (hasRole('peer-support')) {
       baseItems.push(
         { 
@@ -88,6 +111,7 @@ const Navigation = () => {
       )
     }
 
+    // ✅ EMPLOYER: Company management
     if (hasRole('employer')) {
       baseItems.push(
         { 
@@ -101,15 +125,8 @@ const Navigation = () => {
       )
     }
 
-    // Universal management tools
+    // ✅ UNIVERSAL: Only Settings (Connection Hub replaces Messages/Communications)
     baseItems.push(
-      { 
-        id: 'communications', 
-        label: 'Messages', 
-        icon: '💬',
-        path: '/app/communications',
-        description: 'Secure messaging with your connections and match requests'
-      },
       { 
         id: 'settings', 
         label: 'Settings', 

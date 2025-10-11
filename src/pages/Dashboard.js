@@ -424,29 +424,7 @@ const Dashboard = () => {
       )
     }
     
-    // ✅ UNIVERSAL: Communication and connection tools
-    cards.push(
-      { 
-        id: 'connections', 
-        label: 'Connections', 
-        description: hasRole('peer-support') 
-          ? 'Review incoming peer support requests and manage your connections'
-          : 'View and manage your match requests and connection status', 
-        className: styles.roleCardConnections,
-        path: '/app/connections',  // Everyone goes to ConnectionHub via MatchRequests
-        icon: '🤝'
-      },
-      { 
-        id: 'communications', 
-        label: 'Messages', // ✅ ALIGNED with navigation
-        description: hasRole('peer-support') 
-          ? 'Secure messaging hub for all your connections'
-          : 'Secure communication hub for your active connections', 
-        className: styles.roleCardPeerSupport,
-        path: '/app/communications',
-        icon: '💬'
-      }
-    )
+    // ✅ REMOVED: Universal communication tools now handled by prominent Connection Hub
     
     return cards
   }

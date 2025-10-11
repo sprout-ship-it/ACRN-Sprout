@@ -252,7 +252,9 @@ const ConnectionHubStatus = ({ onNavigateToHub }) => {
           background: #374151;
           border-radius: 12px;
           padding: 16px 24px;
-          margin: 16px 0;
+          margin: 16px auto;
+          width: 75%;
+          max-width: 800px;
           cursor: pointer;
           transition: all 0.2s ease;
           border: 2px solid transparent;
@@ -582,7 +584,9 @@ const MainApp = () => {
         let hasCompleteProfile = false;
         let profileError = null;
 
-        // Check based on user's primary role
+        // Check based on user's roles - Check ALL roles, not just primary
+        let profileChecks = [];
+        
         if (hasRole('applicant')) {
           console.log('Checking applicant comprehensive profile...');
           
@@ -592,7 +596,7 @@ const MainApp = () => {
             if (result.success && result.data) {
               const applicantProfile = result.data;
               
-              hasCompleteProfile = !!(
+              const isApplicantComplete = !!(
                 applicantProfile?.primary_city && 
                 applicantProfile?.primary_state && 
                 applicantProfile?.budget_min && 
@@ -603,20 +607,20 @@ const MainApp = () => {
                 applicantProfile?.profile_completed
               );
               
-              console.log('Applicant profile check complete:', hasCompleteProfile);
+              profileChecks.push({ role: 'applicant', complete: isApplicantComplete });
+              console.log('Applicant profile check complete:', isApplicantComplete);
             } else {
               console.log('No applicant profile found or error:', result.error);
-              hasCompleteProfile = false;
+              profileChecks.push({ role: 'applicant', complete: false });
             }
           } catch (error) {
             console.error('Error checking applicant profile:', error);
             profileError = 'Failed to check applicant profile';
-            hasCompleteProfile = false;
+            profileChecks.push({ role: 'applicant', complete: false });
           }
         }
         
-        // ✅ FIXED: Peer support check using standalone function
-        else if (hasRole('peer-support')) {
+        if (hasRole('peer-support')) {
           console.log('Checking peer support comprehensive profile using standalone function...');
           
           try {
@@ -626,7 +630,7 @@ const MainApp = () => {
             if (result.success && result.data) {
               const peerProfile = result.data;
               
-              hasCompleteProfile = !!(
+              const isPeerComplete = !!(
                 peerProfile?.primary_phone && 
                 peerProfile?.bio && 
                 peerProfile?.specialties &&
@@ -634,7 +638,8 @@ const MainApp = () => {
                 peerProfile?.profile_completed
               );
               
-              console.log('✅ Peer profile check complete using standalone function:', hasCompleteProfile, {
+              profileChecks.push({ role: 'peer-support', complete: isPeerComplete });
+              console.log('✅ Peer profile check complete using standalone function:', isPeerComplete, {
                 hasPhone: !!peerProfile?.primary_phone,
                 hasBio: !!peerProfile?.bio,
                 hasSpecialties: !!(peerProfile?.specialties?.length > 0),
@@ -644,34 +649,35 @@ const MainApp = () => {
               // ✅ FIXED: Handle specific error types without causing loops
               if (result.code === 'NOT_FOUND' || result.error?.includes('No peer support profile found')) {
                 console.log('ℹ️ No peer support profile found (normal for new users)');
-                hasCompleteProfile = false;
+                profileChecks.push({ role: 'peer-support', complete: false });
                 profileError = null; // Don't treat "not found" as an error
               } else {
                 console.error('❌ Unexpected peer support profile error:', result.error);
                 profileError = 'Failed to check peer support profile';
-                hasCompleteProfile = false;
+                profileChecks.push({ role: 'peer-support', complete: false });
               }
             }
           } catch (error) {
             console.error('❌ Error checking peer support profile:', error);
             profileError = 'Failed to check peer support profile';
-            hasCompleteProfile = false;
+            profileChecks.push({ role: 'peer-support', complete: false });
           }
         }
         
-        else if (hasRole('landlord')) {
+        if (hasRole('landlord')) {
           console.log('Checking landlord profile...');
           
           try {
-            hasCompleteProfile = await checkLandlordProfile(profile.id);
+            const isLandlordComplete = await checkLandlordProfile(profile.id);
+            profileChecks.push({ role: 'landlord', complete: isLandlordComplete });
           } catch (error) {
             console.error('Error checking landlord profile:', error);
             profileError = 'Failed to check landlord profile';
-            hasCompleteProfile = false;
+            profileChecks.push({ role: 'landlord', complete: false });
           }
         }
 
-        else if (hasRole('employer')) {
+        if (hasRole('employer')) {
           console.log('Checking employer comprehensive profile...');
           
           try {
@@ -681,7 +687,7 @@ const MainApp = () => {
               const employerProfile = result.data[0];
               
               // ✅ UPDATED: Check based on new schema fields and requirements
-              hasCompleteProfile = !!(
+              const isEmployerComplete = !!(
                 employerProfile?.company_name && 
                 employerProfile?.industry && 
                 employerProfile?.business_type && 
@@ -693,7 +699,8 @@ const MainApp = () => {
                 employerProfile?.description.length >= 50 // Require substantial description
               );
               
-              console.log('✅ Employer profile check complete using new schema:', hasCompleteProfile, {
+              profileChecks.push({ role: 'employer', complete: isEmployerComplete });
+              console.log('✅ Employer profile check complete using new schema:', isEmployerComplete, {
                 hasCompanyName: !!employerProfile?.company_name,
                 hasIndustry: !!employerProfile?.industry,
                 hasBusinessType: !!employerProfile?.business_type,
@@ -708,23 +715,35 @@ const MainApp = () => {
               // ✅ FIXED: Handle specific error types without causing loops
               if (result.error?.code === 'NOT_FOUND' || result.error?.message?.includes('No employer profiles found')) {
                 console.log('ℹ️ No employer profile found (normal for new users)');
-                hasCompleteProfile = false;
+                profileChecks.push({ role: 'employer', complete: false });
                 profileError = null; // Don't treat "not found" as an error
               } else {
                 console.error('❌ Unexpected employer profile error:', result.error);
                 profileError = 'Failed to check employer profile';
-                hasCompleteProfile = false;
+                profileChecks.push({ role: 'employer', complete: false });
               }
             } else {
               console.log('ℹ️ No employer profile found');
-              hasCompleteProfile = false;
+              profileChecks.push({ role: 'employer', complete: false });
             }
           } catch (error) {
             console.error('❌ Error checking employer profile:', error);
             profileError = 'Failed to check employer profile';
-            hasCompleteProfile = false;
+            profileChecks.push({ role: 'employer', complete: false });
           }
         }
+
+        // ✅ NEW: Determine if user has complete profiles for ALL their roles
+        console.log('📊 Profile completion summary:', profileChecks);
+        
+        // User needs at least one complete profile for any of their roles
+        hasCompleteProfile = profileChecks.some(check => check.complete);
+        
+        console.log('📊 Final profile completion decision:', {
+          userRoles: profile.roles,
+          profileChecks: profileChecks,
+          hasCompleteProfile: hasCompleteProfile
+        });
 
         // ✅ CRITICAL FIX: Only update state if component is still mounted AND values actually changed
         if (isMountedRef.current) {
@@ -921,7 +940,7 @@ const MainApp = () => {
     profileJustCompleted
   ]);
 
-  // ✅ BULLETPROOF: Stable role detection with minimal dependencies
+  // ✅ BULLETPROOF: Stable role detection - determine which profile form to show
   const primaryRole = useMemo(() => {
     if (!hasRole || typeof hasRole !== 'function') return null;
     
@@ -929,12 +948,22 @@ const MainApp = () => {
     const roles = profile?.roles;
     if (!roles || !Array.isArray(roles)) return null;
     
-    // Return first matching role to avoid re-computation
-    if (roles.includes('applicant')) return 'applicant';
+    // ✅ NEW: If user only has one role, use that
+    if (roles.length === 1) {
+      return roles[0];
+    }
+    
+    // ✅ NEW: For multi-role users, prioritize based on platform value:
+    // 1. peer-support (core platform service)
+    // 2. applicant (main user base)
+    // 3. landlord (property providers)
+    // 4. employer (job providers)
     if (roles.includes('peer-support')) return 'peer-support';
-    if (roles.includes('employer')) return 'employer';
+    if (roles.includes('applicant')) return 'applicant';
     if (roles.includes('landlord')) return 'landlord';
-    return null;
+    if (roles.includes('employer')) return 'employer';
+    
+    return roles[0]; // fallback
   }, [profile?.roles]); // Only depend on roles array, not hasRole function
 
   // Redirect unauthenticated users
