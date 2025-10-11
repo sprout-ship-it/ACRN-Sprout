@@ -1,4 +1,4 @@
-// src/components/features/connections/ConnectionHub.js - FIXED: User ID queries
+// src/components/features/connections/ConnectionHub.js - FIXED: Correct table relationships
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../../../hooks/useAuth';
 import { supabase } from '../../../utils/supabase';
@@ -90,8 +90,7 @@ const ConnectionHub = ({ onBack }) => {
   };
 
   /**
-   * ✅ FIXED: Load both match requests (pending) and match groups (active) connections
-   * Key Fix: Use user.id (auth user ID) for peer_support_profiles queries, not profile.id
+   * ✅ FIXED: Load connections using correct table relationships
    */
   const loadConnections = async () => {
     if (!user?.id || !profile?.id) return;
@@ -120,18 +119,18 @@ const ConnectionHub = ({ onBack }) => {
       // Only check for applicant profile if user has 'applicant' role
       if (profile.roles && profile.roles.includes('applicant')) {
         try {
-          console.log('🔍 Querying applicant_matching_profiles for user_id:', user.id);
+          console.log('🔍 Querying applicant_matching_profiles for user_id:', profile.id);
           const { data: applicantProfile, error: applicantError } = await supabase
             .from('applicant_matching_profiles')
             .select('id, user_id')
-            .eq('user_id', profile.id)  // ✅ FIXED: Use auth user ID
+            .eq('user_id', profile.id)  // ✅ CORRECT: Use registrant profile ID
             .single();
           
           if (applicantProfile && !applicantError) {
             applicantProfileId = applicantProfile.id;
             console.log('👤 Found applicant profile ID:', applicantProfileId);
           } else {
-            console.log('ℹ️ No applicant profile found for auth user:', user.id);
+            console.log('ℹ️ No applicant profile found for registrant profile:', profile.id);
           }
         } catch (err) {
           console.log('ℹ️ No applicant profile found:', err.message);
@@ -265,21 +264,30 @@ const ConnectionHub = ({ onBack }) => {
             
             for (const request of sentRequests) {
               try {
-                // ✅ FIXED: Query correct table based on recipient_type
+                // ✅ FIXED: Get peer support profile name from registrant_profiles
                 let recipientProfile = null;
                 
                 if (request.recipient_type === 'peer-support') {
-                  // Query peer_support_profiles table
+                  // ✅ FIXED: Query peer_support_profiles and join with registrant_profiles
                   const { data: peerProfile, error: peerError } = await supabase
                     .from('peer_support_profiles')
-                    .select('id, user_id, first_name, last_name, professional_title')
+                    .select(`
+                      id, 
+                      user_id, 
+                      professional_title,
+                      registrant_profiles!inner(
+                        first_name,
+                        last_name,
+                        email
+                      )
+                    `)
                     .eq('id', request.recipient_id)
                     .single();
                     
                   if (peerProfile && !peerError) {
                     recipientProfile = {
                       id: peerProfile.id,
-                      name: `${peerProfile.first_name || 'Anonymous'} ${peerProfile.last_name || ''}`.trim(),
+                      name: `${peerProfile.registrant_profiles.first_name || 'Anonymous'} ${peerProfile.registrant_profiles.last_name || ''}`.trim(),
                       title: peerProfile.professional_title || 'Peer Support Specialist'
                     };
                   } else {
@@ -393,7 +401,7 @@ const ConnectionHub = ({ onBack }) => {
                 otherProfileId = match.applicant_1_id === applicantProfileId ? match.applicant_2_id : match.applicant_1_id;
               }
               
-              // Get other user's profile info
+              // Get other user's profile info from registrant_profiles
               if (otherProfileId) {
                 try {
                   const { data: otherProfile, error: profileError } = await supabase
