@@ -80,8 +80,8 @@ const ConnectionHubStatus = ({ onNavigateToHub }) => {
           border-radius: 12px;
           padding: 16px 24px;
           margin: 16px auto;
-          width: 75%;
-          max-width: 800px;
+          width: 50%;
+          max-width: 600px;
           cursor: pointer;
           transition: all 0.2s ease;
           border: 2px solid transparent;
