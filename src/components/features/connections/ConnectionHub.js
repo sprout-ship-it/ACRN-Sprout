@@ -401,19 +401,95 @@ const ConnectionHub = ({ onBack }) => {
                 otherProfileId = match.applicant_1_id === applicantProfileId ? match.applicant_2_id : match.applicant_1_id;
               }
               
-              // Get other user's profile info from registrant_profiles
+              // ✅ FIXED: Get other user's profile info based on connection type
               if (otherProfileId) {
                 try {
-                  const { data: otherProfile, error: profileError } = await supabase
-                    .from('registrant_profiles')
-                    .select('id, first_name, last_name, email, user_id')
-                    .eq('id', otherProfileId)
-                    .single();
+                  let otherProfile = null;
                   
-                  if (otherProfile && !profileError) {
+                  if (connectionType === 'peer_support') {
+                    // For peer support connections, otherProfileId could be either applicant or peer
+                    if (match.peer_support_id === peerSupportProfileId) {
+                      // Current user is peer, other is applicant - query applicant_matching_profiles
+                      const { data: applicantProfile, error: applicantError } = await supabase
+                        .from('applicant_matching_profiles')
+                        .select(`
+                          id,
+                          user_id,
+                          registrant_profiles!inner(
+                            id,
+                            first_name,
+                            last_name,
+                            email
+                          )
+                        `)
+                        .eq('id', otherProfileId)
+                        .single();
+                        
+                      if (applicantProfile && !applicantError) {
+                        otherProfile = {
+                          id: applicantProfile.registrant_profiles.id,
+                          first_name: applicantProfile.registrant_profiles.first_name,
+                          last_name: applicantProfile.registrant_profiles.last_name,
+                          email: applicantProfile.registrant_profiles.email
+                        };
+                      }
+                    } else {
+                      // Current user is applicant, other is peer - query peer_support_profiles
+                      const { data: peerProfile, error: peerError } = await supabase
+                        .from('peer_support_profiles')
+                        .select(`
+                          id,
+                          user_id,
+                          registrant_profiles!inner(
+                            id,
+                            first_name,
+                            last_name,
+                            email
+                          )
+                        `)
+                        .eq('id', otherProfileId)
+                        .single();
+                        
+                      if (peerProfile && !peerError) {
+                        otherProfile = {
+                          id: peerProfile.registrant_profiles.id,
+                          first_name: peerProfile.registrant_profiles.first_name,
+                          last_name: peerProfile.registrant_profiles.last_name,
+                          email: peerProfile.registrant_profiles.email
+                        };
+                      }
+                    }
+                  } else {
+                    // For roommate connections, otherProfileId is applicant_matching_profiles ID
+                    const { data: applicantProfile, error: applicantError } = await supabase
+                      .from('applicant_matching_profiles')
+                      .select(`
+                        id,
+                        user_id,
+                        registrant_profiles!inner(
+                          id,
+                          first_name,
+                          last_name,
+                          email
+                        )
+                      `)
+                      .eq('id', otherProfileId)
+                      .single();
+                      
+                    if (applicantProfile && !applicantError) {
+                      otherProfile = {
+                        id: applicantProfile.registrant_profiles.id,
+                        first_name: applicantProfile.registrant_profiles.first_name,
+                        last_name: applicantProfile.registrant_profiles.last_name,
+                        email: applicantProfile.registrant_profiles.email
+                      };
+                    }
+                  }
+                  
+                  if (otherProfile) {
                     allConnections.push({
                       id: `active_${match.id}`,
-                      profile_id: otherProfileId,
+                      profile_id: otherProfile.id, // Use registrant profile ID
                       name: `${otherProfile.first_name} ${otherProfile.last_name}` || 'Anonymous',
                       type: connectionType,
                       status: 'active_connection',
@@ -425,6 +501,9 @@ const ConnectionHub = ({ onBack }) => {
                       contact_info: match.shared_contact_info || null,
                       avatar: avatar
                     });
+                    console.log(`✅ Added ${connectionType} connection:`, otherProfile.first_name, otherProfile.last_name);
+                  } else {
+                    console.warn('⚠️ Could not load other user profile for match:', match.id);
                   }
                 } catch (profileErr) {
                   console.warn('⚠️ Error loading other profile:', profileErr);

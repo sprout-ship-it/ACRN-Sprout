@@ -67,7 +67,7 @@ const Navigation = () => {
         { 
           id: 'saved-properties', 
           label: 'Saved Properties', 
-          icon: '❤️',
+          icon: '🏠',
           path: '/app/saved-properties',
           description: 'View and manage your favorited housing properties',
           className: 'nav-property-owner'
