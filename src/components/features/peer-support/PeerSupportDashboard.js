@@ -40,9 +40,15 @@ const PeerSupportDashboard = ({ onBack, onClientSelect }) => {
   useEffect(() => {
     if (peerSupportProfileId) {
       loadClients();
-      loadAvailableConnections();
     }
   }, [peerSupportProfileId]);
+
+  // ✅ FIX: Load available connections AFTER clients are loaded
+  useEffect(() => {
+    if (peerSupportProfileId && (clients.length > 0 || formerClients.length > 0 || !loading)) {
+      loadAvailableConnections();
+    }
+  }, [peerSupportProfileId, clients.length, formerClients.length]);
 
   /**
    * ✅ UPDATED: Load PSS clients - separating active from former clients
@@ -141,6 +147,9 @@ const PeerSupportDashboard = ({ onBack, onClientSelect }) => {
           totalSessions: client.total_sessions || 0,
           status: client.status || 'active'
         };
+
+        // ✅ DEBUG: Log status to understand categorization
+        console.log(`Client ${enrichedClient.displayName} has status: ${enrichedClient.status}`);
 
         // Separate into active vs former based on status
         if (client.status === 'active' || client.status === 'on_hold') {
@@ -287,13 +296,61 @@ const PeerSupportDashboard = ({ onBack, onClientSelect }) => {
    * Open the unified client management modal
    */
   const handleOpenClientModal = (client) => {
-    setSelectedClient(client);
     console.log('Opening client modal for:', client.displayName);
+    console.log('Client data being passed:', {
+      id: client.id,
+      pss_client_id: client.id, // This should be pss_clients.id
+      recovery_goals: client.recoveryGoals,
+      total_sessions: client.totalSessions,
+      next_followup: client.nextFollowup,
+      status: client.status
+    });
+    
+    setSelectedClient(client);
     
     // Call parent's callback if provided (for modal integration)
     if (onClientSelect) {
       onClientSelect(client);
     }
+  };
+
+  /**
+   * ✅ NEW: Reactivate a former client
+   */
+  const handleReactivateClient = async (client) => {
+    try {
+      const confirmed = window.confirm(`Reactivate ${client.displayName} as an active client?`);
+      if (!confirmed) return;
+
+      console.log('🔄 Reactivating client:', client.id);
+
+      const { error } = await supabase
+        .from('pss_clients')
+        .update({
+          status: 'active',
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', client.id);
+
+      if (error) throw error;
+
+      alert(`${client.displayName} has been reactivated!`);
+      loadClients();
+
+    } catch (err) {
+      console.error('💥 Error reactivating client:', err);
+      alert(`Failed to reactivate client: ${err.message}`);
+    }
+  };
+
+  /**
+   * ✅ NEW: View client's full profile
+   */
+  const handleViewProfile = (client) => {
+    console.log('Viewing profile for client:', client.displayName);
+    // TODO: Open profile modal with full applicant profile data
+    // For now, just show an alert with available info
+    alert(`Profile for ${client.displayName}\n\nRecovery Stage: ${client.recoveryStage}\nTime in Recovery: ${client.timeInRecovery}\nPhone: ${client.phone}\nEmail: ${client.email}`);
   };
 
   /**
@@ -454,6 +511,25 @@ const PeerSupportDashboard = ({ onBack, onClientSelect }) => {
           >
             📝 {isFormer ? 'View History' : 'Manage Client'}
           </button>
+          
+          <button
+            className={`${styles.actionButton} ${styles.actionSecondary}`}
+            onClick={() => handleViewProfile(client)}
+            style={{ marginTop: '0.5rem' }}
+          >
+            👁️ View Profile
+          </button>
+          
+          {/* ✅ NEW: Reactivate button for former clients */}
+          {isFormer && (
+            <button
+              className={`${styles.actionButton} ${styles.actionSuccess}`}
+              onClick={() => handleReactivateClient(client)}
+              style={{ marginTop: '0.5rem', background: 'var(--success-bg)', color: 'var(--success-text)' }}
+            >
+              🔄 Reactivate Client
+            </button>
+          )}
           
           {!isFormer && (
             <div className={styles.quickActions}>
