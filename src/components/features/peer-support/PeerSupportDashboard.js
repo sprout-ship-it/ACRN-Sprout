@@ -1,149 +1,139 @@
 // src/components/features/peer-support/PeerSupportDashboard.js
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../../../hooks/useAuth';
-import { db } from '../../../utils/supabase';
+import { supabase } from '../../../utils/supabase';
 import LoadingSpinner from '../../ui/LoadingSpinner';
 import styles from './PeerSupportDashboard.module.css';
 
 const PeerSupportDashboard = ({ onBack, onClientSelect }) => {
   const { user, profile } = useAuth();
   const [clients, setClients] = useState([]);
+  const [formerClients, setFormerClients] = useState([]);
   const [availableConnections, setAvailableConnections] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
+  const [activeTab, setActiveTab] = useState('active'); // 'active' or 'former'
   const [selectedClient, setSelectedClient] = useState(null);
 
-  // Load clients and available connections on mount
+  // Get peer support profile ID
+  const [peerSupportProfileId, setPeerSupportProfileId] = useState(null);
+
   useEffect(() => {
-    if (profile?.id) {
-      loadClients();
-    }
+    const loadPeerSupportId = async () => {
+      if (!profile?.id) return;
+      
+      const { data } = await supabase
+        .from('peer_support_profiles')
+        .select('id')
+        .eq('user_id', profile.id)
+        .single();
+      
+      if (data) {
+        setPeerSupportProfileId(data.id);
+      }
+    };
+
+    loadPeerSupportId();
   }, [profile?.id]);
 
+  // Load clients when peer support profile ID is available
   useEffect(() => {
-    if (profile?.id) {
+    if (peerSupportProfileId) {
+      loadClients();
       loadAvailableConnections();
     }
-  }, [profile?.id, clients.length]);
+  }, [peerSupportProfileId]);
 
   /**
-   * Load existing PSS clients for this peer specialist
+   * ✅ UPDATED: Load PSS clients - separating active from former clients
    */
   const loadClients = async () => {
-    if (!profile?.id) return;
+    if (!peerSupportProfileId) return;
     
     setLoading(true);
     setError(null);
 
     try {
-      console.log('🔄 Loading PSS clients...');
+      console.log('🔄 Loading PSS clients for peer specialist:', peerSupportProfileId);
       
-      let clientData = [];
-      
-      try {
-        // Check if PSS clients service exists
-        if (db.pssClients && typeof db.pssClients.getByPeerSpecialistId === 'function') {
-          const result = await db.pssClients.getByPeerSpecialistId(profile.id);
-          if (result.data && !result.error) {
-            clientData = result.data;
-          }
-        } else {
-          // Fallback method via match_groups
-          console.log('🔄 Using fallback method via match_groups...');
-          const matchResult = await db.matchGroups.getByUserId('peer-support', profile.id);
-          
-          if (matchResult.data && !matchResult.error) {
-            const peerSupportConnections = matchResult.data.filter(match => 
-              match.peer_support_id === profile.id && 
-              match.status === 'active'
-            );
-            
-            clientData = peerSupportConnections.map(match => ({
-              id: `fallback_${match.id}`,
-              peer_specialist_id: profile.id,
-              client_id: match.applicant_1_id || match.applicant_2_id,
-              match_group_id: match.id,
-              status: 'active',
-              recovery_goals: [],
-              total_sessions: 0,
-              created_at: match.created_at,
-              updated_at: match.updated_at,
-              next_followup_date: null,
-              followup_frequency: 'weekly',
-              last_contact_date: null
-            }));
-          }
+      // Load all pss_clients records (active and inactive)
+      const { data: pssClientsData, error: pssError } = await supabase
+        .from('pss_clients')
+        .select(`
+          *,
+          applicant:applicant_matching_profiles!client_id (
+            *,
+            registrant:registrant_profiles!user_id (*)
+          )
+        `)
+        .eq('peer_specialist_id', peerSupportProfileId)
+        .order('updated_at', { ascending: false });
+
+      if (pssError) throw pssError;
+
+      console.log(`📊 Found ${pssClientsData?.length || 0} total PSS client records`);
+
+      // Enrich and separate active from former clients
+      const activeClientsList = [];
+      const formerClientsList = [];
+
+      for (const client of pssClientsData || []) {
+        const applicantData = client.applicant;
+        const clientProfile = applicantData?.registrant;
+
+        if (!applicantData || !clientProfile) {
+          console.warn(`Incomplete data for client:`, client);
+          continue;
         }
-      } catch (serviceError) {
-        console.warn('PSS clients service not available, using match_groups fallback:', serviceError);
+
+        const enrichedClient = {
+          ...client,
+          profile: clientProfile,
+          applicantProfile: applicantData,
+          displayName: clientProfile.first_name 
+            ? `${clientProfile.first_name} ${clientProfile.last_name?.charAt(0) || ''}.`
+            : 'Anonymous Client',
+          phone: applicantData.primary_phone || 'Not provided',
+          email: clientProfile.email,
+          
+          // Recovery information
+          primarySubstances: applicantData.primary_substance ? [applicantData.primary_substance] : [],
+          recoveryStage: applicantData.recovery_stage || 'Not specified',
+          timeInRecovery: applicantData.time_in_recovery || 'Not specified',
+          sobrietyDate: applicantData.sobriety_date || null,
+          recoveryMethods: applicantData.recovery_methods || [],
+          supportMeetings: applicantData.support_meetings || 'Not specified',
+          sponsorMentor: applicantData.sponsor_mentor || 'Not specified',
+          recoveryContext: applicantData.recovery_context || '',
+          spiritualAffiliation: applicantData.spiritual_affiliation || 'Not specified',
+          wantRecoverySupport: applicantData.want_recovery_support || false,
+          comfortableDiscussing: applicantData.comfortable_discussing_recovery || false,
+          attendMeetingsTogether: applicantData.attend_meetings_together || false,
+          recoveryAccountability: applicantData.recovery_accountability || false,
+          mentorshipInterest: applicantData.mentorship_interest || false,
+          
+          // Goals and session tracking
+          recoveryGoals: client.recovery_goals || [],
+          nextFollowup: client.next_followup_date,
+          followupFrequency: client.followup_frequency || 'weekly',
+          lastContact: client.last_contact_date,
+          totalSessions: client.total_sessions || 0,
+          status: client.status || 'active'
+        };
+
+        // Separate into active vs former based on status
+        if (client.status === 'active' || client.status === 'on_hold') {
+          activeClientsList.push(enrichedClient);
+        } else {
+          // inactive, completed, or transferred
+          formerClientsList.push(enrichedClient);
+        }
       }
 
-      console.log(`📊 Found ${clientData.length} PSS clients`);
-
-      // Enrich client data with profile information
-      const enrichedClients = await Promise.all(
-        clientData.map(async (client) => {
-          try {
-            const applicantData = client.applicant;
-            const clientProfile = applicantData?.registrant;
-
-            if (!applicantData || !clientProfile) {
-              console.warn(`Incomplete data for client:`, client);
-              return {
-                ...client,
-                displayName: 'Unknown Client',
-                recoveryGoals: [],
-                status: 'active'
-              };
-            }
-
-            return {
-              ...client,
-              profile: clientProfile,
-              applicantProfile: applicantData,
-              displayName: clientProfile.first_name 
-                ? `${clientProfile.first_name} ${clientProfile.last_name?.charAt(0) || ''}.`
-                : 'Anonymous Client',
-              phone: applicantData.primary_phone || 'Not provided',
-              email: clientProfile.email,
-              
-              // Recovery information
-              primarySubstances: applicantData.primary_substance ? [applicantData.primary_substance] : [],
-              recoveryStage: applicantData.recovery_stage || 'Not specified',
-              timeInRecovery: applicantData.time_in_recovery || 'Not specified',
-              sobrietyDate: applicantData.sobriety_date || null,
-              recoveryMethods: applicantData.recovery_methods || [],
-              supportMeetings: applicantData.support_meetings || 'Not specified',
-              sponsorMentor: applicantData.sponsor_mentor || 'Not specified',
-              recoveryContext: applicantData.recovery_context || '',
-              spiritualAffiliation: applicantData.spiritual_affiliation || 'Not specified',
-              wantRecoverySupport: applicantData.want_recovery_support || false,
-              comfortableDiscussing: applicantData.comfortable_discussing_recovery || false,
-              attendMeetingsTogether: applicantData.attend_meetings_together || false,
-              recoveryAccountability: applicantData.recovery_accountability || false,
-              mentorshipInterest: applicantData.mentorship_interest || false,
-              
-              // Goals and session tracking
-              recoveryGoals: client.recovery_goals || [],
-              nextFollowup: client.next_followup_date,
-              followupFrequency: client.followup_frequency || 'weekly',
-              lastContact: client.last_contact_date,
-              totalSessions: client.total_sessions || 0,
-              status: client.status || 'active'
-            };
-          } catch (err) {
-            console.warn(`Error enriching client data for ${client.client_id}:`, err);
-            return {
-              ...client,
-              displayName: 'Unknown Client',
-              recoveryGoals: [],
-              status: 'active'
-            };
-          }
-        })
-      );
-
-      setClients(enrichedClients);
+      console.log(`✅ Loaded ${activeClientsList.length} active clients and ${formerClientsList.length} former clients`);
+      
+      setClients(activeClientsList);
+      setFormerClients(formerClientsList);
 
     } catch (err) {
       console.error('💥 Error loading PSS clients:', err);
@@ -154,73 +144,55 @@ const PeerSupportDashboard = ({ onBack, onClientSelect }) => {
   };
 
   /**
-   * Load available peer support connections that haven't been added as clients yet
+   * ✅ UPDATED: Load available peer support connections from peer_support_matches
    */
   const loadAvailableConnections = async () => {
-    if (!profile?.id) return;
+    if (!peerSupportProfileId) return;
 
     try {
       console.log('🔄 Loading available peer support connections...');
       
-      const result = await db.matchGroups.getByUserId('peer-support', profile.id);
+      // Load peer_support_matches that are active but not yet in pss_clients
+      const { data: matches, error } = await supabase
+        .from('peer_support_matches')
+        .select(`
+          *,
+          applicant:applicant_matching_profiles!applicant_id (
+            *,
+            registrant:registrant_profiles!user_id (*)
+          )
+        `)
+        .eq('peer_support_id', peerSupportProfileId)
+        .eq('status', 'active');
+
+      if (error) throw error;
+
+      console.log(`📊 Found ${matches?.length || 0} active peer support matches`);
+
+      // Filter out matches that already have pss_clients records
+      const existingClientIds = [...clients, ...formerClients].map(c => c.client_id);
       
-      if (result.data && !result.error) {
-        const peerSupportConnections = result.data.filter(match => 
-          match.peer_support_id === profile.id && 
-          (match.status === 'confirmed' || match.status === 'forming')
-        );
+      const availableMatches = (matches || []).filter(match => 
+        !existingClientIds.includes(match.applicant_id)
+      );
 
-        console.log(`📊 Found ${peerSupportConnections.length} potential peer support connections`);
+      console.log(`📊 Found ${availableMatches.length} available connections (not yet added as clients)`);
 
-        const existingClientIds = clients.map(client => client.client_id);
-        console.log(`📊 Found ${existingClientIds.length} existing clients to filter out`);
+      // Enrich with profile data
+      const enrichedConnections = availableMatches.map(match => ({
+        id: match.id,
+        client_id: match.applicant_id,
+        applicant: match.applicant,
+        profile: match.applicant?.registrant,
+        applicantProfile: match.applicant,
+        displayName: match.applicant?.registrant?.first_name
+          ? `${match.applicant.registrant.first_name} ${match.applicant.registrant.last_name?.charAt(0) || ''}.`
+          : 'Anonymous',
+        created_at: match.created_at
+      }));
 
-        const availableConnections = peerSupportConnections.filter(connection => {
-          const clientId = connection.applicant_1_id || connection.applicant_2_id;
-          return clientId && !existingClientIds.includes(clientId);
-        });
-
-        console.log(`📊 Found ${availableConnections.length} available connections after filtering`);
-
-        // Enrich with profile data
-        const enrichedConnections = await Promise.all(
-          availableConnections.map(async (connection) => {
-            const clientId = connection.applicant_1_id || connection.applicant_2_id;
-            
-            try {
-              const profileResult = await db.profiles.getById(clientId);
-              let applicantProfile = null;
-              
-              try {
-                const applicantResult = await db.matchingProfiles.getByUserId(clientId);
-                applicantProfile = applicantResult.data;
-              } catch (err) {
-                console.warn(`Could not load matching profile for potential client ${clientId}`);
-              }
-              
-              return {
-                ...connection,
-                client_id: clientId,
-                profile: profileResult.data,
-                applicantProfile: applicantProfile,
-                displayName: profileResult.data?.first_name 
-                  ? `${profileResult.data.first_name} ${profileResult.data.last_name?.charAt(0) || ''}.`
-                  : 'Anonymous'
-              };
-            } catch (err) {
-              console.warn(`Error enriching connection ${clientId}:`, err);
-              return {
-                ...connection,
-                client_id: clientId,
-                displayName: 'Unknown Connection'
-              };
-            }
-          })
-        );
-
-        setAvailableConnections(enrichedConnections);
-        console.log(`✅ Loaded ${enrichedConnections.length} enriched available connections`);
-      }
+      setAvailableConnections(enrichedConnections);
+      console.log(`✅ Loaded ${enrichedConnections.length} enriched available connections`);
 
     } catch (err) {
       console.warn('Error loading available connections:', err);
@@ -228,50 +200,35 @@ const PeerSupportDashboard = ({ onBack, onClientSelect }) => {
   };
 
   /**
-   * Add a connection as a new PSS client
+   * ✅ UPDATED: Add a connection as a new PSS client
    */
   const handleAddClient = async (connection) => {
-    if (!profile?.id) return;
+    if (!peerSupportProfileId) return;
 
     try {
       console.log('➕ Adding new PSS client:', connection.displayName);
 
-      if (db.pssClients && typeof db.pssClients.create === 'function') {
-        const clientData = {
-          peer_specialist_id: profile.id,
+      const nextFollowupDate = new Date();
+      nextFollowupDate.setDate(nextFollowupDate.getDate() + 7); // 7 days from now
+
+      const { error } = await supabase
+        .from('pss_clients')
+        .insert({
+          peer_specialist_id: peerSupportProfileId,
           client_id: connection.client_id,
-          match_group_id: connection.id,
           status: 'active',
-          next_followup_date: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
           followup_frequency: 'weekly',
-          recovery_goals: [],
+          next_followup_date: nextFollowupDate.toISOString().split('T')[0],
           total_sessions: 0,
+          recovery_goals: [],
+          progress_notes: [],
+          consent_to_contact: true,
           created_by: profile.id
-        };
-
-        const result = await db.pssClients.create(clientData);
-
-        if (result.error) {
-          throw new Error(result.error.message || 'Failed to add client');
-        }
-
-        alert(`${connection.displayName} has been added as your client!`);
-      } else {
-        // Fallback: Update match_group status
-        console.log('🔄 Using fallback method to mark as client...');
-        
-        const result = await db.matchGroups.update(connection.id, {
-          status: 'active',
-          notes: 'Active PSS client relationship',
-          updated_at: new Date().toISOString()
         });
 
-        if (result.error) {
-          throw new Error(result.error.message || 'Failed to update connection status');
-        }
+      if (error) throw error;
 
-        alert(`${connection.displayName} has been marked as your client! Full client management features will be available when the PSS system is fully implemented.`);
-      }
+      alert(`${connection.displayName} has been added as your client!`);
       
       // Remove from available connections and refresh client list
       setAvailableConnections(prev => 
@@ -288,15 +245,15 @@ const PeerSupportDashboard = ({ onBack, onClientSelect }) => {
   /**
    * Open the unified client management modal
    */
-const handleOpenClientModal = (client) => {
-  setSelectedClient(client);
-  console.log('Opening client modal for:', client.displayName);
-  
-  // Call parent's callback if provided (for modal integration)
-  if (onClientSelect) {
-    onClientSelect(client);
-  }
-};
+  const handleOpenClientModal = (client) => {
+    setSelectedClient(client);
+    console.log('Opening client modal for:', client.displayName);
+    
+    // Call parent's callback if provided (for modal integration)
+    if (onClientSelect) {
+      onClientSelect(client);
+    }
+  };
 
   /**
    * Utility functions
@@ -338,6 +295,161 @@ const handleOpenClientModal = (client) => {
     if (daysUntilFollowup < 0) return styles.followupOverdue;
     if (daysUntilFollowup <= 2) return styles.followupDueSoon;
     return styles.followupOnTrack;
+  };
+
+  /**
+   * ✅ NEW: Render client card (reusable for both active and former)
+   */
+  const renderClientCard = (client, isFormer = false) => {
+    const statusBadge = getStatusBadge(client.status);
+    const daysUntilFollowup = getDaysUntilFollowup(client.nextFollowup);
+    const followupAlertClass = getFollowupAlertClass(daysUntilFollowup);
+    
+    return (
+      <div key={client.id} className={styles.clientCard}>
+        {/* Client Header */}
+        <div className={styles.clientCardHeader}>
+          <div>
+            <div className={styles.clientName}>{client.displayName}</div>
+            <div className={styles.clientSubtitle}>
+              {client.totalSessions || 0} sessions • 
+              {client.lastContact 
+                ? ` Last contact: ${new Date(client.lastContact).toLocaleDateString()}`
+                : ' No recent contact'
+              }
+            </div>
+          </div>
+          
+          <div className={styles.clientStatusBadge}>
+            <span className={`badge ${statusBadge.class}`}>
+              {statusBadge.text}
+            </span>
+          </div>
+        </div>
+
+        {/* Client Info */}
+        <div className={styles.clientInfo}>
+          <div className={styles.clientInfoGrid}>
+            <div>
+              <span className={styles.infoLabel}>Phone:</span>
+              <span className={styles.infoValue}> {client.phone || 'Not provided'}</span>
+            </div>
+            <div>
+              <span className={styles.infoLabel}>Email:</span>
+              <span className={styles.infoValue}> {client.email || 'Not provided'}</span>
+            </div>
+          </div>
+
+          <div className={styles.clientInfoGrid}>
+            <div>
+              <span className={styles.infoLabel}>Recovery Stage:</span>
+              <span className={styles.infoValue}> {client.recoveryStage}</span>
+            </div>
+            {!isFormer && (
+              <div>
+                <span className={styles.infoLabel}>Follow-up:</span>
+                <span className={styles.infoValue}> {formatFollowupFrequency(client.followupFrequency)}</span>
+              </div>
+            )}
+          </div>
+
+          {/* Primary Substances */}
+          {client.primarySubstances?.length > 0 && (
+            <div className="mb-3">
+              <span className={styles.infoLabel}>Primary Substances:</span>
+              <div className={styles.substancesList}>
+                {client.primarySubstances.map((substance, i) => (
+                  <span key={i} className={styles.substanceBadge}>
+                    {substance}
+                  </span>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Follow-up Status (Active clients only) */}
+          {!isFormer && client.nextFollowup && (
+            <div className={`${styles.followupAlert} ${followupAlertClass}`}>
+              <strong>Next Follow-up:</strong> {new Date(client.nextFollowup).toLocaleDateString()}
+              {daysUntilFollowup < 0 && (
+                <span className="ml-2">(Overdue by {Math.abs(daysUntilFollowup)} days)</span>
+              )}
+              {daysUntilFollowup >= 0 && daysUntilFollowup <= 2 && (
+                <span className="ml-2">(Due in {daysUntilFollowup} days)</span>
+              )}
+            </div>
+          )}
+
+          {/* Recovery Goals Preview */}
+          <div className={styles.goalsSection}>
+            <div className={styles.goalsHeader}>
+              🎯 Recovery Goals ({client.recoveryGoals?.length || 0}/5)
+            </div>
+            {client.recoveryGoals?.length > 0 ? (
+              <div className={styles.goalsList}>
+                {client.recoveryGoals.slice(0, 2).map((goal) => (
+                  <div key={goal.id} className={styles.goalItem}>
+                    <span className={`${styles.goalStatus} ${styles[`goalStatus${goal.status.charAt(0).toUpperCase() + goal.status.slice(1)}`]}`}>
+                      {goal.status}
+                    </span>
+                    <span className={styles.goalText}>{goal.goal}</span>
+                  </div>
+                ))}
+                {client.recoveryGoals.length > 2 && (
+                  <div className={styles.moreGoalsText}>+{client.recoveryGoals.length - 2} more goals</div>
+                )}
+              </div>
+            ) : (
+              <div className={styles.noGoalsText}>No goals set yet</div>
+            )}
+          </div>
+        </div>
+
+        {/* Action Buttons */}
+        <div className={styles.clientActions}>
+          <button
+            className={`${styles.actionButton} ${styles.actionPrimary}`}
+            onClick={() => handleOpenClientModal(client)}
+          >
+            📝 {isFormer ? 'View History' : 'Manage Client'}
+          </button>
+          
+          {!isFormer && (
+            <div className={styles.quickActions}>
+              <button
+                className={`${styles.quickActionButton} ${styles.phoneAction}`}
+                onClick={() => {
+                  if (client.phone && client.phone !== 'Not provided') {
+                    window.location.href = `tel:${client.phone}`;
+                  } else {
+                    alert('No phone number available for this client');
+                  }
+                }}
+                disabled={!client.phone || client.phone === 'Not provided'}
+                title="Call client"
+              >
+                📞
+              </button>
+
+              <button
+                className={`${styles.quickActionButton} ${styles.emailAction}`}
+                onClick={() => {
+                  if (client.email) {
+                    window.location.href = `mailto:${client.email}`;
+                  } else {
+                    alert('No email address available for this client');
+                  }
+                }}
+                disabled={!client.email}
+                title="Email client"
+              >
+                📧
+              </button>
+            </div>
+          )}
+        </div>
+      </div>
+    );
   };
 
   return (
@@ -407,12 +519,27 @@ const handleOpenClientModal = (client) => {
         </div>
       )}
 
-      {/* Current Clients */}
-      {!loading && clients.length > 0 && (
+      {/* ✅ NEW: Tabs for Active vs Former Clients */}
+      {!loading && (clients.length > 0 || formerClients.length > 0) && (
         <>
+          <div className={styles.tabsContainer}>
+            <button
+              className={`${styles.tab} ${activeTab === 'active' ? styles.tabActive : ''}`}
+              onClick={() => setActiveTab('active')}
+            >
+              Active Clients ({clients.length})
+            </button>
+            <button
+              className={`${styles.tab} ${activeTab === 'former' ? styles.tabActive : ''}`}
+              onClick={() => setActiveTab('former')}
+            >
+              Former Clients ({formerClients.length})
+            </button>
+          </div>
+
           <div className={styles.clientsHeader}>
             <h3 className="card-title">
-              Your Clients ({clients.length})
+              {activeTab === 'active' ? 'Your Active Clients' : 'Former Clients'}
             </h3>
             <button 
               className={styles.refreshButton}
@@ -424,161 +551,14 @@ const handleOpenClientModal = (client) => {
           </div>
 
           <div className={styles.clientsGrid}>
-            {clients.map((client) => {
-              const statusBadge = getStatusBadge(client.status);
-              const daysUntilFollowup = getDaysUntilFollowup(client.nextFollowup);
-              const followupAlertClass = getFollowupAlertClass(daysUntilFollowup);
-              
-              return (
-                <div key={client.id} className={styles.clientCard}>
-                  {/* Client Header */}
-                  <div className={styles.clientCardHeader}>
-                    <div>
-                      <div className={styles.clientName}>{client.displayName}</div>
-                      <div className={styles.clientSubtitle}>
-                        {client.totalSessions || 0} sessions • 
-                        {client.lastContact 
-                          ? ` Last contact: ${new Date(client.lastContact).toLocaleDateString()}`
-                          : ' No recent contact'
-                        }
-                      </div>
-                    </div>
-                    
-                    <div className={styles.clientStatusBadge}>
-                      <span className={`badge ${statusBadge.class}`}>
-                        {statusBadge.text}
-                      </span>
-                    </div>
-                  </div>
-
-                  {/* Client Info */}
-                  <div className={styles.clientInfo}>
-                    <div className={styles.clientInfoGrid}>
-                      <div>
-                        <span className={styles.infoLabel}>Phone:</span>
-                        <span className={styles.infoValue}> {client.phone || 'Not provided'}</span>
-                      </div>
-                      <div>
-                        <span className={styles.infoLabel}>Email:</span>
-                        <span className={styles.infoValue}> {client.email || 'Not provided'}</span>
-                      </div>
-                    </div>
-
-                    <div className={styles.clientInfoGrid}>
-                      <div>
-                        <span className={styles.infoLabel}>Recovery Stage:</span>
-                        <span className={styles.infoValue}> {client.recoveryStage}</span>
-                      </div>
-                      <div>
-                        <span className={styles.infoLabel}>Follow-up:</span>
-                        <span className={styles.infoValue}> {formatFollowupFrequency(client.followupFrequency)}</span>
-                      </div>
-                    </div>
-
-                    {/* Primary Substances */}
-                    {client.primarySubstances?.length > 0 && (
-                      <div className="mb-3">
-                        <span className={styles.infoLabel}>Primary Substances:</span>
-                        <div className={styles.substancesList}>
-                          {client.primarySubstances.map((substance, i) => (
-                            <span key={i} className={styles.substanceBadge}>
-                              {substance}
-                            </span>
-                          ))}
-                        </div>
-                      </div>
-                    )}
-
-                    {/* Follow-up Status */}
-                    {client.nextFollowup && (
-                      <div className={`${styles.followupAlert} ${followupAlertClass}`}>
-                        <strong>Next Follow-up:</strong> {new Date(client.nextFollowup).toLocaleDateString()}
-                        {daysUntilFollowup < 0 && (
-                          <span className="ml-2">(Overdue by {Math.abs(daysUntilFollowup)} days)</span>
-                        )}
-                        {daysUntilFollowup >= 0 && daysUntilFollowup <= 2 && (
-                          <span className="ml-2">(Due in {daysUntilFollowup} days)</span>
-                        )}
-                      </div>
-                    )}
-
-                    {/* Recovery Goals Preview */}
-                    <div className={styles.goalsSection}>
-                      <div className={styles.goalsHeader}>
-                        🎯 Recovery Goals ({client.recoveryGoals?.length || 0}/5)
-                      </div>
-                      {client.recoveryGoals?.length > 0 ? (
-                        <div className={styles.goalsList}>
-                          {client.recoveryGoals.slice(0, 2).map((goal) => (
-                            <div key={goal.id} className={styles.goalItem}>
-                              <span className={`${styles.goalStatus} ${styles[`goalStatus${goal.status.charAt(0).toUpperCase() + goal.status.slice(1)}`]}`}>
-                                {goal.status}
-                              </span>
-                              <span className={styles.goalText}>{goal.goal}</span>
-                            </div>
-                          ))}
-                          {client.recoveryGoals.length > 2 && (
-                            <div className={styles.moreGoalsText}>+{client.recoveryGoals.length - 2} more goals</div>
-                          )}
-                        </div>
-                      ) : (
-                        <div className={styles.noGoalsText}>No goals set yet</div>
-                      )}
-                    </div>
-                  </div>
-
-                  {/* Simplified Action Button */}
-                  <div className={styles.clientActions}>
-                    <button
-                      className={`${styles.actionButton} ${styles.actionPrimary}`}
-                      onClick={() => handleOpenClientModal(client)}
-                    >
-                      📝 Manage Client
-                    </button>
-                    
-                    <div className={styles.quickActions}>
-                      <button
-                        className={`${styles.quickActionButton} ${styles.phoneAction}`}
-                        onClick={() => {
-                          const phoneUrl = client.phone ? `tel:${client.phone}` : '#';
-                          if (client.phone && client.phone !== 'Not provided') {
-                            window.location.href = phoneUrl;
-                          } else {
-                            alert('No phone number available for this client');
-                          }
-                        }}
-                        disabled={!client.phone || client.phone === 'Not provided'}
-                        title="Call client"
-                      >
-                        📞
-                      </button>
-
-                      <button
-                        className={`${styles.quickActionButton} ${styles.emailAction}`}
-                        onClick={() => {
-                          const emailUrl = client.email ? `mailto:${client.email}` : '#';
-                          if (client.email) {
-                            window.location.href = emailUrl;
-                          } else {
-                            alert('No email address available for this client');
-                          }
-                        }}
-                        disabled={!client.email}
-                        title="Email client"
-                      >
-                        📧
-                      </button>
-                    </div>
-                  </div>
-                </div>
-              );
-            })}
+            {activeTab === 'active' && clients.map(client => renderClientCard(client, false))}
+            {activeTab === 'former' && formerClients.map(client => renderClientCard(client, true))}
           </div>
         </>
       )}
 
       {/* No Clients State */}
-      {!loading && clients.length === 0 && availableConnections.length === 0 && (
+      {!loading && clients.length === 0 && formerClients.length === 0 && availableConnections.length === 0 && (
         <div className={styles.emptyState}>
           <div className={styles.emptyStateIcon}>👥</div>
           <h3 className={styles.emptyStateTitle}>No Clients Yet</h3>
@@ -605,11 +585,6 @@ const handleOpenClientModal = (client) => {
             ← Back to Dashboard
           </button>
         </div>
-      )}
-
-      {/* Expose selected client for parent component to handle modal */}
-      {selectedClient && (
-        <div className={styles.hiddenClientData} data-selected-client={JSON.stringify(selectedClient)} />
       )}
     </div>
   );

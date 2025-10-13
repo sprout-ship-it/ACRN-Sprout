@@ -1,4 +1,4 @@
-// src/components/features/connections/ConnectionHub.js - UPDATED with modals and fixes
+// src/components/features/connections/ConnectionHub.js - UPDATED with modals, fixes, and cascading
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../../../hooks/useAuth';
 import { supabase } from '../../../utils/supabase';
@@ -500,13 +500,75 @@ const ConnectionHub = ({ onBack }) => {
           })
           .eq('id', connection.match_group_id);
       } else if (connection.type === 'peer_support') {
-        await supabase
+        // ✅ CASCADE: Update peer_support_matches to active
+        const { data: matchData, error: matchError } = await supabase
           .from('peer_support_matches')
           .update({ 
             status: 'active',
             updated_at: new Date().toISOString()
           })
-          .eq('id', connection.peer_support_match_id);
+          .eq('id', connection.peer_support_match_id)
+          .select()
+          .single();
+
+        if (matchError) throw matchError;
+
+        // ✅ CASCADE: Create pss_clients record for the peer specialist
+        // Determine who is the peer specialist and who is the client
+        const isPeerSpecialist = profileIds.peerSupport && connection.other_person?.professional_title;
+        const peerSpecialistId = isPeerSpecialist ? profileIds.peerSupport : connection.other_person?.id;
+        const clientId = isPeerSpecialist ? connection.other_person?.id : profileIds.applicant;
+
+        if (peerSpecialistId && clientId) {
+          // Check if pss_clients record already exists
+          const { data: existingClient } = await supabase
+            .from('pss_clients')
+            .select('id, status')
+            .eq('peer_specialist_id', peerSpecialistId)
+            .eq('client_id', clientId)
+            .single();
+
+          if (existingClient) {
+            // Reactivate if it was previously inactive
+            if (existingClient.status === 'inactive') {
+              await supabase
+                .from('pss_clients')
+                .update({
+                  status: 'active',
+                  updated_at: new Date().toISOString()
+                })
+                .eq('id', existingClient.id);
+              
+              console.log('✅ Reactivated existing pss_clients record');
+            }
+          } else {
+            // Create new pss_clients record
+            const nextFollowupDate = new Date();
+            nextFollowupDate.setDate(nextFollowupDate.getDate() + 7); // 7 days from now
+
+            const { error: clientError } = await supabase
+              .from('pss_clients')
+              .insert({
+                peer_specialist_id: peerSpecialistId,
+                client_id: clientId,
+                status: 'active',
+                followup_frequency: 'weekly',
+                next_followup_date: nextFollowupDate.toISOString().split('T')[0],
+                total_sessions: 0,
+                recovery_goals: [],
+                progress_notes: [],
+                consent_to_contact: true,
+                created_by: profile.id
+              });
+
+            if (clientError) {
+              console.error('Error creating pss_clients record:', clientError);
+              // Don't throw - peer_support_matches is already active, this is supplementary
+            } else {
+              console.log('✅ Created new pss_clients record');
+            }
+          }
+        }
       } else if (connection.type === 'employer') {
         await supabase
           .from('employment_matches')
@@ -542,14 +604,39 @@ const ConnectionHub = ({ onBack }) => {
           .delete()
           .eq('id', connection.match_group_id);
       } else if (connection.type === 'peer_support') {
+        // ✅ CASCADE: Update peer_support_matches to inactive
         await supabase
           .from('peer_support_matches')
-          .update({ status: 'inactive' })
+          .update({ 
+            status: 'inactive',
+            updated_at: new Date().toISOString()
+          })
           .eq('id', connection.peer_support_match_id);
+
+        // ✅ CASCADE: Mark any existing pss_clients record as inactive
+        const isPeerSpecialist = profileIds.peerSupport && connection.other_person?.professional_title;
+        const peerSpecialistId = isPeerSpecialist ? profileIds.peerSupport : connection.other_person?.id;
+        const clientId = isPeerSpecialist ? connection.other_person?.id : profileIds.applicant;
+
+        if (peerSpecialistId && clientId) {
+          await supabase
+            .from('pss_clients')
+            .update({
+              status: 'inactive',
+              updated_at: new Date().toISOString()
+            })
+            .eq('peer_specialist_id', peerSpecialistId)
+            .eq('client_id', clientId);
+          
+          console.log('✅ Marked any existing pss_clients record as inactive');
+        }
       } else if (connection.type === 'employer') {
         await supabase
           .from('employment_matches')
-          .update({ status: 'inactive' })
+          .update({ 
+            status: 'inactive',
+            updated_at: new Date().toISOString()
+          })
           .eq('id', connection.employment_match_id);
       }
 
@@ -578,14 +665,39 @@ const ConnectionHub = ({ onBack }) => {
           .delete()
           .eq('id', connection.match_group_id);
       } else if (connection.type === 'peer_support') {
+        // ✅ CASCADE: Update peer_support_matches to inactive
         await supabase
           .from('peer_support_matches')
-          .update({ status: 'inactive' })
+          .update({ 
+            status: 'inactive',
+            updated_at: new Date().toISOString()
+          })
           .eq('id', connection.peer_support_match_id);
+
+        // ✅ CASCADE: Mark any existing pss_clients record as inactive
+        const isPeerSpecialist = profileIds.peerSupport && connection.other_person?.professional_title;
+        const peerSpecialistId = isPeerSpecialist ? profileIds.peerSupport : connection.other_person?.id;
+        const clientId = isPeerSpecialist ? connection.other_person?.id : profileIds.applicant;
+
+        if (peerSpecialistId && clientId) {
+          await supabase
+            .from('pss_clients')
+            .update({
+              status: 'inactive',
+              updated_at: new Date().toISOString()
+            })
+            .eq('peer_specialist_id', peerSpecialistId)
+            .eq('client_id', clientId);
+          
+          console.log('✅ Marked any existing pss_clients record as inactive');
+        }
       } else if (connection.type === 'employer') {
         await supabase
           .from('employment_matches')
-          .update({ status: 'inactive' })
+          .update({ 
+            status: 'inactive',
+            updated_at: new Date().toISOString()
+          })
           .eq('id', connection.employment_match_id);
       }
 
@@ -615,14 +727,45 @@ const ConnectionHub = ({ onBack }) => {
         });
         if (error) throw error;
       } else if (connection.type === 'peer_support') {
+        // ✅ CASCADE: Update peer_support_matches to inactive
         await supabase
           .from('peer_support_matches')
-          .update({ status: 'inactive' })
+          .update({ 
+            status: 'inactive',
+            updated_at: new Date().toISOString()
+          })
           .eq('id', connection.peer_support_match_id);
+
+        // ✅ CASCADE: Update pss_clients to inactive (preserve the record for history)
+        // Determine who is the peer specialist and who is the client
+        const isPeerSpecialist = profileIds.peerSupport && connection.other_person?.professional_title;
+        const peerSpecialistId = isPeerSpecialist ? profileIds.peerSupport : connection.other_person?.id;
+        const clientId = isPeerSpecialist ? connection.other_person?.id : profileIds.applicant;
+
+        if (peerSpecialistId && clientId) {
+          const { error: clientError } = await supabase
+            .from('pss_clients')
+            .update({
+              status: 'inactive',
+              updated_at: new Date().toISOString()
+            })
+            .eq('peer_specialist_id', peerSpecialistId)
+            .eq('client_id', clientId);
+
+          if (clientError) {
+            console.error('Error updating pss_clients record:', clientError);
+            // Don't throw - peer_support_matches is already inactive, this is supplementary
+          } else {
+            console.log('✅ Marked pss_clients record as inactive');
+          }
+        }
       } else if (connection.type === 'employer') {
         await supabase
           .from('employment_matches')
-          .update({ status: 'inactive' })
+          .update({ 
+            status: 'inactive',
+            updated_at: new Date().toISOString()
+          })
           .eq('id', connection.employment_match_id);
       }
 
