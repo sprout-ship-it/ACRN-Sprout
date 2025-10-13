@@ -369,13 +369,14 @@ const ConnectionHub = ({ onBack }) => {
 
       if (orConditions.length > 0) {
         try {
+          // ✅ FIXED: Include 'forming' status for active connections
           const { data: matchGroups, error: matchError } = await supabase
             .from('match_groups')
             .select('*')
             .or(orConditions.join(','))
-            .in('status', ['confirmed', 'active']);
+            .in('status', ['confirmed', 'active', 'forming']);
 
-          console.log('📊 Raw match_groups query result:', { data: matchGroups, error: matchError });
+          console.log('📊 Match_groups with confirmed/active/forming status:', { data: matchGroups, error: matchError });
 
           if (matchError) {
             console.warn('⚠️ Error loading match groups:', matchError);
