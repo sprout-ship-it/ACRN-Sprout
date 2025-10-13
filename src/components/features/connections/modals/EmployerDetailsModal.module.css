@@ -1,0 +1,521 @@
+/* src/components/features/connections/modals/EmployerDetailsModal.module.css */
+
+/* ==================== MODAL OVERLAY & CONTAINER ==================== */
+.modalOverlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.6);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  padding: var(--spacing-lg);
+  overflow-y: auto;
+}
+
+.modalContent {
+  background: white;
+  border-radius: var(--radius-xl);
+  box-shadow: var(--shadow-xl);
+  max-width: 800px;
+  width: 100%;
+  max-height: 90vh;
+  overflow-y: auto;
+  position: relative;
+  animation: modalSlideIn 0.3s ease-out;
+}
+
+@keyframes modalSlideIn {
+  from {
+    opacity: 0;
+    transform: translateY(-30px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.modalClose {
+  position: absolute;
+  top: var(--spacing-lg);
+  right: var(--spacing-lg);
+  background: rgba(255, 255, 255, 0.95);
+  border: none;
+  font-size: 2rem;
+  cursor: pointer;
+  color: var(--gray-600);
+  transition: var(--transition-fast);
+  width: 40px;
+  height: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  z-index: 10;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+}
+
+.modalClose:hover {
+  background: white;
+  color: var(--gray-900);
+  transform: rotate(90deg);
+}
+
+.modalBody {
+  padding: 0;
+}
+
+/* ==================== EMPLOYER HEADER ==================== */
+.employerHeader {
+  padding: var(--spacing-xxl);
+  color: white;
+  border-radius: var(--radius-xl) var(--radius-xl) 0 0;
+  position: relative;
+}
+
+.employerHeaderContent {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-lg);
+}
+
+.employerIcon {
+  font-size: 4rem;
+  width: 80px;
+  height: 80px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(255, 255, 255, 0.2);
+  border-radius: var(--radius-xl);
+  flex-shrink: 0;
+  backdrop-filter: blur(10px);
+}
+
+.employerHeaderInfo {
+  flex: 1;
+  min-width: 0;
+}
+
+.employerTitle {
+  font-size: 2rem;
+  margin-bottom: var(--spacing-sm);
+  color: white;
+  font-family: var(--font-serif);
+  font-weight: 700;
+  text-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.employerSubtitle {
+  font-size: 1.1rem;
+  opacity: 0.95;
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-xs);
+}
+
+/* ==================== BADGE SECTION ==================== */
+.badgeSection {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--spacing-sm);
+  padding: var(--spacing-lg) var(--spacing-xxl);
+  background: var(--gray-100);
+}
+
+/* ==================== INFO SECTIONS ==================== */
+.infoSection {
+  padding: var(--spacing-xl) var(--spacing-xxl);
+  border-bottom: 1px solid var(--border-beige);
+}
+
+.infoSection:last-of-type {
+  border-bottom: none;
+}
+
+.sectionTitle {
+  font-size: 1.25rem;
+  font-weight: 600;
+  color: var(--gray-900);
+  margin-bottom: var(--spacing-lg);
+  font-family: var(--font-serif);
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-sm);
+}
+
+/* ==================== INFO GRID ==================== */
+.infoGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: var(--spacing-lg);
+}
+
+.infoItem {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--spacing-md);
+  padding: var(--spacing-md);
+  background: var(--bg-light-cream);
+  border-radius: var(--radius-md);
+  transition: var(--transition-fast);
+}
+
+.infoItem:hover {
+  background: var(--bg-light-purple);
+  transform: translateY(-2px);
+}
+
+.infoIcon {
+  font-size: 1.5rem;
+  flex-shrink: 0;
+  margin-top: 2px;
+}
+
+.infoLabel {
+  font-size: 0.875rem;
+  color: var(--gray-600);
+  font-weight: 500;
+  margin-bottom: 2px;
+}
+
+.infoValue {
+  font-size: 1rem;
+  color: var(--gray-900);
+  font-weight: 600;
+}
+
+/* ==================== TAG SECTION ==================== */
+.tagList {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--spacing-sm);
+}
+
+.tag {
+  display: inline-block;
+  padding: 6px 12px;
+  background: var(--bg-light-purple);
+  color: var(--primary-purple);
+  border-radius: var(--radius-md);
+  font-size: 0.875rem;
+  font-weight: 500;
+  border: 1px solid rgba(160, 32, 240, 0.2);
+  transition: var(--transition-fast);
+}
+
+.tag:hover {
+  background: var(--primary-purple);
+  color: white;
+  border-color: var(--primary-purple);
+  transform: translateY(-1px);
+}
+
+.tagSuccess {
+  background: var(--success-bg);
+  color: var(--success-text);
+  border-color: var(--success-border);
+}
+
+.tagSuccess:hover {
+  background: var(--success-text);
+  color: white;
+}
+
+.tagInfo {
+  background: var(--info-bg);
+  color: var(--info-text);
+  border-color: var(--info-border);
+}
+
+.tagInfo:hover {
+  background: var(--info-text);
+  color: white;
+}
+
+/* ==================== BIO TEXT ==================== */
+.bioText {
+  font-size: 1rem;
+  line-height: 1.7;
+  color: var(--gray-700);
+  white-space: pre-wrap;
+  background: var(--gray-100);
+  padding: var(--spacing-lg);
+  border-radius: var(--radius-md);
+  border-left: 4px solid #ef4444;
+  margin: 0;
+}
+
+/* ==================== CONTACT INFO ==================== */
+.contactInfo {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-md);
+  background: var(--bg-light-cream);
+  padding: var(--spacing-lg);
+  border-radius: var(--radius-md);
+  margin-bottom: var(--spacing-lg);
+}
+
+.contactItem {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-md);
+  padding: var(--spacing-md);
+  background: white;
+  border-radius: var(--radius-sm);
+  transition: var(--transition-fast);
+}
+
+.contactItem:hover {
+  box-shadow: var(--shadow-sm);
+  transform: translateY(-2px);
+}
+
+.contactIcon {
+  font-size: 1.5rem;
+  flex-shrink: 0;
+}
+
+.contactLabel {
+  font-size: 0.875rem;
+  color: var(--gray-600);
+  font-weight: 500;
+  margin-bottom: 2px;
+}
+
+.contactValue {
+  font-size: 1rem;
+  color: #ef4444;
+  font-weight: 600;
+  text-decoration: none;
+  transition: var(--transition-fast);
+}
+
+.contactValue:hover {
+  color: var(--primary-purple);
+  text-decoration: underline;
+}
+
+/* ==================== APPLICATION NOTE ==================== */
+.applicationNote {
+  padding: var(--spacing-lg);
+  background: var(--info-bg);
+  border-left: 4px solid var(--info-text);
+  border-radius: var(--radius-md);
+  color: var(--info-text);
+  font-size: 0.95rem;
+  line-height: 1.6;
+}
+
+.applicationNote strong {
+  display: block;
+  margin-bottom: var(--spacing-sm);
+}
+
+/* ==================== LOCKED CONTACT INFO ==================== */
+.contactInfoLocked {
+  background: var(--warning-bg);
+  border: 2px solid var(--warning-border);
+  border-radius: var(--radius-md);
+  padding: var(--spacing-xl);
+  text-align: center;
+  margin: var(--spacing-lg) var(--spacing-xxl);
+}
+
+.lockIcon {
+  font-size: 3rem;
+  margin-bottom: var(--spacing-md);
+}
+
+.lockMessage {
+  color: var(--warning-text);
+}
+
+.lockMessage strong {
+  display: block;
+  font-size: 1.125rem;
+  margin-bottom: var(--spacing-sm);
+}
+
+.lockMessage p {
+  font-size: 0.9rem;
+  margin-bottom: 0;
+}
+
+/* ==================== HIRING NOTICE ==================== */
+.hiringNotice {
+  padding: var(--spacing-lg);
+  background: var(--warning-bg);
+  border-left: 4px solid var(--warning-text);
+  border-radius: var(--radius-md);
+  color: var(--warning-text);
+  font-size: 0.95rem;
+  line-height: 1.6;
+  margin: var(--spacing-lg) var(--spacing-xxl);
+}
+
+.hiringNotice strong {
+  display: block;
+  margin-bottom: var(--spacing-sm);
+}
+
+/* ==================== MODAL ACTIONS ==================== */
+.modalActions {
+  display: flex;
+  gap: var(--spacing-md);
+  justify-content: flex-end;
+  padding: var(--spacing-xl) var(--spacing-xxl);
+  background: var(--gray-100);
+  border-radius: 0 0 var(--radius-xl) var(--radius-xl);
+}
+
+/* ==================== RESPONSIVE DESIGN ==================== */
+@media (max-width: 768px) {
+  .modalOverlay {
+    padding: var(--spacing-sm);
+    align-items: flex-start;
+  }
+
+  .modalContent {
+    max-height: 95vh;
+    margin: var(--spacing-md) 0;
+  }
+
+  .employerHeader {
+    padding: var(--spacing-xl) var(--spacing-lg);
+  }
+
+  .employerHeaderContent {
+    flex-direction: column;
+    text-align: center;
+    align-items: center;
+  }
+
+  .employerIcon {
+    width: 60px;
+    height: 60px;
+    font-size: 3rem;
+  }
+
+  .employerTitle {
+    font-size: 1.5rem;
+  }
+
+  .employerSubtitle {
+    font-size: 1rem;
+    justify-content: center;
+  }
+
+  .badgeSection {
+    padding: var(--spacing-md) var(--spacing-lg);
+    justify-content: center;
+  }
+
+  .infoSection {
+    padding: var(--spacing-lg);
+  }
+
+  .modalClose {
+    top: var(--spacing-md);
+    right: var(--spacing-md);
+    width: 36px;
+    height: 36px;
+    font-size: 1.75rem;
+  }
+
+  .infoGrid {
+    grid-template-columns: 1fr;
+    gap: var(--spacing-sm);
+  }
+
+  .modalActions {
+    padding: var(--spacing-lg);
+    flex-direction: column;
+  }
+
+  .modalActions button {
+    width: 100%;
+  }
+
+  .contactInfoLocked {
+    margin: var(--spacing-md) var(--spacing-lg);
+    padding: var(--spacing-lg);
+  }
+
+  .hiringNotice {
+    margin: var(--spacing-md) var(--spacing-lg);
+  }
+
+  .applicationNote {
+    padding: var(--spacing-md);
+  }
+}
+
+@media (max-width: 480px) {
+  .employerHeader {
+    padding: var(--spacing-lg) var(--spacing-md);
+  }
+
+  .employerTitle {
+    font-size: 1.25rem;
+  }
+
+  .employerSubtitle {
+    font-size: 0.9rem;
+  }
+
+  .sectionTitle {
+    font-size: 1.125rem;
+  }
+
+  .infoItem {
+    padding: var(--spacing-sm);
+  }
+
+  .bioText {
+    padding: var(--spacing-md);
+    font-size: 0.9rem;
+  }
+
+  .contactInfo {
+    padding: var(--spacing-md);
+  }
+
+  .contactItem {
+    flex-direction: column;
+    align-items: flex-start;
+    text-align: left;
+  }
+
+  .applicationNote {
+    font-size: 0.9rem;
+  }
+
+  .hiringNotice {
+    font-size: 0.9rem;
+  }
+}
+
+/* ==================== SCROLLBAR STYLING ==================== */
+.modalContent::-webkit-scrollbar {
+  width: 8px;
+}
+
+.modalContent::-webkit-scrollbar-track {
+  background: var(--gray-100);
+  border-radius: var(--radius-md);
+}
+
+.modalContent::-webkit-scrollbar-thumb {
+  background: var(--gray-400);
+  border-radius: var(--radius-md);
+}
+
+.modalContent::-webkit-scrollbar-thumb:hover {
+  background: var(--gray-500);
+}
