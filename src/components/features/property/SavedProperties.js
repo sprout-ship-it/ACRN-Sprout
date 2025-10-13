@@ -1,4 +1,4 @@
-// src/components/features/property/SavedProperties.js - Enhanced with Outreach Status
+// src/components/features/property/SavedProperties.js - UPDATED with pending request tracking
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../../../hooks/useAuth';
 import { supabase } from '../../../utils/supabase';
@@ -15,6 +15,8 @@ const SavedProperties = () => {
   const [properties, setProperties] = useState([]);
   const [error, setError] = useState(null);
   const [outreachStatus, setOutreachStatus] = useState(new Map()); // Track outreach status per property
+  const [applicantProfileId, setApplicantProfileId] = useState(null); // ✅ NEW: Track applicant ID
+  const [pendingPropertyRequests, setPendingPropertyRequests] = useState(new Set()); // ✅ NEW: Track pending requests
 
   // ✅ Get saved properties functionality (only pass user)
   const {
@@ -24,25 +26,37 @@ const SavedProperties = () => {
     isPropertySaved
   } = useSavedProperties(user);
 
-// ✅ NEW: Fetch outreach status for saved properties using match_groups
-  const fetchOutreachStatus = async (propertyIds) => {
-    if (!user?.id || !profile?.id || propertyIds.length === 0) {
-      return new Map();
-    }
+  /**
+   * ✅ NEW: Load applicant profile ID
+   */
+  const loadApplicantProfileId = async () => {
+    if (!profile?.id) return;
 
     try {
-      // Get applicant profile ID
-      const { data: applicantProfile, error: applicantError } = await supabase
+      const { data, error } = await supabase
         .from('applicant_matching_profiles')
         .select('id')
         .eq('user_id', profile.id)
         .single();
 
-      if (applicantError || !applicantProfile) {
-        console.warn('No applicant profile found for outreach status');
-        return new Map();
+      if (error) throw error;
+      
+      if (data) {
+        setApplicantProfileId(data.id);
+        console.log('✅ Loaded applicant profile ID:', data.id);
       }
+    } catch (err) {
+      console.error('Error loading applicant profile:', err);
+    }
+  };
 
+// ✅ UPDATED: Fetch outreach status AND build pendingPropertyRequests Set
+  const fetchOutreachStatus = async (propertyIds) => {
+    if (!applicantProfileId || propertyIds.length === 0) {
+      return { statusMap: new Map(), pendingSet: new Set() };
+    }
+
+    try {
       // Get match_groups for these properties where this applicant is in roommate_ids
       const { data: inquiries, error: inquiriesError } = await supabase
         .from('match_groups')
@@ -53,19 +67,20 @@ const SavedProperties = () => {
 
       if (inquiriesError) {
         console.warn('Error fetching outreach status:', inquiriesError);
-        return new Map();
+        return { statusMap: new Map(), pendingSet: new Set() };
       }
 
       // Filter to only include inquiries where this applicant is in roommate_ids
       // and create status map (most recent inquiry per property)
       const statusMap = new Map();
+      const pendingSet = new Set();
       
       if (inquiries && inquiries.length > 0) {
         inquiries.forEach(inquiry => {
           const roommateIds = inquiry.roommate_ids || [];
           
           // Check if this applicant is in the roommate_ids array
-          if (roommateIds.includes(applicantProfile.id)) {
+          if (roommateIds.includes(applicantProfileId)) {
             // Only store if we haven't already stored this property (keeps most recent)
             if (!statusMap.has(inquiry.property_id)) {
               statusMap.set(inquiry.property_id, {
@@ -73,24 +88,31 @@ const SavedProperties = () => {
                 requested_at: inquiry.created_at,
                 responded_at: inquiry.updated_at !== inquiry.created_at ? inquiry.updated_at : null
               });
+              
+              // ✅ NEW: Add to pending set if status is 'requested'
+              if (inquiry.status === 'requested') {
+                pendingSet.add(inquiry.property_id);
+              }
             }
           }
         });
       }
 
-      return statusMap;
+      console.log(`✅ Loaded ${statusMap.size} outreach statuses, ${pendingSet.size} pending`);
+      return { statusMap, pendingSet };
 
     } catch (err) {
       console.warn('Error fetching outreach status:', err);
-      return new Map();
+      return { statusMap: new Map(), pendingSet: new Set() };
     }
   };
 
-  // ✅ Fetch full property details for saved properties with outreach status
+  // ✅ UPDATED: Fetch full property details for saved properties with outreach status
   const fetchSavedPropertyDetails = async () => {
     if (!user?.id || savedProperties.size === 0) {
       setProperties([]);
       setOutreachStatus(new Map());
+      setPendingPropertyRequests(new Set());
       setLoading(false);
       return;
     }
@@ -113,11 +135,12 @@ const SavedProperties = () => {
         throw error;
       }
 
-      // Fetch outreach status
-      const statusMap = await fetchOutreachStatus(savedPropertyIds);
+      // Fetch outreach status and pending requests
+      const { statusMap, pendingSet } = await fetchOutreachStatus(savedPropertyIds);
 
       setProperties(data || []);
       setOutreachStatus(statusMap);
+      setPendingPropertyRequests(pendingSet); // ✅ NEW: Set pending requests
       
     } catch (err) {
       console.error('Error fetching saved property details:', err);
@@ -127,10 +150,17 @@ const SavedProperties = () => {
     }
   };
 
-  // ✅ Load saved property details when savedProperties changes
+  // ✅ NEW: Load applicant profile on mount
   useEffect(() => {
-    fetchSavedPropertyDetails();
-  }, [savedProperties, user?.id]);
+    loadApplicantProfileId();
+  }, [profile?.id]);
+
+  // ✅ UPDATED: Load saved property details when applicantProfileId or savedProperties changes
+  useEffect(() => {
+    if (applicantProfileId) {
+      fetchSavedPropertyDetails();
+    }
+  }, [savedProperties, user?.id, applicantProfileId]);
 
   // ✅ Enhanced contact landlord with profile lookup
   const handleContactLandlord = async (property) => {
@@ -193,46 +223,15 @@ Thank you!`;
 
   // ✅ UPDATED: Send housing inquiry with status refresh
   const handleSendHousingInquiry = async (property) => {
-    if (!property.landlord_id) {
-      alert('Direct inquiries are not available for this property. Please use the contact owner option.');
-      return;
-    }
-
-    try {
-      const requestData = {
-        requester_id: user.id,
-        target_id: property.landlord_id,
-        request_type: 'housing',
-        message: `Hi! I'm reaching out about your property "${property.title}" which I've saved to my favorites. I'm very interested in this ${property.is_recovery_housing ? 'recovery-friendly ' : ''}housing option.
-
-Property Details:
-- Monthly Rent: $${property.monthly_rent}
-- Bedrooms: ${property.bedrooms || 'Studio'}
-- Location: ${property.city}, ${property.state}
-
-I'd love to discuss availability, the application process, and next steps. Thank you!`,
-        status: 'pending'
-      };
-
-      const result = await supabase
-        .from('match_requests')
-        .insert(requestData)
-        .select();
-
-      if (result.error) {
-        throw new Error(result.error.message);
+    // This will be handled by PropertyCard internally, but we need to refresh after
+    // Just refresh the status after the card handles it
+    setTimeout(async () => {
+      if (applicantProfileId) {
+        const { statusMap, pendingSet } = await fetchOutreachStatus(Array.from(savedProperties));
+        setOutreachStatus(statusMap);
+        setPendingPropertyRequests(pendingSet);
       }
-
-      // Refresh outreach status after sending inquiry
-      const statusMap = await fetchOutreachStatus(Array.from(savedProperties));
-      setOutreachStatus(statusMap);
-
-      alert('Housing inquiry sent! The landlord will be notified and can respond through their dashboard.');
-      
-    } catch (err) {
-      console.error('Error sending housing inquiry:', err);
-      alert('Failed to send inquiry. Please try the contact owner option instead.');
-    }
+    }, 1000); // Give PropertyCard time to send the request
   };
 
   // ✅ Handle remove from favorites with confirmation
@@ -254,7 +253,7 @@ I'd love to discuss availability, the application process, and next steps. Thank
   };
 
 
-// ✅ NEW: Get outreach status display info (updated for match_groups statuses)
+// ✅ Get outreach status display info (updated for match_groups statuses)
   const getOutreachStatusInfo = (propertyId) => {
     const status = outreachStatus.get(propertyId);
     if (!status) return null;
@@ -287,7 +286,7 @@ I'd love to discuss availability, the application process, and next steps. Thank
     }
   };
 
-  // ✅ NEW: Enhanced property card component wrapper
+  // ✅ UPDATED: Enhanced property card component wrapper with pendingPropertyRequests
   const EnhancedPropertyCard = ({ property, ...props }) => {
     const statusInfo = getOutreachStatusInfo(property.id);
     
@@ -309,10 +308,11 @@ I'd love to discuss availability, the application process, and next steps. Thank
           </div>
         )}
         
-        {/* Original Property Card */}
+        {/* Original Property Card with pendingPropertyRequests */}
         <PropertyCard
           property={property}
           savedProperties={savedProperties}
+          pendingPropertyRequests={pendingPropertyRequests}
           onContactLandlord={props.onContactLandlord}
           onSaveProperty={props.onSaveProperty}
           onSendHousingInquiry={props.onSendHousingInquiry}
@@ -392,7 +392,7 @@ I'd love to discuss availability, the application process, and next steps. Thank
     );
   }
 
-  // ✅ NEW: Group properties by outreach status for better organization
+  // ✅ Group properties by outreach status for better organization
   const propertiesWithPending = properties.filter(p => getOutreachStatusInfo(p.id)?.text.includes('Sent'));
   const propertiesWithApproved = properties.filter(p => getOutreachStatusInfo(p.id)?.text.includes('Approved'));
   const propertiesWithRejected = properties.filter(p => getOutreachStatusInfo(p.id)?.text.includes('Declined'));
@@ -429,7 +429,7 @@ I'd love to discuss availability, the application process, and next steps. Thank
         </div>
       </div>
 
-      {/* ✅ NEW: Status sections for better organization */}
+      {/* ✅ Status sections for better organization */}
       {propertiesWithApproved.length > 0 && (
         <div className="mb-4">
           <h3 className={styles.sectionTitle}>✅ Approved Inquiries ({propertiesWithApproved.length})</h3>

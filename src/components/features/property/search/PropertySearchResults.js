@@ -1,4 +1,4 @@
-// src/components/features/property/search/PropertySearchResults.js - UPDATED WITH CSS MODULE
+// src/components/features/property/search/PropertySearchResults.js - UPDATED WITH PENDING REQUESTS
 import React from 'react';
 import PropTypes from 'prop-types';
 import PropertyCard from './PropertyCard';
@@ -15,6 +15,7 @@ const PropertySearchResults = ({
   showPagination,
   searchMode,
   savedProperties,
+  pendingPropertyRequests, // ✅ NEW: Track pending requests
   onPageChange,
   onContactLandlord,
   onSaveProperty,
@@ -137,7 +138,7 @@ const PropertySearchResults = ({
         </div>
       </div>
 
-      {/* ✅ UPDATED: Results Grid */}
+      {/* ✅ UPDATED: Results Grid - Pass pendingPropertyRequests to PropertyCard */}
       <div className={styles.resultsGrid}>
         <div className="grid-auto">
           {properties.map(property => (
@@ -145,6 +146,7 @@ const PropertySearchResults = ({
               key={property.id}
               property={property}
               savedProperties={savedProperties}
+              pendingPropertyRequests={pendingPropertyRequests}
               onContactLandlord={onContactLandlord}
               onSaveProperty={onSaveProperty}
               onSendHousingInquiry={onSendHousingInquiry}
@@ -199,12 +201,18 @@ PropertySearchResults.propTypes = {
   showPagination: PropTypes.bool.isRequired,
   searchMode: PropTypes.oneOf(['basic', 'recovery']).isRequired,
   savedProperties: PropTypes.instanceOf(Set).isRequired,
+  pendingPropertyRequests: PropTypes.instanceOf(Set), // ✅ NEW: Pending requests prop
   onPageChange: PropTypes.func.isRequired,
   onContactLandlord: PropTypes.func.isRequired,
   onSaveProperty: PropTypes.func.isRequired,
   onSendHousingInquiry: PropTypes.func.isRequired,
   onClearAllFilters: PropTypes.func.isRequired,
   onSearchModeChange: PropTypes.func.isRequired
+};
+
+// ✅ NEW: Default props
+PropertySearchResults.defaultProps = {
+  pendingPropertyRequests: new Set()
 };
 
 export default PropertySearchResults;

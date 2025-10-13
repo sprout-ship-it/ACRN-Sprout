@@ -1,5 +1,5 @@
-// src/components/features/property/PropertySearch.js - UPDATED WITH PROPER FAVORITES
-import React, { useState } from 'react';
+// src/components/features/property/PropertySearch.js - UPDATED with request tracking
+import React, { useState, useEffect } from 'react';
 import { useAuth } from '../../../hooks/useAuth';
 import { supabase } from '../../../utils/supabase';
 
@@ -23,6 +23,11 @@ const PropertySearch = () => {
   
   // ✅ Advanced filters toggle state
   const [showAdvancedFilters, setShowAdvancedFilters] = useState(false);
+  
+  // ✅ NEW: Track applicant profile ID and pending property requests
+  const [applicantProfileId, setApplicantProfileId] = useState(null);
+  const [pendingPropertyRequests, setPendingPropertyRequests] = useState(new Set());
+  const [requestsLoading, setRequestsLoading] = useState(false);
 
   // ✅ NEW: Get saved properties functionality (only pass user)
   const {
@@ -64,6 +69,71 @@ const PropertySearch = () => {
     clearAllFilters,
     performSearch
   } = usePropertySearch(user);
+
+  /**
+   * ✅ NEW: Load applicant profile ID
+   */
+  const loadApplicantProfileId = async () => {
+    if (!profile?.id) return;
+
+    try {
+      const { data, error } = await supabase
+        .from('applicant_matching_profiles')
+        .select('id')
+        .eq('user_id', profile.id)
+        .single();
+
+      if (error) throw error;
+      
+      if (data) {
+        setApplicantProfileId(data.id);
+        console.log('✅ Loaded applicant profile ID:', data.id);
+      }
+    } catch (err) {
+      console.error('Error loading applicant profile:', err);
+    }
+  };
+
+  /**
+   * ✅ NEW: Load pending property requests
+   */
+  const loadPendingPropertyRequests = async () => {
+    if (!applicantProfileId) return;
+
+    setRequestsLoading(true);
+
+    try {
+      // Query match_groups where user is requester and status is 'requested'
+      // AND property_id is not null (property matches only)
+      const { data: matchGroups, error } = await supabase
+        .from('match_groups')
+        .select('property_id, status')
+        .eq('requested_by_id', applicantProfileId)
+        .eq('status', 'requested')
+        .not('property_id', 'is', null);
+
+      if (error) throw error;
+
+      // Create set of property IDs with pending requests
+      const pendingSet = new Set(
+        matchGroups?.map(group => group.property_id).filter(Boolean) || []
+      );
+
+      setPendingPropertyRequests(pendingSet);
+      console.log(`✅ Loaded ${pendingSet.size} pending property requests`);
+    } catch (err) {
+      console.error('Error loading pending property requests:', err);
+    } finally {
+      setRequestsLoading(false);
+    }
+  };
+
+  /**
+   * ✅ NEW: Check if property has pending request
+   */
+  const hasPropertyRequest = (propertyId) => {
+    return pendingPropertyRequests.has(propertyId);
+  };
 
   // ✅ Handle "Use My Preferences" button
   const handleUseMyPreferences = () => {
@@ -134,42 +204,68 @@ Thank you!`;
     }
   };
 
-  // ✅ Send housing inquiry through match system
+  // ✅ UPDATED: Send housing inquiry and refresh pending requests
   const handleSendHousingInquiry = async (property) => {
     if (!property.landlord_id) {
       alert('Direct inquiries are not available for this property. Please use the contact owner option.');
       return;
     }
 
+    if (!applicantProfileId) {
+      alert('Please complete your applicant profile before sending property requests.');
+      return;
+    }
+
+    // Check if request already exists
+    if (hasPropertyRequest(property.id)) {
+      alert('You have already sent a request for this property.');
+      return;
+    }
+
     try {
-      const requestData = {
-        requester_id: user.id,
-        target_id: property.landlord_id,
-        request_type: 'housing',
-        message: `Hi! I'm interested in your property "${property.title}" at ${property.address}. I'm looking for ${property.is_recovery_housing ? 'recovery-friendly ' : ''}housing and this property looks like it could be a great fit for my needs.
+      // Get landlord's landlord_profile ID
+      const { data: landlordProfile, error: landlordError } = await supabase
+        .from('landlord_profiles')
+        .select('id')
+        .eq('user_id', property.landlord_id)
+        .single();
+
+      if (landlordError || !landlordProfile) {
+        throw new Error('Could not find landlord profile for this property.');
+      }
+
+      // Create match_group entry
+      const matchData = {
+        property_id: property.id,
+        roommate_ids: [applicantProfileId], // Just requester for now
+        status: 'requested',
+        requested_by_id: applicantProfileId,
+        pending_member_id: landlordProfile.id, // Landlord needs to approve
+        message: `Hi! I'm interested in your property "${property.property_name || property.street_address}". I'm looking for ${property.is_recovery_housing ? 'recovery-friendly ' : ''}housing and this property looks like it could be a great fit for my needs.
 
 Property Details I'm interested in:
-- Monthly Rent: $${property.monthly_rent}
+- Monthly Rent: $${property.rent_amount || property.monthly_rent}
 - Bedrooms: ${property.bedrooms || 'Studio'}
 - Location: ${property.city}, ${property.state}
 
 I'd love to discuss availability and the application process. Thank you!`,
-        status: 'pending'
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString()
       };
 
-      const result = await supabase
-        .from('match_requests')
-        .insert(requestData)
-        .select();
+      const { error: insertError } = await supabase
+        .from('match_groups')
+        .insert(matchData);
 
-      if (result.error) {
-        throw new Error(result.error.message);
-      }
+      if (insertError) throw insertError;
 
-      alert('Housing inquiry sent! The landlord will be notified and can respond through their dashboard.');
+      alert('Property request sent! The landlord will be notified and can respond through their dashboard.');
+      
+      // ✅ NEW: Refresh pending requests to update UI
+      await loadPendingPropertyRequests();
     } catch (err) {
       console.error('Error sending housing inquiry:', err);
-      alert('Failed to send inquiry. Please try the contact owner option instead.');
+      alert(`Failed to send request: ${err.message}. Please try again.`);
     }
   };
 
@@ -186,9 +282,9 @@ I'd love to discuss availability and the application process. Thank you!`,
       
       if (success) {
         if (wasAlreadySaved) {
-          alert(`Property "${property.title}" removed from your favorites!`);
+          alert(`Property "${property.property_name || property.street_address}" removed from your favorites!`);
         } else {
-          alert(`Property "${property.title}" saved to your favorites!`);
+          alert(`Property "${property.property_name || property.street_address}" saved to your favorites!`);
         }
       } else {
         alert('Unable to update favorites. Please try again.');
@@ -198,6 +294,18 @@ I'd love to discuss availability and the application process. Thank you!`,
       alert('An error occurred while updating favorites. Please try again.');
     }
   };
+
+  // ✅ NEW: Load applicant profile on mount
+  useEffect(() => {
+    loadApplicantProfileId();
+  }, [profile?.id]);
+
+  // ✅ NEW: Load pending requests when applicant profile ID is available
+  useEffect(() => {
+    if (applicantProfileId) {
+      loadPendingPropertyRequests();
+    }
+  }, [applicantProfileId]);
 
   return (
     <div className="content">
@@ -256,7 +364,7 @@ I'd love to discuss availability and the application process. Thank you!`,
         />
       </div>
 
-      {/* ✅ UPDATED: Search Results with proper saved properties data */}
+      {/* ✅ UPDATED: Search Results with pending requests data */}
       <div data-results-section className={styles.resultsSection}>
         <PropertySearchResults
           loading={loading}
@@ -267,6 +375,7 @@ I'd love to discuss availability and the application process. Thank you!`,
           showPagination={showPagination}
           searchType={searchType}
           savedProperties={savedProperties}
+          pendingPropertyRequests={pendingPropertyRequests}
           onPageChange={handlePageChange}
           onContactLandlord={handleContactLandlord}
           onSaveProperty={handleSavePropertyWithFeedback}

@@ -1,4 +1,4 @@
-// src/components/features/property/search/PropertyCard.js - FIXED HOUSING INQUIRY
+// src/components/features/property/search/PropertyCard.js - UPDATED WITH REQUEST TRACKING
 import React, { useState } from 'react';
 import PropTypes from 'prop-types';
 import { useAuth } from '../../../../hooks/useAuth';
@@ -10,6 +10,7 @@ import styles from './PropertyCard.module.css';
 const PropertyCard = ({
   property,
   savedProperties,
+  pendingPropertyRequests, // ✅ NEW: Track pending requests
   onContactLandlord,
   onSaveProperty,
   onSendHousingInquiry
@@ -18,6 +19,7 @@ const PropertyCard = ({
   const [saving, setSaving] = useState(false);
   const [sendingInquiry, setSendingInquiry] = useState(false);
   const isSaved = savedProperties.has(property.id);
+  const hasPendingRequest = pendingPropertyRequests?.has(property.id) || false; // ✅ NEW: Check pending status
 
   // ✅ Handle save with loading state
   const handleSaveClick = async () => {
@@ -36,6 +38,12 @@ const PropertyCard = ({
 // ✅ FIXED: Housing inquiry using match_groups table
   const handleSendHousingInquiry = async () => {
     if (sendingInquiry || !user || !profile) return;
+    
+    // ✅ NEW: Check if request already pending
+    if (hasPendingRequest) {
+      alert('You have already sent a request for this property. Please wait for a response.');
+      return;
+    }
 
     setSendingInquiry(true);
     
@@ -165,9 +173,14 @@ Thank you for your time.`;
 
 Your inquiry has been sent to the property owner for "${property.title}". 
 
-The landlord will be able to review your request and respond through their dashboard. You can track the status in your Saved Properties if you've favorited this listing.
+The landlord will be able to review your request and respond through their dashboard. You can track the status in your Connection Hub.
 
 Daily limit: ${todayInquiries ? todayInquiries.length + 1 : 1} of 5 inquiries used today.`);
+
+      // ✅ NEW: Call parent's onSendHousingInquiry to refresh pending requests
+      if (onSendHousingInquiry) {
+        onSendHousingInquiry(property);
+      }
 
     } catch (error) {
       console.error('Error sending housing inquiry:', error);
@@ -192,11 +205,17 @@ Daily limit: ${todayInquiries ? todayInquiries.length + 1 : 1} of 5 inquiries us
       </div>
       
       <div className={styles.propertyDetails}>
-        {/* ✅ Property Badges with favorited styling */}
+        {/* ✅ Property Badges with favorited styling and pending request indicator */}
         <div className={`${styles.propertyBadges} mb-2`}>
           {isSaved && (
             <span className={`badge ${styles.badgeFavorited}`}>
               ❤️ Favorited
+            </span>
+          )}
+          {/* ✅ NEW: Show pending request badge */}
+          {hasPendingRequest && (
+            <span className="badge badge-warning">
+              ⏳ Request Sent
             </span>
           )}
           {property.is_recovery_housing && (
@@ -310,19 +329,22 @@ Daily limit: ${todayInquiries ? todayInquiries.length + 1 : 1} of 5 inquiries us
             </button>
           </div>
 
-          {/* ✅ FIXED: Housing Inquiry with proper implementation */}
+          {/* ✅ UPDATED: Housing Inquiry with pending request handling */}
           {property.landlord_id && (
             <div className={styles.secondaryActions}>
               <button
-                className={`btn btn-secondary btn-sm ${styles.fullWidth} ${sendingInquiry ? styles.btnLoading : ''}`}
+                className={`btn btn-sm ${styles.fullWidth} ${hasPendingRequest ? styles.btnRequestSent : 'btn-secondary'} ${sendingInquiry ? styles.btnLoading : ''}`}
                 onClick={handleSendHousingInquiry}
-                disabled={sendingInquiry}
+                disabled={sendingInquiry || hasPendingRequest}
+                title={hasPendingRequest ? 'Request already sent - check Connection Hub for status' : 'Send housing inquiry to landlord'}
               >
                 {sendingInquiry ? (
                   <>
                     <span className={styles.loadingSpinner}></span>
                     Sending Inquiry...
                   </>
+                ) : hasPendingRequest ? (
+                  '⏳ Request Sent'
                 ) : (
                   'Send Housing Inquiry'
                 )}
@@ -336,6 +358,15 @@ Daily limit: ${todayInquiries ? todayInquiries.length + 1 : 1} of 5 inquiries us
           <div className={styles.favoritedFooter}>
             <small className={styles.favoritedMessage}>
               ❤️ You've saved this property to your favorites
+            </small>
+          </div>
+        )}
+        
+        {/* ✅ NEW: Pending request footer message */}
+        {hasPendingRequest && (
+          <div className={styles.pendingRequestFooter}>
+            <small className={styles.pendingRequestMessage}>
+              ⏳ Your inquiry has been sent. Check Connection Hub for updates.
             </small>
           </div>
         )}
@@ -372,13 +403,15 @@ PropertyCard.propTypes = {
     landlord_id: PropTypes.string
   }).isRequired,
   savedProperties: PropTypes.instanceOf(Set).isRequired,
+  pendingPropertyRequests: PropTypes.instanceOf(Set), // ✅ NEW: Pending requests prop
   onContactLandlord: PropTypes.func.isRequired,
   onSaveProperty: PropTypes.func.isRequired,
   onSendHousingInquiry: PropTypes.func
 };
 
-// ✅ Make onSendHousingInquiry optional since we're handling it internally now
+// ✅ UPDATED: Default props
 PropertyCard.defaultProps = {
+  pendingPropertyRequests: new Set(),
   onSendHousingInquiry: () => {}
 };
 

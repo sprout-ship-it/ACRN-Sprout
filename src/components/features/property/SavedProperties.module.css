@@ -1,6 +1,6 @@
-/* src/components/features/property/SavedProperties.module.css */
+/* src/components/features/property/SavedProperties.module.css - Updated with Outreach Status */
 
-/* ✅ Header Section */
+/* ==================== HEADER SECTION ==================== */
 .headerSection {
   display: flex;
   justify-content: space-between;
@@ -28,13 +28,21 @@
   line-height: 1.4;
 }
 
+.outreachSummary {
+  display: inline-block;
+  margin-left: 8px;
+  font-size: 14px;
+  color: var(--gray-600);
+  font-weight: 500;
+}
+
 .headerActions {
   display: flex;
   gap: 12px;
   align-items: center;
 }
 
-/* ✅ Loading States */
+/* ==================== LOADING STATES ==================== */
 .loadingContainer {
   display: flex;
   flex-direction: column;
@@ -65,7 +73,7 @@
   margin: 0;
 }
 
-/* ✅ Error States */
+/* ==================== ERROR STATES ==================== */
 .errorContainer {
   display: flex;
   flex-direction: column;
@@ -94,7 +102,7 @@
   max-width: 400px;
 }
 
-/* ✅ Empty State Actions */
+/* ==================== EMPTY STATE ACTIONS ==================== */
 .emptyStateActions {
   display: flex;
   gap: 12px;
@@ -102,12 +110,149 @@
   margin-top: 24px;
 }
 
-/* ✅ Properties Grid */
-.propertiesGrid {
-  margin-bottom: 32px;
+/* ==================== SECTION TITLES ==================== */
+.sectionTitle {
+  font-size: 20px;
+  font-weight: 600;
+  color: var(--gray-800);
+  margin: 0 0 16px 0;
+  padding-bottom: 8px;
+  border-bottom: 2px solid var(--gray-200);
+  display: flex;
+  align-items: center;
+  gap: 8px;
 }
 
-/* ✅ Tips Section */
+/* ==================== COLLAPSIBLE SECTION ==================== */
+.collapsibleSection {
+  border: 1px solid var(--gray-200);
+  border-radius: var(--radius-md);
+  padding: 16px;
+  background: var(--bg-white);
+}
+
+.collapsibleSection summary {
+  cursor: pointer;
+  list-style: none;
+  user-select: none;
+  padding: 0;
+  margin: 0;
+  border: none;
+}
+
+.collapsibleSection summary::-webkit-details-marker {
+  display: none;
+}
+
+.collapsibleSection summary::before {
+  content: '▶';
+  display: inline-block;
+  margin-right: 8px;
+  transition: transform 0.2s ease;
+}
+
+.collapsibleSection[open] summary::before {
+  transform: rotate(90deg);
+}
+
+.collapsibleSection summary:hover {
+  color: var(--primary-purple);
+}
+
+/* ==================== PROPERTY WRAPPER WITH STATUS ==================== */
+.propertyWrapper {
+  position: relative;
+  margin-bottom: var(--spacing-lg);
+}
+
+/* Status-specific wrapper styles */
+.statusPending {
+  border-left: 4px solid var(--warning-border);
+}
+
+.statusApproved {
+  border-left: 4px solid var(--success-border);
+}
+
+.statusRejected {
+  border-left: 4px solid var(--error-border);
+  opacity: 0.85;
+}
+
+/* ==================== OUTREACH BANNER ==================== */
+.outreachBanner {
+  padding: 12px 16px;
+  border-radius: var(--radius-md) var(--radius-md) 0 0;
+  margin-bottom: -1px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+.bannerWarning {
+  background: linear-gradient(135deg, var(--warning-bg) 0%, #fffbf0 100%);
+  border: 1px solid var(--warning-border);
+  border-bottom: none;
+}
+
+.bannerSuccess {
+  background: linear-gradient(135deg, var(--success-bg) 0%, #f0f9f4 100%);
+  border: 1px solid var(--success-border);
+  border-bottom: none;
+}
+
+.bannerDanger {
+  background: linear-gradient(135deg, var(--error-bg) 0%, #fff5f5 100%);
+  border: 1px solid var(--error-border);
+  border-bottom: none;
+}
+
+.bannerContent {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  flex: 1;
+}
+
+.bannerText {
+  font-weight: 600;
+  font-size: 14px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.bannerWarning .bannerText {
+  color: var(--warning-text);
+}
+
+.bannerSuccess .bannerText {
+  color: var(--success-text);
+}
+
+.bannerDanger .bannerText {
+  color: var(--error-text);
+}
+
+.bannerDescription {
+  font-size: 12px;
+  color: var(--gray-600);
+}
+
+.bannerAction {
+  display: flex;
+  align-items: center;
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--success-text);
+  background: rgba(255, 255, 255, 0.7);
+  padding: 6px 12px;
+  border-radius: var(--radius-sm);
+}
+
+/* ==================== TIPS SECTION ==================== */
 .tipsSection {
   padding: 24px;
 }
@@ -136,6 +281,12 @@
   background: #f8f9fa;
   border-radius: 8px;
   border: 1px solid #e9ecef;
+  transition: var(--transition-normal);
+}
+
+.tipItem:hover {
+  border-color: var(--primary-purple);
+  box-shadow: var(--shadow-sm);
 }
 
 .tipIcon {
@@ -156,13 +307,13 @@
   font-weight: 600;
 }
 
-/* ✅ Button Icons */
+/* ==================== BUTTON ICONS ==================== */
 .btnIcon {
   margin-right: 6px;
   font-size: 14px;
 }
 
-/* ✅ Responsive Design */
+/* ==================== RESPONSIVE DESIGN ==================== */
 @media (max-width: 768px) {
   .headerSection {
     flex-direction: column;
@@ -174,8 +325,41 @@
     font-size: 28px;
   }
   
+  .headerSubtitle {
+    font-size: 14px;
+  }
+  
+  .outreachSummary {
+    display: block;
+    margin-left: 0;
+    margin-top: 4px;
+  }
+  
   .headerActions {
     justify-content: flex-start;
+    flex-wrap: wrap;
+  }
+  
+  .sectionTitle {
+    font-size: 18px;
+  }
+  
+  .outreachBanner {
+    padding: 10px 12px;
+  }
+  
+  .bannerText {
+    font-size: 13px;
+  }
+  
+  .bannerDescription {
+    font-size: 11px;
+  }
+  
+  .bannerAction {
+    width: 100%;
+    justify-content: center;
+    font-size: 11px;
   }
   
   .tipsGrid {
@@ -199,7 +383,20 @@
   }
   
   .headerSubtitle {
-    font-size: 14px;
+    font-size: 13px;
+  }
+  
+  .headerActions {
+    flex-direction: column;
+    width: 100%;
+  }
+  
+  .headerActions .btn {
+    width: 100%;
+  }
+  
+  .sectionTitle {
+    font-size: 16px;
   }
   
   .tipsTitle {
@@ -214,5 +411,46 @@
   .emptyStateActions .btn {
     width: 100%;
     max-width: 280px;
+  }
+  
+  .outreachBanner {
+    padding: 8px 10px;
+  }
+  
+  .bannerContent {
+    gap: 2px;
+  }
+}
+
+/* ==================== ACCESSIBILITY ==================== */
+.collapsibleSection summary:focus-visible {
+  outline: 2px solid var(--primary-purple);
+  outline-offset: 2px;
+  border-radius: var(--radius-sm);
+}
+
+.tipItem:focus-within {
+  border-color: var(--primary-purple);
+  box-shadow: 0 0 0 3px rgba(160, 32, 240, 0.1);
+}
+
+/* ==================== PRINT STYLES ==================== */
+@media print {
+  .headerActions,
+  .collapsibleSection summary::before {
+    display: none;
+  }
+  
+  .collapsibleSection[open] {
+    border: none;
+  }
+  
+  .outreachBanner {
+    break-inside: avoid;
+  }
+  
+  .propertyWrapper {
+    break-inside: avoid;
+    page-break-inside: avoid;
   }
 }

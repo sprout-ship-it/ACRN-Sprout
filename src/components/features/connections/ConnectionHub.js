@@ -141,10 +141,11 @@ const ConnectionHub = ({ onBack }) => {
 
   const loadMatchGroupConnections = async (categories) => {
     try {
+      // ✅ FIX: Query for match_groups where user is either in roommate_ids, requested_by, or pending_member
       const { data: matchGroups, error } = await supabase
         .from('match_groups')
         .select('*')
-        .contains('roommate_ids', JSON.stringify([profileIds.applicant]));
+        .or(`roommate_ids.cs.["${profileIds.applicant}"],requested_by_id.eq.${profileIds.applicant},pending_member_id.eq.${profileIds.applicant}`);
 
       if (error) throw error;
       if (!matchGroups || matchGroups.length === 0) return;
@@ -789,23 +790,40 @@ const ConnectionHub = ({ onBack }) => {
       );
     }
 
-    // Roommate members list
+    // Roommate members list with high-level overview
     if (connection.type === 'roommate' && connection.roommates?.length > 0) {
+      const firstRoommate = connection.roommates[0];
+      const roommateProfile = firstRoommate.registrant_profiles;
+      
       return (
         <div className={styles.membersSection}>
-          <div className={styles.membersSectionTitle}>Members:</div>
-          <div className={styles.membersList}>
-            {connection.roommates.map((roommate, idx) => (
-              <div key={idx} className={styles.memberItem}>
-                <span className={styles.memberName}>
-                  {formatName(roommate.registrant_profiles?.first_name, roommate.registrant_profiles?.last_name)}
-                </span>
-                <button className="btn btn-outline btn-sm" onClick={() => handleViewProfile(connection, roommate.id)} disabled={profileLoading}>
-                  👁️ View Profile
-                </button>
+          <div className={styles.membersSectionTitle}>Potential Roommate:</div>
+          <div style={{ padding: '0.75rem', background: 'white', borderRadius: 'var(--radius-sm)', border: '1px solid var(--border-beige)' }}>
+            <div style={{ marginBottom: '0.5rem' }}>
+              <strong>👤 Name:</strong> {formatName(roommateProfile?.first_name, roommateProfile?.last_name)}
+            </div>
+            {firstRoommate.recovery_stage && (
+              <div style={{ marginBottom: '0.5rem' }}>
+                <strong>🌱 Recovery Stage:</strong> {firstRoommate.recovery_stage.replace(/_/g, ' ')}
               </div>
-            ))}
+            )}
+            {firstRoommate.work_schedule && (
+              <div style={{ marginBottom: '0.5rem' }}>
+                <strong>⏰ Work Schedule:</strong> {firstRoommate.work_schedule.replace(/_/g, ' ')}
+              </div>
+            )}
+            {firstRoommate.interests && firstRoommate.interests.length > 0 && (
+              <div>
+                <strong>🎯 Interests:</strong> {firstRoommate.interests.slice(0, 3).join(', ')}
+                {firstRoommate.interests.length > 3 && ` (+${firstRoommate.interests.length - 3} more)`}
+              </div>
+            )}
           </div>
+          {connection.roommates.length > 1 && (
+            <div style={{ marginTop: '0.5rem', fontSize: '0.9rem', color: 'var(--gray-600)' }}>
+              +{connection.roommates.length - 1} other potential roommate{connection.roommates.length - 1 !== 1 ? 's' : ''}
+            </div>
+          )}
         </div>
       );
     }
@@ -960,19 +978,19 @@ const ConnectionHub = ({ onBack }) => {
                               
                               {connection.type === 'roommate' && connection.roommates?.length > 0 && (
                                 <button className="btn btn-outline" onClick={() => handleViewProfile(connection, connection.roommates[0].id)} disabled={profileLoading}>
-                                  👁️ View Profile
+                                  👁️ View Full Profile
                                 </button>
                               )}
                               
                               {connection.type === 'peer_support' && (
                                 <button className="btn btn-outline" onClick={() => handleViewProfile(connection)} disabled={profileLoading}>
-                                  👁️ View Details
+                                  👁️ View Full Profile
                                 </button>
                               )}
 
                               {connection.type === 'employer' && (
                                 <button className="btn btn-outline" onClick={() => handleViewEmployer(connection)} disabled={profileLoading}>
-                                  👁️ View Details
+                                  👁️ View Full Profile
                                 </button>
                               )}
                               
