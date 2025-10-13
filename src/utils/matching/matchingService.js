@@ -1378,27 +1378,24 @@ async sendMatchRequest(currentUserId, targetMatch) {
     }
     
     // Create match_groups entry with JSONB roommate_ids
-    const groupData = {
-      roommate_ids: [senderApplicantId, targetApplicantId],
-      requested_by_id: senderApplicantId,
-      pending_member_id: targetApplicantId,
-      status: 'requested',
-      message: this.generateRequestMessage(targetMatch),
-      member_confirmations: {},
-      created_at: new Date().toISOString(),
-      updated_at: new Date().toISOString()
-    };
-    
-    console.log('📤 Creating match group:', groupData);
-    
-    const { data, error } = await supabase
-      .from('match_groups')
-      .insert({
-        ...groupData,
-        roommate_ids: JSON.stringify(groupData.roommate_ids) // Convert array to JSONB
-      })
-      .select()
-      .single();
+const groupData = {
+  roommate_ids: [senderApplicantId, targetApplicantId],
+  requested_by_id: senderApplicantId,
+  pending_member_id: targetApplicantId,
+  status: 'requested',
+  message: this.generateRequestMessage(targetMatch),
+  member_confirmations: {},
+  created_at: new Date().toISOString(),
+  updated_at: new Date().toISOString()
+};
+
+console.log('📤 Creating match group:', groupData);
+
+const { data, error } = await supabase
+  .from('match_groups')
+  .insert(groupData) 
+  .select()
+  .single();
     
     if (error) {
       console.error('❌ Supabase error creating match group:', error);
