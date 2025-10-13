@@ -1,4 +1,4 @@
-// src/components/features/connections/ConnectionHub.js - FIXED: Correct table relationships
+// src/components/features/connections/ConnectionHub.js - FULL RESTORATION: Tabs + All Features
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../../../hooks/useAuth';
 import { supabase } from '../../../utils/supabase';
@@ -7,9 +7,15 @@ import styles from './ConnectionHub.module.css';
 
 const ConnectionHub = ({ onBack }) => {
   const { user, profile } = useAuth();
-  const [connections, setConnections] = useState([]);
+  const [connections, setConnections] = useState({
+    active: [],
+    sent: [],
+    awaiting: [],
+    history: []
+  });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
+  const [activeTab, setActiveTab] = useState('active');
   const [activeModal, setActiveModal] = useState(null);
   const [selectedConnection, setSelectedConnection] = useState(null);
 
@@ -90,7 +96,7 @@ const ConnectionHub = ({ onBack }) => {
   };
 
   /**
-   * ✅ FIXED: Load connections using correct table relationships
+   * ✅ FULL RESTORATION: Load connections with deduplication and tab organization
    */
   const loadConnections = async () => {
     if (!user?.id || !profile?.id) return;
@@ -102,471 +108,359 @@ const ConnectionHub = ({ onBack }) => {
       console.log('🔄 Loading all connections for:', {
         authUserId: user.id,
         registrantProfileId: profile.id, 
-        roles: profile.roles,
-        rolesArray: Array.isArray(profile.roles) ? profile.roles : 'NOT_ARRAY',
-        rolesLength: profile.roles?.length,
-        hasApplicantRole: profile.roles?.includes('applicant'),
-        hasPeerSupportRole: profile.roles?.includes('peer-support'),
-        roleCheck: profile.roles && profile.roles.includes('applicant')
+        roles: profile.roles
       });
       
-      const allConnections = [];
+      // Initialize connection categories
+      const connectionCategories = {
+        active: [],
+        sent: [],
+        awaiting: [],
+        history: []
+      };
 
       // Get role-specific profile IDs
       let applicantProfileId = null;
       let peerSupportProfileId = null;
 
-      // Only check for applicant profile if user has 'applicant' role
+      // Check for applicant profile
       if (profile.roles && profile.roles.includes('applicant')) {
         try {
-          console.log('🔍 Querying applicant_matching_profiles for user_id:', profile.id);
           const { data: applicantProfile, error: applicantError } = await supabase
             .from('applicant_matching_profiles')
             .select('id, user_id')
-            .eq('user_id', profile.id)  // ✅ CORRECT: Use registrant profile ID
+            .eq('user_id', profile.id)
             .single();
           
           if (applicantProfile && !applicantError) {
             applicantProfileId = applicantProfile.id;
             console.log('👤 Found applicant profile ID:', applicantProfileId);
-          } else {
-            console.log('ℹ️ No applicant profile found for registrant profile:', profile.id);
           }
         } catch (err) {
           console.log('ℹ️ No applicant profile found:', err.message);
         }
-      } else {
-        console.log('ℹ️ User is not an applicant, skipping applicant profile check');
       }
 
-      // Only check for peer support profile if user has 'peer-support' role
+      // Check for peer support profile
       if (profile.roles && profile.roles.includes('peer-support')) {
         try {
-          console.log('🔍 Querying peer_support_profiles for user_id (registrant profile ID):', profile.id);
           const { data: peerProfile, error: peerError } = await supabase
             .from('peer_support_profiles')
             .select('id, user_id')
-            .eq('user_id', profile.id)  // ✅ CORRECT: Use registrant profile ID
+            .eq('user_id', profile.id)
             .single();
           
           if (peerProfile && !peerError) {
             peerSupportProfileId = peerProfile.id;
             console.log('🤝 Found peer support profile ID:', peerSupportProfileId);
-            console.log('🔗 peer_support_profiles.user_id:', peerProfile.user_id, '(should match registrant profile ID)');
-          } else {
-            console.log('ℹ️ No peer support profile found for registrant profile:', profile.id);
-            console.log('Error details:', peerError);
           }
         } catch (err) {
           console.log('ℹ️ No peer support profile found:', err.message);
         }
-      } else {
-        console.log('ℹ️ User is not a peer specialist, skipping peer support profile check');
       }
 
-      // 1. ✅ LOAD PENDING REQUESTS from match_requests table
-      console.log('🔄 Loading pending match requests...');
-      console.log('📊 Profile IDs found:', { applicantProfileId, peerSupportProfileId });
-      
-      // Query for requests where this user is the recipient (peer specialist receiving requests)
-      if (peerSupportProfileId) {
-        try {
-          console.log('🔍 Looking for requests with recipient_type=peer-support and recipient_id:', peerSupportProfileId);
-          
-          const { data: pendingRequests, error: requestsError } = await supabase
-            .from('match_requests')
-            .select('*')
-            .eq('recipient_type', 'peer-support')
-            .eq('recipient_id', peerSupportProfileId)
-            .eq('status', 'pending');
-
-          if (requestsError) {
-            console.error('❌ Error querying match_requests:', requestsError);
-          } else {
-            console.log(`📋 Found ${pendingRequests?.length || 0} pending requests for peer support specialist`);
-            console.log('📋 Raw pending requests:', pendingRequests);
-            
-            if (pendingRequests && pendingRequests.length > 0) {
-              // Process pending requests
-              for (const request of pendingRequests) {
-                try {
-                  console.log('🔍 Processing request:', request);
-                  
-                  // Get requester's profile (should be applicant)
-                  const { data: requesterProfile, error: profileError } = await supabase
-                    .from('applicant_matching_profiles')
-                    .select(`
-                      id,
-                      user_id,
-                      primary_phone,
-                      registrant_profiles!inner(
-                        id,
-                        first_name,
-                        last_name,
-                        email
-                      )
-                    `)
-                    .eq('id', request.requester_id)
-                    .single();
-
-                  if (requesterProfile && !profileError) {
-                    console.log('👤 Found requester profile:', requesterProfile);
-                    
-                    allConnections.push({
-                      id: `request_${request.id}`,
-                      profile_id: request.requester_id,
-                      name: `${requesterProfile.registrant_profiles.first_name} ${requesterProfile.registrant_profiles.last_name}`,
-                      type: 'peer_support',
-                      status: 'pending_request',
-                      source: 'match_request',
-                      request_id: request.id,
-                      created_at: request.created_at,
-                      last_activity: request.updated_at || request.created_at,
-                      shared_contact: false,
-                      contact_info: null,
-                      avatar: '🤝',
-                      request_message: request.message
-                    });
-                    console.log('✅ Added pending request from:', requesterProfile.registrant_profiles.first_name);
-                  } else {
-                    console.warn('⚠️ Could not find requester profile for request:', request.id, profileError);
-                  }
-                } catch (profileErr) {
-                  console.warn('⚠️ Error loading requester profile:', profileErr);
-                }
-              }
-            } else {
-              console.log('ℹ️ No pending requests found for this peer support specialist');
-            }
-          }
-        } catch (requestErr) {
-          console.warn('⚠️ Error loading match requests:', requestErr);
-        }
-      } else {
-        console.log('ℹ️ No peer support profile ID found, skipping peer support request check');
-      }
-
-      // Also check if this user has sent requests (as an applicant)
-      if (applicantProfileId) {
-        try {
-          console.log('🔍 Looking for requests sent by this user with requester_type=applicant and requester_id:', applicantProfileId);
-          
-          const { data: sentRequests, error: sentError } = await supabase
-            .from('match_requests')
-            .select('*')
-            .eq('requester_type', 'applicant')
-            .eq('requester_id', applicantProfileId)
-            .eq('request_type', 'peer-support')
-            .in('status', ['pending', 'accepted']);
-
-          if (!sentError && sentRequests && sentRequests.length > 0) {
-            console.log(`📤 Found ${sentRequests.length} requests sent by this user`);
-            
-            for (const request of sentRequests) {
-              try {
-                // ✅ FIXED: Get peer support profile name from registrant_profiles
-                let recipientProfile = null;
-                
-                if (request.recipient_type === 'peer-support') {
-                  // ✅ FIXED: Query peer_support_profiles and join with registrant_profiles
-                  const { data: peerProfile, error: peerError } = await supabase
-                    .from('peer_support_profiles')
-                    .select(`
-                      id, 
-                      user_id, 
-                      professional_title,
-                      registrant_profiles!inner(
-                        first_name,
-                        last_name,
-                        email
-                      )
-                    `)
-                    .eq('id', request.recipient_id)
-                    .single();
-                    
-                  if (peerProfile && !peerError) {
-                    recipientProfile = {
-                      id: peerProfile.id,
-                      name: `${peerProfile.registrant_profiles.first_name || 'Anonymous'} ${peerProfile.registrant_profiles.last_name || ''}`.trim(),
-                      title: peerProfile.professional_title || 'Peer Support Specialist'
-                    };
-                  } else {
-                    console.warn('⚠️ Could not find peer support profile for recipient_id:', request.recipient_id, peerError);
-                  }
-                } else if (request.recipient_type === 'applicant') {
-                  // Query applicant_matching_profiles table
-                  const { data: applicantProfile, error: applicantError } = await supabase
-                    .from('applicant_matching_profiles')
-                    .select(`
-                      id,
-                      user_id,
-                      registrant_profiles!inner(
-                        first_name,
-                        last_name,
-                        email
-                      )
-                    `)
-                    .eq('id', request.recipient_id)
-                    .single();
-                    
-                  if (applicantProfile && !applicantError) {
-                    recipientProfile = {
-                      id: applicantProfile.id,
-                      name: `${applicantProfile.registrant_profiles.first_name} ${applicantProfile.registrant_profiles.last_name}`,
-                      title: 'Applicant'
-                    };
-                  } else {
-                    console.warn('⚠️ Could not find applicant profile for recipient_id:', request.recipient_id, applicantError);
-                  }
-                }
-
-                if (recipientProfile) {
-                  allConnections.push({
-                    id: `sent_request_${request.id}`,
-                    profile_id: request.recipient_id,
-                    name: recipientProfile.name,
-                    type: request.request_type.replace('-', '_'), // peer-support -> peer_support
-                    status: request.status === 'pending' ? 'request_sent' : 'active_connection',
-                    source: 'match_request',
-                    request_id: request.id,
-                    created_at: request.created_at,
-                    last_activity: request.updated_at || request.created_at,
-                    shared_contact: request.status === 'accepted',
-                    contact_info: null,
-                    avatar: request.request_type === 'peer-support' ? '🤝' : '👥',
-                    request_message: request.message,
-                    recipient_type: request.recipient_type
-                  });
-                  console.log('✅ Added sent request:', recipientProfile.name, 'Type:', request.recipient_type);
-                } else {
-                  console.warn('⚠️ Could not load recipient profile for request:', request.id);
-                }
-              } catch (recipientErr) {
-                console.warn('⚠️ Error loading recipient profile:', recipientErr);
-              }
-            }
-          }
-        } catch (sentErr) {
-          console.warn('⚠️ Error loading sent requests:', sentErr);
-        }
-      }
-
-      // 2. ✅ LOAD ACTIVE CONNECTIONS from match_groups table
-      console.log('🔄 Loading active connections from match_groups...');
+      // ✅ STEP 1: Load ACTIVE connections from match_groups (forming/active/confirmed)
+      console.log('🔄 Loading ACTIVE connections from match_groups...');
       
       const orConditions = [];
-      
       if (applicantProfileId) {
         orConditions.push(`applicant_1_id.eq.${applicantProfileId}`);
         orConditions.push(`applicant_2_id.eq.${applicantProfileId}`);
       }
-      
       if (peerSupportProfileId) {
         orConditions.push(`peer_support_id.eq.${peerSupportProfileId}`);
       }
 
-      console.log('🔍 Match groups OR conditions:', orConditions);
-
       if (orConditions.length > 0) {
-        try {
-          // ✅ FIXED: Include 'forming' status for active connections
-          const { data: matchGroups, error: matchError } = await supabase
-            .from('match_groups')
-            .select('*')
-            .or(orConditions.join(','))
-            .in('status', ['confirmed', 'active', 'forming']);
+        const { data: activeMatchGroups, error: matchError } = await supabase
+          .from('match_groups')
+          .select('*')
+          .or(orConditions.join(','))
+          .in('status', ['forming', 'active', 'confirmed']);
 
-          console.log('📊 Match_groups with confirmed/active/forming status:', { data: matchGroups, error: matchError });
+        console.log('📊 Active match_groups found:', activeMatchGroups?.length || 0);
 
-          if (matchError) {
-            console.warn('⚠️ Error loading match groups:', matchError);
-          } else if (matchGroups && matchGroups.length > 0) {
-            console.log(`📊 Found ${matchGroups.length} active match groups:`, matchGroups);
+        if (activeMatchGroups && activeMatchGroups.length > 0) {
+          for (const match of activeMatchGroups) {
+            let otherProfileId = null;
+            let connectionType = 'roommate';
+            let avatar = '👥';
             
-            for (const match of matchGroups) {
-              console.log('🔍 Processing match group:', match);
-              
-              let otherProfileId = null;
-              let connectionType = 'roommate';
-              let avatar = '👥';
-              
-              if (match.peer_support_id) {
-                // This is a peer support connection
-                connectionType = 'peer_support';
-                avatar = '🤝';
-                console.log('🤝 Processing peer support connection...');
-                
-                if (match.peer_support_id === peerSupportProfileId) {
-                  // Current user is the peer supporter
-                  otherProfileId = match.applicant_1_id || match.applicant_2_id;
-                  console.log('👤 Current user is peer supporter, other applicant ID:', otherProfileId);
-                } else {
-                  // Current user is the applicant
-                  otherProfileId = match.peer_support_id;
-                  console.log('👤 Current user is applicant, peer supporter ID:', otherProfileId);
-                }
+            if (match.peer_support_id) {
+              connectionType = 'peer_support';
+              avatar = '🤝';
+              if (match.peer_support_id === peerSupportProfileId) {
+                otherProfileId = match.applicant_1_id || match.applicant_2_id;
               } else {
-                // This is a roommate connection
-                connectionType = 'roommate';
-                avatar = '👥';
-                console.log('👥 Processing roommate connection...');
-                console.log('🔍 Match details:', {
-                  applicant_1_id: match.applicant_1_id,
-                  applicant_2_id: match.applicant_2_id,
-                  currentApplicantId: applicantProfileId
-                });
-                
-                if (match.applicant_1_id === applicantProfileId) {
-                  otherProfileId = match.applicant_2_id;
-                  console.log('👤 Current user is applicant_1, other is applicant_2:', otherProfileId);
-                } else if (match.applicant_2_id === applicantProfileId) {
-                  otherProfileId = match.applicant_1_id;
-                  console.log('👤 Current user is applicant_2, other is applicant_1:', otherProfileId);
-                } else {
-                  console.warn('⚠️ Current user not found in roommate match:', {
-                    matchId: match.id,
-                    applicant_1_id: match.applicant_1_id,
-                    applicant_2_id: match.applicant_2_id,
-                    currentApplicantId: applicantProfileId
-                  });
-                }
+                otherProfileId = match.peer_support_id;
               }
+            } else {
+              connectionType = 'roommate';
+              avatar = '👥';
+              if (match.applicant_1_id === applicantProfileId) {
+                otherProfileId = match.applicant_2_id;
+              } else if (match.applicant_2_id === applicantProfileId) {
+                otherProfileId = match.applicant_1_id;
+              }
+            }
+            
+            if (otherProfileId) {
+              let otherProfile = null;
               
-              console.log('🎯 Determined connection type:', connectionType, 'Other profile ID:', otherProfileId);
-              
-              // ✅ FIXED: Get other user's profile info based on connection type
-              if (otherProfileId) {
-                try {
-                  let otherProfile = null;
-                  
-                  if (connectionType === 'peer_support') {
-                    // For peer support connections, otherProfileId could be either applicant or peer
-                    if (match.peer_support_id === peerSupportProfileId) {
-                      // Current user is peer, other is applicant - query applicant_matching_profiles
-                      const { data: applicantProfile, error: applicantError } = await supabase
-                        .from('applicant_matching_profiles')
-                        .select(`
-                          id,
-                          user_id,
-                          registrant_profiles!inner(
-                            id,
-                            first_name,
-                            last_name,
-                            email
-                          )
-                        `)
-                        .eq('id', otherProfileId)
-                        .single();
-                        
-                      if (applicantProfile && !applicantError) {
-                        otherProfile = {
-                          id: applicantProfile.registrant_profiles.id,
-                          first_name: applicantProfile.registrant_profiles.first_name,
-                          last_name: applicantProfile.registrant_profiles.last_name,
-                          email: applicantProfile.registrant_profiles.email
-                        };
-                      }
-                    } else {
-                      // Current user is applicant, other is peer - query peer_support_profiles
-                      const { data: peerProfile, error: peerError } = await supabase
-                        .from('peer_support_profiles')
-                        .select(`
-                          id,
-                          user_id,
-                          registrant_profiles!inner(
-                            id,
-                            first_name,
-                            last_name,
-                            email
-                          )
-                        `)
-                        .eq('id', otherProfileId)
-                        .single();
-                        
-                      if (peerProfile && !peerError) {
-                        otherProfile = {
-                          id: peerProfile.registrant_profiles.id,
-                          first_name: peerProfile.registrant_profiles.first_name,
-                          last_name: peerProfile.registrant_profiles.last_name,
-                          email: peerProfile.registrant_profiles.email
-                        };
-                      }
-                    }
-                  } else {
-                    // For roommate connections, otherProfileId is applicant_matching_profiles ID
-                    const { data: applicantProfile, error: applicantError } = await supabase
+              try {
+                if (connectionType === 'peer_support') {
+                  if (match.peer_support_id === peerSupportProfileId) {
+                    // Other is applicant
+                    const { data: applicantProfile } = await supabase
                       .from('applicant_matching_profiles')
-                      .select(`
-                        id,
-                        user_id,
-                        registrant_profiles!inner(
-                          id,
-                          first_name,
-                          last_name,
-                          email
-                        )
-                      `)
+                      .select(`id, user_id, registrant_profiles!inner(first_name, last_name, email)`)
                       .eq('id', otherProfileId)
                       .single();
                       
-                    if (applicantProfile && !applicantError) {
+                    if (applicantProfile) {
                       otherProfile = {
                         id: applicantProfile.registrant_profiles.id,
-                        first_name: applicantProfile.registrant_profiles.first_name,
-                        last_name: applicantProfile.registrant_profiles.last_name,
+                        name: `${applicantProfile.registrant_profiles.first_name} ${applicantProfile.registrant_profiles.last_name}`,
                         email: applicantProfile.registrant_profiles.email
                       };
                     }
-                  }
-                  
-                  if (otherProfile) {
-                    allConnections.push({
-                      id: `active_${match.id}`,
-                      profile_id: otherProfile.id, // Use registrant profile ID
-                      name: `${otherProfile.first_name} ${otherProfile.last_name}` || 'Anonymous',
-                      type: connectionType,
-                      status: 'active_connection',
-                      source: 'match_group',
-                      match_group_id: match.id,
-                      created_at: match.created_at,
-                      last_activity: match.updated_at || match.created_at,
-                      shared_contact: match.contact_shared || false,
-                      contact_info: match.shared_contact_info || null,
-                      avatar: avatar
-                    });
-                    console.log(`✅ Added ${connectionType} connection:`, otherProfile.first_name, otherProfile.last_name);
                   } else {
-                    console.warn('⚠️ Could not load other user profile for match:', match.id);
+                    // Other is peer
+                    const { data: peerProfile } = await supabase
+                      .from('peer_support_profiles')
+                      .select(`id, user_id, professional_title, registrant_profiles!inner(first_name, last_name, email)`)
+                      .eq('id', otherProfileId)
+                      .single();
+                      
+                    if (peerProfile) {
+                      otherProfile = {
+                        id: peerProfile.registrant_profiles.id,
+                        name: `${peerProfile.registrant_profiles.first_name} ${peerProfile.registrant_profiles.last_name}`,
+                        email: peerProfile.registrant_profiles.email
+                      };
+                    }
                   }
-                } catch (profileErr) {
-                  console.warn('⚠️ Error loading other profile:', profileErr);
+                } else {
+                  // Roommate connection - other is applicant
+                  const { data: applicantProfile } = await supabase
+                    .from('applicant_matching_profiles')
+                    .select(`id, user_id, registrant_profiles!inner(first_name, last_name, email)`)
+                    .eq('id', otherProfileId)
+                    .single();
+                    
+                  if (applicantProfile) {
+                    otherProfile = {
+                      id: applicantProfile.registrant_profiles.id,
+                      name: `${applicantProfile.registrant_profiles.first_name} ${applicantProfile.registrant_profiles.last_name}`,
+                      email: applicantProfile.registrant_profiles.email
+                    };
+                  }
                 }
+                
+                if (otherProfile) {
+                  connectionCategories.active.push({
+                    id: `active_${match.id}`,
+                    profile_id: otherProfile.id,
+                    name: otherProfile.name,
+                    type: connectionType,
+                    status: 'active_connection',
+                    source: 'match_group',
+                    match_group_id: match.id,
+                    created_at: match.created_at,
+                    last_activity: match.updated_at || match.created_at,
+                    shared_contact: match.contact_shared || false,
+                    contact_info: match.shared_contact_info || null,
+                    avatar: avatar
+                  });
+                  console.log(`✅ Added ACTIVE ${connectionType}:`, otherProfile.name);
+                }
+              } catch (profileErr) {
+                console.warn('⚠️ Error loading profile for active connection:', profileErr);
               }
             }
           }
-        } catch (matchErr) {
-          console.warn('⚠️ Error loading match groups:', matchErr);
         }
-      } else {
-        console.log('ℹ️ No matching profile IDs found, skipping match_groups query');
+
+        // ✅ STEP 2: Load HISTORY connections (completed/ended match_groups)
+        const { data: historyMatchGroups } = await supabase
+          .from('match_groups')
+          .select('*')
+          .or(orConditions.join(','))
+          .in('status', ['completed', 'ended', 'cancelled']);
+
+        console.log('📚 History match_groups found:', historyMatchGroups?.length || 0);
+
+        if (historyMatchGroups && historyMatchGroups.length > 0) {
+          for (const match of historyMatchGroups) {
+            let otherProfileId = null;
+            let connectionType = 'roommate';
+            let avatar = '📚';
+            
+            if (match.peer_support_id) {
+              connectionType = 'peer_support';
+              avatar = '🤝';
+              if (match.peer_support_id === peerSupportProfileId) {
+                otherProfileId = match.applicant_1_id || match.applicant_2_id;
+              } else {
+                otherProfileId = match.peer_support_id;
+              }
+            } else {
+              connectionType = 'roommate';
+              avatar = '👥';
+              if (match.applicant_1_id === applicantProfileId) {
+                otherProfileId = match.applicant_2_id;
+              } else if (match.applicant_2_id === applicantProfileId) {
+                otherProfileId = match.applicant_1_id;
+              }
+            }
+            
+            if (otherProfileId) {
+              try {
+                const { data: otherProfile } = await supabase
+                  .from('registrant_profiles')
+                  .select('id, first_name, last_name, email')
+                  .eq('id', otherProfileId)
+                  .single();
+                  
+                if (otherProfile) {
+                  connectionCategories.history.push({
+                    id: `history_${match.id}`,
+                    profile_id: otherProfile.id,
+                    name: `${otherProfile.first_name} ${otherProfile.last_name}`,
+                    type: connectionType,
+                    status: 'connection_ended',
+                    source: 'match_group',
+                    match_group_id: match.id,
+                    created_at: match.created_at,
+                    last_activity: match.updated_at || match.created_at,
+                    avatar: avatar,
+                    end_reason: match.status
+                  });
+                }
+              } catch (profileErr) {
+                console.warn('⚠️ Error loading profile for history connection:', profileErr);
+              }
+            }
+          }
+        }
       }
 
-      // Sort connections by most recent activity, with pending requests first
-      allConnections.sort((a, b) => {
-        // Pending requests first
-        if (a.status === 'pending_request' && b.status !== 'pending_request') return -1;
-        if (b.status === 'pending_request' && a.status !== 'pending_request') return 1;
-        
-        // Then by most recent activity
-        return new Date(b.last_activity) - new Date(a.last_activity);
+      // ✅ STEP 3: Load SENT requests (outgoing, pending)
+      console.log('📤 Loading SENT requests...');
+      if (applicantProfileId) {
+        const { data: sentRequests } = await supabase
+          .from('match_requests')
+          .select('*')
+          .eq('requester_type', 'applicant')
+          .eq('requester_id', applicantProfileId)
+          .eq('status', 'pending');
+
+        console.log('📤 Sent requests found:', sentRequests?.length || 0);
+
+        if (sentRequests && sentRequests.length > 0) {
+          for (const request of sentRequests) {
+            try {
+              let recipientProfile = null;
+              
+              if (request.recipient_type === 'peer-support') {
+                const { data: peerProfile } = await supabase
+                  .from('peer_support_profiles')
+                  .select(`id, user_id, professional_title, registrant_profiles!inner(first_name, last_name, email)`)
+                  .eq('id', request.recipient_id)
+                  .single();
+                  
+                if (peerProfile) {
+                  recipientProfile = {
+                    name: `${peerProfile.registrant_profiles.first_name} ${peerProfile.registrant_profiles.last_name}`,
+                    title: peerProfile.professional_title || 'Peer Support Specialist'
+                  };
+                }
+              }
+              
+              if (recipientProfile) {
+                connectionCategories.sent.push({
+                  id: `sent_${request.id}`,
+                  profile_id: request.recipient_id,
+                  name: recipientProfile.name,
+                  type: request.request_type.replace('-', '_'),
+                  status: 'request_sent',
+                  source: 'match_request',
+                  request_id: request.id,
+                  created_at: request.created_at,
+                  last_activity: request.updated_at || request.created_at,
+                  shared_contact: false,
+                  avatar: '📤',
+                  request_message: request.message
+                });
+                console.log('✅ Added SENT request to:', recipientProfile.name);
+              }
+            } catch (err) {
+              console.warn('⚠️ Error processing sent request:', err);
+            }
+          }
+        }
+      }
+
+      // ✅ STEP 4: Load AWAITING RESPONSE requests (incoming, pending)
+      console.log('⏳ Loading AWAITING RESPONSE requests...');
+      if (peerSupportProfileId) {
+        const { data: awaitingRequests } = await supabase
+          .from('match_requests')
+          .select('*')
+          .eq('recipient_type', 'peer-support')
+          .eq('recipient_id', peerSupportProfileId)
+          .eq('status', 'pending');
+
+        console.log('⏳ Awaiting requests found:', awaitingRequests?.length || 0);
+
+        if (awaitingRequests && awaitingRequests.length > 0) {
+          for (const request of awaitingRequests) {
+            try {
+              const { data: requesterProfile } = await supabase
+                .from('applicant_matching_profiles')
+                .select(`id, user_id, registrant_profiles!inner(first_name, last_name, email)`)
+                .eq('id', request.requester_id)
+                .single();
+
+              if (requesterProfile) {
+                connectionCategories.awaiting.push({
+                  id: `awaiting_${request.id}`,
+                  profile_id: request.requester_id,
+                  name: `${requesterProfile.registrant_profiles.first_name} ${requesterProfile.registrant_profiles.last_name}`,
+                  type: 'peer_support',
+                  status: 'pending_request',
+                  source: 'match_request',
+                  request_id: request.id,
+                  created_at: request.created_at,
+                  last_activity: request.updated_at || request.created_at,
+                  shared_contact: false,
+                  avatar: '⏳',
+                  request_message: request.message
+                });
+                console.log('✅ Added AWAITING request from:', requesterProfile.registrant_profiles.first_name);
+              }
+            } catch (err) {
+              console.warn('⚠️ Error processing awaiting request:', err);
+            }
+          }
+        }
+      }
+
+      // Sort each category by most recent activity
+      Object.keys(connectionCategories).forEach(category => {
+        connectionCategories[category].sort((a, b) => 
+          new Date(b.last_activity) - new Date(a.last_activity)
+        );
       });
 
-      console.log(`✅ Loaded ${allConnections.length} total connections:`);
-      console.log('- Pending requests:', allConnections.filter(c => c.status === 'pending_request').length);
-      console.log('- Sent requests:', allConnections.filter(c => c.status === 'request_sent').length);
-      console.log('- Active connections:', allConnections.filter(c => c.status === 'active_connection').length);
+      console.log('✅ Connections loaded by category:', {
+        active: connectionCategories.active.length,
+        sent: connectionCategories.sent.length,
+        awaiting: connectionCategories.awaiting.length,
+        history: connectionCategories.history.length
+      });
       
-      setConnections(allConnections);
+      setConnections(connectionCategories);
 
     } catch (err) {
       console.error('💥 Error loading connections:', err);
@@ -585,7 +479,6 @@ const ConnectionHub = ({ onBack }) => {
     try {
       console.log('✅ Accepting request from:', connection.name);
 
-      // Update the match request status to 'accepted'
       const { error: updateError } = await supabase
         .from('match_requests')
         .update({
@@ -599,12 +492,8 @@ const ConnectionHub = ({ onBack }) => {
         throw new Error(updateError.message);
       }
 
-      // Remove from connections list (it will become a match_group)
-      setConnections(prev => prev.filter(conn => conn.id !== connection.id));
-      
       alert(`Request from ${connection.name} accepted! They can now connect with you.`);
       
-      // Refresh connections to pick up any new match_groups
       setTimeout(() => {
         loadConnections();
       }, 1000);
@@ -624,7 +513,6 @@ const ConnectionHub = ({ onBack }) => {
     try {
       console.log('❌ Declining request from:', connection.name);
 
-      // Update the match request status to 'rejected'
       const { error: updateError } = await supabase
         .from('match_requests')
         .update({
@@ -638,10 +526,8 @@ const ConnectionHub = ({ onBack }) => {
         throw new Error(updateError.message);
       }
 
-      // Remove from connections list
-      setConnections(prev => prev.filter(conn => conn.id !== connection.id));
-      
       alert(`Request from ${connection.name} declined.`);
+      loadConnections();
 
     } catch (err) {
       console.error('💥 Error declining request:', err);
@@ -679,11 +565,15 @@ const ConnectionHub = ({ onBack }) => {
           throw new Error(updateError.message);
         }
 
-        setConnections(prev => prev.map(conn => 
-          conn.id === connection.id 
-            ? { ...conn, shared_contact: true, contact_info: contactInfo }
-            : conn
-        ));
+        // Update local state
+        setConnections(prev => ({
+          ...prev,
+          active: prev.active.map(conn => 
+            conn.id === connection.id 
+              ? { ...conn, shared_contact: true, contact_info: contactInfo }
+              : conn
+          )
+        }));
         
         alert(`Contact information shared with ${connection.name}!`);
       } else {
@@ -751,6 +641,27 @@ const ConnectionHub = ({ onBack }) => {
     return `${Math.floor(diffInHours / 24)} days ago`;
   };
 
+  /**
+   * Get total connections count
+   */
+  const getTotalCount = () => {
+    return Object.values(connections).reduce((total, category) => total + category.length, 0);
+  };
+
+  /**
+   * Get tab label with count
+   */
+  const getTabLabel = (tabName) => {
+    const count = connections[tabName]?.length || 0;
+    const labels = {
+      active: 'Active',
+      sent: 'Sent', 
+      awaiting: 'Awaiting Response',
+      history: 'Match History'
+    };
+    return `${labels[tabName]} (${count})`;
+  };
+
   // Load connections on mount
   useEffect(() => {
     if (profile?.id && user?.id) {
@@ -794,45 +705,29 @@ const ConnectionHub = ({ onBack }) => {
         </div>
       )}
 
-      {/* No Connections State */}
-      {!loading && !error && connections.length === 0 && (
-        <div className="card">
-          <div className={styles.noConnectionsState}>
-            <h3 className={styles.noConnectionsTitle}>No Active Connections Yet</h3>
-            <p className={styles.noConnectionsDescription}>
-              Your approved matches and connections will appear here.
-            </p>
-            <p className={styles.noConnectionsHint}>Start building connections by:</p>
-            <div className={styles.noConnectionsActions}>
-              <button className="btn btn-outline">👥 Find Matches</button>
-              <button className="btn btn-outline">🤝 Connect with Peers</button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Connections Grid */}
-      {!loading && !error && connections.length > 0 && (
+      {/* Main Content */}
+      {!loading && !error && (
         <>
+          {/* Summary Card */}
           <div className="card mb-4">
             <div className={styles.connectionStats}>
               <h3 className="card-title">
-                {connections.length} Connection{connections.length !== 1 ? 's' : ''}
+                {getTotalCount()} Connection{getTotalCount() !== 1 ? 's' : ''}
               </h3>
               <div className={styles.connectionTypes}>
-                {connections.filter(c => c.status === 'pending_request').length > 0 && (
+                {connections.awaiting?.length > 0 && (
                   <span className="badge badge-warning">
-                    {connections.filter(c => c.status === 'pending_request').length} Pending
+                    {connections.awaiting.length} Awaiting Response
                   </span>
                 )}
-                {connections.filter(c => c.status === 'request_sent').length > 0 && (
+                {connections.sent?.length > 0 && (
                   <span className="badge badge-info">
-                    {connections.filter(c => c.status === 'request_sent').length} Sent
+                    {connections.sent.length} Sent
                   </span>
                 )}
-                {connections.filter(c => c.status === 'active_connection').length > 0 && (
+                {connections.active?.length > 0 && (
                   <span className="badge badge-success">
-                    {connections.filter(c => c.status === 'active_connection').length} Active
+                    {connections.active.length} Active
                   </span>
                 )}
               </div>
@@ -846,145 +741,185 @@ const ConnectionHub = ({ onBack }) => {
             </div>
           </div>
 
-          <div className="grid-auto mb-5">
-            {connections.map((connection) => (
-              <div key={connection.id} className="card">
-                {/* Connection Header */}
-                <div className="card-header">
-                  <div className={styles.connectionHeader}>
-                    <div className={styles.connectionAvatar}>{connection.avatar}</div>
-                    <div className={styles.connectionInfo}>
-                      <div className="card-title">{connection.name}</div>
-                      <div className="card-subtitle">
-                        Active {formatTimeAgo(connection.last_activity)}
+          {/* Tabs */}
+          <div className="card">
+            <div className="card-header">
+              <ul className="nav nav-tabs card-header-tabs">
+                {['active', 'awaiting', 'sent', 'history'].map(tab => (
+                  <li key={tab} className="nav-item">
+                    <button
+                      className={`nav-link ${activeTab === tab ? 'active' : ''}`}
+                      onClick={() => setActiveTab(tab)}
+                    >
+                      {getTabLabel(tab)}
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            </div>
+
+            <div className="card-body">
+              {/* Tab Content */}
+              {connections[activeTab]?.length > 0 ? (
+                <div className="grid-auto">
+                  {connections[activeTab].map((connection) => (
+                    <div key={connection.id} className="card">
+                      {/* Connection Header */}
+                      <div className="card-header">
+                        <div className={styles.connectionHeader}>
+                          <div className={styles.connectionAvatar}>{connection.avatar}</div>
+                          <div className={styles.connectionInfo}>
+                            <div className="card-title">{connection.name}</div>
+                            <div className="card-subtitle">
+                              Active {formatTimeAgo(connection.last_activity)}
+                            </div>
+                          </div>
+                          <div className={styles.connectionMetaInfo}>
+                            <span className={getConnectionTypeBadgeClass(connection.type)}>
+                              {connection.type === 'roommate' && 'Roommate Match'}
+                              {connection.type === 'peer_support' && 'Peer Support'}
+                              {connection.type === 'employer' && 'Employer'}
+                            </span>
+                            
+                            {connection.status === 'active_connection' && (
+                              <span className="badge badge-success">✓ Connected</span>
+                            )}
+                            {connection.status === 'pending_request' && (
+                              <span className="badge badge-warning">⏳ Pending</span>
+                            )}
+                            {connection.status === 'request_sent' && (
+                              <span className="badge badge-info">📤 Sent</span>
+                            )}
+                            {connection.status === 'connection_ended' && (
+                              <span className="badge badge-secondary">📚 Ended</span>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Connection Info */}
+                      <div className="mb-4">
+                        <div className={styles.sourceInfo}>
+                          <span className={styles.sourceLabel}>Source:</span> {
+                            connection.source === 'match_request' && connection.status === 'pending_request' ? 'Incoming Request' :
+                            connection.source === 'match_request' && connection.status === 'request_sent' ? 'Sent Request' :
+                            connection.source === 'match_group' ? 'Active Connection' :
+                            'Unknown'
+                          }
+                        </div>
+
+                        {/* Request Message for pending requests */}
+                        {(connection.status === 'pending_request' || connection.status === 'request_sent') && connection.request_message && (
+                          <div className={styles.requestMessage}>
+                            <span className={styles.requestLabel}>Message:</span>
+                            <div className={styles.requestText}>"{connection.request_message}"</div>
+                          </div>
+                        )}
+
+                        {/* Contact Status for active connections */}
+                        {connection.status === 'active_connection' && (
+                          <div className={styles.contactStatus}>
+                            {connection.shared_contact ? (
+                              <div className={styles.contactShared}>
+                                <strong>📞 Contact Available:</strong> You can communicate directly with {connection.name}
+                              </div>
+                            ) : (
+                              <div className={styles.contactPending}>
+                                <strong>⏳ Contact Pending:</strong> Share your contact information to enable direct communication
+                              </div>
+                            )}
+                          </div>
+                        )}
+
+                        {/* End reason for history */}
+                        {connection.status === 'connection_ended' && connection.end_reason && (
+                          <div className={styles.endReason}>
+                            <span className={styles.endLabel}>Status:</span> {connection.end_reason}
+                          </div>
+                        )}
+                      </div>
+
+                      {/* Action Buttons */}
+                      <div className="button-grid">
+                        {connection.status === 'pending_request' ? (
+                          // Pending request actions (for incoming requests)
+                          <>
+                            <button
+                              className="btn btn-primary"
+                              onClick={() => handleAcceptRequest(connection)}
+                            >
+                              ✅ Accept Request
+                            </button>
+                            
+                            <button
+                              className="btn btn-outline"
+                              onClick={() => handleDeclineRequest(connection)}
+                            >
+                              ❌ Decline
+                            </button>
+                          </>
+                        ) : connection.status === 'request_sent' ? (
+                          // Sent request status (waiting for response)
+                          <div className={styles.requestSentStatus}>
+                            <span className="badge badge-info">⏳ Waiting for response...</span>
+                          </div>
+                        ) : connection.status === 'active_connection' ? (
+                          // Active connection actions
+                          <>
+                            {connection.shared_contact ? (
+                              <button
+                                className="btn btn-primary"
+                                onClick={() => {
+                                  setSelectedConnection(connection);
+                                  setActiveModal('contact');
+                                }}
+                              >
+                                📞 Contact Info
+                              </button>
+                            ) : (
+                              <button
+                                className="btn btn-secondary"
+                                onClick={() => handleShareContact(connection)}
+                              >
+                                📞 Share Contact
+                              </button>
+                            )}
+                            
+                            <button
+                              className="btn btn-outline"
+                              onClick={() => {
+                                setSelectedConnection(connection);
+                                setActiveModal('templates');
+                              }}
+                            >
+                              💬 Message Templates
+                            </button>
+                          </>
+                        ) : null}
                       </div>
                     </div>
-                    <div className={styles.connectionMetaInfo}>
-                      <span className={getConnectionTypeBadgeClass(connection.type)}>
-                        {connection.type === 'roommate' && 'Roommate Match'}
-                        {connection.type === 'peer_support' && 'Peer Support'}
-                        {connection.type === 'employer' && 'Employer'}
-                      </span>
-                      
-                      {connection.status === 'active_connection' && (
-                        <span className="badge badge-success">✓ Connected</span>
-                      )}
-                      {connection.status === 'pending_request' && (
-                        <span className="badge badge-warning">⏳ Pending</span>
-                      )}
-                      {connection.status === 'request_sent' && (
-                        <span className="badge badge-info">📤 Sent</span>
-                      )}
-                    </div>
-                  </div>
+                  ))}
                 </div>
-
-                {/* Connection Info */}
-                <div className="mb-4">
-                  <div className={styles.sourceInfo}>
-                    <span className={styles.sourceLabel}>Source:</span> {
-                      connection.source === 'match_request' && connection.status === 'pending_request' ? 'Incoming Request' :
-                      connection.source === 'match_request' && connection.status === 'request_sent' ? 'Sent Request' :
-                      connection.source === 'match_group' ? 'Active Connection' :
-                      'Unknown'
-                    }
-                  </div>
-
-                  {/* Request Message for pending requests */}
-                  {(connection.status === 'pending_request' || connection.status === 'request_sent') && connection.request_message && (
-                    <div className={styles.requestMessage}>
-                      <span className={styles.requestLabel}>Message:</span>
-                      <div className={styles.requestText}>"{connection.request_message}"</div>
-                    </div>
-                  )}
-
-                  {/* Contact Status for active connections */}
-                  {connection.status === 'active_connection' && (
-                    <div className={styles.contactStatus}>
-                      {connection.shared_contact ? (
-                        <div className={styles.contactShared}>
-                          <strong>📞 Contact Available:</strong> You can communicate directly with {connection.name}
-                        </div>
-                      ) : (
-                        <div className={styles.contactPending}>
-                          <strong>⏳ Contact Pending:</strong> Share your contact information to enable direct communication
-                        </div>
-                      )}
-                    </div>
-                  )}
+              ) : (
+                <div className={styles.noConnectionsState}>
+                  <h3 className={styles.noConnectionsTitle}>No {activeTab} connections</h3>
+                  <p className={styles.noConnectionsDescription}>
+                    {activeTab === 'active' && 'Your active connections will appear here'}
+                    {activeTab === 'sent' && 'Requests you\'ve sent will appear here'}
+                    {activeTab === 'awaiting' && 'Incoming requests waiting for your response will appear here'}
+                    {activeTab === 'history' && 'Your connection history will appear here'}
+                  </p>
                 </div>
-
-                {/* Action Buttons */}
-                <div className="button-grid">
-                  {connection.status === 'pending_request' ? (
-                    // Pending request actions (for incoming requests)
-                    <>
-                      <button
-                        className="btn btn-primary"
-                        onClick={() => handleAcceptRequest(connection)}
-                      >
-                        ✅ Accept Request
-                      </button>
-                      
-                      <button
-                        className="btn btn-outline"
-                        onClick={() => handleDeclineRequest(connection)}
-                      >
-                        ❌ Decline
-                      </button>
-                    </>
-                  ) : connection.status === 'request_sent' ? (
-                    // Sent request status (waiting for response)
-                    <div className={styles.requestSentStatus}>
-                      <span className="badge badge-info">⏳ Waiting for response...</span>
-                    </div>
-                  ) : (
-                    // Active connection actions
-                    <>
-                      {connection.shared_contact ? (
-                        <button
-                          className="btn btn-primary"
-                          onClick={() => {
-                            setSelectedConnection(connection);
-                            setActiveModal('contact');
-                          }}
-                        >
-                          📞 Contact Info
-                        </button>
-                      ) : (
-                        <button
-                          className="btn btn-secondary"
-                          onClick={() => handleShareContact(connection)}
-                        >
-                          📞 Share Contact
-                        </button>
-                      )}
-                      
-                      <button
-                        className="btn btn-outline"
-                        onClick={() => {
-                          setSelectedConnection(connection);
-                          setActiveModal('templates');
-                        }}
-                      >
-                        💬 Message Templates
-                      </button>
-                    </>
-                  )}
-                </div>
-              </div>
-            ))}
+              )}
+            </div>
           </div>
         </>
       )}
 
       {/* Back Button */}
       {onBack && (
-        <div className="text-center">
-          <button
-            className="btn btn-outline"
-            onClick={onBack}
-          >
+        <div className="text-center mt-4">
+          <button className="btn btn-outline" onClick={onBack}>
             ← Back to Dashboard
           </button>
         </div>
