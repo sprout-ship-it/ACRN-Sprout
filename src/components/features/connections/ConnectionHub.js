@@ -383,11 +383,23 @@ const ConnectionHub = ({ onBack }) => {
           .select('*, registrant_profiles(*)')
           .eq('id', profileId)
           .single();
-        profileData = data;
+        
+        if (data) {
+          // ✅ Set profile_type for modal to recognize
+          profileData = {
+            ...data,
+            profile_type: 'applicant',
+            name: `${data.registrant_profiles?.first_name || ''} ${data.registrant_profiles?.last_name || ''}`.trim()
+          };
+        }
       } else if (connection.type === 'landlord') {
         // ✅ NEW: For landlord connections, show the requesting applicant's profile
         if (connection.requesting_applicant) {
-          profileData = connection.requesting_applicant;
+          profileData = {
+            ...connection.requesting_applicant,
+            profile_type: 'applicant',
+            name: `${connection.requesting_applicant.registrant_profiles?.first_name || ''} ${connection.requesting_applicant.registrant_profiles?.last_name || ''}`.trim()
+          };
         } else if (connection.requested_by_id) {
           // Fallback: fetch the requesting applicant if not already loaded
           const { data } = await supabase
@@ -395,15 +407,40 @@ const ConnectionHub = ({ onBack }) => {
             .select('*, registrant_profiles(*)')
             .eq('id', connection.requested_by_id)
             .single();
-          profileData = data;
+          
+          if (data) {
+            profileData = {
+              ...data,
+              profile_type: 'applicant',
+              name: `${data.registrant_profiles?.first_name || ''} ${data.registrant_profiles?.last_name || ''}`.trim()
+            };
+          }
         }
       } else if (connection.type === 'peer_support') {
         if (connection.other_person) {
-          profileData = connection.other_person;
+          // Check if viewing peer support specialist or applicant
+          const isPeerSupportProfile = connection.other_person.professional_title || connection.other_person.specialties;
+          
+          profileData = {
+            ...connection.other_person,
+            profile_type: isPeerSupportProfile ? 'peer_support' : 'applicant',
+            name: isPeerSupportProfile 
+              ? (connection.other_person.professional_title || `${connection.other_person.registrant_profiles?.first_name || ''} ${connection.other_person.registrant_profiles?.last_name || ''}`.trim())
+              : `${connection.other_person.registrant_profiles?.first_name || ''} ${connection.other_person.registrant_profiles?.last_name || ''}`.trim()
+          };
         }
       } else if (connection.type === 'employer') {
         if (connection.other_person) {
-          profileData = connection.other_person;
+          // Check if viewing employer or applicant
+          const isEmployerProfile = connection.other_person.company_name || connection.other_person.industry;
+          
+          profileData = {
+            ...connection.other_person,
+            profile_type: isEmployerProfile ? 'employer' : 'applicant',
+            name: isEmployerProfile 
+              ? connection.other_person.company_name 
+              : `${connection.other_person.registrant_profiles?.first_name || ''} ${connection.other_person.registrant_profiles?.last_name || ''}`.trim()
+          };
         }
       }
       
@@ -1185,6 +1222,7 @@ const ConnectionHub = ({ onBack }) => {
           connectionStatus={selectedConnection?.status}
           onClose={() => setShowProfileModal(false)}
           showContactInfo={selectedConnection?.status === 'confirmed' || selectedConnection?.status === 'active'}
+          allowProfileView={true}
         />
       )}
 

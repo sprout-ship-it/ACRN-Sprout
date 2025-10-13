@@ -8,7 +8,8 @@ const ProfileModal = ({
   profile,
   connectionStatus,
   onClose,
-  showContactInfo = false
+  showContactInfo = false,
+  allowProfileView = false
 }) => {
   if (!isOpen || !profile) return null;
 
@@ -535,6 +536,7 @@ const ProfileModal = ({
 
   /**
    * Render Contact Information Section
+   * ✅ UPDATED: Better messaging for review mode
    */
   const renderContactInfo = () => {
     if (!showContactInfo) {
@@ -542,8 +544,16 @@ const ProfileModal = ({
         <div className={styles.contactInfoLocked}>
           <div className={styles.lockIcon}>🔒</div>
           <div className={styles.lockMessage}>
-            <strong>Contact information available after connection is confirmed</strong>
-            <p>Once both parties approve the connection, you'll be able to exchange contact details.</p>
+            <strong>
+              {allowProfileView 
+                ? 'Review this profile to make your decision' 
+                : 'Contact information available after connection is confirmed'}
+            </strong>
+            <p>
+              {allowProfileView
+                ? 'Contact information will be available after both parties approve the connection.'
+                : 'Once both parties approve the connection, you\'ll be able to exchange contact details.'}
+            </p>
           </div>
         </div>
       );
@@ -638,11 +648,13 @@ ProfileModal.propTypes = {
   }),
   connectionStatus: PropTypes.string,
   onClose: PropTypes.func.isRequired,
-  showContactInfo: PropTypes.bool
+  showContactInfo: PropTypes.bool,
+  allowProfileView: PropTypes.bool
 };
 
 ProfileModal.defaultProps = {
-  showContactInfo: false
+  showContactInfo: false,
+  allowProfileView: false
 };
 
 export default ProfileModal;
