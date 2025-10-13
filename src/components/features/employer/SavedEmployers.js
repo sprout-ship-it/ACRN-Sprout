@@ -4,7 +4,7 @@ import { useAuth } from '../../../context/AuthContext';
 import { useNavigate } from 'react-router-dom';
 import createEmployerService from '../../../utils/database/employerService';
 import { supabase } from '../../../utils/supabase';
-import EmployerDetailsModal from '../../connections/modals/EmployerDetailsModal';
+import EmployerDetailsModal from '../connections/modals/EmployerDetailsModal';
 import styles from '../property/SavedProperties.module.css';
 
 const SavedEmployers = ({ onBack }) => {
