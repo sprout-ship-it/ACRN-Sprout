@@ -171,6 +171,7 @@ const ConnectionHub = ({ onBack }) => {
           id: group.id,
           status: group.status,
           roommateIds: roommateIds,
+          property_id: group.property_id,
           currentUserId: profileIds.applicant
         });
         
@@ -197,21 +198,27 @@ const ConnectionHub = ({ onBack }) => {
           property = propData;
         }
 
+        // ✅ DIFFERENTIATE: Property match vs Roommate match
+        const isPropertyMatch = !!group.property_id;
+        const connectionType = isPropertyMatch ? 'landlord' : 'roommate';
+        const connectionAvatar = isPropertyMatch ? '🏠' : '👥';
+
         const connection = {
           id: group.id,
-          type: 'roommate',
+          type: connectionType,
           status: group.status,
           source: 'match_group',
           match_group_id: group.id,
           created_at: group.created_at,
           last_activity: group.updated_at || group.created_at,
-          avatar: '👥',
+          avatar: connectionAvatar,
           roommates: roommates,
           property: property,
           requested_by_id: group.requested_by_id,
           pending_member_id: group.pending_member_id,
           member_confirmations: group.member_confirmations,
-          message: group.message
+          message: group.message,
+          isPropertyMatch: isPropertyMatch
         };
 
         // Categorize based on status
@@ -611,7 +618,28 @@ const ConnectionHub = ({ onBack }) => {
         email: ''
       };
 
-      if (connection.type === 'roommate') {
+      if (connection.type === 'landlord' && connection.property) {
+        // Property match - show landlord contact
+        const ll = connection.property.landlord_profiles;
+        contact = {
+          type: 'property',
+          property: {
+            address: connection.property.street_address,
+            city: connection.property.city,
+            state: connection.property.state,
+            rent: connection.property.rent_amount,
+            bedrooms: connection.property.bedrooms,
+            bathrooms: connection.property.bathrooms
+          },
+          landlord: {
+            name: formatName(ll?.registrant_profiles?.first_name, ll?.registrant_profiles?.last_name),
+            phone: ll?.primary_phone,
+            email: ll?.contact_email || ll?.registrant_profiles?.email
+          }
+        };
+        
+      } else if (connection.type === 'roommate') {
+        // Roommate match - show roommate contacts
         contact = {
           type: 'roommates',
           members: connection.roommates?.map(r => ({
@@ -621,6 +649,7 @@ const ConnectionHub = ({ onBack }) => {
           })) || []
         };
         
+        // Include landlord if property exists
         if (connection.property?.landlord_profiles) {
           const ll = connection.property.landlord_profiles;
           contact.landlord = {
@@ -675,7 +704,12 @@ const ConnectionHub = ({ onBack }) => {
    * Get connection display name
    */
   const getConnectionName = (connection) => {
-    if (connection.type === 'roommate') {
+    if (connection.type === 'landlord' && connection.property) {
+      // Property match - show property address
+      const prop = connection.property;
+      return prop.street_address || prop.property_name || 'Property Match';
+    } else if (connection.type === 'roommate') {
+      // Roommate match - show group count
       const count = connection.roommates?.length || 0;
       return `Roommate Group (${count} member${count !== 1 ? 's' : ''})`;
     } else if (connection.type === 'peer_support') {
@@ -824,6 +858,48 @@ const ConnectionHub = ({ onBack }) => {
                         {formatTimeAgo(connection.last_activity)}
                       </div>
 
+                      {/* Property details for landlord matches */}
+                      {connection.type === 'landlord' && connection.property && (
+                        <div className={styles.membersSection}>
+                          <div className={styles.membersSectionTitle}>Property Details:</div>
+                          <div style={{ padding: '0.75rem', background: 'white', borderRadius: 'var(--radius-sm)', border: '1px solid var(--border-beige)' }}>
+                            {connection.property.street_address && (
+                              <div style={{ marginBottom: '0.5rem' }}>
+                                <strong>📍 Address:</strong> {connection.property.street_address}
+                                {connection.property.city && `, ${connection.property.city}`}
+                                {connection.property.state && `, ${connection.property.state}`}
+                              </div>
+                            )}
+                            {connection.property.rent_amount && (
+                              <div style={{ marginBottom: '0.5rem' }}>
+                                <strong>💰 Rent:</strong> ${connection.property.rent_amount}/month
+                              </div>
+                            )}
+                            {connection.property.bedrooms && (
+                              <div>
+                                <strong>🛏️ Bedrooms:</strong> {connection.property.bedrooms}
+                                {connection.property.bathrooms && ` | 🚿 Bathrooms: ${connection.property.bathrooms}`}
+                              </div>
+                            )}
+                          </div>
+                          
+                          {/* Show landlord info */}
+                          {connection.property.landlord_profiles && (
+                            <div style={{ marginTop: '0.75rem' }}>
+                              <div className={styles.membersSectionTitle}>Landlord:</div>
+                              <div className={styles.memberItem}>
+                                <span className={styles.memberName}>
+                                  {formatName(
+                                    connection.property.landlord_profiles.registrant_profiles?.first_name,
+                                    connection.property.landlord_profiles.registrant_profiles?.last_name
+                                  )}
+                                </span>
+                              </div>
+                            </div>
+                          )}
+                        </div>
+                      )}
+
                       {/* Roommate members list with View Profile buttons */}
                       {connection.type === 'roommate' && connection.roommates?.length > 0 && (
                         <div className={styles.membersSection}>
@@ -959,7 +1035,38 @@ const ConnectionHub = ({ onBack }) => {
             </div>
 
             <div style={{ padding: '1.5rem' }}>
-              {contactInfo.type === 'roommates' ? (
+              {contactInfo.type === 'property' ? (
+                <>
+                  <h4 style={{ marginBottom: '1rem' }}>Property Information:</h4>
+                  <div style={{ marginBottom: '1.5rem', padding: '1rem', background: '#f9f9f9', borderRadius: '8px' }}>
+                    {contactInfo.property.address && (
+                      <div style={{ marginBottom: '0.5rem' }}>
+                        <strong>📍 Address:</strong> {contactInfo.property.address}
+                        {contactInfo.property.city && `, ${contactInfo.property.city}`}
+                        {contactInfo.property.state && `, ${contactInfo.property.state}`}
+                      </div>
+                    )}
+                    {contactInfo.property.rent && (
+                      <div style={{ marginBottom: '0.5rem' }}>
+                        <strong>💰 Rent:</strong> ${contactInfo.property.rent}/month
+                      </div>
+                    )}
+                    {contactInfo.property.bedrooms && (
+                      <div>
+                        <strong>🛏️ Bedrooms:</strong> {contactInfo.property.bedrooms}
+                        {contactInfo.property.bathrooms && ` | 🚿 Bathrooms: ${contactInfo.property.bathrooms}`}
+                      </div>
+                    )}
+                  </div>
+                  
+                  <h4 style={{ marginBottom: '1rem' }}>Landlord Contact:</h4>
+                  <div style={{ padding: '1rem', background: '#f9f9f9', borderRadius: '8px' }}>
+                    <div><strong>{contactInfo.landlord.name}</strong></div>
+                    <div>📧 {contactInfo.landlord.email}</div>
+                    <div>📞 {contactInfo.landlord.phone}</div>
+                  </div>
+                </>
+              ) : contactInfo.type === 'roommates' ? (
                 <>
                   <h4 style={{ marginBottom: '1rem' }}>Roommates:</h4>
                   {contactInfo.members?.map((member, i) => (
