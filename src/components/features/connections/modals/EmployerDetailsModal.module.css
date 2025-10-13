@@ -71,6 +71,7 @@
 
 /* ==================== EMPLOYER HEADER ==================== */
 .employerHeader {
+  background: linear-gradient(135deg, var(--gold) 0%, var(--gold-dark) 100%);
   padding: var(--spacing-xxl);
   color: white;
   border-radius: var(--radius-xl) var(--radius-xl) 0 0;

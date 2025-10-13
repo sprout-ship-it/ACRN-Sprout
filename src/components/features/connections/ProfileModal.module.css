@@ -74,7 +74,7 @@
   gap: var(--spacing-lg);
   margin-bottom: var(--spacing-xl);
   padding-bottom: var(--spacing-lg);
-  border-bottom: 2px solid var(--border-beige);
+  border-bottom: 3px solid var(--primary-purple);
 }
 
 .profileAvatar {

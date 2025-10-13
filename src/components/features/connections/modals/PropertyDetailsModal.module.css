@@ -71,6 +71,7 @@
 
 /* ==================== PROPERTY HEADER ==================== */
 .propertyHeader {
+  background: linear-gradient(135deg, var(--coral) 0%, var(--coral-dark) 100%);
   padding: var(--spacing-xxl);
   color: white;
   border-radius: var(--radius-xl) var(--radius-xl) 0 0;
