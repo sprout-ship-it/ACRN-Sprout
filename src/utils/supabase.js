@@ -5,7 +5,6 @@ import { createClient } from '@supabase/supabase-js'
 import createAuthService from './database/authService'
 import createProfilesService from './database/profileService'
 import createMatchingProfilesService from './database/matchingProfilesService'
-import createMatchRequestsService from './database/matchRequestsService'
 import createMatchGroupsService from './database/matchGroupsService'
 import createPSSClientsService from './database/pssClients'
 
@@ -44,14 +43,13 @@ export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
 console.log('✅ Supabase client created')
 
 // ✅ FIXED: Initialize services with proper error handling
-let authService, profilesService, matchingProfilesService, matchRequestsService, matchGroupsService, propertiesService, peerSupportService, pssClientsService, employerService;
+let authService, profilesService, matchingProfilesService, matchGroupsService, propertiesService, peerSupportService, pssClientsService, employerService;
 
 try {
   // Initialize core services
   authService = createAuthService(supabase)
   profilesService = createProfilesService(supabase)
   matchingProfilesService = createMatchingProfilesService(supabase)
-  matchRequestsService = createMatchRequestsService(supabase)
   matchGroupsService = createMatchGroupsService(supabase)
   propertiesService = createPropertiesService(supabase)
   
@@ -325,26 +323,6 @@ export const db = {
   },
 
   // ============================================================================
-  // MATCH REQUESTS - Connection requests between users
-  // ✅ UPDATED: Now supports property-specific requests
-  // Uses role-specific IDs + property_id for housing requests
-  // ============================================================================
-  matchRequests: {
-    create: matchRequestsService.create,
-    getByUserId: matchRequestsService.getByUserId,
-    getSentRequests: matchRequestsService.getSentRequests,
-    getReceivedRequests: matchRequestsService.getReceivedRequests,
-    update: matchRequestsService.update,
-    approve: matchRequestsService.approve,
-    reject: matchRequestsService.reject,
-    cancel: matchRequestsService.cancel,
-    getExistingRequest: matchRequestsService.getExistingRequest,
-    getPendingCount: matchRequestsService.getPendingCount,
-    getStatistics: matchRequestsService.getStatistics,
-    delete: matchRequestsService.delete
-  },
-
-  // ============================================================================
   // MATCH GROUPS - Complete housing solutions 
   // ✅ UPDATED: Now references properties.id instead of landlord_profiles.id
   // Uses applicant_matching_profiles.id + properties.id + peer_support_profiles.id
@@ -488,7 +466,6 @@ export const debugInfo = {
     auth: !!authService,
     profiles: !!profilesService,
     matching: !!matchingProfilesService,
-    requests: !!matchRequestsService,
     groups: !!matchGroupsService,
     properties: !!propertiesService,
     peerSupport: !!peerSupportService,
