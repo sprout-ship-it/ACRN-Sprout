@@ -180,6 +180,18 @@ const ConnectionHub = ({ onBack }) => {
           property = propData;
         }
 
+        // ✅ NEW: For property matches, load the requesting applicant's profile
+        // This allows landlords to see WHO is requesting before approving
+        let requestingApplicant = null;
+        if (group.property_id && group.requested_by_id && group.requested_by_id !== profileIds.applicant) {
+          const { data: applicantData } = await supabase
+            .from('applicant_matching_profiles')
+            .select('*, registrant_profiles(*)')
+            .eq('id', group.requested_by_id)
+            .single();
+          requestingApplicant = applicantData;
+        }
+
         const isPropertyMatch = !!group.property_id;
         const connectionType = isPropertyMatch ? 'landlord' : 'roommate';
         const connectionAvatar = isPropertyMatch ? '🏠' : '👥';
@@ -195,6 +207,7 @@ const ConnectionHub = ({ onBack }) => {
           avatar: connectionAvatar,
           roommates: roommates,
           property: property,
+          requesting_applicant: requestingApplicant, // ✅ NEW: Include the requesting applicant for landlords to review
           requested_by_id: group.requested_by_id,
           pending_member_id: group.pending_member_id,
           member_confirmations: group.member_confirmations,
@@ -240,6 +253,7 @@ const ConnectionHub = ({ onBack }) => {
       
       let otherPerson = null;
       if (isApplicant) {
+        // User is applicant, load peer support specialist info
         const { data } = await supabase
           .from('peer_support_profiles')
           .select('id, user_id, professional_title, primary_phone, contact_email, years_experience, specialties, registrant_profiles(first_name, last_name, email)')
@@ -247,9 +261,10 @@ const ConnectionHub = ({ onBack }) => {
           .single();
         otherPerson = data;
       } else {
+        // ✅ UPDATED: User is peer support, load FULL applicant profile for review
         const { data } = await supabase
           .from('applicant_matching_profiles')
-          .select('id, user_id, primary_phone, registrant_profiles(first_name, last_name, email)')
+          .select('*, registrant_profiles(*)')
           .eq('id', match.applicant_id)
           .single();
         otherPerson = data;
@@ -297,6 +312,7 @@ const ConnectionHub = ({ onBack }) => {
       
       let otherPerson = null;
       if (isApplicant) {
+        // User is applicant, load employer info
         const { data } = await supabase
           .from('employer_profiles')
           .select('id, user_id, company_name, phone, contact_email, industry, city, state, job_types_available, registrant_profiles(first_name, last_name, email)')
@@ -304,9 +320,10 @@ const ConnectionHub = ({ onBack }) => {
           .single();
         otherPerson = data;
       } else {
+        // ✅ UPDATED: User is employer, load FULL applicant profile for review
         const { data } = await supabase
           .from('applicant_matching_profiles')
-          .select('id, user_id, primary_phone, registrant_profiles(first_name, last_name, email)')
+          .select('*, registrant_profiles(*)')
           .eq('id', match.applicant_id)
           .single();
         otherPerson = data;
@@ -352,21 +369,34 @@ const ConnectionHub = ({ onBack }) => {
   };
 
   /**
-   * ✅ NEW: Handle viewing profile (needs to be implemented with ProfileModal)
+   * ✅ UPDATED: Handle viewing profile - now supports viewing requesting applicant for property matches
    */
   const handleViewProfile = async (connection, profileId) => {
     setProfileLoading(true);
     try {
-      // Load profile data based on connection type
       let profileData = null;
       
       if (connection.type === 'roommate') {
+        // For roommate connections, load the specified roommate profile
         const { data } = await supabase
           .from('applicant_matching_profiles')
           .select('*, registrant_profiles(*)')
           .eq('id', profileId)
           .single();
         profileData = data;
+      } else if (connection.type === 'landlord') {
+        // ✅ NEW: For landlord connections, show the requesting applicant's profile
+        if (connection.requesting_applicant) {
+          profileData = connection.requesting_applicant;
+        } else if (connection.requested_by_id) {
+          // Fallback: fetch the requesting applicant if not already loaded
+          const { data } = await supabase
+            .from('applicant_matching_profiles')
+            .select('*, registrant_profiles(*)')
+            .eq('id', connection.requested_by_id)
+            .single();
+          profileData = data;
+        }
       } else if (connection.type === 'peer_support') {
         if (connection.other_person) {
           profileData = connection.other_person;
@@ -675,62 +705,109 @@ const ConnectionHub = ({ onBack }) => {
   const getTabCount = (tab) => connections[tab]?.length || 0;
 
   /**
-   * ✅ NEW: Render simplified detail section for connections
+   * ✅ UPDATED: Render simplified detail section for connections
    */
   const renderConnectionDetails = (connection) => {
-    // Property details
+    // Property details with requesting applicant info for landlords
     if (connection.type === 'landlord' && connection.property) {
       return (
-        <div className={styles.membersSection}>
-          <div className={styles.membersSectionTitle}>Property Details:</div>
-          <div style={{ padding: '0.75rem', background: 'white', borderRadius: 'var(--radius-sm)', border: '1px solid var(--border-beige)' }}>
-            {connection.property.street_address && (
-              <div style={{ marginBottom: '0.5rem' }}>
-                <strong>📍 Address:</strong> {connection.property.street_address}
-                {connection.property.city && `, ${connection.property.city}`}
-                {connection.property.state && `, ${connection.property.state}`}
+        <>
+          {/* ✅ NEW: Show requesting applicant info for landlords in awaiting tab */}
+          {activeTab === 'awaiting' && connection.requesting_applicant && (
+            <div className={styles.membersSection} style={{ marginBottom: '1rem' }}>
+              <div className={styles.membersSectionTitle}>Requesting Applicant:</div>
+              <div style={{ padding: '0.75rem', background: 'white', borderRadius: 'var(--radius-sm)', border: '1px solid var(--border-beige)' }}>
+                <div style={{ marginBottom: '0.5rem' }}>
+                  <strong>👤 Name:</strong> {formatName(connection.requesting_applicant.registrant_profiles?.first_name, connection.requesting_applicant.registrant_profiles?.last_name)}
+                </div>
+                {connection.requesting_applicant.recovery_stage && (
+                  <div style={{ marginBottom: '0.5rem' }}>
+                    <strong>🌱 Recovery Stage:</strong> {connection.requesting_applicant.recovery_stage.replace(/_/g, ' ')}
+                  </div>
+                )}
+                {connection.requesting_applicant.employment_status && (
+                  <div>
+                    <strong>💼 Employment:</strong> {connection.requesting_applicant.employment_status.replace(/_/g, ' ')}
+                  </div>
+                )}
               </div>
-            )}
-            {connection.property.rent_amount && (
-              <div style={{ marginBottom: '0.5rem' }}>
-                <strong>💰 Rent:</strong> ${connection.property.rent_amount}/month
-              </div>
-            )}
-            {connection.property.bedrooms !== undefined && (
-              <div>
-                <strong>🛏️ Bedrooms:</strong> {connection.property.bedrooms}
-                {connection.property.bathrooms && ` | 🚿 Bathrooms: ${connection.property.bathrooms}`}
-              </div>
-            )}
+            </div>
+          )}
+          
+          <div className={styles.membersSection}>
+            <div className={styles.membersSectionTitle}>Property Details:</div>
+            <div style={{ padding: '0.75rem', background: 'white', borderRadius: 'var(--radius-sm)', border: '1px solid var(--border-beige)' }}>
+              {connection.property.street_address && (
+                <div style={{ marginBottom: '0.5rem' }}>
+                  <strong>📍 Address:</strong> {connection.property.street_address}
+                  {connection.property.city && `, ${connection.property.city}`}
+                  {connection.property.state && `, ${connection.property.state}`}
+                </div>
+              )}
+              {connection.property.rent_amount && (
+                <div style={{ marginBottom: '0.5rem' }}>
+                  <strong>💰 Rent:</strong> ${connection.property.rent_amount}/month
+                </div>
+              )}
+              {connection.property.bedrooms !== undefined && (
+                <div>
+                  <strong>🛏️ Bedrooms:</strong> {connection.property.bedrooms}
+                  {connection.property.bathrooms && ` | 🚿 Bathrooms: ${connection.property.bathrooms}`}
+                </div>
+              )}
+            </div>
           </div>
-        </div>
+        </>
       );
     }
 
     // Peer Support specialist info
     if (connection.type === 'peer_support' && connection.other_person) {
+      // If this is awaiting tab and user is NOT the requester, show applicant preview
+      const showingApplicantInfo = activeTab === 'awaiting' && !connection.is_requester;
+      
       return (
         <div className={styles.membersSection}>
-          <div className={styles.membersSectionTitle}>Specialist Info:</div>
+          <div className={styles.membersSectionTitle}>
+            {showingApplicantInfo ? 'Requesting Applicant:' : 'Specialist Info:'}
+          </div>
           <div style={{ padding: '0.75rem', background: 'white', borderRadius: 'var(--radius-sm)', border: '1px solid var(--border-beige)' }}>
             <div style={{ marginBottom: '0.5rem' }}>
               <strong>👤 Name:</strong> {formatName(connection.other_person.registrant_profiles?.first_name, connection.other_person.registrant_profiles?.last_name)}
             </div>
-            {connection.other_person.professional_title && (
-              <div style={{ marginBottom: '0.5rem' }}>
-                <strong>💼 Title:</strong> {connection.other_person.professional_title}
-              </div>
-            )}
-            {connection.other_person.years_experience && (
-              <div style={{ marginBottom: '0.5rem' }}>
-                <strong>⭐ Experience:</strong> {connection.other_person.years_experience} year{connection.other_person.years_experience !== 1 ? 's' : ''}
-              </div>
-            )}
-            {connection.other_person.specialties && connection.other_person.specialties.length > 0 && (
-              <div>
-                <strong>🎯 Specialties:</strong> {connection.other_person.specialties.slice(0, 3).join(', ')}
-                {connection.other_person.specialties.length > 3 && ` (+${connection.other_person.specialties.length - 3} more)`}
-              </div>
+            {showingApplicantInfo ? (
+              <>
+                {connection.other_person.recovery_stage && (
+                  <div style={{ marginBottom: '0.5rem' }}>
+                    <strong>🌱 Recovery Stage:</strong> {connection.other_person.recovery_stage.replace(/_/g, ' ')}
+                  </div>
+                )}
+                {connection.other_person.support_needs && connection.other_person.support_needs.length > 0 && (
+                  <div>
+                    <strong>🎯 Support Needs:</strong> {connection.other_person.support_needs.slice(0, 2).join(', ')}
+                    {connection.other_person.support_needs.length > 2 && ` (+${connection.other_person.support_needs.length - 2} more)`}
+                  </div>
+                )}
+              </>
+            ) : (
+              <>
+                {connection.other_person.professional_title && (
+                  <div style={{ marginBottom: '0.5rem' }}>
+                    <strong>💼 Title:</strong> {connection.other_person.professional_title}
+                  </div>
+                )}
+                {connection.other_person.years_experience && (
+                  <div style={{ marginBottom: '0.5rem' }}>
+                    <strong>⭐ Experience:</strong> {connection.other_person.years_experience} year{connection.other_person.years_experience !== 1 ? 's' : ''}
+                  </div>
+                )}
+                {connection.other_person.specialties && connection.other_person.specialties.length > 0 && (
+                  <div>
+                    <strong>🎯 Specialties:</strong> {connection.other_person.specialties.slice(0, 3).join(', ')}
+                    {connection.other_person.specialties.length > 3 && ` (+${connection.other_person.specialties.length - 3} more)`}
+                  </div>
+                )}
+              </>
             )}
           </div>
         </div>
@@ -739,30 +816,61 @@ const ConnectionHub = ({ onBack }) => {
 
     // Employer info
     if (connection.type === 'employer' && connection.other_person) {
+      // If this is awaiting tab and user is NOT the requester, show applicant preview
+      const showingApplicantInfo = activeTab === 'awaiting' && !connection.is_requester;
+      
       return (
         <div className={styles.membersSection}>
-          <div className={styles.membersSectionTitle}>Employer Info:</div>
+          <div className={styles.membersSectionTitle}>
+            {showingApplicantInfo ? 'Requesting Applicant:' : 'Employer Info:'}
+          </div>
           <div style={{ padding: '0.75rem', background: 'white', borderRadius: 'var(--radius-sm)', border: '1px solid var(--border-beige)' }}>
-            {connection.other_person.company_name && (
-              <div style={{ marginBottom: '0.5rem' }}>
-                <strong>🏢 Company:</strong> {connection.other_person.company_name}
-              </div>
-            )}
-            {connection.other_person.industry && (
-              <div style={{ marginBottom: '0.5rem' }}>
-                <strong>🏭 Industry:</strong> {connection.other_person.industry}
-              </div>
-            )}
-            {connection.other_person.city && connection.other_person.state && (
-              <div style={{ marginBottom: '0.5rem' }}>
-                <strong>📍 Location:</strong> {connection.other_person.city}, {connection.other_person.state}
-              </div>
-            )}
-            {connection.other_person.job_types_available && connection.other_person.job_types_available.length > 0 && (
-              <div>
-                <strong>💼 Job Types:</strong> {connection.other_person.job_types_available.slice(0, 2).join(', ')}
-                {connection.other_person.job_types_available.length > 2 && ` (+${connection.other_person.job_types_available.length - 2} more)`}
-              </div>
+            {showingApplicantInfo ? (
+              <>
+                <div style={{ marginBottom: '0.5rem' }}>
+                  <strong>👤 Name:</strong> {formatName(connection.other_person.registrant_profiles?.first_name, connection.other_person.registrant_profiles?.last_name)}
+                </div>
+                {connection.other_person.recovery_stage && (
+                  <div style={{ marginBottom: '0.5rem' }}>
+                    <strong>🌱 Recovery Stage:</strong> {connection.other_person.recovery_stage.replace(/_/g, ' ')}
+                  </div>
+                )}
+                {connection.other_person.employment_status && (
+                  <div style={{ marginBottom: '0.5rem' }}>
+                    <strong>💼 Employment Status:</strong> {connection.other_person.employment_status.replace(/_/g, ' ')}
+                  </div>
+                )}
+                {connection.other_person.desired_job_types && connection.other_person.desired_job_types.length > 0 && (
+                  <div>
+                    <strong>🎯 Desired Roles:</strong> {connection.other_person.desired_job_types.slice(0, 2).join(', ')}
+                    {connection.other_person.desired_job_types.length > 2 && ` (+${connection.other_person.desired_job_types.length - 2} more)`}
+                  </div>
+                )}
+              </>
+            ) : (
+              <>
+                {connection.other_person.company_name && (
+                  <div style={{ marginBottom: '0.5rem' }}>
+                    <strong>🏢 Company:</strong> {connection.other_person.company_name}
+                  </div>
+                )}
+                {connection.other_person.industry && (
+                  <div style={{ marginBottom: '0.5rem' }}>
+                    <strong>🏭 Industry:</strong> {connection.other_person.industry}
+                  </div>
+                )}
+                {connection.other_person.city && connection.other_person.state && (
+                  <div style={{ marginBottom: '0.5rem' }}>
+                    <strong>📍 Location:</strong> {connection.other_person.city}, {connection.other_person.state}
+                  </div>
+                )}
+                {connection.other_person.job_types_available && connection.other_person.job_types_available.length > 0 && (
+                  <div>
+                    <strong>💼 Job Types:</strong> {connection.other_person.job_types_available.slice(0, 2).join(', ')}
+                    {connection.other_person.job_types_available.length > 2 && ` (+${connection.other_person.job_types_available.length - 2} more)`}
+                  </div>
+                )}
+              </>
             )}
           </div>
         </div>
@@ -927,15 +1035,30 @@ const ConnectionHub = ({ onBack }) => {
                                 </button>
                               )}
                               
-                              {connection.type === 'landlord' && connection.property && (
-                                <button 
-                                  className="btn btn-outline" 
-                                  onClick={() => handleViewProperty(connection)} 
-                                  disabled={profileLoading}
-                                  style={{ width: '100%' }}
-                                >
-                                  👁️ View Property Details
-                                </button>
+                              {/* ✅ UPDATED: For landlords, show BOTH applicant profile AND property details */}
+                              {connection.type === 'landlord' && (
+                                <>
+                                  {connection.requesting_applicant && (
+                                    <button 
+                                      className="btn btn-outline" 
+                                      onClick={() => handleViewProfile(connection)} 
+                                      disabled={profileLoading}
+                                      style={{ width: '100%', marginBottom: '0.5rem' }}
+                                    >
+                                      👁️ View Applicant Profile
+                                    </button>
+                                  )}
+                                  {connection.property && (
+                                    <button 
+                                      className="btn btn-outline" 
+                                      onClick={() => handleViewProperty(connection)} 
+                                      disabled={profileLoading}
+                                      style={{ width: '100%' }}
+                                    >
+                                      🏠 View Property Details
+                                    </button>
+                                  )}
+                                </>
                               )}
                               
                               {connection.type === 'employer' && connection.other_person && (
