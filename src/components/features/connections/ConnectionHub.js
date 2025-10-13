@@ -335,64 +335,66 @@ const loadMatchGroupConnections = async (categories) => {
     }
   };
 
-  const handleViewProfile = async (connection, personId = null) => {
-    setProfileLoading(true);
+{activeTab === 'awaiting' && (
+  <>
+    {/* View Details Button - Show who is requesting */}
+    <div style={{ marginBottom: '1rem' }}>
+      {connection.type === 'roommate' && connection.roommates?.length > 0 && (
+        <button 
+          className="btn btn-outline" 
+          onClick={() => handleViewProfile(connection, connection.roommates[0].id)} 
+          disabled={profileLoading}
+          style={{ width: '100%' }}
+        >
+          👁️ View Applicant Profile
+        </button>
+      )}
+      
+      {connection.type === 'peer_support' && connection.other_person && (
+        <button 
+          className="btn btn-outline" 
+          onClick={() => handleViewProfile(connection)} 
+          disabled={profileLoading}
+          style={{ width: '100%' }}
+        >
+          👁️ View Applicant Profile
+        </button>
+      )}
+      
+      {connection.type === 'landlord' && connection.property && (
+        <button 
+          className="btn btn-outline" 
+          onClick={() => handleViewProperty(connection)} 
+          disabled={profileLoading}
+          style={{ width: '100%' }}
+        >
+          👁️ View Property Details
+        </button>
+      )}
+      
+      {connection.type === 'employer' && connection.other_person && (
+        <button 
+          className="btn btn-outline" 
+          onClick={() => handleViewProfile(connection)} 
+          disabled={profileLoading}
+          style={{ width: '100%' }}
+        >
+          👁️ View Applicant Profile
+        </button>
+      )}
+    </div>
     
-    try {
-      let profileData = null;
-
-      if (connection.type === 'roommate') {
-        const { data } = await supabase
-          .from('applicant_matching_profiles')
-          .select('*, registrant_profiles(first_name, last_name, email)')
-          .eq('id', personId)
-          .single();
-        
-        profileData = {
-          ...data,
-          profile_type: 'applicant',
-          name: formatName(data.registrant_profiles?.first_name, data.registrant_profiles?.last_name)
-        };
-      } else if (connection.type === 'peer_support') {
-        const isApplicant = connection.is_requester;
-        
-        if (isApplicant) {
-          const { data } = await supabase
-            .from('peer_support_profiles')
-            .select('*, registrant_profiles(first_name, last_name, email)')
-            .eq('id', connection.other_person.id)
-            .single();
-          
-          profileData = {
-            ...data,
-            profile_type: 'peer_support',
-            name: data.professional_title || formatName(data.registrant_profiles?.first_name, data.registrant_profiles?.last_name)
-          };
-        } else {
-          const { data } = await supabase
-            .from('applicant_matching_profiles')
-            .select('*, registrant_profiles(first_name, last_name, email)')
-            .eq('id', connection.other_person.id)
-            .single();
-          
-          profileData = {
-            ...data,
-            profile_type: 'applicant',
-            name: formatName(data.registrant_profiles?.first_name, data.registrant_profiles?.last_name)
-          };
-        }
-      }
-
-      setSelectedProfile(profileData);
-      setSelectedConnection(connection);
-      setShowProfileModal(true);
-    } catch (err) {
-      console.error('Error loading profile:', err);
-      alert('Failed to load profile information.');
-    } finally {
-      setProfileLoading(false);
-    }
-  };
+    {/* Approve/Decline Actions */}
+    <div className={styles.primaryActions}>
+      <button className="btn btn-primary" onClick={() => handleApproveRequest(connection)} disabled={actionLoading}>
+        ✅ Approve
+      </button>
+      <button className="btn btn-outline" onClick={() => handleDeclineRequest(connection)} disabled={actionLoading}>
+        ❌ Decline
+      </button>
+    </div>
+  </>
+)}
 
   /**
    * ✅ NEW: Handle viewing property details in modal
@@ -923,16 +925,66 @@ const loadMatchGroupConnections = async (categories) => {
 
                       {/* Action Buttons */}
                       <div className={styles.actionButtonsGrid}>
-                        {activeTab === 'awaiting' && (
-                          <div className={styles.primaryActions}>
-                            <button className="btn btn-primary" onClick={() => handleApproveRequest(connection)} disabled={actionLoading}>
-                              ✅ Approve
-                            </button>
-                            <button className="btn btn-outline" onClick={() => handleDeclineRequest(connection)} disabled={actionLoading}>
-                              ❌ Decline
-                            </button>
-                          </div>
-                        )}
+                {activeTab === 'awaiting' && (
+  <>
+    {/* View Details Button - Show who is requesting */}
+    <div style={{ marginBottom: '1rem' }}>
+      {connection.type === 'roommate' && connection.roommates?.length > 0 && (
+        <button 
+          className="btn btn-outline" 
+          onClick={() => handleViewProfile(connection, connection.roommates[0].id)} 
+          disabled={profileLoading}
+          style={{ width: '100%' }}
+        >
+          👁️ View Applicant Profile
+        </button>
+      )}
+      
+      {connection.type === 'peer_support' && connection.other_person && (
+        <button 
+          className="btn btn-outline" 
+          onClick={() => handleViewProfile(connection)} 
+          disabled={profileLoading}
+          style={{ width: '100%' }}
+        >
+          👁️ View Applicant Profile
+        </button>
+      )}
+      
+      {connection.type === 'landlord' && connection.property && (
+        <button 
+          className="btn btn-outline" 
+          onClick={() => handleViewProperty(connection)} 
+          disabled={profileLoading}
+          style={{ width: '100%' }}
+        >
+          👁️ View Property Details
+        </button>
+      )}
+      
+      {connection.type === 'employer' && connection.other_person && (
+        <button 
+          className="btn btn-outline" 
+          onClick={() => handleViewProfile(connection)} 
+          disabled={profileLoading}
+          style={{ width: '100%' }}
+        >
+          👁️ View Applicant Profile
+        </button>
+      )}
+    </div>
+    
+    {/* Approve/Decline Actions */}
+    <div className={styles.primaryActions}>
+      <button className="btn btn-primary" onClick={() => handleApproveRequest(connection)} disabled={actionLoading}>
+        ✅ Approve
+      </button>
+      <button className="btn btn-outline" onClick={() => handleDeclineRequest(connection)} disabled={actionLoading}>
+        ❌ Decline
+      </button>
+    </div>
+  </>
+)}
 
                         {activeTab === 'active' && (
                           <>
