@@ -419,95 +419,118 @@ const createPSSClientsService = (supabaseClient) => {
       }
     },
 
-    /**
-     * ✅ NEW: Update or create PSS client record for goal/session management
-     * @param {string} matchId - peer_support_matches.id
-     * @param {Object} updates - Client management fields to update
-     * @returns {Promise<Object>} Update result
-     */
-    updatePSSClient: async (matchId, updates) => {
-      try {
-        console.log('📝 Updating PSS client record for match:', matchId, updates);
+/**
+ * ✅ FIXED: Update or create PSS client record for goal/session management
+ * @param {string} clientId - pss_clients.id (not peer_support_matches.id!)
+ * @param {Object} updates - Client management fields to update
+ * @returns {Promise<Object>} Update result
+ */
+updatePSSClient: async (clientId, updates) => {
+  try {
+    console.log('📝 Updating client:', clientId, updates);
 
-        // First, get the peer_support_match to extract IDs
-        const { data: match } = await supabaseClient
-          .from('peer_support_matches')
-          .select('applicant_id, peer_support_id')
-          .eq('id', matchId)
+    // ✅ FIX: Check if this is a pss_clients.id or peer_support_matches.id
+    // Try to find the PSS client record directly first
+    const { data: existingClient, error: findError } = await supabaseClient
+      .from('pss_clients')
+      .select('*')
+      .eq('id', clientId)
+      .maybeSingle();
+
+    if (existingClient) {
+      // ✅ CASE 1: We have a pss_clients.id - just update it directly
+      console.log('✅ Found PSS client record, updating directly');
+      
+      const { data, error } = await supabaseClient
+        .from('pss_clients')
+        .update({
+          ...updates,
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', clientId)
+        .select()
+        .single();
+
+      if (error) {
+        console.error('❌ Error updating PSS client:', error);
+        return { success: false, data: null, error };
+      }
+
+      console.log('✅ Updated PSS client record:', data.id);
+      return { success: true, data, error: null };
+
+    } else {
+      // ✅ CASE 2: Might be a peer_support_matches.id - try to find the match
+      console.log('📝 Updating PSS match:', clientId, updates);
+      
+      const { data: match, error: matchError } = await supabaseClient
+        .from('peer_support_matches')
+        .select('applicant_id, peer_support_id')
+        .eq('id', clientId)
+        .maybeSingle();
+
+      if (!match) {
+        throw new Error('Neither PSS client nor peer support match found with this ID');
+      }
+
+      // Check if PSS client record exists for this match
+      const { data: pssClient } = await supabaseClient
+        .from('pss_clients')
+        .select('id')
+        .eq('peer_specialist_id', match.peer_support_id)
+        .eq('client_id', match.applicant_id)
+        .maybeSingle();
+
+      if (pssClient) {
+        // Update existing PSS client record
+        const { data, error } = await supabaseClient
+          .from('pss_clients')
+          .update({
+            ...updates,
+            updated_at: new Date().toISOString()
+          })
+          .eq('id', pssClient.id)
+          .select()
           .single();
 
-        if (!match) {
-          throw new Error('Peer support match not found');
+        if (error) {
+          console.error('❌ Error updating PSS client:', error);
+          return { success: false, data: null, error };
         }
 
-        // Check if PSS client record exists (handle 406 gracefully)
-        let existingClient = null;
-        try {
-          const { data, error } = await supabaseClient
-            .from('pss_clients')
-            .select('id')
-            .eq('peer_specialist_id', match.peer_support_id)
-            .eq('client_id', match.applicant_id)
-            .maybeSingle(); // Use maybeSingle instead of single to handle no results
+        console.log('✅ Updated PSS client record:', data.id);
+        return { success: true, data, error: null };
 
-          if (!error) {
-            existingClient = data;
-          } else {
-            console.warn('Could not check for existing PSS client, will attempt create:', error);
-          }
-        } catch (checkError) {
-          console.warn('Error checking existing PSS client, will attempt create:', checkError);
+      } else {
+        // Create new PSS client record
+        const { data, error } = await supabaseClient
+          .from('pss_clients')
+          .insert([{
+            peer_specialist_id: match.peer_support_id,
+            client_id: match.applicant_id,
+            status: 'active',
+            ...updates,
+            created_at: new Date().toISOString(),
+            updated_at: new Date().toISOString()
+          }])
+          .select()
+          .single();
+
+        if (error) {
+          console.error('❌ Error creating PSS client:', error);
+          return { success: false, data: null, error };
         }
 
-        if (existingClient) {
-          // Update existing PSS client record
-          const { data, error } = await supabaseClient
-            .from('pss_clients')
-            .update({
-              ...updates,
-              updated_at: new Date().toISOString()
-            })
-            .eq('id', existingClient.id)
-            .select()
-            .single();
-
-          if (error) {
-            console.error('❌ Error updating PSS client:', error);
-            return { success: false, data: null, error };
-          }
-
-          console.log('✅ Updated PSS client record:', data.id);
-          return { success: true, data, error: null };
-
-        } else {
-          // Create new PSS client record
-          const { data, error } = await supabaseClient
-            .from('pss_clients')
-            .insert([{
-              peer_specialist_id: match.peer_support_id,
-              client_id: match.applicant_id,
-              status: 'active',
-              ...updates,
-              created_at: new Date().toISOString(),
-              updated_at: new Date().toISOString()
-            }])
-            .select()
-            .single();
-
-          if (error) {
-            console.error('❌ Error creating PSS client:', error);
-            return { success: false, data: null, error };
-          }
-
-          console.log('✅ Created PSS client record:', data.id);
-          return { success: true, data, error: null };
-        }
-
-      } catch (err) {
-        console.error('💥 Exception in updatePSSClient:', err);
-        return { success: false, data: null, error: { message: err.message } };
+        console.log('✅ Created PSS client record:', data.id);
+        return { success: true, data, error: null };
       }
-    },
+    }
+
+  } catch (err) {
+    console.error('💥 Exception in updatePSSClient:', err);
+    return { success: false, data: null, error: { message: err.message } };
+  }
+},
 
     /**
      * Update match status (e.g., 'active' -> 'inactive')
