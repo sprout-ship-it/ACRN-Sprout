@@ -46,6 +46,7 @@ const PeerSupportDashboard = ({ onBack, onClientSelect }) => {
 
   /**
    * ✅ UPDATED: Load PSS clients - separating active from former clients
+   * ✅ FIX: Manual join since foreign key relationship doesn't exist
    */
   const loadClients = async () => {
     if (!peerSupportProfileId) return;
@@ -56,16 +57,10 @@ const PeerSupportDashboard = ({ onBack, onClientSelect }) => {
     try {
       console.log('🔄 Loading PSS clients for peer specialist:', peerSupportProfileId);
       
-      // Load all pss_clients records (active and inactive)
+      // Load all pss_clients records (active and inactive) - WITHOUT joins
       const { data: pssClientsData, error: pssError } = await supabase
         .from('pss_clients')
-        .select(`
-          *,
-          applicant:applicant_matching_profiles!client_id (
-            *,
-            registrant:registrant_profiles!user_id (*)
-          )
-        `)
+        .select('*')
         .eq('peer_specialist_id', peerSupportProfileId)
         .order('updated_at', { ascending: false });
 
@@ -73,15 +68,41 @@ const PeerSupportDashboard = ({ onBack, onClientSelect }) => {
 
       console.log(`📊 Found ${pssClientsData?.length || 0} total PSS client records`);
 
+      // Extract unique client IDs
+      const clientIds = [...new Set(pssClientsData?.map(c => c.client_id) || [])];
+      
+      if (clientIds.length === 0) {
+        setClients([]);
+        setFormerClients([]);
+        setLoading(false);
+        return;
+      }
+
+      // ✅ FIX: Load applicant profiles separately and join manually
+      const { data: applicantData, error: applicantError } = await supabase
+        .from('applicant_matching_profiles')
+        .select('*, registrant_profiles(*)')
+        .in('id', clientIds);
+
+      if (applicantError) throw applicantError;
+
+      console.log(`📊 Loaded ${applicantData?.length || 0} applicant profiles`);
+
+      // Create a map for quick lookup
+      const applicantMap = {};
+      applicantData?.forEach(app => {
+        applicantMap[app.id] = app;
+      });
+
       // Enrich and separate active from former clients
       const activeClientsList = [];
       const formerClientsList = [];
 
       for (const client of pssClientsData || []) {
-        const applicantData = client.applicant;
-        const clientProfile = applicantData?.registrant;
+        const applicant = applicantMap[client.client_id];
+        const clientProfile = applicant?.registrant_profiles;
 
-        if (!applicantData || !clientProfile) {
+        if (!applicant || !clientProfile) {
           console.warn(`Incomplete data for client:`, client);
           continue;
         }
@@ -89,28 +110,28 @@ const PeerSupportDashboard = ({ onBack, onClientSelect }) => {
         const enrichedClient = {
           ...client,
           profile: clientProfile,
-          applicantProfile: applicantData,
+          applicantProfile: applicant,
           displayName: clientProfile.first_name 
             ? `${clientProfile.first_name} ${clientProfile.last_name?.charAt(0) || ''}.`
             : 'Anonymous Client',
-          phone: applicantData.primary_phone || 'Not provided',
+          phone: applicant.primary_phone || 'Not provided',
           email: clientProfile.email,
           
           // Recovery information
-          primarySubstances: applicantData.primary_substance ? [applicantData.primary_substance] : [],
-          recoveryStage: applicantData.recovery_stage || 'Not specified',
-          timeInRecovery: applicantData.time_in_recovery || 'Not specified',
-          sobrietyDate: applicantData.sobriety_date || null,
-          recoveryMethods: applicantData.recovery_methods || [],
-          supportMeetings: applicantData.support_meetings || 'Not specified',
-          sponsorMentor: applicantData.sponsor_mentor || 'Not specified',
-          recoveryContext: applicantData.recovery_context || '',
-          spiritualAffiliation: applicantData.spiritual_affiliation || 'Not specified',
-          wantRecoverySupport: applicantData.want_recovery_support || false,
-          comfortableDiscussing: applicantData.comfortable_discussing_recovery || false,
-          attendMeetingsTogether: applicantData.attend_meetings_together || false,
-          recoveryAccountability: applicantData.recovery_accountability || false,
-          mentorshipInterest: applicantData.mentorship_interest || false,
+          primarySubstances: applicant.primary_substance ? [applicant.primary_substance] : [],
+          recoveryStage: applicant.recovery_stage || 'Not specified',
+          timeInRecovery: applicant.time_in_recovery || 'Not specified',
+          sobrietyDate: applicant.sobriety_date || null,
+          recoveryMethods: applicant.recovery_methods || [],
+          supportMeetings: applicant.support_meetings || 'Not specified',
+          sponsorMentor: applicant.sponsor_mentor || 'Not specified',
+          recoveryContext: applicant.recovery_context || '',
+          spiritualAffiliation: applicant.spiritual_affiliation || 'Not specified',
+          wantRecoverySupport: applicant.want_recovery_support || false,
+          comfortableDiscussing: applicant.comfortable_discussing_recovery || false,
+          attendMeetingsTogether: applicant.attend_meetings_together || false,
+          recoveryAccountability: applicant.recovery_accountability || false,
+          mentorshipInterest: applicant.mentorship_interest || false,
           
           // Goals and session tracking
           recoveryGoals: client.recovery_goals || [],
@@ -145,6 +166,7 @@ const PeerSupportDashboard = ({ onBack, onClientSelect }) => {
 
   /**
    * ✅ UPDATED: Load available peer support connections from peer_support_matches
+   * ✅ FIX: Manual join since foreign key relationship doesn't exist
    */
   const loadAvailableConnections = async () => {
     if (!peerSupportProfileId) return;
@@ -155,13 +177,7 @@ const PeerSupportDashboard = ({ onBack, onClientSelect }) => {
       // Load peer_support_matches that are active but not yet in pss_clients
       const { data: matches, error } = await supabase
         .from('peer_support_matches')
-        .select(`
-          *,
-          applicant:applicant_matching_profiles!applicant_id (
-            *,
-            registrant:registrant_profiles!user_id (*)
-          )
-        `)
+        .select('*')
         .eq('peer_support_id', peerSupportProfileId)
         .eq('status', 'active');
 
@@ -178,18 +194,43 @@ const PeerSupportDashboard = ({ onBack, onClientSelect }) => {
 
       console.log(`📊 Found ${availableMatches.length} available connections (not yet added as clients)`);
 
+      if (availableMatches.length === 0) {
+        setAvailableConnections([]);
+        return;
+      }
+
+      // ✅ FIX: Load applicant profiles separately
+      const applicantIds = availableMatches.map(m => m.applicant_id);
+      
+      const { data: applicantData, error: applicantError } = await supabase
+        .from('applicant_matching_profiles')
+        .select('*, registrant_profiles(*)')
+        .in('id', applicantIds);
+
+      if (applicantError) throw applicantError;
+
+      // Create a map for quick lookup
+      const applicantMap = {};
+      applicantData?.forEach(app => {
+        applicantMap[app.id] = app;
+      });
+
       // Enrich with profile data
-      const enrichedConnections = availableMatches.map(match => ({
-        id: match.id,
-        client_id: match.applicant_id,
-        applicant: match.applicant,
-        profile: match.applicant?.registrant,
-        applicantProfile: match.applicant,
-        displayName: match.applicant?.registrant?.first_name
-          ? `${match.applicant.registrant.first_name} ${match.applicant.registrant.last_name?.charAt(0) || ''}.`
-          : 'Anonymous',
-        created_at: match.created_at
-      }));
+      const enrichedConnections = availableMatches.map(match => {
+        const applicant = applicantMap[match.applicant_id];
+        
+        return {
+          id: match.id,
+          client_id: match.applicant_id,
+          applicant: applicant,
+          profile: applicant?.registrant_profiles,
+          applicantProfile: applicant,
+          displayName: applicant?.registrant_profiles?.first_name
+            ? `${applicant.registrant_profiles.first_name} ${applicant.registrant_profiles.last_name?.charAt(0) || ''}.`
+            : 'Anonymous',
+          created_at: match.created_at
+        };
+      });
 
       setAvailableConnections(enrichedConnections);
       console.log(`✅ Loaded ${enrichedConnections.length} enriched available connections`);
