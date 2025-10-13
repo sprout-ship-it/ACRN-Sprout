@@ -139,90 +139,91 @@ const ConnectionHub = ({ onBack }) => {
     }
   };
 
-  const loadMatchGroupConnections = async (categories) => {
-    try {
-      // ✅ FIX: Query for match_groups where user is either in roommate_ids, requested_by, or pending_member
-      const { data: matchGroups, error } = await supabase
-        .from('match_groups')
-        .select('*')
-        .or(`roommate_ids.cs.["${profileIds.applicant}"],requested_by_id.eq.${profileIds.applicant},pending_member_id.eq.${profileIds.applicant}`);
 
-      if (error) throw error;
-      if (!matchGroups || matchGroups.length === 0) return;
+const loadMatchGroupConnections = async (categories) => {
+  try {
+    // Query for match_groups where user is either in roommate_ids, requested_by, or pending_member
+    const { data: matchGroups, error } = await supabase
+      .from('match_groups')
+      .select('*')
+      .or(`roommate_ids.cs.["${profileIds.applicant}"],requested_by_id.eq.${profileIds.applicant},pending_member_id.eq.${profileIds.applicant}`);
 
-      for (const group of matchGroups) {
-        const roommateIds = group.roommate_ids || [];
-        const otherRoommateIds = roommateIds.filter(id => id !== profileIds.applicant);
-        
-        // ✅ FIX ISSUE 1: Skip inactive groups with 0 members
-        if (otherRoommateIds.length === 0) {
-          console.log('Skipping inactive match group with 0 members:', group.id);
-          continue;
+    if (error) throw error;
+    if (!matchGroups || matchGroups.length === 0) return;
+
+    for (const group of matchGroups) {
+      const roommateIds = group.roommate_ids || [];
+      const otherRoommateIds = roommateIds.filter(id => id !== profileIds.applicant);
+      
+      // ✅ FIXED: Only skip if it's a roommate-only match (no property) with 0 other members
+      // For property matches, we want to show them even if user is the only roommate
+      if (!group.property_id && otherRoommateIds.length === 0) {
+        console.log('Skipping inactive roommate-only match group with 0 other members:', group.id);
+        continue;
+      }
+      
+      let roommates = [];
+      if (otherRoommateIds.length > 0) {
+        const { data: roommateData } = await supabase
+          .from('applicant_matching_profiles')
+          .select('id, user_id, primary_phone, registrant_profiles(first_name, last_name, email)')
+          .in('id', otherRoommateIds);
+        roommates = roommateData || [];
+      }
+
+      let property = null;
+      if (group.property_id) {
+        const { data: propData } = await supabase
+          .from('properties')
+          .select('*, landlord_profiles(user_id, primary_phone, contact_email, registrant_profiles(first_name, last_name, email))')
+          .eq('id', group.property_id)
+          .single();
+        property = propData;
+      }
+
+      const isPropertyMatch = !!group.property_id;
+      const connectionType = isPropertyMatch ? 'landlord' : 'roommate';
+      const connectionAvatar = isPropertyMatch ? '🏠' : '👥';
+
+      const connection = {
+        id: group.id,
+        type: connectionType,
+        status: group.status,
+        source: 'match_group',
+        match_group_id: group.id,
+        created_at: group.created_at,
+        last_activity: group.updated_at || group.created_at,
+        avatar: connectionAvatar,
+        roommates: roommates,
+        property: property,
+        requested_by_id: group.requested_by_id,
+        pending_member_id: group.pending_member_id,
+        member_confirmations: group.member_confirmations,
+        message: group.message,
+        isPropertyMatch: isPropertyMatch
+      };
+
+      if (group.status === 'requested') {
+        if (group.requested_by_id === profileIds.applicant) {
+          categories.sent.push(connection);
+        } else if (group.pending_member_id === profileIds.applicant) {
+          categories.awaiting.push(connection);
         }
-        
-        let roommates = [];
-        if (otherRoommateIds.length > 0) {
-          const { data: roommateData } = await supabase
-            .from('applicant_matching_profiles')
-            .select('id, user_id, primary_phone, registrant_profiles(first_name, last_name, email)')
-            .in('id', otherRoommateIds);
-          roommates = roommateData || [];
-        }
-
-        let property = null;
-        if (group.property_id) {
-          const { data: propData } = await supabase
-            .from('properties')
-            .select('*, landlord_profiles(user_id, primary_phone, contact_email, registrant_profiles(first_name, last_name, email))')
-            .eq('id', group.property_id)
-            .single();
-          property = propData;
-        }
-
-        const isPropertyMatch = !!group.property_id;
-        const connectionType = isPropertyMatch ? 'landlord' : 'roommate';
-        const connectionAvatar = isPropertyMatch ? '🏠' : '👥';
-
-        const connection = {
-          id: group.id,
-          type: connectionType,
-          status: group.status,
-          source: 'match_group',
-          match_group_id: group.id,
-          created_at: group.created_at,
-          last_activity: group.updated_at || group.created_at,
-          avatar: connectionAvatar,
-          roommates: roommates,
-          property: property,
-          requested_by_id: group.requested_by_id,
-          pending_member_id: group.pending_member_id,
-          member_confirmations: group.member_confirmations,
-          message: group.message,
-          isPropertyMatch: isPropertyMatch
-        };
-
-        if (group.status === 'requested') {
-          if (group.requested_by_id === profileIds.applicant) {
-            categories.sent.push(connection);
-          } else if (group.pending_member_id === profileIds.applicant) {
-            categories.awaiting.push(connection);
-          }
-        } else if (group.status === 'forming') {
-          if (group.pending_member_id === profileIds.applicant) {
-            categories.awaiting.push(connection);
-          } else {
-            categories.active.push(connection);
-          }
-        } else if (group.status === 'confirmed' || group.status === 'active') {
+      } else if (group.status === 'forming') {
+        if (group.pending_member_id === profileIds.applicant) {
+          categories.awaiting.push(connection);
+        } else {
           categories.active.push(connection);
         }
+      } else if (group.status === 'confirmed' || group.status === 'active') {
+        categories.active.push(connection);
       }
-    } catch (error) {
-      console.error('Error in loadMatchGroupConnections:', error);
-      throw error;
     }
-  };
-
+  } catch (error) {
+    console.error('Error in loadMatchGroupConnections:', error);
+    throw error;
+  }
+};
   const loadPeerSupportConnections = async (categories) => {
     let query = supabase.from('peer_support_matches').select('*');
     const conditions = [];
