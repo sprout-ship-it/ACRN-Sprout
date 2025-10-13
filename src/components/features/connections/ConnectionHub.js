@@ -365,6 +365,8 @@ const ConnectionHub = ({ onBack }) => {
         orConditions.push(`peer_support_id.eq.${peerSupportProfileId}`);
       }
 
+      console.log('🔍 Match groups OR conditions:', orConditions);
+
       if (orConditions.length > 0) {
         try {
           const { data: matchGroups, error: matchError } = await supabase
@@ -373,12 +375,16 @@ const ConnectionHub = ({ onBack }) => {
             .or(orConditions.join(','))
             .in('status', ['confirmed', 'active']);
 
+          console.log('📊 Raw match_groups query result:', { data: matchGroups, error: matchError });
+
           if (matchError) {
             console.warn('⚠️ Error loading match groups:', matchError);
           } else if (matchGroups && matchGroups.length > 0) {
-            console.log(`📊 Found ${matchGroups.length} active match groups`);
+            console.log(`📊 Found ${matchGroups.length} active match groups:`, matchGroups);
             
             for (const match of matchGroups) {
+              console.log('🔍 Processing match group:', match);
+              
               let otherProfileId = null;
               let connectionType = 'roommate';
               let avatar = '👥';
@@ -387,19 +393,45 @@ const ConnectionHub = ({ onBack }) => {
                 // This is a peer support connection
                 connectionType = 'peer_support';
                 avatar = '🤝';
+                console.log('🤝 Processing peer support connection...');
+                
                 if (match.peer_support_id === peerSupportProfileId) {
                   // Current user is the peer supporter
                   otherProfileId = match.applicant_1_id || match.applicant_2_id;
+                  console.log('👤 Current user is peer supporter, other applicant ID:', otherProfileId);
                 } else {
                   // Current user is the applicant
                   otherProfileId = match.peer_support_id;
+                  console.log('👤 Current user is applicant, peer supporter ID:', otherProfileId);
                 }
               } else {
                 // This is a roommate connection
                 connectionType = 'roommate';
                 avatar = '👥';
-                otherProfileId = match.applicant_1_id === applicantProfileId ? match.applicant_2_id : match.applicant_1_id;
+                console.log('👥 Processing roommate connection...');
+                console.log('🔍 Match details:', {
+                  applicant_1_id: match.applicant_1_id,
+                  applicant_2_id: match.applicant_2_id,
+                  currentApplicantId: applicantProfileId
+                });
+                
+                if (match.applicant_1_id === applicantProfileId) {
+                  otherProfileId = match.applicant_2_id;
+                  console.log('👤 Current user is applicant_1, other is applicant_2:', otherProfileId);
+                } else if (match.applicant_2_id === applicantProfileId) {
+                  otherProfileId = match.applicant_1_id;
+                  console.log('👤 Current user is applicant_2, other is applicant_1:', otherProfileId);
+                } else {
+                  console.warn('⚠️ Current user not found in roommate match:', {
+                    matchId: match.id,
+                    applicant_1_id: match.applicant_1_id,
+                    applicant_2_id: match.applicant_2_id,
+                    currentApplicantId: applicantProfileId
+                  });
+                }
               }
+              
+              console.log('🎯 Determined connection type:', connectionType, 'Other profile ID:', otherProfileId);
               
               // ✅ FIXED: Get other user's profile info based on connection type
               if (otherProfileId) {
