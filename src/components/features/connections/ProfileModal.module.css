@@ -1,0 +1,453 @@
+/* src/components/features/connections/ProfileModal.module.css */
+
+/* ==================== MODAL OVERLAY & CONTAINER ==================== */
+.modalOverlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.6);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  padding: var(--spacing-lg);
+  overflow-y: auto;
+}
+
+.modalContent {
+  background: white;
+  border-radius: var(--radius-xl);
+  box-shadow: var(--shadow-xl);
+  max-width: 800px;
+  width: 100%;
+  max-height: 90vh;
+  overflow-y: auto;
+  position: relative;
+  animation: modalSlideIn 0.3s ease-out;
+}
+
+@keyframes modalSlideIn {
+  from {
+    opacity: 0;
+    transform: translateY(-30px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.modalClose {
+  position: absolute;
+  top: var(--spacing-lg);
+  right: var(--spacing-lg);
+  background: transparent;
+  border: none;
+  font-size: 2rem;
+  cursor: pointer;
+  color: var(--gray-600);
+  transition: var(--transition-fast);
+  width: 40px;
+  height: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--radius-md);
+  z-index: 10;
+}
+
+.modalClose:hover {
+  background: var(--gray-100);
+  color: var(--gray-900);
+}
+
+.modalBody {
+  padding: var(--spacing-xxl);
+}
+
+/* ==================== PROFILE HEADER ==================== */
+.profileHeader {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-lg);
+  margin-bottom: var(--spacing-xl);
+  padding-bottom: var(--spacing-lg);
+  border-bottom: 2px solid var(--border-beige);
+}
+
+.profileAvatar {
+  font-size: 4rem;
+  width: 80px;
+  height: 80px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--bg-light-purple);
+  border-radius: var(--radius-xl);
+  flex-shrink: 0;
+}
+
+.profileHeaderInfo {
+  flex: 1;
+  min-width: 0;
+}
+
+.profileName {
+  font-size: 2rem;
+  margin-bottom: var(--spacing-xs);
+  color: var(--gray-900);
+  font-family: var(--font-serif);
+  font-weight: 700;
+}
+
+.profileSubtitle {
+  font-size: 1rem;
+  color: var(--gray-600);
+  line-height: 1.4;
+}
+
+/* ==================== BADGE SECTION ==================== */
+.badgeSection {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--spacing-sm);
+  margin-bottom: var(--spacing-xl);
+}
+
+/* ==================== INFO SECTIONS ==================== */
+.infoSection {
+  margin-bottom: var(--spacing-xl);
+}
+
+.sectionTitle {
+  font-size: 1.25rem;
+  font-weight: 600;
+  color: var(--gray-900);
+  margin-bottom: var(--spacing-lg);
+  font-family: var(--font-serif);
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-sm);
+}
+
+/* ==================== INFO GRID ==================== */
+.infoGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: var(--spacing-lg);
+  margin-bottom: var(--spacing-md);
+}
+
+.infoItem {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--spacing-md);
+  padding: var(--spacing-md);
+  background: var(--bg-light-cream);
+  border-radius: var(--radius-md);
+  transition: var(--transition-fast);
+}
+
+.infoItem:hover {
+  background: var(--bg-light-purple);
+}
+
+.infoIcon {
+  font-size: 1.5rem;
+  flex-shrink: 0;
+  margin-top: 2px;
+}
+
+.infoLabel {
+  font-size: 0.875rem;
+  color: var(--gray-600);
+  font-weight: 500;
+  margin-bottom: 2px;
+}
+
+.infoValue {
+  font-size: 1rem;
+  color: var(--gray-900);
+  font-weight: 600;
+}
+
+/* ==================== DETAILS LIST ==================== */
+.detailsList {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-sm);
+  margin-bottom: var(--spacing-md);
+}
+
+.detailItem {
+  padding: var(--spacing-sm);
+  background: var(--gray-100);
+  border-radius: var(--radius-sm);
+  font-size: 0.9rem;
+  color: var(--gray-700);
+}
+
+.detailItem strong {
+  color: var(--gray-900);
+}
+
+/* ==================== TAG SECTION ==================== */
+.tagSection {
+  margin-top: var(--spacing-md);
+}
+
+.tagLabel {
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: var(--gray-700);
+  margin-bottom: var(--spacing-sm);
+}
+
+.tagList {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--spacing-sm);
+}
+
+.tag {
+  display: inline-block;
+  padding: 6px 12px;
+  background: var(--bg-light-purple);
+  color: var(--primary-purple);
+  border-radius: var(--radius-md);
+  font-size: 0.875rem;
+  font-weight: 500;
+  border: 1px solid rgba(160, 32, 240, 0.2);
+  transition: var(--transition-fast);
+}
+
+.tag:hover {
+  background: var(--primary-purple);
+  color: white;
+  border-color: var(--primary-purple);
+}
+
+.tagSuccess {
+  background: var(--success-bg);
+  color: var(--success-text);
+  border-color: var(--success-border);
+}
+
+.tagSuccess:hover {
+  background: var(--success-text);
+  color: white;
+}
+
+.tagInfo {
+  background: var(--info-bg);
+  color: var(--info-text);
+  border-color: var(--info-border);
+}
+
+.tagInfo:hover {
+  background: var(--info-text);
+  color: white;
+}
+
+/* ==================== BIO TEXT ==================== */
+.bioText {
+  font-size: 1rem;
+  line-height: 1.7;
+  color: var(--gray-700);
+  white-space: pre-wrap;
+  background: var(--gray-100);
+  padding: var(--spacing-lg);
+  border-radius: var(--radius-md);
+  border-left: 4px solid var(--primary-purple);
+}
+
+/* ==================== CONTACT INFO ==================== */
+.contactInfo {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-md);
+  background: var(--bg-light-cream);
+  padding: var(--spacing-lg);
+  border-radius: var(--radius-md);
+}
+
+.contactItem {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-md);
+  padding: var(--spacing-md);
+  background: white;
+  border-radius: var(--radius-sm);
+  transition: var(--transition-fast);
+}
+
+.contactItem:hover {
+  box-shadow: var(--shadow-sm);
+  transform: translateY(-2px);
+}
+
+.contactIcon {
+  font-size: 1.5rem;
+  flex-shrink: 0;
+}
+
+.contactLabel {
+  font-size: 0.875rem;
+  color: var(--gray-600);
+  font-weight: 500;
+  margin-bottom: 2px;
+}
+
+.contactValue {
+  font-size: 1rem;
+  color: var(--primary-purple);
+  font-weight: 600;
+  text-decoration: none;
+  transition: var(--transition-fast);
+}
+
+.contactValue:hover {
+  color: var(--secondary-purple);
+  text-decoration: underline;
+}
+
+/* ==================== LOCKED CONTACT INFO ==================== */
+.contactInfoLocked {
+  background: var(--warning-bg);
+  border: 2px solid var(--warning-border);
+  border-radius: var(--radius-md);
+  padding: var(--spacing-xl);
+  text-align: center;
+}
+
+.lockIcon {
+  font-size: 3rem;
+  margin-bottom: var(--spacing-md);
+}
+
+.lockMessage {
+  color: var(--warning-text);
+}
+
+.lockMessage strong {
+  display: block;
+  font-size: 1.125rem;
+  margin-bottom: var(--spacing-sm);
+}
+
+.lockMessage p {
+  font-size: 0.9rem;
+  margin-bottom: 0;
+}
+
+/* ==================== RESPONSIVE DESIGN ==================== */
+@media (max-width: 768px) {
+  .modalOverlay {
+    padding: var(--spacing-sm);
+    align-items: flex-start;
+  }
+
+  .modalContent {
+    max-height: 95vh;
+    margin: var(--spacing-md) 0;
+  }
+
+  .modalBody {
+    padding: var(--spacing-lg);
+  }
+
+  .modalClose {
+    top: var(--spacing-md);
+    right: var(--spacing-md);
+    width: 36px;
+    height: 36px;
+    font-size: 1.75rem;
+  }
+
+  .profileHeader {
+    flex-direction: column;
+    text-align: center;
+    align-items: center;
+  }
+
+  .profileAvatar {
+    width: 60px;
+    height: 60px;
+    font-size: 3rem;
+  }
+
+  .profileName {
+    font-size: 1.5rem;
+  }
+
+  .infoGrid {
+    grid-template-columns: 1fr;
+    gap: var(--spacing-sm);
+  }
+
+  .badgeSection {
+    justify-content: center;
+  }
+
+  .tagList {
+    justify-content: center;
+  }
+}
+
+@media (max-width: 480px) {
+  .modalBody {
+    padding: var(--spacing-md);
+  }
+
+  .profileName {
+    font-size: 1.25rem;
+  }
+
+  .profileSubtitle {
+    font-size: 0.9rem;
+  }
+
+  .sectionTitle {
+    font-size: 1.125rem;
+  }
+
+  .infoItem {
+    padding: var(--spacing-sm);
+  }
+
+  .bioText {
+    padding: var(--spacing-md);
+    font-size: 0.9rem;
+  }
+
+  .contactInfo {
+    padding: var(--spacing-md);
+  }
+
+  .contactItem {
+    flex-direction: column;
+    align-items: flex-start;
+    text-align: left;
+  }
+}
+
+/* ==================== SCROLLBAR STYLING ==================== */
+.modalContent::-webkit-scrollbar {
+  width: 8px;
+}
+
+.modalContent::-webkit-scrollbar-track {
+  background: var(--gray-100);
+  border-radius: var(--radius-md);
+}
+
+.modalContent::-webkit-scrollbar-thumb {
+  background: var(--gray-400);
+  border-radius: var(--radius-md);
+}
+
+.modalContent::-webkit-scrollbar-thumb:hover {
+  background: var(--gray-500);
+}
