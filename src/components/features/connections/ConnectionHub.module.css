@@ -1,5 +1,138 @@
 /* ConnectionHub.module.css - Connection Hub Component Styles */
 
+/* ==================== TAB NAVIGATION STYLES ==================== */
+.tabContainer {
+  margin-bottom: 0;
+}
+
+.tabNav {
+  display: flex;
+  gap: 0.5rem;
+  border-bottom: 2px solid var(--border-beige);
+  padding: 0;
+  margin: 0;
+  list-style: none;
+  background: white;
+  border-radius: var(--radius-md) var(--radius-md) 0 0;
+}
+
+.tabItem {
+  flex: 1;
+}
+
+.tabButton {
+  width: 100%;
+  padding: 0.875rem 1rem;
+  border: none;
+  background: transparent;
+  color: var(--gray-600);
+  font-weight: 600;
+  font-size: 0.95rem;
+  cursor: pointer;
+  transition: var(--transition-normal);
+  border-bottom: 3px solid transparent;
+  position: relative;
+}
+
+.tabButton:hover {
+  background: rgba(160, 32, 240, 0.05);
+  color: var(--primary-purple);
+}
+
+.tabButton.active {
+  color: var(--primary-purple);
+  border-bottom-color: var(--primary-purple);
+  background: rgba(160, 32, 240, 0.08);
+}
+
+.tabCount {
+  display: inline-block;
+  margin-left: 0.5rem;
+  padding: 0.125rem 0.5rem;
+  background: var(--gray-200);
+  border-radius: 12px;
+  font-size: 0.8rem;
+  font-weight: 600;
+}
+
+.tabButton.active .tabCount {
+  background: var(--primary-purple);
+  color: white;
+}
+
+/* ==================== COLOR-CODED CONNECTION CARDS ==================== */
+.connectionCard {
+  position: relative;
+  overflow: hidden;
+  border: 2px solid;
+  transition: var(--transition-normal);
+}
+
+/* Roommate - Blue */
+.connectionCard.roommate {
+  border-color: #3b82f6;
+}
+
+.connectionCard.roommate .connectionCardHeader {
+  background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+  color: white;
+}
+
+/* Peer Support - Purple */
+.connectionCard.peerSupport {
+  border-color: var(--primary-purple);
+}
+
+.connectionCard.peerSupport .connectionCardHeader {
+  background: linear-gradient(135deg, var(--primary-purple) 0%, var(--secondary-purple) 100%);
+  color: white;
+}
+
+/* Landlord - Yellow/Gold */
+.connectionCard.landlord {
+  border-color: #f59e0b;
+}
+
+.connectionCard.landlord .connectionCardHeader {
+  background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
+  color: white;
+}
+
+/* Employer - Red/Coral */
+.connectionCard.employer {
+  border-color: #ef4444;
+}
+
+.connectionCard.employer .connectionCardHeader {
+  background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
+  color: white;
+}
+
+.connectionCardHeader {
+  padding: 1rem 1.25rem;
+  margin: -1rem -1rem 1rem -1rem;
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  border-radius: var(--radius-md) var(--radius-md) 0 0;
+}
+
+.connectionTypeLabel {
+  font-size: 0.75rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  opacity: 0.95;
+  margin-bottom: 0.25rem;
+}
+
+.connectionTitle {
+  font-size: 1.25rem;
+  font-weight: 700;
+  margin: 0;
+  font-family: var(--font-serif);
+}
+
 /* ==================== CONNECTION HEADER LAYOUT ==================== */
 .connectionHeader {
   display: flex;
@@ -38,39 +171,101 @@
   gap: 0.5rem;
 }
 
-/* ==================== CONNECTION TYPE BADGES ==================== */
-.connectionTypeBadge {
-  padding: 0.3rem 0.8rem;
-  border-radius: 12px;
-  font-size: 0.8rem;
+/* ==================== MEMBERS LIST SECTION ==================== */
+.membersSection {
+  margin-bottom: 1rem;
+  padding: 1rem;
+  background: var(--gray-100);
+  border-radius: var(--radius-md);
+}
+
+.membersSectionTitle {
   font-weight: 600;
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
-  border: 1px solid;
+  margin-bottom: 0.75rem;
+  color: var(--gray-800);
+  font-size: 0.95rem;
 }
 
-.roommateType {
-  background: rgba(160, 32, 240, 0.1);
-  color: var(--primary-purple);
-  border-color: rgba(160, 32, 240, 0.4);
+.membersList {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
 }
 
-.peerSupportType {
-  background: rgba(32, 178, 170, 0.1);
-  color: var(--secondary-teal);
-  border-color: rgba(32, 178, 170, 0.4);
+.memberItem {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0.75rem;
+  background: white;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border-beige);
 }
 
-.landlordType {
-  background: rgba(255, 215, 0, 0.1);
-  color: var(--gold-dark);
-  border-color: rgba(255, 215, 0, 0.4);
+.memberName {
+  font-weight: 500;
+  color: var(--gray-800);
 }
 
-.employerType {
-  background: rgba(255, 111, 97, 0.1);
-  color: var(--coral-dark);
-  border-color: rgba(255, 111, 97, 0.4);
+/* ==================== ACTION BUTTONS SECTION ==================== */
+.actionButtonsGrid {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 0.75rem;
+  align-items: center;
+}
+
+.primaryActions {
+  display: flex;
+  gap: 0.75rem;
+}
+
+.secondaryAction {
+  display: flex;
+}
+
+.endConnectionButton {
+  padding: 0.5rem 0.875rem !important;
+  font-size: 0.85rem !important;
+  background: transparent !important;
+  border: 1px solid var(--gray-400) !important;
+  color: var(--gray-600) !important;
+}
+
+.endConnectionButton:hover {
+  background: var(--error-bg) !important;
+  border-color: var(--error-border) !important;
+  color: var(--error-text) !important;
+}
+
+/* ==================== REQUEST IDENTIFICATION ==================== */
+.requestTypeIndicator {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.5rem 0.875rem;
+  background: rgba(0, 0, 0, 0.05);
+  border-radius: var(--radius-md);
+  font-size: 0.9rem;
+  font-weight: 600;
+  margin-bottom: 0.75rem;
+  color: white;
+}
+
+.requestTypeIndicator.roommate {
+  background: rgba(59, 130, 246, 0.9);
+}
+
+.requestTypeIndicator.peerSupport {
+  background: rgba(160, 32, 240, 0.9);
+}
+
+.requestTypeIndicator.landlord {
+  background: rgba(245, 158, 11, 0.9);
+}
+
+.requestTypeIndicator.employer {
+  background: rgba(239, 68, 68, 0.9);
 }
 
 /* ==================== CONNECTION SOURCE INFO ==================== */
@@ -403,8 +598,33 @@
   font-size: 1rem;
 }
 
+/* ==================== WAITING STATUS ==================== */
+.waitingStatus {
+  text-align: center;
+  padding: 1.5rem;
+  color: var(--gray-600);
+  background: var(--gray-100);
+  border-radius: var(--radius-md);
+  font-size: 0.95rem;
+}
+
 /* ==================== RESPONSIVE DESIGN ==================== */
 @media (max-width: 768px) {
+  .tabNav {
+    gap: 0.25rem;
+  }
+  
+  .tabButton {
+    padding: 0.75rem 0.5rem;
+    font-size: 0.85rem;
+  }
+  
+  .tabCount {
+    margin-left: 0.25rem;
+    padding: 0.125rem 0.375rem;
+    font-size: 0.75rem;
+  }
+  
   .connectionHeader {
     flex-direction: column;
     text-align: center;
@@ -442,11 +662,37 @@
   .templateButton {
     text-align: center !important;
   }
+  
+  .actionButtonsGrid {
+    grid-template-columns: 1fr;
+  }
+  
+  .primaryActions {
+    flex-direction: column;
+  }
+  
+  .secondaryAction {
+    justify-content: center;
+  }
 }
 
 @media (max-width: 480px) {
+  .tabButton {
+    padding: 0.625rem 0.375rem;
+    font-size: 0.75rem;
+  }
+  
   .connectionAvatar {
     font-size: 1.75rem;
+  }
+  
+  .connectionCardHeader {
+    padding: 0.875rem 1rem;
+    margin: -1rem -1rem 1rem -1rem;
+  }
+  
+  .connectionTitle {
+    font-size: 1.1rem;
   }
   
   .contactDetails {

@@ -1,11 +1,10 @@
-// src/components/features/connections/ConnectionHub.js - Consolidated Match Tables Version
+// src/components/features/connections/ConnectionHub.js - Updated with styling and ProfileModal
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../../../hooks/useAuth';
 import { supabase } from '../../../utils/supabase';
 import LoadingSpinner from '../../ui/LoadingSpinner';
+import ProfileModal from './ProfileModal';
 import styles from './ConnectionHub.module.css';
-// TODO: Import ProfileModal when created
-// import ProfileModal from './ProfileModal';
 
 const ConnectionHub = ({ onBack }) => {
   const { user, profile } = useAuth();
@@ -32,6 +31,15 @@ const ConnectionHub = ({ onBack }) => {
     landlord: null,
     employer: null
   });
+
+  /**
+   * Format name to show only first name and last initial
+   */
+  const formatName = (firstName, lastName) => {
+    if (!firstName) return 'Unknown';
+    if (!lastName) return firstName;
+    return `${firstName} ${lastName.charAt(0)}.`;
+  };
 
   /**
    * Load user's role-specific profile IDs
@@ -135,108 +143,102 @@ const ConnectionHub = ({ onBack }) => {
     }
   };
 
-
-const loadMatchGroupConnections = async (categories) => {
-  try {
-    console.log('🔍 Loading match groups for applicant:', profileIds.applicant);
-    
-    // FIXED: Correct JSONB array query syntax for PostgREST
-    const { data: matchGroups, error } = await supabase
-      .from('match_groups')
-      .select('*')
-      .contains('roommate_ids', JSON.stringify([profileIds.applicant]));
-
-    if (error) {
-      console.error('❌ Error loading match groups:', error);
-      throw error;
-    }
-    
-    if (!matchGroups || matchGroups.length === 0) {
-      console.log('ℹ️ No match groups found');
-      return;
-    }
-
-    console.log(`✅ Found ${matchGroups.length} match groups`);
-
-    for (const group of matchGroups) {
-      // Parse roommate_ids from JSONB
-      const roommateIds = group.roommate_ids || [];
+  const loadMatchGroupConnections = async (categories) => {
+    try {
+      console.log('🔍 Loading match groups for applicant:', profileIds.applicant);
       
-      console.log('📋 Processing group:', {
-        id: group.id,
-        status: group.status,
-        roommateIds: roommateIds,
-        currentUserId: profileIds.applicant
-      });
+      const { data: matchGroups, error } = await supabase
+        .from('match_groups')
+        .select('*')
+        .contains('roommate_ids', JSON.stringify([profileIds.applicant]));
+
+      if (error) {
+        console.error('❌ Error loading match groups:', error);
+        throw error;
+      }
       
-      // Get all roommate profiles (excluding current user)
-      const otherRoommateIds = roommateIds.filter(id => id !== profileIds.applicant);
-      
-      let roommates = [];
-      if (otherRoommateIds.length > 0) {
-        const { data: roommateData } = await supabase
-          .from('applicant_matching_profiles')
-          .select('id, user_id, primary_phone, registrant_profiles(first_name, last_name, email)')
-          .in('id', otherRoommateIds);
+      if (!matchGroups || matchGroups.length === 0) {
+        console.log('ℹ️ No match groups found');
+        return;
+      }
+
+      console.log(`✅ Found ${matchGroups.length} match groups`);
+
+      for (const group of matchGroups) {
+        const roommateIds = group.roommate_ids || [];
         
-        roommates = roommateData || [];
-      }
-
-      // Get property info if exists
-      let property = null;
-      if (group.property_id) {
-        const { data: propData } = await supabase
-          .from('properties')
-          .select('*, landlord_profiles(user_id, primary_phone, contact_email, registrant_profiles(first_name, last_name, email))')
-          .eq('id', group.property_id)
-          .single();
-        property = propData;
-      }
-
-      const connection = {
-        id: group.id,
-        type: 'roommate',
-        status: group.status,
-        source: 'match_group',
-        match_group_id: group.id,
-        created_at: group.created_at,
-        last_activity: group.updated_at || group.created_at,
-        avatar: '👥',
-        roommates: roommates,
-        property: property,
-        requested_by_id: group.requested_by_id,
-        pending_member_id: group.pending_member_id,
-        member_confirmations: group.member_confirmations,
-        message: group.message
-      };
-
-      // Categorize based on status
-      if (group.status === 'requested') {
-        // Check if user sent or received this request
-        if (group.requested_by_id === profileIds.applicant) {
-          categories.sent.push(connection);
-        } else if (group.pending_member_id === profileIds.applicant) {
-          categories.awaiting.push(connection);
+        console.log('📋 Processing group:', {
+          id: group.id,
+          status: group.status,
+          roommateIds: roommateIds,
+          currentUserId: profileIds.applicant
+        });
+        
+        const otherRoommateIds = roommateIds.filter(id => id !== profileIds.applicant);
+        
+        let roommates = [];
+        if (otherRoommateIds.length > 0) {
+          const { data: roommateData } = await supabase
+            .from('applicant_matching_profiles')
+            .select('id, user_id, primary_phone, registrant_profiles(first_name, last_name, email)')
+            .in('id', otherRoommateIds);
+          
+          roommates = roommateData || [];
         }
-      } else if (group.status === 'forming') {
-        // Someone is being added to the group
-        if (group.pending_member_id === profileIds.applicant) {
-          categories.awaiting.push(connection);
-        } else {
+
+        // Get property info if exists
+        let property = null;
+        if (group.property_id) {
+          const { data: propData } = await supabase
+            .from('properties')
+            .select('*, landlord_profiles(user_id, primary_phone, contact_email, registrant_profiles(first_name, last_name, email))')
+            .eq('id', group.property_id)
+            .single();
+          property = propData;
+        }
+
+        const connection = {
+          id: group.id,
+          type: 'roommate',
+          status: group.status,
+          source: 'match_group',
+          match_group_id: group.id,
+          created_at: group.created_at,
+          last_activity: group.updated_at || group.created_at,
+          avatar: '👥',
+          roommates: roommates,
+          property: property,
+          requested_by_id: group.requested_by_id,
+          pending_member_id: group.pending_member_id,
+          member_confirmations: group.member_confirmations,
+          message: group.message
+        };
+
+        // Categorize based on status
+        if (group.status === 'requested') {
+          if (group.requested_by_id === profileIds.applicant) {
+            categories.sent.push(connection);
+          } else if (group.pending_member_id === profileIds.applicant) {
+            categories.awaiting.push(connection);
+          }
+        } else if (group.status === 'forming') {
+          if (group.pending_member_id === profileIds.applicant) {
+            categories.awaiting.push(connection);
+          } else {
+            categories.active.push(connection);
+          }
+        } else if (group.status === 'confirmed' || group.status === 'active') {
           categories.active.push(connection);
         }
-      } else if (group.status === 'confirmed' || group.status === 'active') {
-        categories.active.push(connection);
       }
+      
+      console.log('✅ Match groups loaded and categorized');
+      
+    } catch (error) {
+      console.error('💥 Error in loadMatchGroupConnections:', error);
+      throw error;
     }
-    
-    console.log('✅ Match groups loaded and categorized');
-    
-  } catch (error) {
-    console.error('💥 Error in loadMatchGroupConnections:', error);
-    throw error;
-  }
-};
+  };
 
   /**
    * Load peer support connections
@@ -246,7 +248,6 @@ const loadMatchGroupConnections = async (categories) => {
       .from('peer_support_matches')
       .select('*');
 
-    // Build OR conditions
     const conditions = [];
     if (profileIds.applicant) conditions.push(`applicant_id.eq.${profileIds.applicant}`);
     if (profileIds.peerSupport) conditions.push(`peer_support_id.eq.${profileIds.peerSupport}`);
@@ -262,7 +263,6 @@ const loadMatchGroupConnections = async (categories) => {
     for (const match of matches) {
       const isApplicant = match.applicant_id === profileIds.applicant;
       
-      // Get the other person's info
       let otherPerson = null;
       if (isApplicant) {
         const { data } = await supabase
@@ -294,7 +294,6 @@ const loadMatchGroupConnections = async (categories) => {
         is_requester: match.requested_by_id === profileIds.applicant
       };
 
-      // Categorize
       if (match.status === 'requested') {
         if (connection.is_requester) {
           categories.sent.push(connection);
@@ -330,7 +329,6 @@ const loadMatchGroupConnections = async (categories) => {
     for (const match of matches) {
       const isApplicant = match.applicant_id === profileIds.applicant;
       
-      // Get the other person's info
       let otherPerson = null;
       if (isApplicant) {
         const { data } = await supabase
@@ -364,7 +362,6 @@ const loadMatchGroupConnections = async (categories) => {
         is_requester: match.requested_by_id === profileIds.applicant
       };
 
-      // Categorize
       if (match.status === 'requested') {
         if (connection.is_requester) {
           categories.sent.push(connection);
@@ -387,7 +384,6 @@ const loadMatchGroupConnections = async (categories) => {
       let profileData = null;
 
       if (connection.type === 'roommate') {
-        // For roommate groups, personId specifies which roommate to view
         const { data } = await supabase
           .from('applicant_matching_profiles')
           .select('*, registrant_profiles(first_name, last_name, email)')
@@ -397,14 +393,13 @@ const loadMatchGroupConnections = async (categories) => {
         profileData = {
           ...data,
           profile_type: 'applicant',
-          name: `${data.registrant_profiles?.first_name} ${data.registrant_profiles?.last_name}`
+          name: formatName(data.registrant_profiles?.first_name, data.registrant_profiles?.last_name)
         };
         
       } else if (connection.type === 'peer_support') {
         const isApplicant = connection.is_requester;
         
         if (isApplicant) {
-          // Viewing peer support specialist
           const { data } = await supabase
             .from('peer_support_profiles')
             .select('*, registrant_profiles(first_name, last_name, email)')
@@ -414,10 +409,9 @@ const loadMatchGroupConnections = async (categories) => {
           profileData = {
             ...data,
             profile_type: 'peer_support',
-            name: data.professional_title || `${data.registrant_profiles?.first_name} ${data.registrant_profiles?.last_name}`
+            name: data.professional_title || formatName(data.registrant_profiles?.first_name, data.registrant_profiles?.last_name)
           };
         } else {
-          // Viewing applicant
           const { data } = await supabase
             .from('applicant_matching_profiles')
             .select('*, registrant_profiles(first_name, last_name, email)')
@@ -427,7 +421,7 @@ const loadMatchGroupConnections = async (categories) => {
           profileData = {
             ...data,
             profile_type: 'applicant',
-            name: `${data.registrant_profiles?.first_name} ${data.registrant_profiles?.last_name}`
+            name: formatName(data.registrant_profiles?.first_name, data.registrant_profiles?.last_name)
           };
         }
         
@@ -435,7 +429,6 @@ const loadMatchGroupConnections = async (categories) => {
         const isApplicant = connection.is_requester;
         
         if (isApplicant) {
-          // Viewing employer
           const { data } = await supabase
             .from('employer_profiles')
             .select('*, registrant_profiles(first_name, last_name, email)')
@@ -445,10 +438,9 @@ const loadMatchGroupConnections = async (categories) => {
           profileData = {
             ...data,
             profile_type: 'employer',
-            name: data.company_name || `${data.registrant_profiles?.first_name} ${data.registrant_profiles?.last_name}`
+            name: data.company_name || formatName(data.registrant_profiles?.first_name, data.registrant_profiles?.last_name)
           };
         } else {
-          // Viewing applicant
           const { data } = await supabase
             .from('applicant_matching_profiles')
             .select('*, registrant_profiles(first_name, last_name, email)')
@@ -458,7 +450,7 @@ const loadMatchGroupConnections = async (categories) => {
           profileData = {
             ...data,
             profile_type: 'applicant',
-            name: `${data.registrant_profiles?.first_name} ${data.registrant_profiles?.last_name}`
+            name: formatName(data.registrant_profiles?.first_name, data.registrant_profiles?.last_name)
           };
         }
       }
@@ -609,7 +601,7 @@ const loadMatchGroupConnections = async (categories) => {
   };
 
   /**
-   * Load and show contact information (only for confirmed connections)
+   * Load and show contact information
    */
   const handleViewContact = async (connection) => {
     try {
@@ -623,7 +615,7 @@ const loadMatchGroupConnections = async (categories) => {
         contact = {
           type: 'roommates',
           members: connection.roommates?.map(r => ({
-            name: `${r.registrant_profiles?.first_name} ${r.registrant_profiles?.last_name}`,
+            name: formatName(r.registrant_profiles?.first_name, r.registrant_profiles?.last_name),
             phone: r.primary_phone,
             email: r.registrant_profiles?.email
           })) || []
@@ -632,7 +624,7 @@ const loadMatchGroupConnections = async (categories) => {
         if (connection.property?.landlord_profiles) {
           const ll = connection.property.landlord_profiles;
           contact.landlord = {
-            name: `${ll.registrant_profiles?.first_name} ${ll.registrant_profiles?.last_name}`,
+            name: formatName(ll.registrant_profiles?.first_name, ll.registrant_profiles?.last_name),
             phone: ll.primary_phone,
             email: ll.contact_email || ll.registrant_profiles?.email
           };
@@ -641,7 +633,7 @@ const loadMatchGroupConnections = async (categories) => {
       } else if (connection.type === 'peer_support') {
         const other = connection.other_person;
         contact = {
-          name: other?.professional_title || `${other?.registrant_profiles?.first_name} ${other?.registrant_profiles?.last_name}`,
+          name: other?.professional_title || formatName(other?.registrant_profiles?.first_name, other?.registrant_profiles?.last_name),
           phone: other?.primary_phone,
           email: other?.contact_email || other?.registrant_profiles?.email
         };
@@ -649,7 +641,7 @@ const loadMatchGroupConnections = async (categories) => {
       } else if (connection.type === 'employer') {
         const other = connection.other_person;
         contact = {
-          name: other?.company_name || `${other?.registrant_profiles?.first_name} ${other?.registrant_profiles?.last_name}`,
+          name: other?.company_name || formatName(other?.registrant_profiles?.first_name, other?.registrant_profiles?.last_name),
           phone: other?.phone || other?.primary_phone,
           email: other?.contact_email || other?.registrant_profiles?.email
         };
@@ -688,12 +680,25 @@ const loadMatchGroupConnections = async (categories) => {
       return `Roommate Group (${count} member${count !== 1 ? 's' : ''})`;
     } else if (connection.type === 'peer_support') {
       const other = connection.other_person;
-      return other?.professional_title || `${other?.registrant_profiles?.first_name || 'Unknown'}`;
+      return other?.professional_title || formatName(other?.registrant_profiles?.first_name, other?.registrant_profiles?.last_name);
     } else if (connection.type === 'employer') {
       const other = connection.other_person;
-      return other?.company_name || `${other?.registrant_profiles?.first_name || 'Unknown'}`;
+      return other?.company_name || formatName(other?.registrant_profiles?.first_name, other?.registrant_profiles?.last_name);
     }
     return 'Unknown';
+  };
+
+  /**
+   * Get connection type label
+   */
+  const getConnectionTypeLabel = (type) => {
+    const labels = {
+      roommate: 'Housing Request',
+      peer_support: 'Peer Support Request',
+      landlord: 'Property Request',
+      employer: 'Employment Request'
+    };
+    return labels[type] || 'Connection Request';
   };
 
   /**
@@ -762,30 +767,33 @@ const loadMatchGroupConnections = async (categories) => {
 
           {/* Tabs */}
           <div className="card">
-            <div className="card-header">
-              <ul className="nav nav-tabs card-header-tabs">
-                <li className="nav-item">
+            <div className={styles.tabContainer}>
+              <ul className={styles.tabNav}>
+                <li className={styles.tabItem}>
                   <button
-                    className={`nav-link ${activeTab === 'active' ? 'active' : ''}`}
+                    className={`${styles.tabButton} ${activeTab === 'active' ? styles.active : ''}`}
                     onClick={() => setActiveTab('active')}
                   >
-                    Active ({getTabCount('active')})
+                    Active
+                    <span className={styles.tabCount}>{getTabCount('active')}</span>
                   </button>
                 </li>
-                <li className="nav-item">
+                <li className={styles.tabItem}>
                   <button
-                    className={`nav-link ${activeTab === 'awaiting' ? 'active' : ''}`}
+                    className={`${styles.tabButton} ${activeTab === 'awaiting' ? styles.active : ''}`}
                     onClick={() => setActiveTab('awaiting')}
                   >
-                    Awaiting Response ({getTabCount('awaiting')})
+                    Awaiting Response
+                    <span className={styles.tabCount}>{getTabCount('awaiting')}</span>
                   </button>
                 </li>
-                <li className="nav-item">
+                <li className={styles.tabItem}>
                   <button
-                    className={`nav-link ${activeTab === 'sent' ? 'active' : ''}`}
+                    className={`${styles.tabButton} ${activeTab === 'sent' ? styles.active : ''}`}
                     onClick={() => setActiveTab('sent')}
                   >
-                    Sent Requests ({getTabCount('sent')})
+                    Sent Requests
+                    <span className={styles.tabCount}>{getTabCount('sent')}</span>
                   </button>
                 </li>
               </ul>
@@ -795,56 +803,54 @@ const loadMatchGroupConnections = async (categories) => {
               {connections[activeTab]?.length > 0 ? (
                 <div className="grid-auto">
                   {connections[activeTab].map((connection) => (
-                    <div key={connection.id} className="card">
-                      <div className="card-header">
-                        <div className={styles.connectionHeader}>
-                          <div className={styles.connectionAvatar}>{connection.avatar}</div>
-                          <div className={styles.connectionInfo}>
-                            <div className="card-title">{getConnectionName(connection)}</div>
-                            <div className="card-subtitle">
-                              {formatTimeAgo(connection.last_activity)}
-                            </div>
+                    <div key={connection.id} className={`card ${styles.connectionCard} ${styles[connection.type === 'peer_support' ? 'peerSupport' : connection.type]}`}>
+                      {/* Color-coded header */}
+                      <div className={styles.connectionCardHeader}>
+                        <div style={{ flex: 1 }}>
+                          <div className={styles.connectionTypeLabel}>
+                            {getConnectionTypeLabel(connection.type)}
                           </div>
-                          <span className={`badge ${connection.status === 'active' || connection.status === 'confirmed' ? 'badge-success' : 'badge-warning'}`}>
-                            {connection.status}
-                          </span>
+                          <div className={styles.connectionTitle}>
+                            {getConnectionName(connection)}
+                          </div>
                         </div>
+                        <span className={`badge ${connection.status === 'active' || connection.status === 'confirmed' ? 'badge-success' : 'badge-warning'}`}>
+                          {connection.status}
+                        </span>
+                      </div>
+
+                      {/* Time info */}
+                      <div className="card-subtitle mb-3" style={{ color: 'var(--gray-600)' }}>
+                        {formatTimeAgo(connection.last_activity)}
                       </div>
 
                       {/* Roommate members list with View Profile buttons */}
                       {connection.type === 'roommate' && connection.roommates?.length > 0 && (
-                        <div className="mb-3">
-                          <strong>Members:</strong>
-                          {connection.roommates.map((roommate, idx) => (
-                            <div key={idx} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '0.5rem' }}>
-                              <span>{roommate.registrant_profiles?.first_name} {roommate.registrant_profiles?.last_name}</span>
-                              <button
-                                className="btn btn-outline btn-sm"
-                                onClick={() => handleViewProfile(connection, roommate.id)}
-                                disabled={profileLoading}
-                              >
-                                👁️ View Profile
-                              </button>
-                            </div>
-                          ))}
+                        <div className={styles.membersSection}>
+                          <div className={styles.membersSectionTitle}>Members:</div>
+                          <div className={styles.membersList}>
+                            {connection.roommates.map((roommate, idx) => (
+                              <div key={idx} className={styles.memberItem}>
+                                <span className={styles.memberName}>
+                                  {formatName(roommate.registrant_profiles?.first_name, roommate.registrant_profiles?.last_name)}
+                                </span>
+                                <button
+                                  className="btn btn-outline btn-sm"
+                                  onClick={() => handleViewProfile(connection, roommate.id)}
+                                  disabled={profileLoading}
+                                >
+                                  👁️ View Profile
+                                </button>
+                              </div>
+                            ))}
+                          </div>
                         </div>
                       )}
 
                       {/* Action Buttons */}
-                      <div className="button-grid">
-                        {/* View Profile button for non-roommate connections */}
-                        {connection.type !== 'roommate' && (
-                          <button
-                            className="btn btn-outline"
-                            onClick={() => handleViewProfile(connection)}
-                            disabled={profileLoading}
-                          >
-                            👁️ View Profile
-                          </button>
-                        )}
-
+                      <div className={styles.actionButtonsGrid}>
                         {activeTab === 'awaiting' && (
-                          <>
+                          <div className={styles.primaryActions}>
                             <button
                               className="btn btn-primary"
                               onClick={() => handleApproveRequest(connection)}
@@ -859,29 +865,46 @@ const loadMatchGroupConnections = async (categories) => {
                             >
                               ❌ Decline
                             </button>
-                          </>
+                          </div>
                         )}
 
                         {activeTab === 'active' && (
                           <>
-                            <button
-                              className="btn btn-primary"
-                              onClick={() => handleViewContact(connection)}
-                            >
-                              📞 Contact Info
-                            </button>
-                            <button
-                              className="btn btn-outline"
-                              onClick={() => handleEndConnection(connection)}
-                              disabled={actionLoading}
-                            >
-                              ❌ End Connection
-                            </button>
+                            <div className={styles.primaryActions}>
+                              {connection.type !== 'roommate' && (
+                                <button
+                                  className="btn btn-outline"
+                                  onClick={() => handleViewProfile(connection)}
+                                  disabled={profileLoading}
+                                >
+                                  👁️ View Profile
+                                </button>
+                              )}
+                              <button
+                                className="btn btn-primary"
+                                onClick={() => handleViewContact(connection)}
+                              >
+                                📞 Contact Info
+                              </button>
+                            </div>
+                            <div className={styles.secondaryAction}>
+                              <button
+                                className={`btn ${styles.endConnectionButton}`}
+                                onClick={() => handleEndConnection(connection)}
+                                disabled={actionLoading}
+                              >
+                                ❌ End
+                              </button>
+                            </div>
                           </>
                         )}
 
                         {activeTab === 'sent' && (
-                          <div className="text-center text-gray-600">
+                          <div className={styles.waitingStatus}>
+                            {/* Request type indicator */}
+                            <div className={`${styles.requestTypeIndicator} ${styles[connection.type === 'peer_support' ? 'peerSupport' : connection.type]}`}>
+                              {connection.avatar} {getConnectionTypeLabel(connection.type)}
+                            </div>
                             ⏳ Waiting for response...
                           </div>
                         )}
@@ -915,42 +938,15 @@ const loadMatchGroupConnections = async (categories) => {
         </div>
       )}
 
-      {/* Profile Modal - TODO: Replace with actual ProfileModal component */}
+      {/* Profile Modal */}
       {showProfileModal && selectedProfile && (
-        <div className="modal-overlay" onClick={() => setShowProfileModal(false)}>
-          <div className="modal-content" onClick={(e) => e.stopPropagation()} style={{ maxWidth: '800px' }}>
-            <div className="modal-header">
-              <h3 className="modal-title">{selectedProfile.name}'s Profile</h3>
-              <button className="modal-close" onClick={() => setShowProfileModal(false)}>×</button>
-            </div>
-
-            <div style={{ padding: '1.5rem' }}>
-              <p className="text-gray-600">
-                <strong>Profile Type:</strong> {selectedProfile.profile_type}
-              </p>
-              
-              {/* Placeholder for full profile details */}
-              <div className="alert alert-info">
-                <strong>TODO:</strong> Replace this with the actual ProfileModal component that shows full profile details 
-                (similar to search result cards). Contact info should only be shown if connection status is 'confirmed' or 'active'.
-              </div>
-
-              {/* Show connection status */}
-              <div className="mt-3">
-                <strong>Connection Status:</strong>{' '}
-                <span className={`badge ${selectedConnection?.status === 'active' || selectedConnection?.status === 'confirmed' ? 'badge-success' : 'badge-warning'}`}>
-                  {selectedConnection?.status}
-                </span>
-              </div>
-
-              {(selectedConnection?.status === 'confirmed' || selectedConnection?.status === 'active') && (
-                <div className="alert alert-success mt-3">
-                  ✅ Contact information available - use "Contact Info" button to view phone and email
-                </div>
-              )}
-            </div>
-          </div>
-        </div>
+        <ProfileModal
+          isOpen={showProfileModal}
+          profile={selectedProfile}
+          connectionStatus={selectedConnection?.status}
+          onClose={() => setShowProfileModal(false)}
+          showContactInfo={selectedConnection?.status === 'confirmed' || selectedConnection?.status === 'active'}
+        />
       )}
 
       {/* Contact Info Modal */}
