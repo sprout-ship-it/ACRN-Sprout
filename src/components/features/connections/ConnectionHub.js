@@ -1,4 +1,4 @@
-// src/components/features/connections/ConnectionHub.js - Updated with styling and ProfileModal
+// src/components/features/connections/ConnectionHub.js - Enhanced with detailed connection info
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../../../hooks/useAuth';
 import { supabase } from '../../../utils/supabase';
@@ -50,7 +50,6 @@ const ConnectionHub = ({ onBack }) => {
     try {
       const ids = { applicant: null, peerSupport: null, landlord: null, employer: null };
 
-      // Get applicant profile ID
       if (profile.roles?.includes('applicant')) {
         const { data } = await supabase
           .from('applicant_matching_profiles')
@@ -60,7 +59,6 @@ const ConnectionHub = ({ onBack }) => {
         if (data) ids.applicant = data.id;
       }
 
-      // Get peer support profile ID
       if (profile.roles?.includes('peer-support')) {
         const { data } = await supabase
           .from('peer_support_profiles')
@@ -70,7 +68,6 @@ const ConnectionHub = ({ onBack }) => {
         if (data) ids.peerSupport = data.id;
       }
 
-      // Get landlord profile ID
       if (profile.roles?.includes('landlord')) {
         const { data } = await supabase
           .from('landlord_profiles')
@@ -80,7 +77,6 @@ const ConnectionHub = ({ onBack }) => {
         if (data) ids.landlord = data.id;
       }
 
-      // Get employer profile ID
       if (profile.roles?.includes('employer')) {
         const { data } = await supabase
           .from('employer_profiles')
@@ -112,22 +108,18 @@ const ConnectionHub = ({ onBack }) => {
         awaiting: []
       };
 
-      // STEP 1: Load roommate/housing connections from match_groups
       if (profileIds.applicant) {
         await loadMatchGroupConnections(connectionCategories);
       }
 
-      // STEP 2: Load peer support connections
       if (profileIds.applicant || profileIds.peerSupport) {
         await loadPeerSupportConnections(connectionCategories);
       }
 
-      // STEP 3: Load employment connections
       if (profileIds.applicant || profileIds.employer) {
         await loadEmploymentConnections(connectionCategories);
       }
 
-      // Sort by most recent activity
       Object.keys(connectionCategories).forEach(category => {
         connectionCategories[category].sort((a, b) => 
           new Date(b.last_activity) - new Date(a.last_activity)
@@ -145,36 +137,16 @@ const ConnectionHub = ({ onBack }) => {
 
   const loadMatchGroupConnections = async (categories) => {
     try {
-      console.log('🔍 Loading match groups for applicant:', profileIds.applicant);
-      
       const { data: matchGroups, error } = await supabase
         .from('match_groups')
         .select('*')
         .contains('roommate_ids', JSON.stringify([profileIds.applicant]));
 
-      if (error) {
-        console.error('❌ Error loading match groups:', error);
-        throw error;
-      }
-      
-      if (!matchGroups || matchGroups.length === 0) {
-        console.log('ℹ️ No match groups found');
-        return;
-      }
-
-      console.log(`✅ Found ${matchGroups.length} match groups`);
+      if (error) throw error;
+      if (!matchGroups || matchGroups.length === 0) return;
 
       for (const group of matchGroups) {
         const roommateIds = group.roommate_ids || [];
-        
-        console.log('📋 Processing group:', {
-          id: group.id,
-          status: group.status,
-          roommateIds: roommateIds,
-          property_id: group.property_id,
-          currentUserId: profileIds.applicant
-        });
-        
         const otherRoommateIds = roommateIds.filter(id => id !== profileIds.applicant);
         
         let roommates = [];
@@ -183,11 +155,9 @@ const ConnectionHub = ({ onBack }) => {
             .from('applicant_matching_profiles')
             .select('id, user_id, primary_phone, registrant_profiles(first_name, last_name, email)')
             .in('id', otherRoommateIds);
-          
           roommates = roommateData || [];
         }
 
-        // Get property info if exists
         let property = null;
         if (group.property_id) {
           const { data: propData } = await supabase
@@ -198,7 +168,6 @@ const ConnectionHub = ({ onBack }) => {
           property = propData;
         }
 
-        // ✅ DIFFERENTIATE: Property match vs Roommate match
         const isPropertyMatch = !!group.property_id;
         const connectionType = isPropertyMatch ? 'landlord' : 'roommate';
         const connectionAvatar = isPropertyMatch ? '🏠' : '👥';
@@ -221,7 +190,6 @@ const ConnectionHub = ({ onBack }) => {
           isPropertyMatch: isPropertyMatch
         };
 
-        // Categorize based on status
         if (group.status === 'requested') {
           if (group.requested_by_id === profileIds.applicant) {
             categories.sent.push(connection);
@@ -238,30 +206,18 @@ const ConnectionHub = ({ onBack }) => {
           categories.active.push(connection);
         }
       }
-      
-      console.log('✅ Match groups loaded and categorized');
-      
     } catch (error) {
-      console.error('💥 Error in loadMatchGroupConnections:', error);
+      console.error('Error in loadMatchGroupConnections:', error);
       throw error;
     }
   };
 
-  /**
-   * Load peer support connections
-   */
   const loadPeerSupportConnections = async (categories) => {
-    let query = supabase
-      .from('peer_support_matches')
-      .select('*');
-
+    let query = supabase.from('peer_support_matches').select('*');
     const conditions = [];
     if (profileIds.applicant) conditions.push(`applicant_id.eq.${profileIds.applicant}`);
     if (profileIds.peerSupport) conditions.push(`peer_support_id.eq.${profileIds.peerSupport}`);
-    
-    if (conditions.length > 0) {
-      query = query.or(conditions.join(','));
-    }
+    if (conditions.length > 0) query = query.or(conditions.join(','));
 
     const { data: matches, error } = await query;
     if (error) throw error;
@@ -274,7 +230,7 @@ const ConnectionHub = ({ onBack }) => {
       if (isApplicant) {
         const { data } = await supabase
           .from('peer_support_profiles')
-          .select('id, user_id, professional_title, primary_phone, contact_email, registrant_profiles(first_name, last_name, email)')
+          .select('id, user_id, professional_title, primary_phone, contact_email, years_experience, specialties, registrant_profiles(first_name, last_name, email)')
           .eq('id', match.peer_support_id)
           .single();
         otherPerson = data;
@@ -313,21 +269,12 @@ const ConnectionHub = ({ onBack }) => {
     }
   };
 
-  /**
-   * Load employment connections
-   */
   const loadEmploymentConnections = async (categories) => {
-    let query = supabase
-      .from('employment_matches')
-      .select('*');
-
+    let query = supabase.from('employment_matches').select('*');
     const conditions = [];
     if (profileIds.applicant) conditions.push(`applicant_id.eq.${profileIds.applicant}`);
     if (profileIds.employer) conditions.push(`employer_id.eq.${profileIds.employer}`);
-    
-    if (conditions.length > 0) {
-      query = query.or(conditions.join(','));
-    }
+    if (conditions.length > 0) query = query.or(conditions.join(','));
 
     const { data: matches, error } = await query;
     if (error) throw error;
@@ -340,7 +287,7 @@ const ConnectionHub = ({ onBack }) => {
       if (isApplicant) {
         const { data } = await supabase
           .from('employer_profiles')
-          .select('id, user_id, company_name, phone, contact_email, registrant_profiles(first_name, last_name, email)')
+          .select('id, user_id, company_name, phone, contact_email, industry, city, state, job_types_available, registrant_profiles(first_name, last_name, email)')
           .eq('id', match.employer_id)
           .single();
         otherPerson = data;
@@ -381,9 +328,6 @@ const ConnectionHub = ({ onBack }) => {
     }
   };
 
-  /**
-   * Load full profile data for viewing
-   */
   const handleViewProfile = async (connection, personId = null) => {
     setProfileLoading(true);
     
@@ -402,7 +346,6 @@ const ConnectionHub = ({ onBack }) => {
           profile_type: 'applicant',
           name: formatName(data.registrant_profiles?.first_name, data.registrant_profiles?.last_name)
         };
-        
       } else if (connection.type === 'peer_support') {
         const isApplicant = connection.is_requester;
         
@@ -431,7 +374,6 @@ const ConnectionHub = ({ onBack }) => {
             name: formatName(data.registrant_profiles?.first_name, data.registrant_profiles?.last_name)
           };
         }
-        
       } else if (connection.type === 'employer') {
         const isApplicant = connection.is_requester;
         
@@ -465,7 +407,6 @@ const ConnectionHub = ({ onBack }) => {
       setSelectedProfile(profileData);
       setSelectedConnection(connection);
       setShowProfileModal(true);
-      
     } catch (err) {
       console.error('Error loading profile:', err);
       alert('Failed to load profile information.');
@@ -474,15 +415,12 @@ const ConnectionHub = ({ onBack }) => {
     }
   };
 
-  /**
-   * Handle approving a connection request
-   */
   const handleApproveRequest = async (connection) => {
     if (actionLoading) return;
     setActionLoading(true);
 
     try {
-      if (connection.type === 'roommate') {
+      if (connection.type === 'roommate' || connection.type === 'landlord') {
         await supabase
           .from('match_groups')
           .update({ 
@@ -490,7 +428,6 @@ const ConnectionHub = ({ onBack }) => {
             updated_at: new Date().toISOString()
           })
           .eq('id', connection.match_group_id);
-          
       } else if (connection.type === 'peer_support') {
         await supabase
           .from('peer_support_matches')
@@ -499,7 +436,6 @@ const ConnectionHub = ({ onBack }) => {
             updated_at: new Date().toISOString()
           })
           .eq('id', connection.peer_support_match_id);
-          
       } else if (connection.type === 'employer') {
         await supabase
           .from('employment_matches')
@@ -512,7 +448,6 @@ const ConnectionHub = ({ onBack }) => {
 
       alert('Connection approved! You can now exchange contact information.');
       await loadConnections();
-      
     } catch (err) {
       console.error('Error approving request:', err);
       alert('Failed to approve request. Please try again.');
@@ -521,9 +456,6 @@ const ConnectionHub = ({ onBack }) => {
     }
   };
 
-  /**
-   * Handle declining a connection request
-   */
   const handleDeclineRequest = async (connection) => {
     if (actionLoading) return;
     
@@ -533,18 +465,16 @@ const ConnectionHub = ({ onBack }) => {
     setActionLoading(true);
 
     try {
-      if (connection.type === 'roommate') {
+      if (connection.type === 'roommate' || connection.type === 'landlord') {
         await supabase
           .from('match_groups')
           .delete()
           .eq('id', connection.match_group_id);
-          
       } else if (connection.type === 'peer_support') {
         await supabase
           .from('peer_support_matches')
           .update({ status: 'inactive' })
           .eq('id', connection.peer_support_match_id);
-          
       } else if (connection.type === 'employer') {
         await supabase
           .from('employment_matches')
@@ -554,7 +484,6 @@ const ConnectionHub = ({ onBack }) => {
 
       alert('Connection request declined.');
       await loadConnections();
-      
     } catch (err) {
       console.error('Error declining request:', err);
       alert('Failed to decline request. Please try again.');
@@ -563,9 +492,42 @@ const ConnectionHub = ({ onBack }) => {
     }
   };
 
-  /**
-   * Handle ending an active connection
-   */
+  const handleWithdrawRequest = async (connection) => {
+    if (actionLoading) return;
+    
+    const confirmed = window.confirm('Are you sure you want to withdraw this connection request?');
+    if (!confirmed) return;
+
+    setActionLoading(true);
+
+    try {
+      if (connection.type === 'roommate' || connection.type === 'landlord') {
+        await supabase
+          .from('match_groups')
+          .delete()
+          .eq('id', connection.match_group_id);
+      } else if (connection.type === 'peer_support') {
+        await supabase
+          .from('peer_support_matches')
+          .update({ status: 'inactive' })
+          .eq('id', connection.peer_support_match_id);
+      } else if (connection.type === 'employer') {
+        await supabase
+          .from('employment_matches')
+          .update({ status: 'inactive' })
+          .eq('id', connection.employment_match_id);
+      }
+
+      alert('Connection request withdrawn.');
+      await loadConnections();
+    } catch (err) {
+      console.error('Error withdrawing request:', err);
+      alert('Failed to withdraw request. Please try again.');
+    } finally {
+      setActionLoading(false);
+    }
+  };
+
   const handleEndConnection = async (connection) => {
     if (actionLoading) return;
     
@@ -575,20 +537,17 @@ const ConnectionHub = ({ onBack }) => {
     setActionLoading(true);
 
     try {
-      if (connection.type === 'roommate') {
+      if (connection.type === 'roommate' || connection.type === 'landlord') {
         const { error } = await supabase.rpc('remove_member_from_group', {
           p_group_id: connection.match_group_id,
           p_member_id: profileIds.applicant
         });
-        
         if (error) throw error;
-        
       } else if (connection.type === 'peer_support') {
         await supabase
           .from('peer_support_matches')
           .update({ status: 'inactive' })
           .eq('id', connection.peer_support_match_id);
-          
       } else if (connection.type === 'employer') {
         await supabase
           .from('employment_matches')
@@ -598,7 +557,6 @@ const ConnectionHub = ({ onBack }) => {
 
       alert('Connection ended.');
       await loadConnections();
-      
     } catch (err) {
       console.error('Error ending connection:', err);
       alert('Failed to end connection. Please try again.');
@@ -607,19 +565,11 @@ const ConnectionHub = ({ onBack }) => {
     }
   };
 
-  /**
-   * Load and show contact information
-   */
   const handleViewContact = async (connection) => {
     try {
-      let contact = {
-        name: '',
-        phone: '',
-        email: ''
-      };
+      let contact = { name: '', phone: '', email: '' };
 
       if (connection.type === 'landlord' && connection.property) {
-        // Property match - show landlord contact
         const ll = connection.property.landlord_profiles;
         contact = {
           type: 'property',
@@ -637,9 +587,7 @@ const ConnectionHub = ({ onBack }) => {
             email: ll?.contact_email || ll?.registrant_profiles?.email
           }
         };
-        
       } else if (connection.type === 'roommate') {
-        // Roommate match - show roommate contacts
         contact = {
           type: 'roommates',
           members: connection.roommates?.map(r => ({
@@ -649,7 +597,6 @@ const ConnectionHub = ({ onBack }) => {
           })) || []
         };
         
-        // Include landlord if property exists
         if (connection.property?.landlord_profiles) {
           const ll = connection.property.landlord_profiles;
           contact.landlord = {
@@ -658,7 +605,6 @@ const ConnectionHub = ({ onBack }) => {
             email: ll.contact_email || ll.registrant_profiles?.email
           };
         }
-        
       } else if (connection.type === 'peer_support') {
         const other = connection.other_person;
         contact = {
@@ -666,7 +612,6 @@ const ConnectionHub = ({ onBack }) => {
           phone: other?.primary_phone,
           email: other?.contact_email || other?.registrant_profiles?.email
         };
-        
       } else if (connection.type === 'employer') {
         const other = connection.other_person;
         contact = {
@@ -679,16 +624,12 @@ const ConnectionHub = ({ onBack }) => {
       setContactInfo(contact);
       setSelectedConnection(connection);
       setShowContactModal(true);
-      
     } catch (err) {
       console.error('Error loading contact info:', err);
       alert('Failed to load contact information.');
     }
   };
 
-  /**
-   * Format time ago
-   */
   const formatTimeAgo = (dateString) => {
     const date = new Date(dateString);
     const now = new Date();
@@ -700,16 +641,11 @@ const ConnectionHub = ({ onBack }) => {
     return `${Math.floor(diffInHours / 24)} days ago`;
   };
 
-  /**
-   * Get connection display name
-   */
   const getConnectionName = (connection) => {
     if (connection.type === 'landlord' && connection.property) {
-      // Property match - show property address
       const prop = connection.property;
       return prop.street_address || prop.property_name || 'Property Match';
     } else if (connection.type === 'roommate') {
-      // Roommate match - show group count
       const count = connection.roommates?.length || 0;
       return `Roommate Group (${count} member${count !== 1 ? 's' : ''})`;
     } else if (connection.type === 'peer_support') {
@@ -722,9 +658,6 @@ const ConnectionHub = ({ onBack }) => {
     return 'Unknown';
   };
 
-  /**
-   * Get connection type label
-   */
   const getConnectionTypeLabel = (type) => {
     const labels = {
       roommate: 'Housing Request',
@@ -735,17 +668,12 @@ const ConnectionHub = ({ onBack }) => {
     return labels[type] || 'Connection Request';
   };
 
-  /**
-   * Get tab count
-   */
   const getTabCount = (tab) => connections[tab]?.length || 0;
 
-  // Load profile IDs on mount
   useEffect(() => {
     loadProfileIds();
   }, [profile?.id]);
 
-  // Load connections when profile IDs are ready
   useEffect(() => {
     if (Object.values(profileIds).some(id => id !== null)) {
       loadConnections();
@@ -754,7 +682,6 @@ const ConnectionHub = ({ onBack }) => {
 
   return (
     <div className="content">
-      {/* Header */}
       <div className="text-center mb-5">
         <h1 className="welcome-title">Connection Hub</h1>
         <p className="welcome-text">
@@ -762,72 +689,49 @@ const ConnectionHub = ({ onBack }) => {
         </p>
       </div>
 
-      {/* Error State */}
       {error && (
         <div className="alert alert-error mb-4">
           <h4>Error Loading Connections</h4>
           <p>{error}</p>
-          <button className="btn btn-outline" onClick={loadConnections}>
-            Try Again
-          </button>
+          <button className="btn btn-outline" onClick={loadConnections}>Try Again</button>
         </div>
       )}
 
-      {/* Loading State */}
       {loading && (
         <div className="text-center" style={{ padding: '4rem' }}>
           <LoadingSpinner size="large" text="Loading your connections..." />
         </div>
       )}
 
-      {/* Main Content */}
       {!loading && !error && (
         <>
-          {/* Summary */}
           <div className="card mb-4">
             <div className={styles.connectionStats}>
               <h3 className="card-title">
                 {Object.values(connections).reduce((sum, arr) => sum + arr.length, 0)} Total Connection{Object.values(connections).reduce((sum, arr) => sum + arr.length, 0) !== 1 ? 's' : ''}
               </h3>
-              <button 
-                className="btn btn-outline btn-sm"
-                onClick={loadConnections}
-                disabled={loading}
-              >
+              <button className="btn btn-outline btn-sm" onClick={loadConnections} disabled={loading}>
                 🔄 Refresh
               </button>
             </div>
           </div>
 
-          {/* Tabs */}
           <div className="card">
             <div className={styles.tabContainer}>
               <ul className={styles.tabNav}>
                 <li className={styles.tabItem}>
-                  <button
-                    className={`${styles.tabButton} ${activeTab === 'active' ? styles.active : ''}`}
-                    onClick={() => setActiveTab('active')}
-                  >
-                    Active
-                    <span className={styles.tabCount}>{getTabCount('active')}</span>
+                  <button className={`${styles.tabButton} ${activeTab === 'active' ? styles.active : ''}`} onClick={() => setActiveTab('active')}>
+                    Active<span className={styles.tabCount}>{getTabCount('active')}</span>
                   </button>
                 </li>
                 <li className={styles.tabItem}>
-                  <button
-                    className={`${styles.tabButton} ${activeTab === 'awaiting' ? styles.active : ''}`}
-                    onClick={() => setActiveTab('awaiting')}
-                  >
-                    Awaiting Response
-                    <span className={styles.tabCount}>{getTabCount('awaiting')}</span>
+                  <button className={`${styles.tabButton} ${activeTab === 'awaiting' ? styles.active : ''}`} onClick={() => setActiveTab('awaiting')}>
+                    Awaiting Response<span className={styles.tabCount}>{getTabCount('awaiting')}</span>
                   </button>
                 </li>
                 <li className={styles.tabItem}>
-                  <button
-                    className={`${styles.tabButton} ${activeTab === 'sent' ? styles.active : ''}`}
-                    onClick={() => setActiveTab('sent')}
-                  >
-                    Sent Requests
-                    <span className={styles.tabCount}>{getTabCount('sent')}</span>
+                  <button className={`${styles.tabButton} ${activeTab === 'sent' ? styles.active : ''}`} onClick={() => setActiveTab('sent')}>
+                    Sent Requests<span className={styles.tabCount}>{getTabCount('sent')}</span>
                   </button>
                 </li>
               </ul>
@@ -838,22 +742,16 @@ const ConnectionHub = ({ onBack }) => {
                 <div className="grid-auto">
                   {connections[activeTab].map((connection) => (
                     <div key={connection.id} className={`card ${styles.connectionCard} ${styles[connection.type === 'peer_support' ? 'peerSupport' : connection.type]}`}>
-                      {/* Color-coded header */}
                       <div className={styles.connectionCardHeader}>
                         <div style={{ flex: 1 }}>
-                          <div className={styles.connectionTypeLabel}>
-                            {getConnectionTypeLabel(connection.type)}
-                          </div>
-                          <div className={styles.connectionTitle}>
-                            {getConnectionName(connection)}
-                          </div>
+                          <div className={styles.connectionTypeLabel}>{getConnectionTypeLabel(connection.type)}</div>
+                          <div className={styles.connectionTitle}>{getConnectionName(connection)}</div>
                         </div>
                         <span className={`badge ${connection.status === 'active' || connection.status === 'confirmed' ? 'badge-success' : 'badge-warning'}`}>
                           {connection.status}
                         </span>
                       </div>
 
-                      {/* Time info */}
                       <div className="card-subtitle mb-3" style={{ color: 'var(--gray-600)' }}>
                         {formatTimeAgo(connection.last_activity)}
                       </div>
@@ -883,16 +781,12 @@ const ConnectionHub = ({ onBack }) => {
                             )}
                           </div>
                           
-                          {/* Show landlord info */}
                           {connection.property.landlord_profiles && (
                             <div style={{ marginTop: '0.75rem' }}>
                               <div className={styles.membersSectionTitle}>Landlord:</div>
                               <div className={styles.memberItem}>
                                 <span className={styles.memberName}>
-                                  {formatName(
-                                    connection.property.landlord_profiles.registrant_profiles?.first_name,
-                                    connection.property.landlord_profiles.registrant_profiles?.last_name
-                                  )}
+                                  {formatName(connection.property.landlord_profiles.registrant_profiles?.first_name, connection.property.landlord_profiles.registrant_profiles?.last_name)}
                                 </span>
                               </div>
                             </div>
@@ -900,7 +794,65 @@ const ConnectionHub = ({ onBack }) => {
                         </div>
                       )}
 
-                      {/* Roommate members list with View Profile buttons */}
+                      {/* Peer Support specialist info */}
+                      {connection.type === 'peer_support' && connection.other_person && (
+                        <div className={styles.membersSection}>
+                          <div className={styles.membersSectionTitle}>Specialist Info:</div>
+                          <div style={{ padding: '0.75rem', background: 'white', borderRadius: 'var(--radius-sm)', border: '1px solid var(--border-beige)' }}>
+                            <div style={{ marginBottom: '0.5rem' }}>
+                              <strong>👤 Name:</strong> {formatName(connection.other_person.registrant_profiles?.first_name, connection.other_person.registrant_profiles?.last_name)}
+                            </div>
+                            {connection.other_person.professional_title && (
+                              <div style={{ marginBottom: '0.5rem' }}>
+                                <strong>💼 Title:</strong> {connection.other_person.professional_title}
+                              </div>
+                            )}
+                            {connection.other_person.years_experience && (
+                              <div style={{ marginBottom: '0.5rem' }}>
+                                <strong>⭐ Experience:</strong> {connection.other_person.years_experience} year{connection.other_person.years_experience !== 1 ? 's' : ''}
+                              </div>
+                            )}
+                            {connection.other_person.specialties && connection.other_person.specialties.length > 0 && (
+                              <div>
+                                <strong>🎯 Specialties:</strong> {connection.other_person.specialties.slice(0, 3).join(', ')}
+                                {connection.other_person.specialties.length > 3 && ` (+${connection.other_person.specialties.length - 3} more)`}
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Employer info */}
+                      {connection.type === 'employer' && connection.other_person && (
+                        <div className={styles.membersSection}>
+                          <div className={styles.membersSectionTitle}>Employer Info:</div>
+                          <div style={{ padding: '0.75rem', background: 'white', borderRadius: 'var(--radius-sm)', border: '1px solid var(--border-beige)' }}>
+                            {connection.other_person.company_name && (
+                              <div style={{ marginBottom: '0.5rem' }}>
+                                <strong>🏢 Company:</strong> {connection.other_person.company_name}
+                              </div>
+                            )}
+                            {connection.other_person.industry && (
+                              <div style={{ marginBottom: '0.5rem' }}>
+                                <strong>🏭 Industry:</strong> {connection.other_person.industry}
+                              </div>
+                            )}
+                            {connection.other_person.city && connection.other_person.state && (
+                              <div style={{ marginBottom: '0.5rem' }}>
+                                <strong>📍 Location:</strong> {connection.other_person.city}, {connection.other_person.state}
+                              </div>
+                            )}
+                            {connection.other_person.job_types_available && connection.other_person.job_types_available.length > 0 && (
+                              <div>
+                                <strong>💼 Job Types:</strong> {connection.other_person.job_types_available.slice(0, 2).join(', ')}
+                                {connection.other_person.job_types_available.length > 2 && ` (+${connection.other_person.job_types_available.length - 2} more)`}
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Roommate members list */}
                       {connection.type === 'roommate' && connection.roommates?.length > 0 && (
                         <div className={styles.membersSection}>
                           <div className={styles.membersSectionTitle}>Members:</div>
@@ -910,11 +862,7 @@ const ConnectionHub = ({ onBack }) => {
                                 <span className={styles.memberName}>
                                   {formatName(roommate.registrant_profiles?.first_name, roommate.registrant_profiles?.last_name)}
                                 </span>
-                                <button
-                                  className="btn btn-outline btn-sm"
-                                  onClick={() => handleViewProfile(connection, roommate.id)}
-                                  disabled={profileLoading}
-                                >
+                                <button className="btn btn-outline btn-sm" onClick={() => handleViewProfile(connection, roommate.id)} disabled={profileLoading}>
                                   👁️ View Profile
                                 </button>
                               </div>
@@ -927,18 +875,10 @@ const ConnectionHub = ({ onBack }) => {
                       <div className={styles.actionButtonsGrid}>
                         {activeTab === 'awaiting' && (
                           <div className={styles.primaryActions}>
-                            <button
-                              className="btn btn-primary"
-                              onClick={() => handleApproveRequest(connection)}
-                              disabled={actionLoading}
-                            >
+                            <button className="btn btn-primary" onClick={() => handleApproveRequest(connection)} disabled={actionLoading}>
                               ✅ Approve
                             </button>
-                            <button
-                              className="btn btn-outline"
-                              onClick={() => handleDeclineRequest(connection)}
-                              disabled={actionLoading}
-                            >
+                            <button className="btn btn-outline" onClick={() => handleDeclineRequest(connection)} disabled={actionLoading}>
                               ❌ Decline
                             </button>
                           </div>
@@ -948,40 +888,55 @@ const ConnectionHub = ({ onBack }) => {
                           <>
                             <div className={styles.primaryActions}>
                               {connection.type !== 'roommate' && (
-                                <button
-                                  className="btn btn-outline"
-                                  onClick={() => handleViewProfile(connection)}
-                                  disabled={profileLoading}
-                                >
+                                <button className="btn btn-outline" onClick={() => handleViewProfile(connection)} disabled={profileLoading}>
                                   👁️ View Profile
                                 </button>
                               )}
-                              <button
-                                className="btn btn-primary"
-                                onClick={() => handleViewContact(connection)}
-                              >
+                              <button className="btn btn-primary" onClick={() => handleViewContact(connection)}>
                                 📞 Contact Info
                               </button>
                             </div>
                             <div className={styles.secondaryAction}>
-                              <button
-                                className={`btn ${styles.endConnectionButton}`}
-                                onClick={() => handleEndConnection(connection)}
-                                disabled={actionLoading}
-                              >
-                                ❌ End
+                              <button className={`btn ${styles.endConnectionButton}`} onClick={() => handleEndConnection(connection)} disabled={actionLoading}>
+                                ❌ End Connection
                               </button>
                             </div>
                           </>
                         )}
 
                         {activeTab === 'sent' && (
-                          <div className={styles.waitingStatus}>
-                            {/* Request type indicator */}
+                          <div style={{ width: '100%' }}>
                             <div className={`${styles.requestTypeIndicator} ${styles[connection.type === 'peer_support' ? 'peerSupport' : connection.type]}`}>
                               {connection.avatar} {getConnectionTypeLabel(connection.type)}
                             </div>
-                            ⏳ Waiting for response...
+                            
+                            <div className={styles.waitingStatus} style={{ marginBottom: '1rem' }}>
+                              ⏳ Waiting for response...
+                            </div>
+                            
+                            <div className={styles.primaryActions}>
+                              {connection.type === 'landlord' && connection.property && (
+                                <button className="btn btn-outline" onClick={() => alert('Property details are shown above in the card.')} disabled={profileLoading}>
+                                  👁️ View Property
+                                </button>
+                              )}
+                              
+                              {connection.type === 'roommate' && connection.roommates?.length > 0 && (
+                                <button className="btn btn-outline" onClick={() => handleViewProfile(connection, connection.roommates[0].id)} disabled={profileLoading}>
+                                  👁️ View Profile
+                                </button>
+                              )}
+                              
+                              {(connection.type === 'peer_support' || connection.type === 'employer') && (
+                                <button className="btn btn-outline" onClick={() => handleViewProfile(connection)} disabled={profileLoading}>
+                                  👁️ View Details
+                                </button>
+                              )}
+                              
+                              <button className="btn btn-outline" onClick={() => handleWithdrawRequest(connection)} disabled={actionLoading} style={{ color: 'var(--error-text)', borderColor: 'var(--error-border)' }}>
+                                🗑️ Withdraw Request
+                              </button>
+                            </div>
                           </div>
                         )}
                       </div>
@@ -995,9 +950,7 @@ const ConnectionHub = ({ onBack }) => {
                     {activeTab === 'awaiting' && '⏳'}
                     {activeTab === 'sent' && '📤'}
                   </div>
-                  <h3 className="empty-state-title">
-                    No {activeTab} connections
-                  </h3>
+                  <h3 className="empty-state-title">No {activeTab} connections</h3>
                 </div>
               )}
             </div>
@@ -1005,16 +958,12 @@ const ConnectionHub = ({ onBack }) => {
         </>
       )}
 
-      {/* Back Button */}
       {onBack && (
         <div className="text-center mt-4">
-          <button className="btn btn-outline" onClick={onBack}>
-            ← Back to Dashboard
-          </button>
+          <button className="btn btn-outline" onClick={onBack}>← Back to Dashboard</button>
         </div>
       )}
 
-      {/* Profile Modal */}
       {showProfileModal && selectedProfile && (
         <ProfileModal
           isOpen={showProfileModal}
@@ -1025,7 +974,6 @@ const ConnectionHub = ({ onBack }) => {
         />
       )}
 
-      {/* Contact Info Modal */}
       {showContactModal && contactInfo && (
         <div className="modal-overlay" onClick={() => setShowContactModal(false)}>
           <div className="modal-content" onClick={(e) => e.stopPropagation()}>
