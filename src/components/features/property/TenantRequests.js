@@ -16,6 +16,7 @@ const TenantRequests = () => {
   const [processingRequest, setProcessingRequest] = useState(null);
 
   // Load all housing requests for this landlord
+// Load all housing inquiries for this landlord
   const loadRequests = async () => {
     if (!user?.id || !profile?.id) return;
 
@@ -34,37 +35,56 @@ const TenantRequests = () => {
         throw new Error('Landlord profile not found. Please complete your landlord profile setup.');
       }
 
-      // 2. Get all housing requests for this landlord with related data
-      const { data: requests, error: requestsError } = await supabase
-        .from('match_requests')
-        .select(`
-          *,
-          properties!inner(
-            id,
-            title,
-            address,
-            city,
-            state,
-            monthly_rent,
-            bedrooms,
-            bathrooms,
-            is_recovery_housing,
-            available_beds
-          )
-        `)
-        .eq('recipient_type', 'landlord')
-        .eq('recipient_id', landlordProfile.id)
-        .eq('request_type', 'housing')
-        .eq('properties.landlord_id', landlordProfile.id)
-        .order('created_at', { ascending: false });
+      // 2. Get all properties owned by this landlord
+      const { data: landlordProperties, error: propertiesError } = await supabase
+        .from('properties')
+        .select('id, title, address, city, state, monthly_rent, bedrooms, bathrooms, is_recovery_housing, available_beds, landlord_id')
+        .eq('landlord_id', landlordProfile.id);
 
-      if (requestsError) {
-        throw new Error(requestsError.message);
+      if (propertiesError) {
+        throw new Error(propertiesError.message);
       }
 
-      // 3. Get applicant profiles for all requests
-      const applicantIds = [...new Set(requests.map(req => req.requester_id))];
-      
+      if (!landlordProperties || landlordProperties.length === 0) {
+        // No properties, no inquiries
+        setPendingRequests([]);
+        setRecentRequests([]);
+        setArchivedRequests([]);
+        setLoading(false);
+        return;
+      }
+
+      const propertyIds = landlordProperties.map(p => p.id);
+
+      // 3. Get all match_groups (housing inquiries) for these properties
+      const { data: inquiries, error: inquiriesError } = await supabase
+        .from('match_groups')
+        .select('*')
+        .in('property_id', propertyIds)
+        .not('property_id', 'is', null) // Only housing inquiries
+        .order('created_at', { ascending: false });
+
+      if (inquiriesError) {
+        throw new Error(inquiriesError.message);
+      }
+
+      if (!inquiries || inquiries.length === 0) {
+        // No inquiries
+        setPendingRequests([]);
+        setRecentRequests([]);
+        setArchivedRequests([]);
+        setLoading(false);
+        return;
+      }
+
+      // 4. Extract all unique applicant IDs from all roommate_ids arrays
+      const allApplicantIds = new Set();
+      inquiries.forEach(inquiry => {
+        const roommateIds = inquiry.roommate_ids || [];
+        roommateIds.forEach(id => allApplicantIds.add(id));
+      });
+
+      // 5. Get applicant profiles for all applicants
       const { data: applicantProfiles, error: applicantError } = await supabase
         .from('applicant_matching_profiles')
         .select(`
@@ -83,32 +103,52 @@ const TenantRequests = () => {
             email
           )
         `)
-        .in('id', applicantIds);
+        .in('id', Array.from(allApplicantIds));
 
       if (applicantError) {
         console.warn('Error loading applicant profiles:', applicantError);
       }
 
-      // 4. Merge applicant data with requests
-      const enrichedRequests = requests.map(request => {
-        const applicant = applicantProfiles?.find(ap => ap.id === request.requester_id);
+      // 6. Create a lookup map for applicants
+      const applicantMap = new Map();
+      if (applicantProfiles) {
+        applicantProfiles.forEach(applicant => {
+          applicantMap.set(applicant.id, applicant);
+        });
+      }
+
+      // 7. Create a lookup map for properties
+      const propertyMap = new Map();
+      landlordProperties.forEach(property => {
+        propertyMap.set(property.id, property);
+      });
+
+      // 8. Enrich inquiries with applicant and property data
+      const enrichedInquiries = inquiries.map(inquiry => {
+        const roommateIds = inquiry.roommate_ids || [];
+        const applicants = roommateIds
+          .map(id => applicantMap.get(id))
+          .filter(Boolean); // Remove any null/undefined
+
         return {
-          ...request,
-          applicant: applicant || null
+          ...inquiry,
+          applicants: applicants, // Array of applicants (could be 1 or more)
+          property: propertyMap.get(inquiry.property_id),
+          isGroupInquiry: applicants.length > 1
         };
       });
 
-      // 5. Categorize requests
+      // 9. Categorize inquiries
       const now = new Date();
       const thirtyDaysAgo = new Date(now.getTime() - (30 * 24 * 60 * 60 * 1000));
 
-      const pending = enrichedRequests.filter(req => req.status === 'pending');
-      const recent = enrichedRequests.filter(req => 
-        req.status !== 'pending' && 
+      const pending = enrichedInquiries.filter(req => req.status === 'requested');
+      const recent = enrichedInquiries.filter(req => 
+        (req.status === 'confirmed' || req.status === 'active' || req.status === 'inactive') && 
         new Date(req.updated_at || req.created_at) >= thirtyDaysAgo
       );
-      const archived = enrichedRequests.filter(req => 
-        req.status !== 'pending' && 
+      const archived = enrichedInquiries.filter(req => 
+        (req.status === 'confirmed' || req.status === 'active' || req.status === 'inactive') && 
         new Date(req.updated_at || req.created_at) < thirtyDaysAgo
       );
 
@@ -124,61 +164,54 @@ const TenantRequests = () => {
     }
   };
 
-  // Handle approve/reject actions
-  const handleRequestAction = async (request, action) => {
-    if (processingRequest === request.id) return;
+// Handle approve/reject actions
+  const handleRequestAction = async (inquiry, action) => {
+    if (processingRequest === inquiry.id) return;
 
-    const confirmMessage = action === 'accepted' 
-      ? `Approve housing request from ${request.applicant?.registrant_profiles?.first_name} for "${request.properties.title}"?`
-      : `Reject housing request from ${request.applicant?.registrant_profiles?.first_name} for "${request.properties.title}"?`;
+    // Determine applicant name for confirmation message
+    const primaryApplicant = inquiry.applicants && inquiry.applicants.length > 0 
+      ? inquiry.applicants[0] 
+      : null;
+    const applicantName = primaryApplicant?.registrant_profiles?.first_name || 'this applicant';
+    const isGroup = inquiry.isGroupInquiry;
+    const groupText = isGroup ? ` and ${inquiry.applicants.length - 1} roommate${inquiry.applicants.length > 2 ? 's' : ''}` : '';
+
+    const confirmMessage = action === 'confirmed' 
+      ? `Approve housing inquiry from ${applicantName}${groupText} for "${inquiry.property.title}"?`
+      : `Reject housing inquiry from ${applicantName}${groupText} for "${inquiry.property.title}"?`;
 
     if (!window.confirm(confirmMessage)) return;
 
-    setProcessingRequest(request.id);
+    setProcessingRequest(inquiry.id);
 
     try {
-      // 1. Update the match request status
+      // Update the match_group status
+      const newStatus = action === 'confirmed' ? 'confirmed' : 'inactive';
+      
       const { error: updateError } = await supabase
-        .from('match_requests')
+        .from('match_groups')
         .update({ 
-          status: action,
-          responded_at: new Date().toISOString()
+          status: newStatus,
+          updated_at: new Date().toISOString()
         })
-        .eq('id', request.id);
+        .eq('id', inquiry.id);
 
       if (updateError) {
         throw new Error(updateError.message);
       }
 
-      // 2. If approved, create a match_group for future connection tracking
-      if (action === 'accepted') {
-        const { error: matchGroupError } = await supabase
-          .from('match_groups')
-          .insert({
-            applicant_1_id: request.requester_id,
-            property_id: request.property_id,
-            status: 'confirmed',
-            group_name: `Housing Connection - ${request.properties.title}`
-          });
-
-        if (matchGroupError) {
-          console.warn('Error creating match group:', matchGroupError);
-          // Don't fail the whole operation if match group creation fails
-        }
-      }
-
-      // 3. Reload requests to update the UI
+      // Reload inquiries to update the UI
       await loadRequests();
 
-      const successMessage = action === 'accepted'
-        ? `Request approved! The applicant can now contact you directly about "${request.properties.title}".`
-        : `Request rejected. The applicant will be notified.`;
+      const successMessage = action === 'confirmed'
+        ? `Inquiry approved! ${applicantName}${groupText} can now contact you directly about "${inquiry.property.title}".`
+        : `Inquiry rejected. ${applicantName}${groupText} will be notified.`;
 
       alert(successMessage);
 
     } catch (err) {
-      console.error('Error processing request:', err);
-      alert(`Failed to ${action === 'accepted' ? 'approve' : 'reject'} request: ${err.message}`);
+      console.error('Error processing inquiry:', err);
+      alert(`Failed to ${action === 'confirmed' ? 'approve' : 'reject'} inquiry: ${err.message}`);
     } finally {
       setProcessingRequest(null);
     }
@@ -209,31 +242,39 @@ const TenantRequests = () => {
     return age;
   };
 
-  // Render request card
-  const renderRequestCard = (request, section = 'pending') => {
-    const applicant = request.applicant;
-    const property = request.properties;
+// Render inquiry card
+  const renderRequestCard = (inquiry, section = 'pending') => {
+    const applicants = inquiry.applicants || [];
+    const primaryApplicant = applicants[0]; // First applicant is the one who sent the inquiry
+    const property = inquiry.property;
+    const isGroup = inquiry.isGroupInquiry;
     
+    if (!primaryApplicant || !property) {
+      console.warn('Missing applicant or property data:', inquiry);
+      return null;
+    }
+
     return (
-      <div key={request.id} className={`card ${styles.requestCard} ${styles[`request${section.charAt(0).toUpperCase() + section.slice(1)}`]}`}>
+      <div key={inquiry.id} className={`card ${styles.requestCard} ${styles[`request${section.charAt(0).toUpperCase() + section.slice(1)}`]}`}>
         {/* Request Header */}
         <div className={styles.requestHeader}>
           <div className={styles.requestInfo}>
             <h4 className={styles.requestTitle}>
-              {applicant?.registrant_profiles?.first_name} {applicant?.registrant_profiles?.last_name || 'Anonymous'}
+              {primaryApplicant.registrant_profiles?.first_name} {primaryApplicant.registrant_profiles?.last_name || 'Anonymous'}
+              {isGroup && <span className={styles.groupIndicator}> + {applicants.length - 1} roommate{applicants.length > 2 ? 's' : ''}</span>}
             </h4>
             <div className={styles.requestMeta}>
               <span className={styles.requestProperty}>"{property.title}"</span>
-              <span className={styles.requestTime}>{formatTimeAgo(request.created_at)}</span>
+              <span className={styles.requestTime}>{formatTimeAgo(inquiry.created_at)}</span>
             </div>
           </div>
           
           <div className={styles.requestStatus}>
-            <span className={`badge ${styles.statusBadge} ${styles[`status${request.status.charAt(0).toUpperCase() + request.status.slice(1)}`]}`}>
-              {request.status === 'pending' && '⏳ Pending'}
-              {request.status === 'accepted' && '✅ Approved'}
-              {request.status === 'rejected' && '❌ Rejected'}
-              {request.status === 'withdrawn' && '↩️ Withdrawn'}
+            <span className={`badge ${styles.statusBadge} ${styles[`status${inquiry.status.charAt(0).toUpperCase() + inquiry.status.slice(1)}`]}`}>
+              {inquiry.status === 'requested' && '⏳ Pending'}
+              {inquiry.status === 'confirmed' && '✅ Approved'}
+              {inquiry.status === 'active' && '🏠 Active'}
+              {inquiry.status === 'inactive' && '❌ Declined'}
             </span>
           </div>
         </div>
@@ -248,49 +289,69 @@ const TenantRequests = () => {
           </div>
         </div>
 
-        {/* Applicant Info */}
-        {applicant && (
+        {/* Applicant(s) Info */}
+        {applicants.length > 0 && (
           <div className={styles.applicantInfo}>
-            <h5 className={styles.applicantTitle}>👤 Applicant Information</h5>
-            <div className={styles.applicantGrid}>
-              <div className={styles.applicantDetail}>
-                <span className={styles.detailLabel}>Age:</span>
-                <span className={styles.detailValue}>{calculateAge(applicant.date_of_birth)}</span>
-              </div>
-              <div className={styles.applicantDetail}>
-                <span className={styles.detailLabel}>Budget:</span>
-                <span className={styles.detailValue}>${applicant.budget_min} - ${applicant.budget_max}</span>
-              </div>
-              <div className={styles.applicantDetail}>
-                <span className={styles.detailLabel}>Recovery Stage:</span>
-                <span className={styles.detailValue}>{applicant.recovery_stage || 'Not specified'}</span>
-              </div>
-              <div className={styles.applicantDetail}>
-                <span className={styles.detailLabel}>Move-in Date:</span>
-                <span className={styles.detailValue}>
-                  {applicant.move_in_date ? new Date(applicant.move_in_date).toLocaleDateString() : 'Flexible'}
-                </span>
-              </div>
-              <div className={styles.applicantDetail}>
-                <span className={styles.detailLabel}>Email:</span>
-                <span className={styles.detailValue}>{applicant.registrant_profiles?.email}</span>
-              </div>
-              {applicant.primary_phone && (
-                <div className={styles.applicantDetail}>
-                  <span className={styles.detailLabel}>Phone:</span>
-                  <span className={styles.detailValue}>{applicant.primary_phone}</span>
+            <h5 className={styles.applicantTitle}>
+              👤 {isGroup ? `Group Inquiry (${applicants.length} applicants)` : 'Applicant Information'}
+            </h5>
+            
+            {/* Show all applicants */}
+            {applicants.map((applicant, index) => (
+              <div key={applicant.id} className={styles.applicantSection}>
+                {isGroup && (
+                  <div className={styles.applicantHeader}>
+                    <strong>Applicant {index + 1}: {applicant.registrant_profiles?.first_name} {applicant.registrant_profiles?.last_name}</strong>
+                    {index === 0 && <span className={styles.primaryLabel}>(Primary Contact)</span>}
+                  </div>
+                )}
+                
+                <div className={styles.applicantGrid}>
+                  <div className={styles.applicantDetail}>
+                    <span className={styles.detailLabel}>Age:</span>
+                    <span className={styles.detailValue}>{calculateAge(applicant.date_of_birth)}</span>
+                  </div>
+                  <div className={styles.applicantDetail}>
+                    <span className={styles.detailLabel}>Budget:</span>
+                    <span className={styles.detailValue}>${applicant.budget_min} - ${applicant.budget_max}</span>
+                  </div>
+                  <div className={styles.applicantDetail}>
+                    <span className={styles.detailLabel}>Recovery Stage:</span>
+                    <span className={styles.detailValue}>{applicant.recovery_stage || 'Not specified'}</span>
+                  </div>
+                  <div className={styles.applicantDetail}>
+                    <span className={styles.detailLabel}>Move-in Date:</span>
+                    <span className={styles.detailValue}>
+                      {applicant.move_in_date ? new Date(applicant.move_in_date).toLocaleDateString() : 'Flexible'}
+                    </span>
+                  </div>
+                  <div className={styles.applicantDetail}>
+                    <span className={styles.detailLabel}>Email:</span>
+                    <span className={styles.detailValue}>{applicant.registrant_profiles?.email}</span>
+                  </div>
+                  {applicant.primary_phone && (
+                    <div className={styles.applicantDetail}>
+                      <span className={styles.detailLabel}>Phone:</span>
+                      <span className={styles.detailValue}>{applicant.primary_phone}</span>
+                    </div>
+                  )}
                 </div>
-              )}
-            </div>
+
+                {/* Separator between applicants in group inquiries */}
+                {isGroup && index < applicants.length - 1 && (
+                  <hr className={styles.applicantSeparator} />
+                )}
+              </div>
+            ))}
           </div>
         )}
 
         {/* Request Message */}
-        {request.message && (
+        {inquiry.message && (
           <div className={styles.requestMessage}>
-            <h5 className={styles.messageTitle}>💬 Message from Applicant</h5>
+            <h5 className={styles.messageTitle}>💬 Message from {isGroup ? 'Group' : 'Applicant'}</h5>
             <div className={styles.messageContent}>
-              {request.message.split('\n').map((line, index) => (
+              {inquiry.message.split('\n').map((line, index) => (
                 <p key={index}>{line}</p>
               ))}
             </div>
@@ -298,41 +359,41 @@ const TenantRequests = () => {
         )}
 
         {/* Action Buttons - Only show for pending requests */}
-        {request.status === 'pending' && (
+        {inquiry.status === 'requested' && (
           <div className={styles.requestActions}>
             <button
-              className={`btn btn-success btn-sm ${processingRequest === request.id ? styles.btnLoading : ''}`}
-              onClick={() => handleRequestAction(request, 'accepted')}
-              disabled={processingRequest === request.id}
+              className={`btn btn-success btn-sm ${processingRequest === inquiry.id ? styles.btnLoading : ''}`}
+              onClick={() => handleRequestAction(inquiry, 'confirmed')}
+              disabled={processingRequest === inquiry.id}
             >
-              {processingRequest === request.id ? (
+              {processingRequest === inquiry.id ? (
                 <>
                   <span className={styles.loadingSpinner}></span>
                   Approving...
                 </>
               ) : (
-                '✅ Approve Request'
+                '✅ Approve Inquiry'
               )}
             </button>
             
             <button
-              className={`btn btn-outline-danger btn-sm ${processingRequest === request.id ? styles.btnLoading : ''}`}
-              onClick={() => handleRequestAction(request, 'rejected')}
-              disabled={processingRequest === request.id}
+              className={`btn btn-outline-danger btn-sm ${processingRequest === inquiry.id ? styles.btnLoading : ''}`}
+              onClick={() => handleRequestAction(inquiry, 'inactive')}
+              disabled={processingRequest === inquiry.id}
             >
-              {processingRequest === request.id ? (
+              {processingRequest === inquiry.id ? (
                 <>
                   <span className={styles.loadingSpinner}></span>
                   Rejecting...
                 </>
               ) : (
-                '❌ Reject Request'
+                '❌ Reject Inquiry'
               )}
             </button>
 
             <button
               className="btn btn-outline btn-sm"
-              onClick={() => window.open(`mailto:${applicant?.registrant_profiles?.email}?subject=Regarding your housing inquiry for "${property.title}"`, '_blank')}
+              onClick={() => window.open(`mailto:${primaryApplicant.registrant_profiles?.email}?subject=Regarding your housing inquiry for "${property.title}"`, '_blank')}
             >
               📧 Contact Directly
             </button>
@@ -340,10 +401,10 @@ const TenantRequests = () => {
         )}
 
         {/* Response timestamp for non-pending requests */}
-        {request.status !== 'pending' && request.responded_at && (
+        {inquiry.status !== 'requested' && inquiry.updated_at && inquiry.updated_at !== inquiry.created_at && (
           <div className={styles.responseInfo}>
             <small className={styles.responseTime}>
-              Responded {formatTimeAgo(request.responded_at)}
+              Responded {formatTimeAgo(inquiry.updated_at)}
             </small>
           </div>
         )}

@@ -103,7 +103,7 @@ const RequestCard = ({
           
           <button
             className="btn btn-secondary btn-sm"
-            onClick={() => actions.onApprove(request.id)}
+            onClick={() => actions.onApprove(request)}
             disabled={actionLoading}
           >
             Accept
@@ -126,7 +126,7 @@ const RequestCard = ({
         <div>
           <button
             className="btn btn-outline btn-sm"
-            onClick={() => actions.onCancel(request.id)}
+            onClick={() => actions.onCancel(request)}
             disabled={actionLoading}
           >
             Cancel Request
@@ -148,7 +148,7 @@ const RequestCard = ({
           
           <button
             className="btn btn-outline btn-sm"
-            onClick={() => actions.onUnmatch(request.id)}
+            onClick={() => actions.onUnmatch(request)}
             disabled={actionLoading}
           >
             End Connection

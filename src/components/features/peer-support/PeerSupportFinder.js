@@ -1,6 +1,7 @@
-// src/components/features/peer-support/PeerSupportFinder.js - FIXED: Direct database queries
+// src/components/features/peer-support/PeerSupportFinder.js - UPDATED FOR peer_support_matches
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../../../hooks/useAuth';
+import { supabase } from '../../../utils/supabase';
 import { db } from '../../../utils/supabase';
 import LoadingSpinner from '../../ui/LoadingSpinner';
 import styles from './PeerSupportFinder.module.css';
@@ -71,61 +72,67 @@ const PeerSupportFinder = ({ onBack }) => {
   };
 
   /**
-   * ✅ FIXED: Load existing peer support connections with correct parameters
+   * ✅ FIXED: Load existing peer support connections from peer_support_matches table
    */
   const loadConnectionRequests = async () => {
     if (!profile?.id) return;
 
     try {
-      console.log('📊 Loading existing peer support connections...');
+      console.log('📊 Loading existing peer support connections from peer_support_matches...');
       
-      if (!db.matchRequests || typeof db.matchRequests.getByUserId !== 'function') {
-        console.warn('⚠️ MatchRequests service not available, skipping connection loading');
+      // Get user's applicant profile ID
+      const { data: applicantProfile, error: applicantError } = await supabase
+        .from('applicant_matching_profiles')
+        .select('id')
+        .eq('user_id', profile.id)
+        .single();
+
+      if (applicantError || !applicantProfile) {
+        console.warn('⚠️ No applicant profile found, skipping connection loading');
         return;
       }
-      
-      // ✅ FIXED: Pass correct parameters - userType first, then userId
-      const result = await db.matchRequests.getByUserId('applicant', profile.id);
-      
-      if (result.success && result.data && !result.error) {
-        const sentRequests = new Set();
-        const activeConnections = new Set();
-        
-        result.data
-          .filter(req => req.request_type === 'peer-support')
-          .forEach(req => {
-            // For peer support requests:
-            // - requester_type = 'applicant', requester_id = applicant_matching_profiles.id
-            // - recipient_type = 'peer-support', recipient_id = peer_support_profiles.id
-            // We need to track by the registrant_profiles.id (user_id) for UI consistency
-            
-            // Since we're calling as 'applicant' type, we need to get the peer support specialist's user_id
-            // This requires a different approach - we'll track by the profile IDs but map to user_ids
-            
-            if (req.requester_type === 'applicant' && req.status === 'pending') {
-              // This is a request we sent - track by recipient_id (peer_support_profiles.id)
-              sentRequests.add(req.recipient_id);
-            } else if (req.status === 'accepted') {
-              // This is an active connection
-              if (req.requester_type === 'applicant') {
-                activeConnections.add(req.recipient_id);
-              } else {
-                activeConnections.add(req.requester_id);
-              }
-            }
-          });
-        
-        // ✅ NOTE: We're now tracking by role-specific profile IDs, not user_ids
-        // This means we need to update the connection checking logic too
-        setConnectionRequests(sentRequests);
-        setActiveConnections(activeConnections);
-        console.log('📊 Loaded peer support connections:', {
-          pending: sentRequests.size,
-          active: activeConnections.size
-        });
-      } else if (result.error) {
-        console.error('Error loading connections:', result.error);
+
+      const applicantId = applicantProfile.id;
+      console.log('✅ Found applicant profile ID:', applicantId);
+
+      // Query peer_support_matches table
+      const { data: matches, error: matchesError } = await supabase
+        .from('peer_support_matches')
+        .select('*')
+        .eq('applicant_id', applicantId);
+
+      if (matchesError) {
+        console.error('❌ Error loading peer support matches:', matchesError);
+        return;
       }
+
+      if (!matches || matches.length === 0) {
+        console.log('ℹ️ No peer support matches found');
+        return;
+      }
+
+      const sentRequests = new Set();
+      const activeConnections = new Set();
+
+      // Process matches and track by peer_support_profiles.id
+      matches.forEach(match => {
+        if (match.status === 'requested') {
+          // Pending request
+          sentRequests.add(match.peer_support_id);
+        } else if (match.status === 'active') {
+          // Active connection
+          activeConnections.add(match.peer_support_id);
+        }
+      });
+
+      setConnectionRequests(sentRequests);
+      setActiveConnections(activeConnections);
+      
+      console.log('📊 Loaded peer support connections:', {
+        pending: sentRequests.size,
+        active: activeConnections.size
+      });
+
     } catch (err) {
       console.error('💥 Error loading peer support connections:', err);
     }
@@ -388,21 +395,11 @@ const PeerSupportFinder = ({ onBack }) => {
   };
 
   /**
-   * ✅ FIXED: Peer support connection request with direct database queries
-   * 
-   * Issue: The matchingProfiles service was trying to lookup registrant_profiles first,
-   * but some users don't have registrant_profiles records, causing the service to fail.
-   * 
-   * Solution: Bypass the service chain and directly query:
-   * - applicant_matching_profiles table for requester_id
-   * - peer_support_profiles table for recipient_id
-   * 
-   * Then populate these role-specific IDs into match_requests table.
+   * ✅ FIXED: Direct insert into peer_support_matches table
    */
   const handleRequestConnection = async (specialist) => {
     if (!profile?.id) return;
 
-    // ✅ UPDATED: Check by peer_support_profiles.id instead of user_id
     const specialistPeerProfileId = specialist.id; // This is peer_support_profiles.id
     
     if (connectionRequests.has(specialistPeerProfileId)) {
@@ -424,119 +421,69 @@ const PeerSupportFinder = ({ onBack }) => {
     try {
       console.log('🤝 Sending peer support request to:', specialist.first_name);
       
-      if (!db.matchRequests || typeof db.matchRequests.create !== 'function') {
-        throw new Error('Connection request service is temporarily unavailable. Please try again later.');
+      // Get user's applicant profile ID
+      const { data: applicantProfile, error: applicantError } = await supabase
+        .from('applicant_matching_profiles')
+        .select('id')
+        .eq('user_id', profile.id)
+        .single();
+
+      if (applicantError || !applicantProfile) {
+        throw new Error('Could not find your applicant profile. Please complete your applicant profile first.');
       }
 
-      // ✅ FIXED: Bypass service chain and directly query role-specific profile tables
-      console.log('🔍 Getting role-specific profile IDs for match request...');
-      
-      // Get the requester's applicant_matching_profiles.id (bypassing registrant_profiles lookup)
-      
-      // ✅ FIXED: Direct query to applicant_matching_profiles by user_id
-      let requesterProfileId = null;
-      try {
-        console.log('🔍 Directly querying applicant_matching_profiles for user_id:', profile.id);
-        
-        // Access supabase client through db object or create direct client
-        const supabase = db.client || db._client || db.supabase;
-        if (!supabase) {
-          // Fallback: create direct client
-          const { createClient } = await import('@supabase/supabase-js');
-          const supabaseUrl = process.env.REACT_APP_SUPABASE_URL;
-          const supabaseKey = process.env.REACT_APP_SUPABASE_ANON_KEY;
-          const directClient = createClient(supabaseUrl, supabaseKey);
-          
-          const { data: applicantProfile, error: applicantError } = await directClient
-            .from('applicant_matching_profiles')
-            .select('id')
-            .eq('user_id', profile.id)
-            .single();
+      const requesterApplicantId = applicantProfile.id;
+      console.log('✅ Found requester applicant profile ID:', requesterApplicantId);
 
-          if (applicantError) {
-            console.error('❌ Error querying applicant_matching_profiles:', applicantError);
-            throw new Error('Could not find your applicant profile. Please complete your applicant profile first.');
-          }
+      // specialist.id is already peer_support_profiles.id
+      const recipientPeerSupportId = specialist.id;
+      console.log('✅ Using specialist peer support profile ID:', recipientPeerSupportId);
 
-          if (!applicantProfile?.id) {
-            throw new Error('Your applicant profile exists but has no ID. Please contact support.');
-          }
+      // Check for existing match
+      const { data: existingMatch } = await supabase
+        .from('peer_support_matches')
+        .select('id, status')
+        .eq('applicant_id', requesterApplicantId)
+        .eq('peer_support_id', recipientPeerSupportId)
+        .single();
 
-          requesterProfileId = applicantProfile.id;
-        } else {
-          const { data: applicantProfile, error: applicantError } = await supabase
-            .from('applicant_matching_profiles')
-            .select('id')
-            .eq('user_id', profile.id)
-            .single();
-
-          if (applicantError) {
-            console.error('❌ Error querying applicant_matching_profiles:', applicantError);
-            throw new Error('Could not find your applicant profile. Please complete your applicant profile first.');
-          }
-
-          if (!applicantProfile?.id) {
-            throw new Error('Your applicant profile exists but has no ID. Please contact support.');
-          }
-
-          requesterProfileId = applicantProfile.id;
+      if (existingMatch) {
+        if (existingMatch.status === 'requested') {
+          throw new Error('You have already sent a request to this specialist.');
+        } else if (existingMatch.status === 'active') {
+          throw new Error('You already have an active connection with this specialist.');
         }
-        
-        console.log('✅ Found requester applicant profile ID:', requesterProfileId);
-        
-      } catch (profileError) {
-        console.error('Error getting requester profile:', profileError);
-        throw new Error(`Unable to get your applicant profile: ${profileError.message}`);
       }
 
-      // ✅ SIMPLIFIED: Use specialist.id directly (it's already peer_support_profiles.id)
-      const recipientProfileId = specialist.id; // This is peer_support_profiles.id
-      
-      console.log('🤝 Using specialist peer support profile ID:', recipientProfileId);
-
-      // Validate we have both IDs
-      if (!requesterProfileId) {
-        throw new Error('Could not determine your applicant profile ID. Please complete your profile setup.');
-      }
-
-      if (!recipientProfileId) {
-        throw new Error('Could not determine the specialist\'s profile ID. This specialist may have an incomplete profile.');
-      }
-      
-      // ✅ FIXED: Use role-specific profile IDs instead of registrant_profiles.id
-      const requestData = {
-        requester_type: 'applicant',
-        requester_id: requesterProfileId,    // ✅ Now using applicant_matching_profiles.id
-        recipient_type: 'peer-support', 
-        recipient_id: recipientProfileId,    // ✅ Now using peer_support_profiles.id
-        request_type: 'peer-support',
+      // Create peer_support_matches entry
+      const matchData = {
+        applicant_id: requesterApplicantId,
+        peer_support_id: recipientPeerSupportId,
+        status: 'requested',
         message: `Hi ${specialist.first_name || 'there'}! I'm interested in connecting with you for peer support services. Your experience with ${specialist.specialties?.slice(0, 2).join(' and ') || 'recovery support'} aligns well with what I'm looking for in my recovery journey.
 
 I would appreciate the opportunity to discuss how your support could help me in my recovery process.`,
-        status: 'pending'
+        requested_by_id: requesterApplicantId,
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString()
       };
       
-      console.log('📤 Sending peer support request with role-specific IDs:', {
-        requester_type: requestData.requester_type,
-        requester_id: requestData.requester_id,
-        recipient_type: requestData.recipient_type,
-        recipient_id: requestData.recipient_id,
-        request_type: requestData.request_type
-      });
+      console.log('📤 Creating peer_support_matches entry:', matchData);
       
-      const result = await db.matchRequests.create(requestData);
+      const { data: newMatch, error: matchError } = await supabase
+        .from('peer_support_matches')
+        .insert(matchData)
+        .select()
+        .single();
       
-      if (result.error) {
-        throw new Error(result.error.message || 'Failed to send peer support request');
+      if (matchError) {
+        console.error('❌ Error creating peer support match:', matchError);
+        throw new Error(matchError.message || 'Failed to send peer support request');
       }
       
-      if (!result.data) {
-        throw new Error('No response received from peer support request');
-      }
+      console.log('✅ Peer support match created successfully:', newMatch);
       
-      console.log('✅ Peer support request sent successfully with correct IDs:', result.data);
-      
-      // ✅ FIXED: Track by peer_support_profiles.id for consistency
+      // Track by peer_support_profiles.id
       setConnectionRequests(prev => new Set([...prev, specialistPeerProfileId]));
       
       alert(`Peer support request sent to ${specialist.first_name || 'the specialist'}! They will be notified and can respond through their dashboard.`);
@@ -564,10 +511,10 @@ I would appreciate the opportunity to discuss how your support could help me in 
   };
 
   /**
-   * ✅ UPDATED: Get connection status for display - now using peer_support_profiles.id
+   * ✅ UPDATED: Get connection status for display - using peer_support_profiles.id
    */
   const getConnectionStatus = (specialist) => {
-    const specialistPeerProfileId = specialist.id; // peer_support_profiles.id
+    const specialistPeerProfileId = specialist.id;
     const hasRequest = connectionRequests.has(specialistPeerProfileId);
     const hasConnection = activeConnections.has(specialistPeerProfileId);
     const isAcceptingClients = specialist.accepting_clients;

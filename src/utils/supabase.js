@@ -20,7 +20,6 @@ import createEmployerService from './database/employerService'
 
 // TODO: Import remaining role-specific services as we verify alignment
 // import createLandlordProfilesService from './database/landlordProfilesService'
-// import createCommunicationService from './database/communicationService'
 
 console.log('🔧 Supabase client initializing...')
 

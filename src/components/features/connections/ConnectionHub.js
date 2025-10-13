@@ -135,26 +135,52 @@ const ConnectionHub = ({ onBack }) => {
     }
   };
 
-  /**
-   * Load roommate/housing connections from match_groups
-   */
-  const loadMatchGroupConnections = async (categories) => {
+
+const loadMatchGroupConnections = async (categories) => {
+  try {
+    console.log('🔍 Loading match groups for applicant:', profileIds.applicant);
+    
+    // FIXED: Correct JSONB array query syntax for PostgREST
     const { data: matchGroups, error } = await supabase
       .from('match_groups')
       .select('*')
-      .contains('roommate_ids', [profileIds.applicant]);
+      .contains('roommate_ids', JSON.stringify([profileIds.applicant]));
 
-    if (error) throw error;
-    if (!matchGroups) return;
+    if (error) {
+      console.error('❌ Error loading match groups:', error);
+      throw error;
+    }
+    
+    if (!matchGroups || matchGroups.length === 0) {
+      console.log('ℹ️ No match groups found');
+      return;
+    }
+
+    console.log(`✅ Found ${matchGroups.length} match groups`);
 
     for (const group of matchGroups) {
+      // Parse roommate_ids from JSONB
       const roommateIds = group.roommate_ids || [];
       
-      // Get all roommate profiles
-      const { data: roommates } = await supabase
-        .from('applicant_matching_profiles')
-        .select('id, user_id, primary_phone, registrant_profiles(first_name, last_name, email)')
-        .in('id', roommateIds);
+      console.log('📋 Processing group:', {
+        id: group.id,
+        status: group.status,
+        roommateIds: roommateIds,
+        currentUserId: profileIds.applicant
+      });
+      
+      // Get all roommate profiles (excluding current user)
+      const otherRoommateIds = roommateIds.filter(id => id !== profileIds.applicant);
+      
+      let roommates = [];
+      if (otherRoommateIds.length > 0) {
+        const { data: roommateData } = await supabase
+          .from('applicant_matching_profiles')
+          .select('id, user_id, primary_phone, registrant_profiles(first_name, last_name, email)')
+          .in('id', otherRoommateIds);
+        
+        roommates = roommateData || [];
+      }
 
       // Get property info if exists
       let property = null;
@@ -167,9 +193,6 @@ const ConnectionHub = ({ onBack }) => {
         property = propData;
       }
 
-      // Determine connection status and categorize
-      const otherRoommates = roommates?.filter(r => r.id !== profileIds.applicant) || [];
-      
       const connection = {
         id: group.id,
         type: 'roommate',
@@ -179,11 +202,12 @@ const ConnectionHub = ({ onBack }) => {
         created_at: group.created_at,
         last_activity: group.updated_at || group.created_at,
         avatar: '👥',
-        roommates: otherRoommates,
+        roommates: roommates,
         property: property,
         requested_by_id: group.requested_by_id,
         pending_member_id: group.pending_member_id,
-        member_confirmations: group.member_confirmations
+        member_confirmations: group.member_confirmations,
+        message: group.message
       };
 
       // Categorize based on status
@@ -191,7 +215,7 @@ const ConnectionHub = ({ onBack }) => {
         // Check if user sent or received this request
         if (group.requested_by_id === profileIds.applicant) {
           categories.sent.push(connection);
-        } else {
+        } else if (group.pending_member_id === profileIds.applicant) {
           categories.awaiting.push(connection);
         }
       } else if (group.status === 'forming') {
@@ -205,7 +229,14 @@ const ConnectionHub = ({ onBack }) => {
         categories.active.push(connection);
       }
     }
-  };
+    
+    console.log('✅ Match groups loaded and categorized');
+    
+  } catch (error) {
+    console.error('💥 Error in loadMatchGroupConnections:', error);
+    throw error;
+  }
+};
 
   /**
    * Load peer support connections

@@ -24,7 +24,7 @@ const SavedProperties = () => {
     isPropertySaved
   } = useSavedProperties(user);
 
-  // ✅ NEW: Fetch outreach status for saved properties
+// ✅ NEW: Fetch outreach status for saved properties using match_groups
   const fetchOutreachStatus = async (propertyIds) => {
     if (!user?.id || !profile?.id || propertyIds.length === 0) {
       return new Map();
@@ -43,32 +43,40 @@ const SavedProperties = () => {
         return new Map();
       }
 
-      // Get match requests for these properties
-      const { data: requests, error: requestsError } = await supabase
-        .from('match_requests')
-        .select('property_id, status, created_at, responded_at')
-        .eq('requester_type', 'applicant')
-        .eq('requester_id', applicantProfile.id)
-        .eq('request_type', 'housing')
+      // Get match_groups for these properties where this applicant is in roommate_ids
+      const { data: inquiries, error: inquiriesError } = await supabase
+        .from('match_groups')
+        .select('property_id, status, created_at, updated_at, roommate_ids')
         .in('property_id', propertyIds)
+        .not('property_id', 'is', null) // Only housing inquiries
         .order('created_at', { ascending: false });
 
-      if (requestsError) {
-        console.warn('Error fetching outreach status:', requestsError);
+      if (inquiriesError) {
+        console.warn('Error fetching outreach status:', inquiriesError);
         return new Map();
       }
 
-      // Create status map (most recent request per property)
+      // Filter to only include inquiries where this applicant is in roommate_ids
+      // and create status map (most recent inquiry per property)
       const statusMap = new Map();
-      requests.forEach(request => {
-        if (!statusMap.has(request.property_id)) {
-          statusMap.set(request.property_id, {
-            status: request.status,
-            requested_at: request.created_at,
-            responded_at: request.responded_at
-          });
-        }
-      });
+      
+      if (inquiries && inquiries.length > 0) {
+        inquiries.forEach(inquiry => {
+          const roommateIds = inquiry.roommate_ids || [];
+          
+          // Check if this applicant is in the roommate_ids array
+          if (roommateIds.includes(applicantProfile.id)) {
+            // Only store if we haven't already stored this property (keeps most recent)
+            if (!statusMap.has(inquiry.property_id)) {
+              statusMap.set(inquiry.property_id, {
+                status: inquiry.status,
+                requested_at: inquiry.created_at,
+                responded_at: inquiry.updated_at !== inquiry.created_at ? inquiry.updated_at : null
+              });
+            }
+          }
+        });
+      }
 
       return statusMap;
 
@@ -245,27 +253,29 @@ I'd love to discuss availability, the application process, and next steps. Thank
     }
   };
 
-  // ✅ NEW: Get outreach status display info
+
+// ✅ NEW: Get outreach status display info (updated for match_groups statuses)
   const getOutreachStatusInfo = (propertyId) => {
     const status = outreachStatus.get(propertyId);
     if (!status) return null;
 
     switch (status.status) {
-      case 'pending':
+      case 'requested':
         return {
           badge: 'warning',
           text: '⏳ Inquiry Sent',
           description: `Sent ${new Date(status.requested_at).toLocaleDateString()}`,
           class: styles.statusPending
         };
-      case 'accepted':
+      case 'confirmed':
+      case 'active':
         return {
           badge: 'success', 
           text: '✅ Approved',
           description: status.responded_at ? `Approved ${new Date(status.responded_at).toLocaleDateString()}` : 'Approved',
           class: styles.statusApproved
         };
-      case 'rejected':
+      case 'inactive':
         return {
           badge: 'danger',
           text: '❌ Declined', 

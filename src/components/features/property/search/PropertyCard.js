@@ -33,7 +33,7 @@ const PropertyCard = ({
     }
   };
 
-  // ✅ FIXED: Proper housing inquiry implementation
+// ✅ FIXED: Housing inquiry using match_groups table
   const handleSendHousingInquiry = async () => {
     if (sendingInquiry || !user || !profile) return;
 
@@ -51,61 +51,56 @@ const PropertyCard = ({
         throw new Error('You must complete your applicant profile before sending housing inquiries.');
       }
 
-      // 2. Get landlord profile ID from property
+      // 2. Validate property has landlord_id
       if (!property.landlord_id) {
         throw new Error('Unable to send inquiry - landlord information not available.');
       }
 
-      const { data: landlordProfile, error: landlordError } = await supabase
-        .from('landlord_profiles')
-        .select('id, user_id')
-        .eq('id', property.landlord_id)
-        .single();
-
-      if (landlordError || !landlordProfile) {
-        throw new Error('Unable to send inquiry - landlord profile not found.');
-      }
-
       // 3. Check for daily request limit (5 per day)
       const today = new Date().toISOString().split('T')[0];
-      const { data: todayRequests, error: countError } = await supabase
-        .from('match_requests')
+      const { data: todayInquiries, error: countError } = await supabase
+        .from('match_groups')
         .select('id')
-        .eq('requester_type', 'applicant')
-        .eq('requester_id', applicantProfile.id)
-        .eq('request_type', 'housing')
+        .eq('requested_by_id', applicantProfile.id)
+        .not('property_id', 'is', null) // Only count housing inquiries
         .gte('created_at', `${today}T00:00:00Z`)
         .lt('created_at', `${today}T23:59:59Z`);
 
       if (countError) {
         console.warn('Error checking request limit:', countError);
-      } else if (todayRequests && todayRequests.length >= 5) {
+      } else if (todayInquiries && todayInquiries.length >= 5) {
         throw new Error('You have reached the daily limit of 5 housing inquiries. Please try again tomorrow.');
       }
 
-      // 4. Check if request already exists for this property
-      const { data: existingRequest, error: existingError } = await supabase
-        .from('match_requests')
-        .select('id, status')
-        .eq('requester_type', 'applicant')
-        .eq('requester_id', applicantProfile.id)
-        .eq('recipient_type', 'landlord')
-        .eq('recipient_id', landlordProfile.id)
+      // 4. Check if inquiry already exists for this property
+      // Need to check if applicant_id exists in the roommate_ids JSONB array
+      const { data: existingInquiries, error: existingError } = await supabase
+        .from('match_groups')
+        .select('id, status, roommate_ids')
         .eq('property_id', property.id)
-        .eq('request_type', 'housing')
-        .single();
+        .not('property_id', 'is', null);
 
-      if (existingRequest) {
-        if (existingRequest.status === 'pending') {
-          throw new Error('You have already sent an inquiry for this property. Please wait for a response.');
-        } else if (existingRequest.status === 'accepted') {
-          throw new Error('Your inquiry for this property has already been accepted!');
-        } else if (existingRequest.status === 'rejected') {
-          throw new Error('Your previous inquiry for this property was declined. You cannot send another inquiry.');
+      if (existingError) {
+        console.warn('Error checking existing inquiries:', existingError);
+      } else if (existingInquiries && existingInquiries.length > 0) {
+        // Check if this applicant is in any of the roommate_ids arrays
+        const applicantHasInquiry = existingInquiries.find(inquiry => {
+          const roommateIds = inquiry.roommate_ids || [];
+          return roommateIds.includes(applicantProfile.id);
+        });
+
+        if (applicantHasInquiry) {
+          if (applicantHasInquiry.status === 'requested') {
+            throw new Error('You have already sent an inquiry for this property. Please wait for a response.');
+          } else if (applicantHasInquiry.status === 'confirmed' || applicantHasInquiry.status === 'active') {
+            throw new Error('Your inquiry for this property has already been approved!');
+          } else if (applicantHasInquiry.status === 'inactive') {
+            throw new Error('Your previous inquiry for this property was declined. You cannot send another inquiry.');
+          }
         }
       }
 
-      // 5. Create the housing inquiry
+      // 5. Create the housing inquiry in match_groups
       const inquiryMessage = `Hi! I'm very interested in your property "${property.title}" located at ${property.address}, ${property.city}, ${property.state}.
 
 Property Details I'm Interested In:
@@ -125,17 +120,14 @@ Please let me know if you need any additional information from me. I'm looking f
 
 Thank you for your time.`;
 
-      const { data: newRequest, error: insertError } = await supabase
-        .from('match_requests')
+      const { data: newInquiry, error: insertError } = await supabase
+        .from('match_groups')
         .insert({
-          requester_type: 'applicant',
-          requester_id: applicantProfile.id,
-          recipient_type: 'landlord', 
-          recipient_id: landlordProfile.id,
           property_id: property.id,
-          request_type: 'housing',
-          message: inquiryMessage,
-          status: 'pending'
+          roommate_ids: [applicantProfile.id], // ✅ JSONB array with single applicant
+          requested_by_id: applicantProfile.id,
+          status: 'requested',
+          message: inquiryMessage
         })
         .select()
         .single();
@@ -173,9 +165,9 @@ Thank you for your time.`;
 
 Your inquiry has been sent to the property owner for "${property.title}". 
 
-You can track the status of your inquiry in your Connections tab. The landlord will be able to review your request and respond through their dashboard.
+The landlord will be able to review your request and respond through their dashboard. You can track the status in your Saved Properties if you've favorited this listing.
 
-Daily limit: ${todayRequests ? todayRequests.length + 1 : 1} of 5 inquiries used today.`);
+Daily limit: ${todayInquiries ? todayInquiries.length + 1 : 1} of 5 inquiries used today.`);
 
     } catch (error) {
       console.error('Error sending housing inquiry:', error);

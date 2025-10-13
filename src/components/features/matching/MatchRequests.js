@@ -311,11 +311,19 @@ const MatchRequests = () => {
     }
   };
 
-  // ✅ FIXED: Define action handlers with correct ID mapping
+// ✅ UPDATED: Helper to determine match type from request
+  const getMatchType = (request) => {
+    // request_type is already set correctly in the database
+    return request.request_type; // 'peer-support', 'roommate', 'housing', or 'employment'
+  };
+
+  // ✅ UPDATED: Define action handlers with matchType parameter
   const actions = {
-    onApprove: async (requestId) => {
-      console.log('🔄 Approving request with profile IDs:', profileIds);
-      const result = await handleApprove(requestId, profileIds); // ✅ FIXED: Pass profileIds
+    onApprove: async (request) => {
+      const matchType = getMatchType(request);
+      console.log('🔄 Approving request:', { id: request.id, matchType });
+      
+      const result = await handleApprove(request.id, matchType);
       if (result.success) {
         alert('Connection approved successfully!');
       } else {
@@ -328,9 +336,11 @@ const MatchRequests = () => {
       setShowRejectModal(true);
     },
     
-    onCancel: async (requestId) => {
+    onCancel: async (request) => {
+      const matchType = getMatchType(request);
+      
       if (window.confirm('Are you sure you want to cancel this request?')) {
-        const result = await handleCancel(requestId);
+        const result = await handleCancel(request.id, matchType);
         if (result.success) {
           alert('Request cancelled successfully.');
         } else {
@@ -339,9 +349,11 @@ const MatchRequests = () => {
       }
     },
     
-    onUnmatch: async (requestId) => {
+    onUnmatch: async (request) => {
+      const matchType = getMatchType(request);
+      
       if (window.confirm('Are you sure you want to end this connection? This action cannot be undone.')) {
-        const result = await handleUnmatch(requestId);
+        const result = await handleUnmatch(request.id, matchType);
         if (result.success) {
           alert('Connection ended successfully.');
         } else {
@@ -351,8 +363,10 @@ const MatchRequests = () => {
     },
     
     onReconnect: async (formerMatch) => {
-      console.log('🔄 Reconnecting with profile IDs:', profileIds);
-      const result = await handleReconnect(formerMatch, profileIds); // ✅ FIXED: Pass profileIds
+      const matchType = getMatchType(formerMatch);
+      console.log('🔄 Reconnecting:', { matchType, profileIds });
+      
+      const result = await handleReconnect(formerMatch, matchType, profileIds);
       if (result.success) {
         alert('Reconnection request sent successfully!');
       } else {
@@ -365,14 +379,16 @@ const MatchRequests = () => {
     onViewDetails: loadFullMatchDetails
   };
 
-  // Handle rejection modal submission
+  // ✅ UPDATED: Handle rejection modal submission with matchType
   const handleRejectSubmit = async (reason) => {
     if (!reason?.trim()) {
       alert('Please provide a reason for rejection.');
       return;
     }
 
-    const result = await handleReject(selectedRequest.id, reason);
+    const matchType = getMatchType(selectedRequest);
+    const result = await handleReject(selectedRequest.id, matchType);
+    
     if (result.success) {
       setShowRejectModal(false);
       setSelectedRequest(null);
