@@ -10,134 +10,135 @@ const Navigation = () => {
   const navigate = useNavigate()
 
   // Get navigation items based on user roles - CLEAN NAVIGATION FOCUSED ON MANAGEMENT
-  const getNavigationItems = () => {
-    const baseItems = [
-      { 
-        id: 'dashboard', 
-        label: 'Dashboard', 
-        icon: '🏠',
-        path: '/app'
-      }
-    ]
-
-    // Role-specific profile management with CLEAR MULTI-ROLE NAMING
-    if (hasRole('applicant')) {
-      baseItems.push({
-        id: 'applicant-profile',
-        label: 'Applicant Profile', // ✅ RENAMED for multi-role clarity
-        icon: '👤', 
-        path: '/app/profile/matching',
-        description: 'Manage your housing seeker profile and matching preferences'
-      })
+const getNavigationItems = () => {
+  const baseItems = [
+    { 
+      id: 'dashboard', 
+      label: 'Dashboard', 
+      icon: '🏠',
+      path: '/app'
     }
+  ]
 
-    if (hasRole('peer-support')) {
-      baseItems.push({
-        id: 'peer-profile',
-        label: 'Peer Support Profile', // ✅ RENAMED for multi-role clarity
-        icon: '👤',
-        path: '/app/profile/peer-support', 
-        description: 'Manage your peer support specialist profile and services'
-      })
-    }
+  // Role-specific profile management with CLEAR MULTI-ROLE NAMING
+  if (hasRole('applicant')) {
+    baseItems.push({
+      id: 'applicant-profile',
+      label: 'Applicant Profile',
+      icon: '👤', 
+      path: '/app/profile/matching',
+      description: 'Manage your housing seeker profile and matching preferences'
+    })
+  }
 
-    if (hasRole('landlord')) {
-      baseItems.push({
-        id: 'landlord-profile',
-        label: 'Landlord Profile', // ✅ RENAMED for multi-role clarity
-        icon: '👤',
-        path: '/app/profile/landlord',
-        description: 'Manage your property owner profile and business information'
-      })
-    }
+  if (hasRole('peer-support')) {
+    baseItems.push({
+      id: 'peer-profile',
+      label: 'Peer Support Profile',
+      icon: '👤',
+      path: '/app/profile/peer-support', 
+      description: 'Manage your peer support specialist profile and services'
+    })
+  }
 
-    if (hasRole('employer')) {
-      baseItems.push({
-        id: 'employer-profile',
-        label: 'Employer Profile', // ✅ RENAMED for multi-role clarity
-        icon: '👤',
-        path: '/app/employers',
-        description: 'Manage your company profiles and employer information'
-      })
-    }
+  if (hasRole('landlord')) {
+    baseItems.push({
+      id: 'landlord-profile',
+      label: 'Landlord Profile',
+      icon: '👤',
+      path: '/app/profile/landlord',
+      description: 'Manage your property owner profile and business information'
+    })
+  }
 
-    // ✅ APPLICANT: Management functions (saved/favorites)
-    if (hasRole('applicant')) {
-      baseItems.push(
-        { 
-          id: 'saved-properties', 
-          label: 'Saved Properties', 
-          icon: '🏠',
-          path: '/app/saved-properties',
-          description: 'View and manage your favorited housing properties',
-          className: 'nav-property-owner'
-        },
-        { 
-          id: 'saved-employers', 
-          label: 'Saved Employers', 
-          icon: '💖',
-          path: '/app/saved-employers',
-          description: 'View and manage your favorited recovery-friendly employers',
-          className: 'nav-employer'
-        }
-      )
-    }
+  // ✅ UPDATED: Employer profile now points to employer dashboard
+  if (hasRole('employer')) {
+    baseItems.push({
+      id: 'employer-profile',
+      label: 'Employer Profile',
+      icon: '👤',
+      path: '/app/employer-dashboard',
+      description: 'Manage your company profiles and employer information'
+    })
+  }
 
-    // ✅ LANDLORD: Property management
-    if (hasRole('landlord')) {
-      baseItems.push(
-        { 
-          id: 'properties', 
-          label: 'My Properties', 
-          icon: '🏢',
-          path: '/app/properties',
-          description: 'Manage your rental properties and housing listings',
-          className: 'nav-property-owner'
-        }
-      )
-    }
-
-    // ✅ PEER SUPPORT: Support hub
-    if (hasRole('peer-support')) {
-      baseItems.push(
-        { 
-          id: 'peer-dashboard', 
-          label: 'Support Hub', 
-          icon: '📊',
-          path: '/app/peer-dashboard',
-          description: 'Comprehensive peer support client management dashboard',
-          className: 'nav-peer-support'
-        }
-      )
-    }
-
-    // ✅ EMPLOYER: Company management
-    if (hasRole('employer')) {
-      baseItems.push(
-        { 
-          id: 'employer-management', 
-          label: 'Manage Companies', 
-          icon: '🏢',
-          path: '/app/employers',
-          description: 'Manage your company profiles and job opportunities',
-          className: 'nav-employer'
-        }
-      )
-    }
-
-    // ✅ UNIVERSAL: Only Settings (Connection Hub replaces Messages/Communications)
+  // ✅ APPLICANT: Management functions (saved/favorites)
+  if (hasRole('applicant')) {
     baseItems.push(
       { 
-        id: 'settings', 
-        label: 'Settings', 
-        icon: '⚙️',
-        path: '/app/settings',
-        description: 'Account preferences, privacy settings, and profile management'
+        id: 'saved-properties', 
+        label: 'Saved Properties', 
+        icon: '🏠',
+        path: '/app/saved-properties',
+        description: 'View and manage your favorited housing properties',
+        className: 'nav-property-owner'
+      },
+      { 
+        id: 'saved-employers', 
+        label: 'Saved Employers', 
+        icon: '💖',
+        path: '/app/saved-employers',
+        description: 'View and manage your favorited recovery-friendly employers',
+        className: 'nav-employer'
       }
     )
-
-    return baseItems
   }
+
+  // ✅ LANDLORD: Property management
+  if (hasRole('landlord')) {
+    baseItems.push(
+      { 
+        id: 'properties', 
+        label: 'My Properties',
+        icon: '🏢',
+        path: '/app/properties',
+        description: 'Manage your rental properties and housing listings',
+        className: 'nav-property-owner'
+      }
+    )
+  }
+
+  // ✅ PEER SUPPORT: Support hub
+  if (hasRole('peer-support')) {
+    baseItems.push(
+      { 
+        id: 'peer-dashboard', 
+        label: 'Support Hub',
+        icon: '📊',
+        path: '/app/peer-dashboard',
+        description: 'Comprehensive peer support client management dashboard',
+        className: 'nav-peer-support'
+      }
+    )
+  }
+
+  // ✅ EMPLOYER: Company management (points to EmployerManagement for CRUD)
+  if (hasRole('employer')) {
+    baseItems.push(
+      { 
+        id: 'employer-management', 
+        label: 'Manage Companies',
+        icon: '🏢',
+        path: '/app/employers',
+        description: 'Manage your company profiles and job opportunities',
+        className: 'nav-employer'
+      }
+    )
+  }
+
+  // ✅ UNIVERSAL: Only Settings
+  baseItems.push(
+    { 
+      id: 'settings', 
+      label: 'Settings',
+      icon: '⚙️',
+      path: '/app/settings',
+      description: 'Account preferences, privacy settings, and profile management'
+    }
+  )
+
+  return baseItems
+}
 
   const navigationItems = getNavigationItems()
 

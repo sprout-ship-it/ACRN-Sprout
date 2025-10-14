@@ -339,95 +339,94 @@ const Dashboard = () => {
   }, [calculateProfileStats])
 
   // ✅ RESTRUCTURED: Dashboard cards with search functions for applicants only
-  const getDashboardCards = () => {
-    const cards = []
-    
-    if (!user || !hasRole || typeof hasRole !== 'function') {
-      return cards
-    }
-    
-    // ✅ APPLICANT-ONLY: Search/discovery functions as dashboard cards
-    if (hasRole('applicant')) {
-      cards.push(
-        { 
-          id: 'find-matches', 
-          label: 'Find Roommates', 
-          description: 'Discover compatible roommates based on your preferences', 
-          className: styles.roleCardHousingSeeker,
-          path: '/app/find-matches',
-          icon: '🔍'
-        },
-        { 
-          id: 'find-peer-support', 
-          label: 'Find Support', 
-          description: 'Connect with experienced peer support specialists', 
-          className: styles.roleCardPeerSupport,
-          path: '/app/find-peer-support',
-          icon: '👥'
-        },
-        { 
-          id: 'find-employers', 
-          label: 'Find Employment', 
-          description: 'Discover recovery-friendly job opportunities', 
-          className: styles.roleCardEmployer,
-          path: '/app/find-employers',
-          icon: '💼'
-        },
-        { 
-          id: 'browse-properties', 
-          label: 'Find Housing', 
-          description: 'Search for recovery-friendly housing options', 
-          className: styles.roleCardPropertyOwner,
-          path: '/app/property-search',
-          icon: '🏠'
-        }
-      )
-    }
-    
-    // ✅ ROLE-SPECIFIC: Primary management functions (aligned with navigation)
-    if (hasRole('peer-support')) {
-      cards.push(
-        { 
-          id: 'peer-dashboard', 
-          label: 'Support Hub', // ✅ ALIGNED with navigation
-          description: 'Manage your peer support services and clients', 
-          className: styles.roleCardPeerSupport,
-          path: '/app/peer-dashboard',
-          icon: '📊'
-        }
-      )
-    }
-    
-    if (hasRole('landlord')) {
-      cards.push(
-        { 
-          id: 'manage-properties', 
-          label: 'My Properties', // ✅ ALIGNED with navigation
-          description: 'Add, edit, and manage your rental properties', 
-          className: styles.roleCardPropertyOwner,
-          path: '/app/properties',
-          icon: '🏢'
-        }
-      )
-    }
-
-    if (hasRole('employer')) {
-      cards.push(
-        { 
-          id: 'manage-employers', 
-          label: 'Manage Companies', // ✅ ALIGNED with navigation
-          description: 'Add, edit, and manage your company profiles', 
-          className: styles.roleCardEmployer,
-          path: '/app/employers',
-          icon: '🏢'
-        }
-      )
-    }
-    
-    // ✅ REMOVED: Universal communication tools now handled by prominent Connection Hub
-    
+const getDashboardCards = () => {
+  const cards = []
+  
+  if (!user || !hasRole || typeof hasRole !== 'function') {
     return cards
   }
+  
+  // ✅ APPLICANT-ONLY: Search/discovery functions as dashboard cards
+  if (hasRole('applicant')) {
+    cards.push(
+      { 
+        id: 'find-matches', 
+        label: 'Find Roommates', 
+        description: 'Discover compatible roommates based on your preferences', 
+        className: styles.roleCardHousingSeeker,
+        path: '/app/find-matches',
+        icon: '🔍'
+      },
+      { 
+        id: 'find-peer-support', 
+        label: 'Find Support', 
+        description: 'Connect with experienced peer support specialists', 
+        className: styles.roleCardPeerSupport,
+        path: '/app/find-peer-support',
+        icon: '👥'
+      },
+      { 
+        id: 'find-employers', 
+        label: 'Find Employment', 
+        description: 'Discover recovery-friendly job opportunities', 
+        className: styles.roleCardEmployer,
+        path: '/app/find-employers',
+        icon: '💼'
+      },
+      { 
+        id: 'browse-properties', 
+        label: 'Find Housing', 
+        description: 'Search for recovery-friendly housing options', 
+        className: styles.roleCardPropertyOwner,
+        path: '/app/property-search',
+        icon: '🏠'
+      }
+    )
+  }
+  
+  // ✅ ROLE-SPECIFIC: Primary management functions (aligned with navigation)
+  if (hasRole('peer-support')) {
+    cards.push(
+      { 
+        id: 'peer-dashboard', 
+        label: 'Support Hub',
+        description: 'Manage your peer support services and clients', 
+        className: styles.roleCardPeerSupport,
+        path: '/app/peer-dashboard',
+        icon: '📊'
+      }
+    )
+  }
+  
+  if (hasRole('landlord')) {
+    cards.push(
+      { 
+        id: 'manage-properties', 
+        label: 'My Properties',
+        description: 'Add, edit, and manage your rental properties', 
+        className: styles.roleCardPropertyOwner,
+        path: '/app/properties',
+        icon: '🏢'
+      }
+    )
+  }
+
+  // ✅ NEW: Employer dashboard card
+  if (hasRole('employer')) {
+    cards.push(
+      { 
+        id: 'employer-dashboard', 
+        label: 'Employer Dashboard',
+        description: 'Manage your company profiles and hiring status', 
+        className: styles.roleCardEmployer,
+        path: '/app/employer-dashboard',
+        icon: '💼'
+      }
+    )
+  }
+  
+  return cards
+}
 
   const handleCardClick = (card) => {
     console.log('Dashboard card clicked:', card.label, 'Path:', card.path)

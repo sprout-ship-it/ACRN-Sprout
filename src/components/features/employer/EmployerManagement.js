@@ -19,6 +19,7 @@ const EmployerManagement = () => {
   const [currentSection, setCurrentSection] = useState(0);
   const [errors, setErrors] = useState({});
   const [error, setError] = useState(null);
+  const [updatingToggle, setUpdatingToggle] = useState(null);
 
   // ✅ UPDATED: Form data structure matching new schema exactly
   const [formData, setFormData] = useState({
@@ -401,6 +402,30 @@ const EmployerManagement = () => {
       setError(err.message || 'Failed to delete employer profile. Please try again.');
     }
   };
+const handleToggleHiring = async (employerId, currentStatus) => {
+  setUpdatingToggle(employerId);
+
+  try {
+    const { error } = await supabase
+      .from('employer_profiles')
+      .update({ 
+        is_actively_hiring: !currentStatus,
+        updated_at: new Date().toISOString()
+      })
+      .eq('id', employerId);
+
+    if (error) throw error;
+
+    // Refresh the employers list to show updated status
+    await fetchEmployers();
+  } catch (err) {
+    console.error('Error toggling hiring status:', err);
+    alert('Failed to update hiring status. Please try again.');
+  } finally {
+    setUpdatingToggle(null);
+  }
+};
+
 
   // Section navigation
   const nextSection = () => {
@@ -433,6 +458,10 @@ const EmployerManagement = () => {
         <button
           className="btn btn-primary"
           onClick={handleAddEmployer}
+          style={{
+            background: 'var(--coral)',
+            borderColor: 'var(--coral)'
+          }}
         >
           + Add Employer Profile
         </button>
@@ -446,100 +475,153 @@ const EmployerManagement = () => {
       )}
 
       {/* Employers List */}
-      {employers.length === 0 ? (
-        <div className="empty-state">
-          <div className="empty-state-icon">🏢</div>
-          <h3 className="empty-state-title">No employer profiles yet</h3>
-          <p>Add your first employer profile to help applicants find recovery-friendly job opportunities.</p>
+{employers.length === 0 ? (
+  <div className="empty-state">
+    <div className="empty-state-icon">🏢</div>
+    <h3 className="empty-state-title">No employer profiles yet</h3>
+    <p>Add your first employer profile to help applicants find recovery-friendly job opportunities.</p>
+  </div>
+) : (
+  <div className="grid-auto">
+    {employers.map(employer => (
+      <div key={employer.id} className="card" style={{ borderLeft: '4px solid var(--coral)' }}>
+        <div className="card-header">
+          <div>
+            <h3 className="card-title" style={{ color: 'var(--coral)' }}>{employer.company_name}</h3>
+            <p className="card-subtitle">{employer.industry} • {employer.city}, {employer.state}</p>
+            {employer.additional_locations?.length > 0 && (
+              <p className="text-sm text-gray-600">+{employer.additional_locations.length} additional location{employer.additional_locations.length > 1 ? 's' : ''}</p>
+            )}
+          </div>
+          <div>
+            <span className={`badge ${employer.is_actively_hiring ? 'badge-success' : 'badge-warning'}`}>
+              {employer.is_actively_hiring ? 'Hiring' : 'Not Hiring'}
+            </span>
+            <span className="badge badge-info ml-2">{employer.business_type?.replace('_', ' ')}</span>
+          </div>
         </div>
-      ) : (
-        <div className="grid-auto">
-          {employers.map(employer => (
-            <div key={employer.id} className="card">
-              <div className="card-header">
-                <div>
-                  <h3 className="card-title">{employer.company_name}</h3>
-                  <p className="card-subtitle">{employer.industry} • {employer.city}, {employer.state}</p>
-                  {employer.additional_locations?.length > 0 && (
-                    <p className="text-sm text-gray-600">+{employer.additional_locations.length} additional location{employer.additional_locations.length > 1 ? 's' : ''}</p>
-                  )}
-                </div>
-                <div>
-                  <span className={`badge ${employer.is_actively_hiring ? 'badge-success' : 'badge-warning'}`}>
-                    {employer.is_actively_hiring ? 'Hiring' : 'Not Hiring'}
+        
+        <div className="mb-3">
+          <div className="grid-2 text-gray-600 mb-3">
+            <div>
+              <span>Company Size:</span>
+              <span className="text-gray-800 ml-1">{employer.company_size || 'Not specified'}</span>
+            </div>
+            <div>
+              <span>Contact Method:</span>
+              <span className="text-gray-800 ml-1">{employer.preferred_contact_method?.replace('_', ' ') || 'Not specified'}</span>
+            </div>
+          </div>
+          
+          {employer.job_types_available?.length > 0 && (
+            <div className="mb-3">
+              <div className="label mb-2">Job Types Available</div>
+              <div className="mb-2">
+                {employer.job_types_available.slice(0, 3).map((type, i) => (
+                  <span key={i} className="badge badge-success mr-1 mb-1">
+                    {type.replace('_', ' ')}
                   </span>
-                  <span className="badge badge-info ml-2">{employer.business_type?.replace('_', ' ')}</span>
-                </div>
-              </div>
-              
-              <div className="mb-3">
-                <div className="grid-2 text-gray-600 mb-3">
-                  <div>
-                    <span>Company Size:</span>
-                    <span className="text-gray-800 ml-1">{employer.company_size || 'Not specified'}</span>
-                  </div>
-                  <div>
-                    <span>Contact Method:</span>
-                    <span className="text-gray-800 ml-1">{employer.preferred_contact_method?.replace('_', ' ') || 'Not specified'}</span>
-                  </div>
-                </div>
-                
-                {employer.job_types_available?.length > 0 && (
-                  <div className="mb-3">
-                    <div className="label mb-2">Job Types Available</div>
-                    <div className="mb-2">
-                      {employer.job_types_available.slice(0, 3).map((type, i) => (
-                        <span key={i} className="badge badge-success mr-1 mb-1">
-                          {type.replace('_', ' ')}
-                        </span>
-                      ))}
-                      {employer.job_types_available.length > 3 && (
-                        <span className="text-sm text-gray-600">
-                          +{employer.job_types_available.length - 3} more
-                        </span>
-                      )}
-                    </div>
-                  </div>
+                ))}
+                {employer.job_types_available.length > 3 && (
+                  <span className="text-sm text-gray-600">
+                    +{employer.job_types_available.length - 3} more
+                  </span>
                 )}
-                
-                {employer.recovery_friendly_features?.length > 0 && (
-                  <div className="mb-3">
-                    <div className="label mb-2">Recovery-Friendly Features</div>
-                    <div className="mb-2">
-                      {employer.recovery_friendly_features.slice(0, 3).map((feature, i) => (
-                        <span key={i} className="badge badge-info mr-1 mb-1">
-                          {feature.replace(/_/g, ' ')}
-                        </span>
-                      ))}
-                      {employer.recovery_friendly_features.length > 3 && (
-                        <span className="text-sm text-gray-600">
-                          +{employer.recovery_friendly_features.length - 3} more
-                        </span>
-                      )}
-                    </div>
-                  </div>
-                )}
-              </div>
-              
-              <div className="grid-2">
-                <button
-                  className="btn btn-primary btn-sm"
-                  onClick={() => editEmployer(employer)}
-                >
-                  Edit
-                </button>
-                
-                <button
-                  className="btn btn-danger btn-sm"
-                  onClick={() => deleteEmployer(employer.id)}
-                >
-                  Delete
-                </button>
               </div>
             </div>
-          ))}
+          )}
+          
+          {employer.recovery_friendly_features?.length > 0 && (
+            <div className="mb-3">
+              <div className="label mb-2">Recovery-Friendly Features</div>
+              <div className="mb-2">
+                {employer.recovery_friendly_features.slice(0, 3).map((feature, i) => (
+                  <span key={i} className="badge badge-info mr-1 mb-1">
+                    {feature.replace(/_/g, ' ')}
+                  </span>
+                ))}
+                {employer.recovery_friendly_features.length > 3 && (
+                  <span className="text-sm text-gray-600">
+                    +{employer.recovery_friendly_features.length - 3} more
+                  </span>
+                )}
+              </div>
+            </div>
+          )}
+
+          {/* Inline Hiring Toggle */}
+          <div style={{ 
+            padding: '12px', 
+            background: 'var(--gray-50)', 
+            borderRadius: 'var(--radius-md)',
+            marginBottom: '12px'
+          }}>
+            <label style={{ 
+              display: 'flex', 
+              justifyContent: 'space-between', 
+              alignItems: 'center',
+              cursor: 'pointer',
+              fontWeight: 600,
+              color: 'var(--gray-800)'
+            }}>
+              <span>Actively Hiring</span>
+              <button
+                style={{
+                  position: 'relative',
+                  width: '56px',
+                  height: '30px',
+                  borderRadius: '15px',
+                  border: 'none',
+                  cursor: updatingToggle === employer.id ? 'not-allowed' : 'pointer',
+                  transition: 'all 0.2s ease',
+                  background: employer.is_actively_hiring ? '#10b981' : 'var(--coral)',
+                  opacity: updatingToggle === employer.id ? 0.6 : 1
+                }}
+                onClick={(e) => {
+                  e.preventDefault();
+                  handleToggleHiring(employer.id, employer.is_actively_hiring);
+                }}
+                disabled={updatingToggle === employer.id}
+              >
+                <span style={{
+                  position: 'absolute',
+                  top: '3px',
+                  left: employer.is_actively_hiring ? '29px' : '3px',
+                  width: '24px',
+                  height: '24px',
+                  borderRadius: '50%',
+                  background: 'white',
+                  transition: 'all 0.2s ease',
+                  boxShadow: '0 2px 4px rgba(0,0,0,0.2)'
+                }}></span>
+              </button>
+            </label>
+          </div>
         </div>
-      )}
+        
+        <div className="grid-2">
+          <button
+            className="btn btn-primary btn-sm"
+            onClick={() => editEmployer(employer)}
+            style={{
+              background: 'var(--coral)',
+              borderColor: 'var(--coral)'
+            }}
+          >
+            Edit
+          </button>
+          
+          <button
+            className="btn btn-danger btn-sm"
+            onClick={() => deleteEmployer(employer.id)}
+          >
+            Delete
+          </button>
+        </div>
+      </div>
+    ))}
+  </div>
+)}
 
       {/* Add/Edit Employer Modal */}
       {showForm && (

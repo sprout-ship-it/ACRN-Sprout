@@ -36,6 +36,7 @@ import SavedEmployers from '../components/features/employer/SavedEmployers'
 import ConnectionHub from '../components/features/connections/ConnectionHub'
 import PeerSupportDashboard from '../components/features/peer-support/PeerSupportDashboard'
 import PeerSupportModal from '../components/features/peer-support/PeerSupportModal'
+import EmployerDashboard from '../components/features/employer/EmployerDashboard';
 
 // Search Components
 import PropertySearch from '../components/features/property/PropertySearch';
@@ -979,6 +980,7 @@ const MainApp = () => {
             {/* Employer Routes */}
             {hasRole('employer') && (
               <>
+                <Route path="/employer-dashboard" element={<EmployerDashboard />} />
                 <Route path="/employers" element={<EmployerManagement />} />
                 <Route path="/candidates" element={<CandidateManagement />} />
                 <Route path="/job-applications" element={<MatchRequests />} />

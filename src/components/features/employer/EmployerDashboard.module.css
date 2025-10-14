@@ -1,0 +1,380 @@
+/* src/components/features/employer/EmployerDashboard.module.css */
+
+/* ==================== WELCOME SECTION ==================== */
+.welcomeSection {
+  text-align: center;
+  margin-bottom: 2rem;
+  padding: 1.5rem;
+  background: linear-gradient(135deg, rgba(255, 111, 97, 0.1), rgba(255, 111, 97, 0.05));
+  border-radius: var(--radius-lg);
+  border: 2px solid rgba(255, 111, 97, 0.2);
+}
+
+/* ==================== QUICK ACTIONS ==================== */
+.quickActionsCard {
+  background: linear-gradient(135deg, var(--coral), var(--coral-dark));
+  color: white;
+  border: none;
+  margin-bottom: 2rem;
+}
+
+.quickActionsHeader {
+  margin-bottom: 1rem;
+}
+
+.quickActionsHeader .card-title {
+  color: white;
+  margin: 0;
+}
+
+.quickActionsGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 1rem;
+}
+
+.btnCoral {
+  background: white;
+  color: var(--coral);
+  border: 2px solid white;
+  font-weight: 600;
+  transition: var(--transition-fast);
+}
+
+.btnCoral:hover {
+  background: rgba(255, 255, 255, 0.9);
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+}
+
+.btnCoralOutline {
+  background: transparent;
+  color: var(--coral);
+  border: 2px solid var(--coral);
+  font-weight: 600;
+  transition: var(--transition-fast);
+}
+
+.btnCoralOutline:hover {
+  background: var(--coral);
+  color: white;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(255, 111, 97, 0.3);
+}
+
+/* ==================== COMPANY CARDS ==================== */
+.companyCard {
+  border-left: 4px solid var(--coral);
+  transition: var(--transition-normal);
+  position: relative;
+}
+
+.companyCard:hover {
+  border-left-color: var(--coral-dark);
+  box-shadow: 0 8px 20px rgba(255, 111, 97, 0.15);
+  transform: translateY(-2px);
+}
+
+.companyCardHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 1rem;
+  padding-bottom: 1rem;
+  border-bottom: 1px solid var(--border-beige);
+}
+
+.companyName {
+  font-size: 1.25rem;
+  font-weight: 700;
+  color: var(--coral);
+  margin: 0 0 0.25rem 0;
+}
+
+.companyLocation {
+  font-size: 0.9rem;
+  color: var(--gray-600);
+  margin: 0;
+}
+
+.badgeCoral {
+  background: rgba(255, 111, 97, 0.1);
+  color: var(--coral);
+  border: 1px solid rgba(255, 111, 97, 0.3);
+  font-weight: 600;
+}
+
+/* ==================== COMPANY STATS ==================== */
+.companyStats {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 1rem;
+  margin-bottom: 1.5rem;
+  padding: 1rem;
+  background: var(--bg-light-cream);
+  border-radius: var(--radius-md);
+}
+
+.statItem {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+}
+
+.statValue {
+  font-size: 2rem;
+  font-weight: 700;
+  color: var(--coral);
+  line-height: 1;
+  margin-bottom: 0.25rem;
+}
+
+.statLabel {
+  font-size: 0.85rem;
+  color: var(--gray-600);
+  font-weight: 500;
+}
+
+/* ==================== HIRING TOGGLE ==================== */
+.hiringToggleSection {
+  margin-bottom: 1rem;
+  padding: 1rem;
+  background: var(--gray-50);
+  border-radius: var(--radius-md);
+}
+
+.toggleLabel {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  cursor: pointer;
+  font-weight: 600;
+  color: var(--gray-800);
+}
+
+.toggleButton {
+  position: relative;
+  width: 60px;
+  height: 32px;
+  border-radius: 16px;
+  border: none;
+  cursor: pointer;
+  transition: var(--transition-fast);
+  outline: none;
+}
+
+.toggleButton:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.toggleOff {
+  background: var(--coral);
+}
+
+.toggleOff:hover:not(:disabled) {
+  background: var(--coral-dark);
+}
+
+.toggleOn {
+  background: #10b981;
+}
+
+.toggleOn:hover:not(:disabled) {
+  background: #059669;
+}
+
+.toggleSlider {
+  position: absolute;
+  top: 4px;
+  left: 4px;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  background: white;
+  transition: var(--transition-fast);
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+}
+
+.toggleOn .toggleSlider {
+  transform: translateX(28px);
+}
+
+/* ==================== COMPANY ACTIONS ==================== */
+.companyActions {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.companyActions .btn {
+  flex: 1;
+}
+
+/* ==================== INSIGHTS CARD ==================== */
+.insightsCard {
+  border-left: 4px solid var(--coral);
+}
+
+.insightsGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 2rem;
+  margin-bottom: 2rem;
+  padding: 2rem;
+  background: var(--bg-light-cream);
+  border-radius: var(--radius-lg);
+}
+
+.insightStat {
+  text-align: center;
+}
+
+.insightValue {
+  font-size: 3rem;
+  font-weight: 700;
+  color: var(--coral);
+  line-height: 1;
+  margin-bottom: 0.5rem;
+}
+
+.insightLabel {
+  font-size: 0.95rem;
+  color: var(--gray-600);
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+/* ==================== RECENT ACTIVITY ==================== */
+.recentActivity {
+  margin-bottom: 1.5rem;
+}
+
+.activityTitle {
+  font-size: 1.1rem;
+  font-weight: 600;
+  color: var(--gray-800);
+  margin-bottom: 1rem;
+  padding-bottom: 0.5rem;
+  border-bottom: 2px solid var(--coral);
+}
+
+.activityList {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.activityItem {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  padding: 1rem;
+  background: white;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--border-beige);
+  transition: var(--transition-fast);
+}
+
+.activityItem:hover {
+  border-color: var(--coral);
+  box-shadow: 0 2px 8px rgba(255, 111, 97, 0.1);
+}
+
+.activityIcon {
+  font-size: 1.5rem;
+  flex-shrink: 0;
+}
+
+.activityContent {
+  flex: 1;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 1rem;
+}
+
+.activityText {
+  font-size: 0.95rem;
+  color: var(--gray-800);
+}
+
+.activityText strong {
+  color: var(--coral);
+  font-weight: 600;
+}
+
+.activityTime {
+  font-size: 0.85rem;
+  color: var(--gray-500);
+  white-space: nowrap;
+}
+
+/* ==================== RESPONSIVE DESIGN ==================== */
+@media (max-width: 768px) {
+  .quickActionsGrid {
+    grid-template-columns: 1fr;
+  }
+
+  .companyCardHeader {
+    flex-direction: column;
+    gap: 0.75rem;
+  }
+
+  .companyStats {
+    grid-template-columns: 1fr;
+  }
+
+  .insightsGrid {
+    grid-template-columns: 1fr;
+    gap: 1.5rem;
+    padding: 1.5rem;
+  }
+
+  .insightValue {
+    font-size: 2.5rem;
+  }
+
+  .activityContent {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.25rem;
+  }
+
+  .activityTime {
+    align-self: flex-start;
+  }
+}
+
+@media (max-width: 480px) {
+  .welcomeSection {
+    padding: 1rem;
+  }
+
+  .companyName {
+    font-size: 1.1rem;
+  }
+
+  .statValue {
+    font-size: 1.5rem;
+  }
+
+  .insightValue {
+    font-size: 2rem;
+  }
+
+  .toggleButton {
+    width: 50px;
+    height: 28px;
+  }
+
+  .toggleSlider {
+    width: 20px;
+    height: 20px;
+  }
+
+  .toggleOn .toggleSlider {
+    transform: translateX(22px);
+  }
+}
