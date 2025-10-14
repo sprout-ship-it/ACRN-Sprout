@@ -12,10 +12,11 @@
 
 /* ==================== QUICK ACTIONS ==================== */
 .quickActionsCard {
-  background: linear-gradient(135deg, var(--coral), var(--coral-dark));
+  background: linear-gradient(135deg, rgba(255, 111, 97, 0.95), rgba(229, 87, 75, 0.95));
   color: white;
   border: none;
   margin-bottom: 2rem;
+  box-shadow: 0 4px 15px rgba(255, 111, 97, 0.25);
 }
 
 .quickActionsHeader {
@@ -42,24 +43,26 @@
 }
 
 .btnCoral:hover {
-  background: rgba(255, 255, 255, 0.9);
+  background: rgba(255, 255, 255, 0.95);
   transform: translateY(-2px);
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
 }
 
 .btnCoralOutline {
-  background: transparent;
-  color: var(--coral);
-  border: 2px solid var(--coral);
+  background: rgba(255, 255, 255, 0.15);
+  color: white;
+  border: 2px solid rgba(255, 255, 255, 0.8);
   font-weight: 600;
   transition: var(--transition-fast);
+  backdrop-filter: blur(10px);
 }
 
 .btnCoralOutline:hover {
-  background: var(--coral);
+  background: rgba(255, 255, 255, 0.25);
+  border-color: white;
   color: white;
   transform: translateY(-2px);
-  box-shadow: 0 4px 12px rgba(255, 111, 97, 0.3);
+  box-shadow: 0 4px 12px rgba(255, 255, 255, 0.3);
 }
 
 /* ==================== COMPANY CARDS ==================== */
