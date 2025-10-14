@@ -450,61 +450,43 @@ const MainApp = () => {
           }
         }
 
-        if (hasRole('employer')) {
-          console.log('Checking employer comprehensive profile...');
-          
-          try {
-            const result = await getEmployerProfilesByUserId(profile.id);
-            
-            if (result.success && result.data && result.data.length > 0) {
-              const employerProfile = result.data[0];
-              
-              // ✅ UPDATED: Check based on new schema fields and requirements
-              const isEmployerComplete = !!(
-                employerProfile?.company_name && 
-                employerProfile?.industry && 
-                employerProfile?.business_type && 
-                employerProfile?.city && 
-                employerProfile?.state && 
-                employerProfile?.zip_code && 
-                employerProfile?.phone && 
-                employerProfile?.description &&
-                employerProfile?.description.length >= 50 // Require substantial description
-              );
-              
-              profileChecks.push({ role: 'employer', complete: isEmployerComplete });
-              console.log('✅ Employer profile check complete using new schema:', isEmployerComplete, {
-                hasCompanyName: !!employerProfile?.company_name,
-                hasIndustry: !!employerProfile?.industry,
-                hasBusinessType: !!employerProfile?.business_type,
-                hasLocation: !!(employerProfile?.city && employerProfile?.state && employerProfile?.zip_code),
-                hasPhone: !!employerProfile?.phone,
-                hasDescription: !!employerProfile?.description,
-                descriptionLength: employerProfile?.description?.length || 0,
-                isActive: !!employerProfile?.is_active
-              });
-              
-            } else if (result.error) {
-              // ✅ FIXED: Handle specific error types without causing loops
-              if (result.error?.code === 'NOT_FOUND' || result.error?.message?.includes('No employer profiles found')) {
-                console.log('ℹ️ No employer profile found (normal for new users)');
-                profileChecks.push({ role: 'employer', complete: false });
-                profileError = null; // Don't treat "not found" as an error
-              } else {
-                console.error('❌ Unexpected employer profile error:', result.error);
-                profileError = 'Failed to check employer profile';
-                profileChecks.push({ role: 'employer', complete: false });
-              }
-            } else {
-              console.log('ℹ️ No employer profile found');
-              profileChecks.push({ role: 'employer', complete: false });
-            }
-          } catch (error) {
-            console.error('❌ Error checking employer profile:', error);
-            profileError = 'Failed to check employer profile';
-            profileChecks.push({ role: 'employer', complete: false });
-          }
-        }
+if (hasRole('employer')) {
+  console.log('Checking employer comprehensive profile...');
+  
+  try {
+    const result = await getEmployerProfilesByUserId(profile.id);
+    
+    if (result.success && result.data && result.data.length > 0) {
+      // ✅ UPDATED: Employer has at least one profile - mark as complete
+      // They can add more from the dashboard
+      const isEmployerComplete = true;
+      
+      profileChecks.push({ role: 'employer', complete: isEmployerComplete });
+      console.log('✅ Employer has profile(s), marking as complete:', {
+        profileCount: result.data.length,
+        isComplete: isEmployerComplete
+      });
+      
+    } else if (result.error) {
+      if (result.error?.code === 'NOT_FOUND' || result.error?.message?.includes('No employer profiles found')) {
+        console.log('ℹ️ No employer profile found (normal for new users)');
+        profileChecks.push({ role: 'employer', complete: false });
+        profileError = null;
+      } else {
+        console.error('❌ Unexpected employer profile error:', result.error);
+        profileError = 'Failed to check employer profile';
+        profileChecks.push({ role: 'employer', complete: false });
+      }
+    } else {
+      console.log('ℹ️ No employer profile found');
+      profileChecks.push({ role: 'employer', complete: false });
+    }
+  } catch (error) {
+    console.error('❌ Error checking employer profile:', error);
+    profileError = 'Failed to check employer profile';
+    profileChecks.push({ role: 'employer', complete: false });
+  }
+}
 
         // ✅ NEW: Determine if user has complete profiles for ALL their roles
         console.log('📊 Profile completion summary:', profileChecks);
@@ -830,24 +812,6 @@ const MainApp = () => {
           </div>
         );
 
-      case 'employer':
-        return (
-          <div className="app-background" style={{ minHeight: '100vh', padding: '20px 0' }}>
-            <div className="container">
-              <Header />
-              <div className="content">
-                <div style={{ maxWidth: '900px', margin: '0 auto' }}>
-                  <ErrorAlert />
-                  <div className="alert alert-info mb-4">
-                    <h4>Create Your Employer Profile</h4>
-                    <p>Please create your company profile to start connecting with recovery-focused talent and posting job opportunities.</p>
-                  </div>
-                  <EmployerManagement />
-                </div>
-              </div>
-            </div>
-          </div>
-        );
 
       case 'landlord':
         return (
