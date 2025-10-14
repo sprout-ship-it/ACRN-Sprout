@@ -173,20 +173,6 @@ const getNavigationItems = () => {
     return '👋 Community Member'
   }
 
-  // Helper to get completion status for profiles
-  const getProfileCompletionStatus = () => {
-    if (!profile) return null
-    
-    // This would integrate with your profile completion logic
-    // For now, just show a general tip
-    return {
-      isComplete: false, // This would be calculated based on actual profile data
-      message: 'Complete your profile to unlock all features'
-    }
-  }
-
-  const completionStatus = getProfileCompletionStatus()
-
   return (
     <>
       {/* Role indicator for better user context */}
@@ -227,22 +213,6 @@ const getNavigationItems = () => {
           )
         })}
       </nav>
-
-      {/* Profile completion indicator */}
-      {profile && completionStatus && !completionStatus.isComplete && (
-        <div style={{
-          padding: '10px 20px',
-          background: 'var(--bg-light-cream)',
-          fontSize: '0.8rem',
-          color: 'var(--gray-600)',
-          textAlign: 'center',
-          marginTop: '1rem',
-          borderRadius: '8px',
-          border: '1px solid var(--border-beige)'
-        }}>
-          💡 {completionStatus.message}
-        </div>
-      )}
 
       {/* Grid Navigation Styles */}
       <style jsx>{`

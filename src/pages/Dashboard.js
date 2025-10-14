@@ -532,19 +532,6 @@ const getDashboardCards = () => {
           </div>
         )}
         
-        {!profileStats.loading && !profileError && !profileStats.error && profileStats.completionPercentage < 100 && (
-          <div className={styles.alertInfo}>
-            <div style={{ textAlign: 'center' }}>
-              <strong>Profile Completion: {profileStats.completionPercentage}%</strong>
-              {profileStats.completionPercentage < 100 && (
-                <p style={{ margin: '5px 0 0 0', fontSize: '0.9rem' }}>
-                  Complete your profile to unlock all features
-                </p>
-              )}
-            </div>
-          </div>
-        )}
-
         {/* ✅ ADDED: Show completion even with service errors */}
         {profileStats.error && profileStats.completionPercentage > 0 && (
           <div className={styles.alertInfo}>
