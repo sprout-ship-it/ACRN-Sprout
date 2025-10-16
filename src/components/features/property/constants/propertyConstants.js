@@ -323,7 +323,7 @@ export const fieldValidation = {
   required: {
     general_rental: [
       'property_name', 'property_type', 'address', 'city', 'state', 'zip_code', 
-      'phone', 'bedrooms', 'total_beds', 'rent_amount', 'available_date', 'lease_duration'
+      'phone', 'bedrooms', 'rent_amount', 'available_date', 'lease_duration'
     ],
     recovery_housing: [
       'property_name', 'property_type', 'address', 'city', 'state', 'zip_code', 
