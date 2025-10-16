@@ -1024,7 +1024,7 @@ const PropertyManagement = () => {
                         }}
                         disabled={loading}
                       >
-                        Next → ({currentSection + 2} of {formSections.length})
+                        Next → ({currentSection + 1} of {formSections.length})
                       </button>
                     )}
                   </>
