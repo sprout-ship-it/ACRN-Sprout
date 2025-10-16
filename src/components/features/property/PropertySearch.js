@@ -94,38 +94,28 @@ const PropertySearch = () => {
     }
   };
 
-  /**
-   * ✅ NEW: Load pending property requests
-   */
 const loadPendingPropertyRequests = async () => {
   if (!applicantProfileId) return;
 
   setRequestsLoading(true);
 
   try {
-    // ✅ Query match_groups where user is in roommate_ids and status is 'requested'
-    const { data: matchGroups, error } = await supabase
-      .from('match_groups')
-      .select('property_id, status, roommate_ids')
-      .eq('status', 'requested')
-      .not('property_id', 'is', null);
+    // ✅ Query housing_matches where user is applicant and status is 'requested'
+    const { data: housingMatches, error } = await supabase
+      .from('housing_matches')
+      .select('property_id, status')
+      .eq('applicant_id', applicantProfileId)
+      .in('status', ['requested', 'applicant-liked']); // Include both statuses
 
     if (error) throw error;
 
-    // Filter to only groups where this applicant is a member
-    const pendingSet = new Set();
-    matchGroups?.forEach(group => {
-      const roommateIds = Array.isArray(group.roommate_ids) 
-        ? group.roommate_ids 
-        : [];
-      
-      if (roommateIds.includes(applicantProfileId) && group.property_id) {
-        pendingSet.add(group.property_id);
-      }
-    });
+    // Create set of property IDs with pending requests
+    const pendingSet = new Set(
+      housingMatches?.map(match => match.property_id).filter(Boolean) || []
+    );
 
     setPendingPropertyRequests(pendingSet);
-    console.log(`✅ Loaded ${pendingSet.size} pending property requests`);
+    console.log(`✅ Loaded ${pendingSet.size} pending property requests from housing_matches`);
   } catch (err) {
     console.error('Error loading pending property requests:', err);
   } finally {
@@ -209,7 +199,6 @@ Thank you!`;
     }
   };
 
-// ✅ FIXED: Send housing inquiry with correct landlord_id usage
 const handleSendHousingInquiry = async (property) => {
   if (!property.landlord_id) {
     alert('Direct inquiries are not available for this property. Please use the contact owner option.');
@@ -228,15 +217,12 @@ const handleSendHousingInquiry = async (property) => {
   }
 
   try {
-    // ✅ Create match_group for property inquiry
-    // Future: Could allow adding roommates before applying
+    // ✅ Create housing_match entry (proper table for property inquiries!)
     const matchData = {
+      applicant_id: applicantProfileId,
       property_id: property.id,
-      roommate_ids: [applicantProfileId], // Start with just this applicant
       status: 'requested',
-      requested_by_id: applicantProfileId,
-      // ✅ Leave pending_member_id as null - landlord finds via property_id
-      message: `Hi! I'm interested in your property "${property.title || property.address}". I'm looking for ${property.is_recovery_housing ? 'recovery-friendly ' : ''}housing and this property looks like it could be a great fit for my needs.
+      applicant_message: `Hi! I'm interested in your property "${property.title || property.address}". I'm looking for ${property.is_recovery_housing ? 'recovery-friendly ' : ''}housing and this property looks like it could be a great fit for my needs.
 
 Property Details I'm interested in:
 - Monthly Rent: $${property.monthly_rent}
@@ -249,7 +235,7 @@ I'd love to discuss availability and the application process. Thank you!`,
     };
 
     const { error: insertError } = await supabase
-      .from('match_groups')
+      .from('housing_matches')
       .insert(matchData);
 
     if (insertError) throw insertError;
