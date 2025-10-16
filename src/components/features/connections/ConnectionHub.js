@@ -45,7 +45,7 @@ const ConnectionHub = ({ onBack }) => {
     return `${firstName} ${lastName.charAt(0)}.`;
   };
 
-  /**
+/**
    * Load user's role-specific profile IDs
    */
   const loadProfileIds = async () => {
@@ -55,39 +55,39 @@ const ConnectionHub = ({ onBack }) => {
       const ids = { applicant: null, peerSupport: null, landlord: null, employer: null };
 
       if (profile.roles?.includes('applicant')) {
-        const { data } = await supabase
+        const { data, error } = await supabase
           .from('applicant_matching_profiles')
           .select('id')
           .eq('user_id', profile.id)
-          .single();
-        if (data) ids.applicant = data.id;
+          .maybeSingle();
+        if (data && !error) ids.applicant = data.id;
       }
 
       if (profile.roles?.includes('peer-support')) {
-        const { data } = await supabase
+        const { data, error } = await supabase
           .from('peer_support_profiles')
           .select('id')
           .eq('user_id', profile.id)
-          .single();
-        if (data) ids.peerSupport = data.id;
+          .maybeSingle();
+        if (data && !error) ids.peerSupport = data.id;
       }
 
       if (profile.roles?.includes('landlord')) {
-        const { data } = await supabase
+        const { data, error } = await supabase
           .from('landlord_profiles')
           .select('id')
           .eq('user_id', profile.id)
-          .single();
-        if (data) ids.landlord = data.id;
+          .maybeSingle();
+        if (data && !error) ids.landlord = data.id;
       }
 
       if (profile.roles?.includes('employer')) {
-        const { data } = await supabase
+        const { data, error } = await supabase
           .from('employer_profiles')
           .select('id')
           .eq('user_id', profile.id)
-          .single();
-        if (data) ids.employer = data.id;
+          .maybeSingle();
+        if (data && !error) ids.employer = data.id;
       }
 
       setProfileIds(ids);
