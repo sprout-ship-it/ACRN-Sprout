@@ -97,36 +97,41 @@ const PropertySearch = () => {
   /**
    * ✅ NEW: Load pending property requests
    */
-  const loadPendingPropertyRequests = async () => {
-    if (!applicantProfileId) return;
+const loadPendingPropertyRequests = async () => {
+  if (!applicantProfileId) return;
 
-    setRequestsLoading(true);
+  setRequestsLoading(true);
 
-    try {
-      // Query match_groups where user is requester and status is 'requested'
-      // AND property_id is not null (property matches only)
-      const { data: matchGroups, error } = await supabase
-        .from('match_groups')
-        .select('property_id, status')
-        .eq('requested_by_id', applicantProfileId)
-        .eq('status', 'requested')
-        .not('property_id', 'is', null);
+  try {
+    // ✅ Query match_groups where user is in roommate_ids and status is 'requested'
+    const { data: matchGroups, error } = await supabase
+      .from('match_groups')
+      .select('property_id, status, roommate_ids')
+      .eq('status', 'requested')
+      .not('property_id', 'is', null);
 
-      if (error) throw error;
+    if (error) throw error;
 
-      // Create set of property IDs with pending requests
-      const pendingSet = new Set(
-        matchGroups?.map(group => group.property_id).filter(Boolean) || []
-      );
+    // Filter to only groups where this applicant is a member
+    const pendingSet = new Set();
+    matchGroups?.forEach(group => {
+      const roommateIds = Array.isArray(group.roommate_ids) 
+        ? group.roommate_ids 
+        : [];
+      
+      if (roommateIds.includes(applicantProfileId) && group.property_id) {
+        pendingSet.add(group.property_id);
+      }
+    });
 
-      setPendingPropertyRequests(pendingSet);
-      console.log(`✅ Loaded ${pendingSet.size} pending property requests`);
-    } catch (err) {
-      console.error('Error loading pending property requests:', err);
-    } finally {
-      setRequestsLoading(false);
-    }
-  };
+    setPendingPropertyRequests(pendingSet);
+    console.log(`✅ Loaded ${pendingSet.size} pending property requests`);
+  } catch (err) {
+    console.error('Error loading pending property requests:', err);
+  } finally {
+    setRequestsLoading(false);
+  }
+};
 
   /**
    * ✅ NEW: Check if property has pending request
@@ -223,17 +228,14 @@ const handleSendHousingInquiry = async (property) => {
   }
 
   try {
-    // ✅ FIX: property.landlord_id is already the landlord_profile.id
-    // No need to query - just use it directly!
-    const landlordProfileId = property.landlord_id;
-
-    // Create match_group entry
+    // ✅ Create match_group for property inquiry
+    // Future: Could allow adding roommates before applying
     const matchData = {
       property_id: property.id,
-      roommate_ids: [applicantProfileId], // Just requester for now
+      roommate_ids: [applicantProfileId], // Start with just this applicant
       status: 'requested',
       requested_by_id: applicantProfileId,
-      pending_member_id: landlordProfileId, // This is already the landlord_profile.id
+      // ✅ Leave pending_member_id as null - landlord finds via property_id
       message: `Hi! I'm interested in your property "${property.title || property.address}". I'm looking for ${property.is_recovery_housing ? 'recovery-friendly ' : ''}housing and this property looks like it could be a great fit for my needs.
 
 Property Details I'm interested in:
@@ -254,13 +256,14 @@ I'd love to discuss availability and the application process. Thank you!`,
 
     alert('Property request sent! The landlord will be notified and can respond through their dashboard.');
     
-    // ✅ Refresh pending requests to update UI
+    // ✅ Refresh pending requests
     await loadPendingPropertyRequests();
   } catch (err) {
     console.error('Error sending housing inquiry:', err);
     alert(`Failed to send request: ${err.message}. Please try again.`);
   }
 };
+
 
   // ✅ NEW: Handle save property with proper feedback and error handling
   const handleSavePropertyWithFeedback = async (property) => {
