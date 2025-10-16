@@ -204,70 +204,63 @@ Thank you!`;
     }
   };
 
-  // ✅ UPDATED: Send housing inquiry and refresh pending requests
-  const handleSendHousingInquiry = async (property) => {
-    if (!property.landlord_id) {
-      alert('Direct inquiries are not available for this property. Please use the contact owner option.');
-      return;
-    }
+// ✅ FIXED: Send housing inquiry with correct landlord_id usage
+const handleSendHousingInquiry = async (property) => {
+  if (!property.landlord_id) {
+    alert('Direct inquiries are not available for this property. Please use the contact owner option.');
+    return;
+  }
 
-    if (!applicantProfileId) {
-      alert('Please complete your applicant profile before sending property requests.');
-      return;
-    }
+  if (!applicantProfileId) {
+    alert('Please complete your applicant profile before sending property requests.');
+    return;
+  }
 
-    // Check if request already exists
-    if (hasPropertyRequest(property.id)) {
-      alert('You have already sent a request for this property.');
-      return;
-    }
+  // Check if request already exists
+  if (hasPropertyRequest(property.id)) {
+    alert('You have already sent a request for this property.');
+    return;
+  }
 
-    try {
-      // Get landlord's landlord_profile ID
-      const { data: landlordProfile, error: landlordError } = await supabase
-        .from('landlord_profiles')
-        .select('id')
-        .eq('user_id', property.landlord_id)
-        .single();
+  try {
+    // ✅ FIX: property.landlord_id is already the landlord_profile.id
+    // No need to query - just use it directly!
+    const landlordProfileId = property.landlord_id;
 
-      if (landlordError || !landlordProfile) {
-        throw new Error('Could not find landlord profile for this property.');
-      }
-
-      // Create match_group entry
-      const matchData = {
-        property_id: property.id,
-        roommate_ids: [applicantProfileId], // Just requester for now
-        status: 'requested',
-        requested_by_id: applicantProfileId,
-        pending_member_id: landlordProfile.id, // Landlord needs to approve
-        message: `Hi! I'm interested in your property "${property.property_name || property.street_address}". I'm looking for ${property.is_recovery_housing ? 'recovery-friendly ' : ''}housing and this property looks like it could be a great fit for my needs.
+    // Create match_group entry
+    const matchData = {
+      property_id: property.id,
+      roommate_ids: [applicantProfileId], // Just requester for now
+      status: 'requested',
+      requested_by_id: applicantProfileId,
+      pending_member_id: landlordProfileId, // This is already the landlord_profile.id
+      message: `Hi! I'm interested in your property "${property.title || property.address}". I'm looking for ${property.is_recovery_housing ? 'recovery-friendly ' : ''}housing and this property looks like it could be a great fit for my needs.
 
 Property Details I'm interested in:
-- Monthly Rent: $${property.rent_amount || property.monthly_rent}
+- Monthly Rent: $${property.monthly_rent}
 - Bedrooms: ${property.bedrooms || 'Studio'}
 - Location: ${property.city}, ${property.state}
 
 I'd love to discuss availability and the application process. Thank you!`,
-        created_at: new Date().toISOString(),
-        updated_at: new Date().toISOString()
-      };
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString()
+    };
 
-      const { error: insertError } = await supabase
-        .from('match_groups')
-        .insert(matchData);
+    const { error: insertError } = await supabase
+      .from('match_groups')
+      .insert(matchData);
 
-      if (insertError) throw insertError;
+    if (insertError) throw insertError;
 
-      alert('Property request sent! The landlord will be notified and can respond through their dashboard.');
-      
-      // ✅ NEW: Refresh pending requests to update UI
-      await loadPendingPropertyRequests();
-    } catch (err) {
-      console.error('Error sending housing inquiry:', err);
-      alert(`Failed to send request: ${err.message}. Please try again.`);
-    }
-  };
+    alert('Property request sent! The landlord will be notified and can respond through their dashboard.');
+    
+    // ✅ Refresh pending requests to update UI
+    await loadPendingPropertyRequests();
+  } catch (err) {
+    console.error('Error sending housing inquiry:', err);
+    alert(`Failed to send request: ${err.message}. Please try again.`);
+  }
+};
 
   // ✅ NEW: Handle save property with proper feedback and error handling
   const handleSavePropertyWithFeedback = async (property) => {
