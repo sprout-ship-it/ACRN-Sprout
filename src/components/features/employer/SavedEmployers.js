@@ -4,7 +4,7 @@ import { useAuth } from '../../../context/AuthContext';
 import { useNavigate } from 'react-router-dom';
 import createEmployerService from '../../../utils/database/employerService';
 import { supabase } from '../../../utils/supabase';
-import EmployerDetailsModal from '../connections/modals/EmployerDetailsModal';
+import ProfileModal from '../connections/ProfileModal';
 import styles from '../property/SavedProperties.module.css';
 
 const SavedEmployers = ({ onBack }) => {
@@ -605,17 +605,23 @@ const SavedEmployers = ({ onBack }) => {
         </div>
       )}
 
-      {/* ✅ NEW: Employer Details Modal */}
-      {showEmployerModal && selectedEmployer && (
-        <EmployerDetailsModal
-          isOpen={showEmployerModal}
-          employer={selectedEmployer}
-          connectionStatus={isActiveConnection(selectedEmployer.id) ? 'active' : null}
-          onClose={() => setShowEmployerModal(false)}
-          onConnect={() => handleAddAsEmployer(selectedEmployer)}
-          showContactInfo={isActiveConnection(selectedEmployer.id)}
-        />
-      )}
+{/* ✅ UPDATED: Use consolidated ProfileModal */}
+{showEmployerModal && selectedEmployer && (
+  <ProfileModal
+    isOpen={showEmployerModal}
+    profile={{
+      ...selectedEmployer,
+      profile_type: 'employer',
+      name: selectedEmployer.company_name || 'Company'
+    }}
+    connectionStatus={isActiveConnection(selectedEmployer.id) ? 'active' : null}
+    onClose={() => setShowEmployerModal(false)}
+    onConnect={() => handleAddAsEmployer(selectedEmployer)}
+    showContactInfo={isActiveConnection(selectedEmployer.id)}
+    showActions={!isActiveConnection(selectedEmployer.id)}
+    isAwaitingApproval={false}
+  />
+)}
     </div>
   );
 };
