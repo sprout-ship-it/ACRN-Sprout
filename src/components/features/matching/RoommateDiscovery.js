@@ -6,7 +6,7 @@ import { DEFAULT_FILTERS } from '../../../utils/matching/config';
 
 // Import new components
 import MatchCard from './components/MatchCard';
-import ProfileModal from '../../connections/ProfileModal'; // ✅ UPDATED: Use consolidated ProfileModal
+import ProfileModal from '../connections/ProfileModal'; // ✅ UPDATED: Use consolidated ProfileModal
 import LoadingSpinner from '../../ui/LoadingSpinner';
 
 // Import CSS foundation and component module
