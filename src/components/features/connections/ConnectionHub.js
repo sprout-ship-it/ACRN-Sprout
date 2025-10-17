@@ -251,16 +251,26 @@ const loadMatchGroupConnections = async (categories) => {
       for (const match of matches) {
         const isApplicant = match.applicant_id === profileIds.applicant;
         
-        // Load property details
-        let property = null;
-        if (match.property_id) {
-          const { data: propData } = await supabase
-            .from('properties')
-            .select('*, landlord_profiles(user_id, primary_phone, contact_email, registrant_profiles(first_name, last_name, email))')
-            .eq('id', match.property_id)
-            .single();
-          property = propData;
-        }
+// Load property details
+let property = null;
+if (match.property_id) {
+  const { data: propData } = await supabase
+    .from('properties')
+    .select(`
+      *,
+      landlord_profiles(
+        id,
+        user_id,
+        primary_phone,
+        contact_email,
+        contact_person,
+        business_name
+      )
+    `)
+    .eq('id', match.property_id)
+    .single();
+  property = propData;
+}
         
         // Load applicant details (for landlord view)
         let applicant = null;
@@ -628,7 +638,7 @@ const handleApproveRequest = async (connection) => {
     })
     .eq('id', connection.housing_match_id)
     .select();
-    
+
         if (error) {
           console.error('❌ Error updating housing_matches:', error);
           throw error;
