@@ -94,18 +94,21 @@ const PropertySearch = () => {
     }
   };
 
+/**
+ * ✅ UPDATED: Load pending property requests from housing_matches table
+ */
 const loadPendingPropertyRequests = async () => {
   if (!applicantProfileId) return;
 
   setRequestsLoading(true);
 
   try {
-    // ✅ Query housing_matches where user is applicant and status is 'requested'
+    // ✅ FIXED: Query housing_matches instead of match_groups
     const { data: housingMatches, error } = await supabase
-      .from('housing_matches')
+      .from('housing_matches')  // ✅ CHANGED from match_groups to housing_matches
       .select('property_id, status')
       .eq('applicant_id', applicantProfileId)
-      .in('status', ['requested', 'applicant-liked']); // Include both statuses
+      .in('status', ['requested', 'applicant-liked']); // Check for pending statuses
 
     if (error) throw error;
 
@@ -199,6 +202,7 @@ Thank you!`;
     }
   };
 
+
 const handleSendHousingInquiry = async (property) => {
   if (!property.landlord_id) {
     alert('Direct inquiries are not available for this property. Please use the contact owner option.');
@@ -217,7 +221,7 @@ const handleSendHousingInquiry = async (property) => {
   }
 
   try {
-    // ✅ Create housing_match entry (proper table for property inquiries!)
+    // ✅ FIXED: Write to housing_matches table (proper table for property inquiries!)
     const matchData = {
       applicant_id: applicantProfileId,
       property_id: property.id,
@@ -235,7 +239,7 @@ I'd love to discuss availability and the application process. Thank you!`,
     };
 
     const { error: insertError } = await supabase
-      .from('housing_matches')
+      .from('housing_matches')  // ✅ CHANGED from match_groups to housing_matches
       .insert(matchData);
 
     if (insertError) throw insertError;
@@ -249,7 +253,6 @@ I'd love to discuss availability and the application process. Thank you!`,
     alert(`Failed to send request: ${err.message}. Please try again.`);
   }
 };
-
 
   // ✅ NEW: Handle save property with proper feedback and error handling
   const handleSavePropertyWithFeedback = async (property) => {
