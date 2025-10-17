@@ -135,8 +135,8 @@ const RoommateDiscovery = ({ onRequestMatch, onBack }) => {
       const { data: applicantProfile, error: profileError } = await supabase
         .from('applicant_matching_profiles')
         .select('id')
-        .eq('user_id', user.id)
-        .single();
+        .eq('user_id', profile.id)  
+        .maybeSingle();  
       
       if (profileError || !applicantProfile) {
         throw new Error('Could not find your applicant profile');
