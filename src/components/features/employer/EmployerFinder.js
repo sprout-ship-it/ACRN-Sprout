@@ -3,7 +3,7 @@ import React, { useState } from 'react';
 import useEmployerSearch from './hooks/useEmployerSearch';
 import EmployerFilterPanel from './components/EmployerFilterPanel';
 import EmployerResultsGrid from './components/EmployerResultsGrid';
-import ProfileModal from '../../connections/ProfileModal'; // ✅ UPDATED: Use consolidated ProfileModal
+import ProfileModal from '../connections/ProfileModal'; // ✅ UPDATED: Use consolidated ProfileModal
 
 const EmployerFinder = ({ onBack }) => {
   // Comprehensive search hook for all employer functionality
