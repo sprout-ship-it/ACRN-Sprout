@@ -564,8 +564,18 @@ const handleApproveRequest = async (connection) => {
   setActionLoading(true);
 
   try {
+    // ✅ DEBUG: Log the entire connection object
+    console.log('🔍 Full connection object:', {
+      type: connection.type,
+      source: connection.source,
+      housing_match_id: connection.housing_match_id,
+      match_group_id: connection.match_group_id,
+      status: connection.status,
+      id: connection.id
+    });
+
     if (connection.type === 'roommate') {
-      // ✅ Roommate connections use match_groups
+      // Roommate connections use match_groups
       await supabase
         .from('match_groups')
         .update({ 
@@ -575,30 +585,54 @@ const handleApproveRequest = async (connection) => {
         .eq('id', connection.match_group_id);
         
     } else if (connection.type === 'landlord') {
-      // ✅ FIXED: Housing connections use housing_matches table
-      console.log('Approving housing match:', connection.housing_match_id);
-      
-      const { data, error } = await supabase
-        .from('housing_matches')
-        .update({ 
-          status: 'approved',
-          landlord_message: 'Your inquiry has been approved! Please contact me to discuss next steps.',
-          updated_at: new Date().toISOString()
-        })
-        .eq('id', connection.housing_match_id)
-        .select();
-      
-      if (error) {
-        console.error('Error updating housing match:', error);
-        throw error;
+      // ✅ FIXED: Check which table this connection is actually in
+      if (connection.source === 'match_group' && connection.match_group_id) {
+        // OLD data still in match_groups
+        console.log('✅ Approving LEGACY housing match from match_groups:', connection.match_group_id);
+        
+        const { data, error } = await supabase
+          .from('match_groups')
+          .update({ 
+            status: 'confirmed',
+            updated_at: new Date().toISOString()
+          })
+          .eq('id', connection.match_group_id)
+          .select();
+        
+        if (error) {
+          console.error('❌ Error updating match_groups:', error);
+          throw error;
+        }
+        console.log('✅ Legacy match updated:', data);
+        
+      } else if (connection.source === 'housing_match' && connection.housing_match_id) {
+        // NEW data in housing_matches
+        console.log('✅ Approving NEW housing match from housing_matches:', connection.housing_match_id);
+        
+        const { data, error } = await supabase
+          .from('housing_matches')
+          .update({ 
+            status: 'approved',
+            landlord_message: 'Your inquiry has been approved! Please contact me to discuss next steps.',
+            updated_at: new Date().toISOString()
+          })
+          .eq('id', connection.housing_match_id)
+          .select();
+        
+        if (error) {
+          console.error('❌ Error updating housing_matches:', error);
+          throw error;
+        }
+        console.log('✅ Housing match updated:', data);
+        
+      } else {
+        console.error('❌ Unknown landlord connection source:', connection);
+        throw new Error('Unable to determine connection source');
       }
-      
-      console.log('Housing match updated:', data);
       
       // 💰 TODO: Trigger billing for applicant here
       
     } else if (connection.type === 'peer_support') {
-      // ✅ Peer support logic
       const { data: matchData, error: matchError } = await supabase
         .from('peer_support_matches')
         .update({ 
@@ -611,7 +645,6 @@ const handleApproveRequest = async (connection) => {
 
       if (matchError) throw matchError;
 
-      // CASCADE: Create pss_clients record
       const isPeerSpecialist = profileIds.peerSupport && connection.other_person?.professional_title;
       const peerSpecialistId = isPeerSpecialist ? profileIds.peerSupport : connection.other_person?.id;
       const clientId = isPeerSpecialist ? connection.other_person?.id : profileIds.applicant;
@@ -669,7 +702,7 @@ const handleApproveRequest = async (connection) => {
     await loadConnections();
     
   } catch (err) {
-    console.error('Error approving request:', err);
+    console.error('💥 Error approving request:', err);
     alert('Failed to approve request. Please try again.');
   } finally {
     setActionLoading(false);
