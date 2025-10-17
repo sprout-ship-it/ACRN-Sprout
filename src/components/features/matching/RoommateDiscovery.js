@@ -1,4 +1,4 @@
-// src/components/features/matching/RoommateDiscovery.js - SCHEMA ALIGNED
+// src/components/features/matching/RoommateDiscovery.js - UPDATED FOR PROFILEMODAL
 import React, { useState, useEffect, useCallback } from 'react';
 import { useAuth } from '../../../context/AuthContext';
 import matchingService from '../../../utils/matching/matchingService';
@@ -6,7 +6,7 @@ import { DEFAULT_FILTERS } from '../../../utils/matching/config';
 
 // Import new components
 import MatchCard from './components/MatchCard';
-import MatchDetailsModal from './components/MatchDetailsModal';
+import ProfileModal from '../../connections/ProfileModal'; // ✅ UPDATED: Use consolidated ProfileModal
 import LoadingSpinner from '../../ui/LoadingSpinner';
 
 // Import CSS foundation and component module
@@ -26,41 +26,31 @@ const RoommateDiscovery = ({ onRequestMatch, onBack }) => {
   const [excludedCount, setExcludedCount] = useState(0);
   const [sentRequestsCount, setSentRequestsCount] = useState(0);
 
-  // ✅ SCHEMA ALIGNED: Filter state using database field names
   const [filters, setFilters] = useState({
     minScore: DEFAULT_FILTERS.minScore,
-    recovery_stage: '',  // ✅ FIXED: Use snake_case to match database
-    age_range: '',       // ✅ FIXED: Use snake_case to match database  
-    location: '',        // Will be handled specially for primary_city/primary_state
+    recovery_stage: '',
+    age_range: '',
+    location: '',
     hideAlreadyMatched: DEFAULT_FILTERS.hideAlreadyMatched,
     hideRequestsSent: DEFAULT_FILTERS.hideRequestsSent
   });
 
-  // Load matches when component mounts or filters change
   useEffect(() => {
     if (user?.id && profile?.id) {
       findMatches();
     }
   }, [profile?.id, filters]);
 
-  /**
-   * ✅ SCHEMA ALIGNED: Construct user location from primary_city and primary_state
-   */
   const getUserLocation = useCallback((profile) => {
     if (!profile) return null;
     
-    // Construct location from schema fields (primary_location is generated)
     if (profile.primary_city && profile.primary_state) {
       return `${profile.primary_city}, ${profile.primary_state}`;
     }
     
-    // Fallback to generated primary_location if available
     return profile.primary_location || null;
   }, []);
 
-  /**
-   * Find roommate matches using the matching service
-   */
   const findMatches = useCallback(async () => {
     if (!user?.id || !profile?.id) {
       setError('No authenticated user found');
@@ -73,11 +63,10 @@ const RoommateDiscovery = ({ onRequestMatch, onBack }) => {
     try {
       console.log('🔍 Finding roommate matches with schema-aligned filters...');
       
-      // ✅ SCHEMA ALIGNED: Convert filters to database field names
       const dbFilters = {
         minScore: filters.minScore,
-        recovery_stage: filters.recovery_stage,  // Database field name
-        age_range: filters.age_range,            // Database field name
+        recovery_stage: filters.recovery_stage,
+        age_range: filters.age_range,
         location: filters.location,
         hideAlreadyMatched: filters.hideAlreadyMatched,
         hideRequestsSent: filters.hideRequestsSent
@@ -100,38 +89,35 @@ const RoommateDiscovery = ({ onRequestMatch, onBack }) => {
     }
   }, [user?.id, filters]);
 
-  /**
-   * Handle filter changes
-   */
   const handleFilterChange = useCallback((newFilters) => {
     setFilters(prev => ({ ...prev, ...newFilters }));
   }, []);
 
   /**
-   * Handle showing match details
+   * ✅ UPDATED: Handle showing match details with ProfileModal format
    */
   const handleShowDetails = useCallback((match) => {
-    setSelectedMatch(match);
+    // Transform match data to profile format expected by ProfileModal
+    const profileData = {
+      ...match,
+      profile_type: 'applicant',
+      name: `${match.first_name || ''} ${match.last_name || ''}`.trim()
+    };
+    
+    setSelectedMatch(profileData);
     setShowDetails(true);
   }, []);
 
-  /**
-   * Handle closing match details
-   */
   const handleCloseDetails = useCallback(() => {
     setShowDetails(false);
     setSelectedMatch(null);
   }, []);
 
-  /**
-   * ✅ SCHEMA ALIGNED: Handle sending a match request with proper user identification
-   */
   const handleRequestMatch = useCallback(async (match) => {
     try {
       console.log('🤝 Sending roommate match request to:', match.first_name);
       
-      // ✅ SCHEMA ALIGNED: Ensure we're using the correct user identification
-      const matchUserId = match.user_id || match.id; // Handle different ID structures
+      const matchUserId = match.user_id || match.id;
       
       const result = await matchingService.sendMatchRequest(profile.id, {
         ...match,
@@ -141,22 +127,18 @@ const RoommateDiscovery = ({ onRequestMatch, onBack }) => {
       if (result.success) {
         alert(`Roommate request sent to ${match.first_name}!`);
         
-        // Update local state to reflect sent request
         setMatches(prev => prev.map(m => 
           (m.user_id === matchUserId || m.id === matchUserId)
             ? { ...m, isRequestSent: true }
             : m
         ));
         
-        // Update sent requests count
         setSentRequestsCount(prev => prev + 1);
         
-        // Call parent callback if provided
         if (onRequestMatch) {
           await onRequestMatch(match);
         }
         
-        // Refresh matches if hiding sent requests
         if (filters.hideRequestsSent) {
           setTimeout(() => findMatches(), 1000);
         }
@@ -171,9 +153,6 @@ const RoommateDiscovery = ({ onRequestMatch, onBack }) => {
     }
   }, [profile?.id, onRequestMatch, filters.hideRequestsSent, findMatches]);
 
-  /**
-   * ✅ SCHEMA ALIGNED: Handle using user's location constructed from primary_city/primary_state
-   */
   const handleUseMyLocation = useCallback(() => {
     const userLocation = getUserLocation(userProfile);
     
@@ -187,23 +166,16 @@ const RoommateDiscovery = ({ onRequestMatch, onBack }) => {
     }
   }, [userProfile, getUserLocation]);
 
-  /**
-   * Handle refreshing matches
-   */
   const handleRefreshMatches = useCallback(async () => {
     console.log('🔄 Force refreshing matches...');
     matchingService.clearCache();
     await findMatches();
   }, [findMatches]);
 
-  /**
-   * ✅ SCHEMA ALIGNED: Render filter controls with database field names
-   */
   const renderFilterControls = () => (
     <div className="card mb-5">
       <h3 className="card-title">Search Filters</h3>
       
-      {/* Primary filters using CSS module */}
       <div className={styles.filterRowPrimary}>
         <div className="form-group">
           <label className="label">Min Compatibility</label>
@@ -222,7 +194,7 @@ const RoommateDiscovery = ({ onRequestMatch, onBack }) => {
           <label className="label">Recovery Stage</label>
           <select
             className="input"
-            value={filters.recovery_stage} // ✅ FIXED: Use database field name
+            value={filters.recovery_stage}
             onChange={(e) => handleFilterChange({ recovery_stage: e.target.value })}
           >
             <option value="">Any stage</option>
@@ -233,26 +205,25 @@ const RoommateDiscovery = ({ onRequestMatch, onBack }) => {
             ))}
           </select>
         </div>
-        
 
-      <div className="form-group">
-        <label className="label">Age Range</label>
-        <select
-          className="input"
-          value={filters.age_range}
-          onChange={(e) => handleFilterChange({ age_range: e.target.value })}
-        >
-          <option value="">Any age</option>
-          {DEFAULT_FILTERS.AGE_RANGES.map(range => (
-            <option 
-              key={range.label} 
-              value={`${range.min}-${range.max}`}
-            >
-              {range.label}
-            </option>
-          ))}
-        </select>
-      </div>
+        <div className="form-group">
+          <label className="label">Age Range</label>
+          <select
+            className="input"
+            value={filters.age_range}
+            onChange={(e) => handleFilterChange({ age_range: e.target.value })}
+          >
+            <option value="">Any age</option>
+            {DEFAULT_FILTERS.AGE_RANGES.map(range => (
+              <option 
+                key={range.label} 
+                value={`${range.min}-${range.max}`}
+              >
+                {range.label}
+              </option>
+            ))}
+          </select>
+        </div>
 
         <div className="form-group">
           <label className="label">Location</label>
@@ -266,7 +237,6 @@ const RoommateDiscovery = ({ onRequestMatch, onBack }) => {
         </div>
       </div>
 
-      {/* Action buttons using CSS module */}
       <div className={styles.filterActions}>
         <button
           className="btn btn-primary"
@@ -279,7 +249,7 @@ const RoommateDiscovery = ({ onRequestMatch, onBack }) => {
         <button
           className="btn btn-outline"
           onClick={handleUseMyLocation}
-          disabled={loading || !getUserLocation(userProfile)} // ✅ FIXED: Use constructed location
+          disabled={loading || !getUserLocation(userProfile)}
         >
           Use My Location
         </button>
@@ -293,7 +263,6 @@ const RoommateDiscovery = ({ onRequestMatch, onBack }) => {
         </button>
       </div>
 
-      {/* Exclusion options using CSS module */}
       <div className={styles.filterOptions}>
         <div className="checkbox-item">
           <input
@@ -320,7 +289,6 @@ const RoommateDiscovery = ({ onRequestMatch, onBack }) => {
         </div>
       </div>
 
-      {/* ✅ SCHEMA ALIGNED: Active filters display with database field names */}
       {(filters.minScore > DEFAULT_FILTERS.minScore || filters.recovery_stage || 
         filters.age_range || filters.location || !filters.hideAlreadyMatched || 
         !filters.hideRequestsSent) && (
@@ -328,8 +296,8 @@ const RoommateDiscovery = ({ onRequestMatch, onBack }) => {
           <div className={styles.activeFiltersTitle}>Active Filters:</div>
           <div className={styles.activeFiltersList}>
             {filters.minScore > DEFAULT_FILTERS.minScore && ` Min Compatibility: ${filters.minScore}% •`}
-            {filters.recovery_stage && ` Recovery: ${filters.recovery_stage} •`} {/* ✅ FIXED */}
-            {filters.age_range && ` Age: ${filters.age_range} •`} {/* ✅ FIXED */}
+            {filters.recovery_stage && ` Recovery: ${filters.recovery_stage} •`}
+            {filters.age_range && ` Age: ${filters.age_range} •`}
             {filters.location && ` Location: ${filters.location} •`}
             {!filters.hideAlreadyMatched && ` Including connected users •`}
             {!filters.hideRequestsSent && ` Including contacted users`}
@@ -339,9 +307,6 @@ const RoommateDiscovery = ({ onRequestMatch, onBack }) => {
     </div>
   );
 
-  /**
-   * Render matches results
-   */
   const renderMatches = () => {
     if (loading) {
       return (
@@ -382,7 +347,6 @@ const RoommateDiscovery = ({ onRequestMatch, onBack }) => {
             Try adjusting your filters or check back later for new applicants.
           </p>
           
-          {/* Show exclusion stats when no matches found */}
           {(excludedCount > 0 || sentRequestsCount > 0) && (
             <div className={styles.exclusionStats}>
               <strong>Hidden from search:</strong>
@@ -397,8 +361,8 @@ const RoommateDiscovery = ({ onRequestMatch, onBack }) => {
               className="btn btn-primary"
               onClick={() => handleFilterChange({ 
                 minScore: 30, 
-                recovery_stage: '',  // ✅ FIXED: Use database field name
-                age_range: '',       // ✅ FIXED: Use database field name
+                recovery_stage: '',
+                age_range: '',
                 location: ''
               })}
             >
@@ -421,7 +385,6 @@ const RoommateDiscovery = ({ onRequestMatch, onBack }) => {
 
     return (
       <>
-        {/* Results header using CSS module */}
         <div className="card mb-4">
           <div className={styles.matchResultsHeader}>
             <h3 className="card-title">
@@ -435,11 +398,10 @@ const RoommateDiscovery = ({ onRequestMatch, onBack }) => {
           </div>
         </div>
 
-        {/* Match cards grid using CSS module */}
         <div className={styles.matchesGrid}>
           {matches.map((match) => (
             <MatchCard
-              key={match.user_id || match.id} // ✅ FIXED: Handle different ID structures
+              key={match.user_id || match.id}
               match={match}
               onShowDetails={handleShowDetails}
               onRequestMatch={handleRequestMatch}
@@ -452,7 +414,6 @@ const RoommateDiscovery = ({ onRequestMatch, onBack }) => {
     );
   };
 
-  // Check authorization
   if (!hasRole('applicant')) {
     return (
       <div className="content">
@@ -470,7 +431,6 @@ const RoommateDiscovery = ({ onRequestMatch, onBack }) => {
     );
   }
 
-  // ✅ SCHEMA ALIGNED: Show error if no user profile using constructed location
   if (!userProfile && !loading && !error) {
     return (
       <div className="content">
@@ -491,14 +451,12 @@ const RoommateDiscovery = ({ onRequestMatch, onBack }) => {
   return (
     <>
       <div className="content">
-        {/* Header using CSS module */}
         <div className={styles.discoveryHeader}>
           <h1 className={styles.discoveryTitle}>Find Your Perfect Roommate</h1>
           <p className={styles.discoverySubtitle}>
             Discover compatible roommates based on recovery goals, lifestyle preferences, and personal compatibility
           </p>
           
-          {/* ✅ SCHEMA ALIGNED: Show user location info if available */}
           {userProfile && getUserLocation(userProfile) && (
             <div className={styles.userLocationInfo}>
               <small>Your preferred location: <strong>{getUserLocation(userProfile)}</strong></small>
@@ -506,13 +464,10 @@ const RoommateDiscovery = ({ onRequestMatch, onBack }) => {
           )}
         </div>
         
-        {/* Filter Controls */}
         {renderFilterControls()}
         
-        {/* Matches Results */}
         {renderMatches()}
         
-        {/* Back Button */}
         {onBack && (
           <div className="text-center">
             <button
@@ -525,16 +480,17 @@ const RoommateDiscovery = ({ onRequestMatch, onBack }) => {
         )}
       </div>
       
-      {/* Match Details Modal */}
+      {/* ✅ UPDATED: Use consolidated ProfileModal */}
       {showDetails && selectedMatch && (
-        <MatchDetailsModal
-          match={selectedMatch}
+        <ProfileModal
+          isOpen={showDetails}
+          profile={selectedMatch}
+          connectionStatus={selectedMatch.isAlreadyMatched ? 'active' : selectedMatch.isRequestSent ? 'requested' : null}
           onClose={handleCloseDetails}
-          onRequestMatch={handleRequestMatch}
-          isRequestSent={selectedMatch.isRequestSent}
-          isAlreadyMatched={selectedMatch.isAlreadyMatched}
-          usePortal={true}
-          debugMode={true}
+          onConnect={handleRequestMatch}
+          showContactInfo={false}
+          showActions={!selectedMatch.isAlreadyMatched && !selectedMatch.isRequestSent}
+          isAwaitingApproval={false}
         />
       )}
     </>

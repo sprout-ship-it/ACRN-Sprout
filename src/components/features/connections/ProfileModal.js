@@ -8,8 +8,12 @@ const ProfileModal = ({
   profile,
   connectionStatus,
   onClose,
+  onApprove,
+  onDecline,
+  onConnect,
   showContactInfo = false,
-  allowProfileView = false
+  showActions = false,
+  isAwaitingApproval = false
 }) => {
   if (!isOpen || !profile) return null;
 
@@ -42,10 +46,10 @@ const ProfileModal = ({
           'early': 'Early Recovery',
           'stabilizing': 'Stabilizing Recovery',
           'stable': 'Stable Recovery',
-          'long-term': 'Long-term Recovery',
+          'long_term': 'Long-term Recovery',
           'maintenance': 'Maintenance Phase'
         };
-        return stageMap[value] || value;
+        return stageMap[value] || value.replace(/_/g, ' ');
         
       case 'work_schedule':
         const scheduleMap = {
@@ -64,8 +68,206 @@ const ProfileModal = ({
         ).join(' ');
         
       default:
-        return value;
+        return value.replace(/_/g, ' ');
     }
+  };
+
+  /**
+   * Format remote work options
+   */
+  const formatRemoteWork = (option) => {
+    if (!option) return 'Not specified';
+    const optionMap = {
+      'on_site': 'On-site',
+      'fully_remote': 'Fully Remote',
+      'hybrid': 'Hybrid',
+      'flexible': 'Flexible'
+    };
+    return optionMap[option] || option.replace(/_/g, ' ');
+  };
+
+  /**
+   * Render contact information section
+   */
+  const renderContactInfo = () => {
+    if (!showContactInfo) {
+      return (
+        <div className={styles.contactInfoLocked}>
+          <div className={styles.lockIcon}>🔒</div>
+          <div className={styles.lockMessage}>
+            <strong>
+              {isAwaitingApproval 
+                ? 'Review this profile to make your decision' 
+                : 'Contact information available after connection is confirmed'}
+            </strong>
+            <p>
+              {isAwaitingApproval
+                ? 'Contact information will be available after both parties approve the connection.'
+                : 'Once both parties approve the connection, you\'ll be able to exchange contact details.'}
+            </p>
+          </div>
+        </div>
+      );
+    }
+
+    // Get contact details based on profile type
+    const email = profile.contact_email || profile.registrant_profiles?.email;
+    const phone = profile.primary_phone || profile.phone;
+
+    return (
+      <div className={styles.infoSection}>
+        <h4 className={styles.sectionTitle}>📞 Contact Information</h4>
+        <div className={styles.contactInfo}>
+          {email && (
+            <div className={styles.contactItem}>
+              <span className={styles.contactIcon}>📧</span>
+              <div>
+                <div className={styles.contactLabel}>Email</div>
+                <a href={`mailto:${email}`} className={styles.contactValue}>
+                  {email}
+                </a>
+              </div>
+              <a 
+                href={`mailto:${email}`}
+                className={styles.contactIconButton}
+                title="Send Email"
+              >
+                📧
+              </a>
+            </div>
+          )}
+          
+          {phone && (
+            <div className={styles.contactItem}>
+              <span className={styles.contactIcon}>📱</span>
+              <div>
+                <div className={styles.contactLabel}>Phone</div>
+                <a href={`tel:${phone}`} className={styles.contactValue}>
+                  {phone}
+                </a>
+              </div>
+              <a 
+                href={`tel:${phone}`}
+                className={styles.contactIconButton}
+                title="Call"
+              >
+                📱
+              </a>
+            </div>
+          )}
+          
+          {profile_type === 'employer' && profile.website && (
+            <div className={styles.contactItem}>
+              <span className={styles.contactIcon}>🌐</span>
+              <div>
+                <div className={styles.contactLabel}>Website</div>
+                <a 
+                  href={profile.website.startsWith('http') ? profile.website : `https://${profile.website}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className={styles.contactValue}
+                >
+                  {profile.website}
+                </a>
+              </div>
+              <a 
+                href={profile.website.startsWith('http') ? profile.website : `https://${profile.website}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className={styles.contactIconButton}
+                title="Visit Website"
+              >
+                🌐
+              </a>
+            </div>
+          )}
+        </div>
+      </div>
+    );
+  };
+
+  /**
+   * Render action buttons
+   */
+  const renderActionButtons = () => {
+    if (!showActions) return null;
+
+    // Awaiting approval view (for recipient)
+    if (isAwaitingApproval && onApprove && onDecline) {
+      return (
+        <div className={styles.modalActions}>
+          <button className="btn btn-outline" onClick={onClose}>
+            Close
+          </button>
+          <div className={styles.approvalActions}>
+            <button 
+              className="btn btn-primary" 
+              onClick={() => onApprove(profile)}
+            >
+              ✅ Approve Connection
+            </button>
+            <button 
+              className="btn btn-outline" 
+              onClick={() => onDecline(profile)}
+              style={{ color: 'var(--error-text)', borderColor: 'var(--error-border)' }}
+            >
+              ❌ Decline
+            </button>
+          </div>
+        </div>
+      );
+    }
+
+    // Active connection view
+    if (connectionStatus === 'active' || connectionStatus === 'confirmed') {
+      return (
+        <div className={styles.modalActions}>
+          <button className="btn btn-outline" onClick={onClose}>
+            Close
+          </button>
+        </div>
+      );
+    }
+
+    // Discovery view (not connected yet)
+    if (onConnect && connectionStatus !== 'requested') {
+      return (
+        <div className={styles.modalActions}>
+          <button className="btn btn-outline" onClick={onClose}>
+            Close
+          </button>
+          <button 
+            className="btn btn-primary" 
+            onClick={() => onConnect(profile)}
+          >
+            {profile_type === 'employer' ? '🤝 Add as My Employer' : '🤝 Request Connection'}
+          </button>
+        </div>
+      );
+    }
+
+    // Request sent view
+    if (connectionStatus === 'requested') {
+      return (
+        <div className={styles.modalActions}>
+          <button className="btn btn-outline" onClick={onClose}>
+            Close
+          </button>
+          <div className={styles.requestSentIndicator}>
+            📤 Connection Request Sent
+          </div>
+        </div>
+      );
+    }
+
+    // Default (just close)
+    return (
+      <div className={styles.modalActions}>
+        <button className="btn btn-outline" onClick={onClose}>
+          Close
+        </button>
+      </div>
+    );
   };
 
   /**
@@ -211,7 +413,7 @@ const ProfileModal = ({
                   <span className={styles.infoIcon}>🚭</span>
                   <div>
                     <div className={styles.infoLabel}>Smoking</div>
-                    <div className={styles.infoValue}>{profile.smoking_status.replace(/_/g, ' ')}</div>
+                    <div className={styles.infoValue}>{formatValue(profile.smoking_status)}</div>
                   </div>
                 </div>
               )}
@@ -425,6 +627,9 @@ const ProfileModal = ({
           ) : (
             <span className="badge badge-warning">⏸️ Not Currently Hiring</span>
           )}
+          {profile.recovery_friendly_features && profile.recovery_friendly_features.length > 0 && (
+            <span className="badge badge-success">🤝 Recovery Friendly</span>
+          )}
         </div>
 
         {/* Company Information */}
@@ -466,7 +671,7 @@ const ProfileModal = ({
                 <span className={styles.infoIcon}>💻</span>
                 <div>
                   <div className={styles.infoLabel}>Remote Work</div>
-                  <div className={styles.infoValue}>{profile.remote_work_options.replace(/_/g, ' ')}</div>
+                  <div className={styles.infoValue}>{formatRemoteWork(profile.remote_work_options)}</div>
                 </div>
               </div>
             )}
@@ -504,7 +709,7 @@ const ProfileModal = ({
         {/* Benefits */}
         {profile.benefits_offered && Array.isArray(profile.benefits_offered) && profile.benefits_offered.length > 0 && (
           <div className={styles.infoSection}>
-            <h4 className={styles.sectionTitle}>Benefits Offered</h4>
+            <h4 className={styles.sectionTitle}>✨ Benefits Offered</h4>
             <div className={styles.tagList}>
               {profile.benefits_offered.map((benefit, i) => (
                 <span key={i} className={styles.tag}>
@@ -518,7 +723,7 @@ const ProfileModal = ({
         {/* Company Description */}
         {profile.description && (
           <div className={styles.infoSection}>
-            <h4 className={styles.sectionTitle}>About the Company</h4>
+            <h4 className={styles.sectionTitle}>📝 About the Company</h4>
             <p className={styles.bioText}>{profile.description}</p>
           </div>
         )}
@@ -526,92 +731,26 @@ const ProfileModal = ({
         {/* Company Culture */}
         {profile.company_culture && (
           <div className={styles.infoSection}>
-            <h4 className={styles.sectionTitle}>Company Culture</h4>
+            <h4 className={styles.sectionTitle}>🌟 Company Culture</h4>
             <p className={styles.bioText}>{profile.company_culture}</p>
           </div>
         )}
-      </>
-    );
-  };
 
-  /**
-   * Render Contact Information Section
-   * ✅ UPDATED: Better messaging for review mode
-   */
-  const renderContactInfo = () => {
-    if (!showContactInfo) {
-      return (
-        <div className={styles.contactInfoLocked}>
-          <div className={styles.lockIcon}>🔒</div>
-          <div className={styles.lockMessage}>
-            <strong>
-              {allowProfileView 
-                ? 'Review this profile to make your decision' 
-                : 'Contact information available after connection is confirmed'}
-            </strong>
-            <p>
-              {allowProfileView
-                ? 'Contact information will be available after both parties approve the connection.'
-                : 'Once both parties approve the connection, you\'ll be able to exchange contact details.'}
-            </p>
+        {/* Application Process */}
+        {profile.application_process && (
+          <div className={styles.infoSection}>
+            <h4 className={styles.sectionTitle}>📋 Application Process</h4>
+            <p className={styles.bioText}>{profile.application_process}</p>
           </div>
-        </div>
-      );
-    }
+        )}
 
-    return (
-      <div className={styles.infoSection}>
-        <h4 className={styles.sectionTitle}>📞 Contact Information</h4>
-        <div className={styles.contactInfo}>
-          {profile.registrant_profiles?.email && (
-            <div className={styles.contactItem}>
-              <span className={styles.contactIcon}>📧</span>
-              <div>
-                <div className={styles.contactLabel}>Email</div>
-                <a href={`mailto:${profile.registrant_profiles.email}`} className={styles.contactValue}>
-                  {profile.registrant_profiles.email}
-                </a>
-              </div>
-            </div>
-          )}
-          
-          {profile.primary_phone && (
-            <div className={styles.contactItem}>
-              <span className={styles.contactIcon}>📱</span>
-              <div>
-                <div className={styles.contactLabel}>Phone</div>
-                <a href={`tel:${profile.primary_phone}`} className={styles.contactValue}>
-                  {profile.primary_phone}
-                </a>
-              </div>
-            </div>
-          )}
-          
-          {profile.phone && !profile.primary_phone && (
-            <div className={styles.contactItem}>
-              <span className={styles.contactIcon}>📱</span>
-              <div>
-                <div className={styles.contactLabel}>Phone</div>
-                <a href={`tel:${profile.phone}`} className={styles.contactValue}>
-                  {profile.phone}
-                </a>
-              </div>
-            </div>
-          )}
-          
-          {profile.contact_email && (
-            <div className={styles.contactItem}>
-              <span className={styles.contactIcon}>📧</span>
-              <div>
-                <div className={styles.contactLabel}>Contact Email</div>
-                <a href={`mailto:${profile.contact_email}`} className={styles.contactValue}>
-                  {profile.contact_email}
-                </a>
-              </div>
-            </div>
-          )}
-        </div>
-      </div>
+        {/* Hiring Status Notice */}
+        {!profile.is_actively_hiring && (
+          <div className={styles.hiringNotice}>
+            <strong>⏸️ Note:</strong> This employer is not currently hiring. However, you can still connect to stay informed about future opportunities.
+          </div>
+        )}
+      </>
     );
   };
 
@@ -628,6 +767,9 @@ const ProfileModal = ({
           
           {/* Contact Information Section */}
           {renderContactInfo()}
+          
+          {/* Action Buttons */}
+          {renderActionButtons()}
         </div>
       </div>
     </div>
@@ -637,24 +779,27 @@ const ProfileModal = ({
 ProfileModal.propTypes = {
   isOpen: PropTypes.bool.isRequired,
   profile: PropTypes.shape({
-    profile_type: PropTypes.oneOf(['applicant', 'peer_support', 'employer', 'landlord']).isRequired,
+    profile_type: PropTypes.oneOf(['applicant', 'peer_support', 'employer']).isRequired,
     name: PropTypes.string.isRequired,
-    // Common fields
     registrant_profiles: PropTypes.object,
     primary_phone: PropTypes.string,
     phone: PropTypes.string,
-    contact_email: PropTypes.string,
-    // Type-specific fields will vary
+    contact_email: PropTypes.string
   }),
   connectionStatus: PropTypes.string,
   onClose: PropTypes.func.isRequired,
+  onApprove: PropTypes.func,
+  onDecline: PropTypes.func,
+  onConnect: PropTypes.func,
   showContactInfo: PropTypes.bool,
-  allowProfileView: PropTypes.bool
+  showActions: PropTypes.bool,
+  isAwaitingApproval: PropTypes.bool
 };
 
 ProfileModal.defaultProps = {
   showContactInfo: false,
-  allowProfileView: false
+  showActions: false,
+  isAwaitingApproval: false
 };
 
 export default ProfileModal;

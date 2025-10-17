@@ -1,12 +1,12 @@
-// src/components/features/peer-support/PeerSupportFinder.js - UPDATED FOR peer_support_matches
+// src/components/features/peer-support/PeerSupportFinder.js - UPDATED FOR PROFILEMODAL
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../../../hooks/useAuth';
 import { supabase } from '../../../utils/supabase';
 import { db } from '../../../utils/supabase';
 import LoadingSpinner from '../../ui/LoadingSpinner';
+import ProfileModal from '../../connections/ProfileModal'; // ✅ UPDATED: Use consolidated ProfileModal
 import styles from './PeerSupportFinder.module.css';
 
-// ✅ UPDATED: Import aligned constants
 import { 
   specialtyOptions, 
   recoveryMethodOptions,
@@ -24,7 +24,6 @@ const PeerSupportFinder = ({ onBack }) => {
   const [connectionRequests, setConnectionRequests] = useState(new Set());
   const [activeConnections, setActiveConnections] = useState(new Set());
   
-  // ✅ NEW: Expandable filter states
   const [expandedFilters, setExpandedFilters] = useState({
     specialties: false,
     recoveryMethods: false,
@@ -42,7 +41,6 @@ const PeerSupportFinder = ({ onBack }) => {
     serviceAreas: []
   });
 
-  // Load peer specialists on component mount
   useEffect(() => {
     if (profile?.id) {
       loadSpecialists();
@@ -50,7 +48,6 @@ const PeerSupportFinder = ({ onBack }) => {
     }
   }, [profile?.id]);
 
-  // Reload when filters change (with debounce)
   useEffect(() => {
     const timeoutId = setTimeout(() => {
       if (profile?.id) {
@@ -61,9 +58,6 @@ const PeerSupportFinder = ({ onBack }) => {
     return () => clearTimeout(timeoutId);
   }, [filters, profile?.id]);
 
-  /**
-   * ✅ NEW: Toggle filter section expansion
-   */
   const toggleFilterExpansion = (filterType) => {
     setExpandedFilters(prev => ({
       ...prev,
@@ -71,16 +65,12 @@ const PeerSupportFinder = ({ onBack }) => {
     }));
   };
 
-  /**
-   * ✅ FIXED: Load existing peer support connections from peer_support_matches table
-   */
   const loadConnectionRequests = async () => {
     if (!profile?.id) return;
 
     try {
       console.log('📊 Loading existing peer support connections from peer_support_matches...');
       
-      // Get user's applicant profile ID
       const { data: applicantProfile, error: applicantError } = await supabase
         .from('applicant_matching_profiles')
         .select('id')
@@ -95,7 +85,6 @@ const PeerSupportFinder = ({ onBack }) => {
       const applicantId = applicantProfile.id;
       console.log('✅ Found applicant profile ID:', applicantId);
 
-      // Query peer_support_matches table
       const { data: matches, error: matchesError } = await supabase
         .from('peer_support_matches')
         .select('*')
@@ -114,13 +103,10 @@ const PeerSupportFinder = ({ onBack }) => {
       const sentRequests = new Set();
       const activeConnections = new Set();
 
-      // Process matches and track by peer_support_profiles.id
       matches.forEach(match => {
         if (match.status === 'requested') {
-          // Pending request
           sentRequests.add(match.peer_support_id);
         } else if (match.status === 'active') {
-          // Active connection
           activeConnections.add(match.peer_support_id);
         }
       });
@@ -138,9 +124,6 @@ const PeerSupportFinder = ({ onBack }) => {
     }
   };
 
-  /**
-   * Enhanced search with correct service path and methods
-   */
   const loadSpecialists = async () => {
     if (!profile?.id) return;
     
@@ -150,7 +133,6 @@ const PeerSupportFinder = ({ onBack }) => {
     try {
       console.log('🔍 Loading peer support specialists with filters:', filters);
       
-      // Build filter object for database query
       const dbFilters = {};
       
       if (filters.specialties.length > 0) {
@@ -212,7 +194,6 @@ const PeerSupportFinder = ({ onBack }) => {
       
       console.log(`📊 Found ${availableSpecialists.length} specialists from database`);
       
-      // Apply client-side filters for more refined search
       if (filters.minExperience) {
         const minYears = parseInt(filters.minExperience);
         availableSpecialists = availableSpecialists.filter(specialist => 
@@ -281,12 +262,10 @@ const PeerSupportFinder = ({ onBack }) => {
         });
       }
 
-      // Exclude current user if they're also a peer specialist
       availableSpecialists = availableSpecialists.filter(specialist => 
         specialist.user_id !== profile.id
       );
 
-      // Better sorting - accepting clients first, then by experience
       availableSpecialists.sort((a, b) => {
         if (a.accepting_clients && !b.accepting_clients) return -1;
         if (!a.accepting_clients && b.accepting_clients) return 1;
@@ -305,9 +284,6 @@ const PeerSupportFinder = ({ onBack }) => {
     }
   };
 
-  /**
-   * Filter change handlers
-   */
   const handleSpecialtyChange = (specialty, isChecked) => {
     setFilters(prev => ({
       ...prev,
@@ -339,9 +315,6 @@ const PeerSupportFinder = ({ onBack }) => {
     setFilters(prev => ({ ...prev, [field]: value }));
   };
 
-  /**
-   * Smart location search that includes common areas
-   */
   const handleShowNearby = async () => {
     if (!profile?.primary_city && !profile?.primary_state) {
       try {
@@ -387,20 +360,25 @@ const PeerSupportFinder = ({ onBack }) => {
   };
 
   /**
-   * Show specialist details in modal
+   * ✅ UPDATED: Handle showing specialist details with ProfileModal format
    */
   const handleShowDetails = (specialist) => {
-    setSelectedSpecialist(specialist);
+    // Transform specialist data to profile format expected by ProfileModal
+    const profileData = {
+      ...specialist,
+      profile_type: 'peer_support',
+      name: specialist.professional_title || `${specialist.first_name || ''} ${specialist.last_name || ''}`.trim()
+    };
+    
+    setSelectedSpecialist(profileData);
     setShowDetails(true);
   };
 
-  /**
-   * ✅ FIXED: Direct insert into peer_support_matches table
-   */
   const handleRequestConnection = async (specialist) => {
     if (!profile?.id) return;
 
-    const specialistPeerProfileId = specialist.id; // This is peer_support_profiles.id
+    // Use the original specialist ID (peer_support_profiles.id)
+    const specialistPeerProfileId = specialist.id;
     
     if (connectionRequests.has(specialistPeerProfileId)) {
       alert(`You've already sent a peer support request to ${specialist.first_name || 'this specialist'}.`);
@@ -421,7 +399,6 @@ const PeerSupportFinder = ({ onBack }) => {
     try {
       console.log('🤝 Sending peer support request to:', specialist.first_name);
       
-      // Get user's applicant profile ID
       const { data: applicantProfile, error: applicantError } = await supabase
         .from('applicant_matching_profiles')
         .select('id')
@@ -435,11 +412,9 @@ const PeerSupportFinder = ({ onBack }) => {
       const requesterApplicantId = applicantProfile.id;
       console.log('✅ Found requester applicant profile ID:', requesterApplicantId);
 
-      // specialist.id is already peer_support_profiles.id
       const recipientPeerSupportId = specialist.id;
       console.log('✅ Using specialist peer support profile ID:', recipientPeerSupportId);
 
-      // Check for existing match
       const { data: existingMatch } = await supabase
         .from('peer_support_matches')
         .select('id, status')
@@ -455,7 +430,6 @@ const PeerSupportFinder = ({ onBack }) => {
         }
       }
 
-      // Create peer_support_matches entry
       const matchData = {
         applicant_id: requesterApplicantId,
         peer_support_id: recipientPeerSupportId,
@@ -483,10 +457,13 @@ I would appreciate the opportunity to discuss how your support could help me in 
       
       console.log('✅ Peer support match created successfully:', newMatch);
       
-      // Track by peer_support_profiles.id
       setConnectionRequests(prev => new Set([...prev, specialistPeerProfileId]));
       
       alert(`Peer support request sent to ${specialist.first_name || 'the specialist'}! They will be notified and can respond through their dashboard.`);
+      
+      // Close modal if open
+      setShowDetails(false);
+      setSelectedSpecialist(null);
       
     } catch (err) {
       console.error('💥 Error sending peer support request:', err);
@@ -494,9 +471,6 @@ I would appreciate the opportunity to discuss how your support could help me in 
     }
   };
 
-  /**
-   * Clear all filters
-   */
   const clearFilters = () => {
     setFilters({
       specialties: [],
@@ -510,9 +484,6 @@ I would appreciate the opportunity to discuss how your support could help me in 
     });
   };
 
-  /**
-   * ✅ UPDATED: Get connection status for display - using peer_support_profiles.id
-   */
   const getConnectionStatus = (specialist) => {
     const specialistPeerProfileId = specialist.id;
     const hasRequest = connectionRequests.has(specialistPeerProfileId);
@@ -530,9 +501,6 @@ I would appreciate the opportunity to discuss how your support could help me in 
     }
   };
 
-  /**
-   * Format display text for various fields
-   */
   const formatExperienceText = (years) => {
     if (!years) return 'Experience not specified';
     return years === 1 ? '1 year experience' : `${years} years experience`;
@@ -553,7 +521,6 @@ I would appreciate the opportunity to discuss how your support could help me in 
     return option ? option.label : affiliation;
   };
 
-  // ✅ NEW: Calculate active filter count for each section
   const getFilterCount = (filterType) => {
     switch (filterType) {
       case 'specialties':
@@ -570,7 +537,6 @@ I would appreciate the opportunity to discuss how your support could help me in 
   return (
     <>
       <div className="content">
-        {/* ✅ IMPROVED: Header Section */}
         <div className={styles.headerSection}>
           <h1 className={styles.headerTitle}>Find Peer Support Specialists</h1>
           <p className={styles.headerSubtitle}>
@@ -578,7 +544,7 @@ I would appreciate the opportunity to discuss how your support could help me in 
           </p>
         </div>
 
-        {/* ✅ IMPROVED: Basic Filters Section */}
+        {/* Basic Filters - keeping all existing filter code */}
         <div className={styles.filtersSection}>
           <div className={styles.card}>
             <div className={styles.cardHeader}>
@@ -647,7 +613,6 @@ I would appreciate the opportunity to discuss how your support could help me in 
                 </div>
               </div>
 
-              {/* ✅ IMPROVED: Quick Action Buttons - Centered and Better Positioned */}
               <div className={styles.quickActions}>
                 <button
                   className="btn btn-outline"
@@ -673,7 +638,7 @@ I would appreciate the opportunity to discuss how your support could help me in 
           </div>
         </div>
 
-        {/* ✅ NEW: Expandable Specialties Filter */}
+        {/* Expandable Filters - keeping all existing code */}
         <div className={styles.filtersSection}>
           <div className={styles.card}>
             <div 
@@ -719,7 +684,6 @@ I would appreciate the opportunity to discuss how your support could help me in 
           </div>
         </div>
 
-        {/* ✅ NEW: Expandable Recovery Methods Filter */}
         <div className={styles.filtersSection}>
           <div className={styles.card}>
             <div 
@@ -765,7 +729,6 @@ I would appreciate the opportunity to discuss how your support could help me in 
           </div>
         </div>
 
-        {/* ✅ NEW: Expandable Service Areas Filter */}
         <div className={styles.filtersSection}>
           <div className={styles.card}>
             <div 
@@ -811,7 +774,7 @@ I would appreciate the opportunity to discuss how your support could help me in 
           </div>
         </div>
 
-        {/* ✅ NEW: Search Actions Section at Bottom */}
+        {/* Search Actions and Results - keeping all existing code */}
         <div className={styles.searchActionsSection}>
           <div className={styles.card}>
             <div className={styles.cardContent}>
@@ -840,7 +803,6 @@ I would appreciate the opportunity to discuss how your support could help me in 
                 </button>
               </div>
 
-              {/* Active Filters Display */}
               {(filters.specialties.length > 0 || filters.location || filters.zipCode || filters.minExperience || 
                 filters.recoveryMethods.length > 0 || filters.spiritualAffiliation || filters.serviceAreas.length > 0) && (
                 <div className={styles.activeFiltersDisplay}>
@@ -861,7 +823,6 @@ I would appreciate the opportunity to discuss how your support could help me in 
           </div>
         </div>
 
-        {/* Error State */}
         {error && (
           <div className={styles.errorState}>
             <div className="alert alert-error">
@@ -880,14 +841,12 @@ I would appreciate the opportunity to discuss how your support could help me in 
           </div>
         )}
 
-        {/* Loading State */}
         {loading && (
           <div className={styles.loadingContainer}>
             <LoadingSpinner size="large" text="Finding peer support specialists..." />
           </div>
         )}
 
-        {/* No Results State */}
         {!loading && !error && specialists.length === 0 && (
           <div className={styles.emptyState}>
             <div className={styles.emptyStateIcon}>🔍</div>
@@ -910,7 +869,6 @@ I would appreciate the opportunity to discuss how your support could help me in 
           </div>
         )}
 
-        {/* Specialists Grid */}
         {!loading && !error && specialists.length > 0 && (
           <div className={styles.specialistsContainer}>
             <div className={styles.specialistsHeader}>
@@ -984,7 +942,6 @@ I would appreciate the opportunity to discuss how your support could help me in 
                         </div>
                       )}
 
-                      {/* Specialties */}
                       {specialist.specialties?.length > 0 && (
                         <div className={styles.specialtiesSection}>
                           <div className="label mb-2">Specialties</div>
@@ -1003,7 +960,6 @@ I would appreciate the opportunity to discuss how your support could help me in 
                         </div>
                       )}
 
-                      {/* Recovery Methods */}
                       {specialist.supported_recovery_methods?.length > 0 && (
                         <div className={styles.specialtiesSection}>
                           <div className="label mb-2">Recovery Methods</div>
@@ -1022,7 +978,6 @@ I would appreciate the opportunity to discuss how your support could help me in 
                         </div>
                       )}
 
-                      {/* Brief Bio */}
                       {specialist.bio && (
                         <div className={styles.bioSection}>
                           <p className={styles.bioText}>
@@ -1058,7 +1013,6 @@ I would appreciate the opportunity to discuss how your support could help me in 
           </div>
         )}
 
-        {/* Back Button */}
         {onBack && (
           <div className="text-center">
             <button
@@ -1071,159 +1025,21 @@ I would appreciate the opportunity to discuss how your support could help me in 
         )}
       </div>
 
-      {/* Specialist Details Modal - keeping existing modal code */}
+      {/* ✅ UPDATED: Use consolidated ProfileModal */}
       {showDetails && selectedSpecialist && (
-        <div className="modal-overlay" onClick={() => setShowDetails(false)}>
-          <div className={styles.modalContent} onClick={(e) => e.stopPropagation()}>
-            <div className={styles.modalHeader}>
-              <h2 className={styles.modalTitle}>
-                {selectedSpecialist.first_name || 'Anonymous'} - Peer Support Specialist
-              </h2>
-              <button
-                className={styles.modalClose}
-                onClick={() => setShowDetails(false)}
-              >
-                ×
-              </button>
-            </div>
-
-            <div className={styles.modalBody}>
-              {/* Connection Status */}
-              {activeConnections.has(selectedSpecialist.id) && (
-                <div className="alert alert-success mb-4">
-                  <strong>✅ Active Connection:</strong> You have an active peer support connection with this specialist. 
-                  Check your connections page to exchange contact information and coordinate support sessions.
-                </div>
-              )}
-              
-              {connectionRequests.has(selectedSpecialist.id) && !activeConnections.has(selectedSpecialist.id) && (
-                <div className="alert alert-info mb-4">
-                  <strong>📤 Request Sent:</strong> You've sent a peer support request to this specialist. 
-                  They will review your request and respond through their dashboard.
-                </div>
-              )}
-
-              {/* Professional Information */}
-              <div className={styles.professionalInfo}>
-                <h4 className={styles.detailSectionTitle}>Professional Background</h4>
-                <div className={styles.professionalGrid}>
-                  <div className={styles.infoItem}>
-                    <span className={styles.infoLabel}>Title:</span>
-                    <span className={styles.infoValue}>{selectedSpecialist.professional_title || 'Peer Support Specialist'}</span>
-                  </div>
-                  <div className={styles.infoItem}>
-                    <span className={styles.infoLabel}>Experience:</span>
-                    <span className={styles.infoValue}>{formatExperienceText(selectedSpecialist.years_experience)}</span>
-                  </div>
-                  <div className={styles.infoItem}>
-                    <span className={styles.infoLabel}>Licensed:</span>
-                    <span className={styles.infoValue}>{selectedSpecialist.is_licensed ? 'Yes' : 'No'}</span>
-                  </div>
-                  <div className={styles.infoItem}>
-                    <span className={styles.infoLabel}>Accepting Clients:</span>
-                    <span className={styles.infoValue}>{selectedSpecialist.accepting_clients ? 'Yes' : 'No'}</span>
-                  </div>
-                  {selectedSpecialist.spiritual_affiliation && (
-                    <div className={styles.infoItem}>
-                      <span className={styles.infoLabel}>Spiritual Background:</span>
-                      <span className={styles.infoValue}>{formatSpiritualAffiliation(selectedSpecialist.spiritual_affiliation)}</span>
-                    </div>
-                  )}
-                </div>
-              </div>
-
-              {/* Bio */}
-              {selectedSpecialist.bio && (
-                <div className={styles.detailSection}>
-                  <h4 className={styles.detailSectionTitle}>About</h4>
-                  <p className={styles.bioText}>{selectedSpecialist.bio}</p>
-                </div>
-              )}
-
-              {/* Service Areas */}
-              <div className={styles.detailSection}>
-                <h4 className={styles.detailSectionTitle}>Service Areas</h4>
-                <div className={styles.tagsList}>
-                  <span className={styles.detailBadge}>{formatLocationText(selectedSpecialist)}</span>
-                  {selectedSpecialist.service_areas?.map((area, i) => (
-                    <span key={i} className={styles.detailBadge}>{area}</span>
-                  ))}
-                </div>
-              </div>
-
-              {/* All Specialties */}
-              {selectedSpecialist.specialties?.length > 0 && (
-                <div className={styles.detailSection}>
-                  <h4 className={styles.detailSectionTitle}>Specialties</h4>
-                  <div className={styles.tagsList}>
-                    {selectedSpecialist.specialties.map((specialty, i) => (
-                      <span key={i} className={styles.detailBadge}>{specialty}</span>
-                    ))}
-                  </div>
-                </div>
-              )}
-
-              {/* Recovery Methods Supported */}
-              {selectedSpecialist.supported_recovery_methods?.length > 0 && (
-                <div className={styles.detailSection}>
-                  <h4 className={styles.detailSectionTitle}>Supported Recovery Methods</h4>
-                  <div className={styles.tagsList}>
-                    {selectedSpecialist.supported_recovery_methods.map((method, i) => (
-                      <span key={i} className={styles.detailBadge}>{method}</span>
-                    ))}
-                  </div>
-                </div>
-              )}
-
-              {/* Additional Information */}
-              {selectedSpecialist.additional_info && (
-                <div className={styles.detailSection}>
-                  <h4 className={styles.detailSectionTitle}>Additional Information</h4>
-                  <p className={styles.bioText}>{selectedSpecialist.additional_info}</p>
-                </div>
-              )}
-
-              {/* Connection Process Explanation */}
-              {!activeConnections.has(selectedSpecialist.id) && !connectionRequests.has(selectedSpecialist.id) && (
-                <div className={styles.connectionProcess}>
-                  <div className={styles.connectionProcessTitle}>🤝 Peer Support Connection Process:</div>
-                  <ol className={styles.connectionProcessList}>
-                    <li>Send connection request to express interest in peer support</li>
-                    <li>Specialist reviews your request and your recovery goals</li>
-                    <li>If approved, you can exchange contact information and coordinate</li>
-                    <li>Work together to establish a support schedule and goals</li>
-                  </ol>
-                </div>
-              )}
-
-              <div className={styles.modalActions}>
-                <button
-                  className="btn btn-outline"
-                  onClick={() => setShowDetails(false)}
-                >
-                  Close
-                </button>
-                
-                {!activeConnections.has(selectedSpecialist.id) && !connectionRequests.has(selectedSpecialist.id) ? (
-                  <button
-                    className="btn btn-secondary"
-                    onClick={() => {
-                      handleRequestConnection(selectedSpecialist);
-                      setShowDetails(false);
-                    }}
-                    disabled={!selectedSpecialist.accepting_clients}
-                  >
-                    {!selectedSpecialist.accepting_clients ? 'Not Accepting Clients' : 'Request Connection'}
-                  </button>
-                ) : (
-                  <div className={styles.connectionStatusDisplay}>
-                    {activeConnections.has(selectedSpecialist.id) ? '✅ Active Connection' : '📤 Request Sent'}
-                  </div>
-                )}
-              </div>
-            </div>
-          </div>
-        </div>
+        <ProfileModal
+          isOpen={showDetails}
+          profile={selectedSpecialist}
+          connectionStatus={activeConnections.has(selectedSpecialist.id) ? 'active' : connectionRequests.has(selectedSpecialist.id) ? 'requested' : null}
+          onClose={() => {
+            setShowDetails(false);
+            setSelectedSpecialist(null);
+          }}
+          onConnect={handleRequestConnection}
+          showContactInfo={activeConnections.has(selectedSpecialist.id)}
+          showActions={!activeConnections.has(selectedSpecialist.id) && !connectionRequests.has(selectedSpecialist.id)}
+          isAwaitingApproval={false}
+        />
       )}
     </>
   );

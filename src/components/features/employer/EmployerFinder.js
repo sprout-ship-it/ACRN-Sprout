@@ -1,9 +1,9 @@
-// src/components/features/employer/EmployerFinder.js - CLEANED UP (DEBUG REMOVED)
+// src/components/features/employer/EmployerFinder.js - UPDATED FOR PROFILEMODAL
 import React, { useState } from 'react';
 import useEmployerSearch from './hooks/useEmployerSearch';
 import EmployerFilterPanel from './components/EmployerFilterPanel';
 import EmployerResultsGrid from './components/EmployerResultsGrid';
-import EmployerModal from './components/EmployerModal';
+import ProfileModal from '../../connections/ProfileModal'; // ✅ UPDATED: Use consolidated ProfileModal
 
 const EmployerFinder = ({ onBack }) => {
   // Comprehensive search hook for all employer functionality
@@ -40,10 +40,17 @@ const EmployerFinder = ({ onBack }) => {
   const [showModal, setShowModal] = useState(false);
 
   /**
-   * Handle viewing employer details in modal
+   * ✅ UPDATED: Handle viewing employer details with ProfileModal format
    */
   const handleViewDetails = (employer) => {
-    setSelectedEmployer(employer);
+    // Transform employer data to profile format expected by ProfileModal
+    const profileData = {
+      ...employer,
+      profile_type: 'employer',
+      name: employer.company_name || 'Company'
+    };
+    
+    setSelectedEmployer(profileData);
     setShowModal(true);
   };
 
@@ -59,11 +66,16 @@ const EmployerFinder = ({ onBack }) => {
    * Handle connecting with employer (with modal management)
    */
   const handleConnect = async (employer) => {
-    const success = await connectWithEmployer(employer);
+    // Use the original employer data for connection
+    const originalEmployer = employers.find(e => 
+      e.user_id === employer.user_id || e.id === employer.id
+    );
+    
+    const success = await connectWithEmployer(originalEmployer || employer);
     
     if (success) {
       // Close modal if open and it's the same employer
-      if (showModal && selectedEmployer?.id === employer.id) {
+      if (showModal && selectedEmployer?.user_id === employer.user_id) {
         handleCloseModal();
       }
     }
@@ -72,7 +84,7 @@ const EmployerFinder = ({ onBack }) => {
   };
 
   /**
-   * Handle toggling favorite status with detailed logging
+   * Handle toggling favorite status
    */
   const handleToggleFavorite = async (employerId) => {
     console.log('🎯 EmployerFinder: handleToggleFavorite called with:', {
@@ -86,7 +98,6 @@ const EmployerFinder = ({ onBack }) => {
     
     console.log('🎯 EmployerFinder: toggleFavorite result:', result);
     
-    // Note: Modal stays open when toggling favorites
     return result;
   };
 
@@ -109,6 +120,34 @@ const EmployerFinder = ({ onBack }) => {
    */
   const handleSearch = () => {
     loadEmployers();
+  };
+
+  /**
+   * ✅ NEW: Get connection status for modal
+   */
+  const getModalConnectionStatus = (employer) => {
+    const status = getConnectionStatus(employer);
+    
+    // Map status to values expected by ProfileModal
+    if (status.isConnected) return 'active';
+    if (status.isRequested) return 'requested';
+    return null;
+  };
+
+  /**
+   * ✅ NEW: Determine if contact info should be shown
+   */
+  const shouldShowContactInfo = (employer) => {
+    const status = getConnectionStatus(employer);
+    return status.isConnected;
+  };
+
+  /**
+   * ✅ NEW: Determine if action buttons should be shown
+   */
+  const shouldShowActions = (employer) => {
+    const status = getConnectionStatus(employer);
+    return !status.isConnected && !status.isRequested;
   };
 
   return (
@@ -161,20 +200,21 @@ const EmployerFinder = ({ onBack }) => {
         </div>
       )}
 
-      {/* Employer Details Modal */}
+      {/* ✅ UPDATED: Use consolidated ProfileModal */}
       {showModal && selectedEmployer && (
-        <EmployerModal
+        <ProfileModal
           isOpen={showModal}
-          employer={selectedEmployer}
-          connectionStatus={getConnectionStatus(selectedEmployer)}
-          isFavorited={favorites.has(selectedEmployer.user_id)}
+          profile={selectedEmployer}
+          connectionStatus={getModalConnectionStatus(selectedEmployer)}
           onClose={handleCloseModal}
           onConnect={handleConnect}
-          onToggleFavorite={handleToggleFavorite}
+          showContactInfo={shouldShowContactInfo(selectedEmployer)}
+          showActions={shouldShowActions(selectedEmployer)}
+          isAwaitingApproval={false}
         />
       )}
     </div>
   );
 };
 
-export default EmployerFinder;  
+export default EmployerFinder;

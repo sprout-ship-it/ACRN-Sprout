@@ -1,4 +1,4 @@
-// src/components/features/property/PropertySearch.js - UPDATED with request tracking
+// src/components/features/property/PropertySearch.js - UPDATED with PropertyDetailsModal
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../../../hooks/useAuth';
 import { supabase } from '../../../utils/supabase';
@@ -11,8 +11,11 @@ import PropertyAdvancedFilters from './search/PropertyAdvancedFilters';
 import PropertySearchResults from './search/PropertySearchResults';
 import usePropertySearch from './search/hooks/usePropertySearch';
 
-// ✅ NEW: Import saved properties hook
+// ✅ Import saved properties hook
 import useSavedProperties from '../../../hooks/useSavedProperties';
+
+// ✅ NEW: Import PropertyDetailsModal
+import PropertyDetailsModal from '../../connections/modals/PropertyDetailsModal';
 
 // ✅ Import CSS foundation and component module
 import '../../../styles/main.css';
@@ -24,12 +27,16 @@ const PropertySearch = () => {
   // ✅ Advanced filters toggle state
   const [showAdvancedFilters, setShowAdvancedFilters] = useState(false);
   
-  // ✅ NEW: Track applicant profile ID and pending property requests
+  // ✅ Track applicant profile ID and pending property requests
   const [applicantProfileId, setApplicantProfileId] = useState(null);
   const [pendingPropertyRequests, setPendingPropertyRequests] = useState(new Set());
   const [requestsLoading, setRequestsLoading] = useState(false);
 
-  // ✅ NEW: Get saved properties functionality (only pass user)
+  // ✅ NEW: Modal state for property details
+  const [selectedProperty, setSelectedProperty] = useState(null);
+  const [showPropertyModal, setShowPropertyModal] = useState(false);
+
+  // ✅ Get saved properties functionality
   const {
     savedProperties,
     loading: savingLoading,
@@ -71,7 +78,7 @@ const PropertySearch = () => {
   } = usePropertySearch(user);
 
   /**
-   * ✅ NEW: Load applicant profile ID
+   * ✅ Load applicant profile ID
    */
   const loadApplicantProfileId = async () => {
     if (!profile?.id) return;
@@ -94,44 +101,72 @@ const PropertySearch = () => {
     }
   };
 
-/**
- * ✅ UPDATED: Load pending property requests from housing_matches table
- */
-const loadPendingPropertyRequests = async () => {
-  if (!applicantProfileId) return;
+  /**
+   * ✅ Load pending property requests from housing_matches table
+   */
+  const loadPendingPropertyRequests = async () => {
+    if (!applicantProfileId) return;
 
-  setRequestsLoading(true);
+    setRequestsLoading(true);
 
-  try {
-    // ✅ Query housing_matches for pending requests
-    const { data: housingMatches, error } = await supabase
-      .from('housing_matches')
-      .select('property_id, status')
-      .eq('applicant_id', applicantProfileId)
-      .eq('status', 'requested'); // ✅ NEW: Use 'requested' status
+    try {
+      // ✅ Query housing_matches for pending requests
+      const { data: housingMatches, error } = await supabase
+        .from('housing_matches')
+        .select('property_id, status')
+        .eq('applicant_id', applicantProfileId)
+        .in('status', ['requested', 'approved']);
 
-    if (error) throw error;
+      if (error) throw error;
 
-    // Create set of property IDs with pending requests
-    const pendingSet = new Set(
-      housingMatches?.map(match => match.property_id).filter(Boolean) || []
-    );
+      // Create set of property IDs with pending requests
+      const pendingSet = new Set(
+        housingMatches?.map(match => match.property_id).filter(Boolean) || []
+      );
 
-    setPendingPropertyRequests(pendingSet);
-    console.log(`✅ Loaded ${pendingSet.size} pending property requests from housing_matches`);
-  } catch (err) {
-    console.error('Error loading pending property requests:', err);
-  } finally {
-    setRequestsLoading(false);
-  }
-};
-
+      setPendingPropertyRequests(pendingSet);
+      console.log(`✅ Loaded ${pendingSet.size} pending property requests from housing_matches`);
+    } catch (err) {
+      console.error('Error loading pending property requests:', err);
+    } finally {
+      setRequestsLoading(false);
+    }
+  };
 
   /**
-   * ✅ NEW: Check if property has pending request
+   * ✅ Check if property has pending request
    */
   const hasPropertyRequest = (propertyId) => {
     return pendingPropertyRequests.has(propertyId);
+  };
+
+  /**
+   * ✅ NEW: Get connection status for property modal
+   */
+  const getPropertyConnectionStatus = (property) => {
+    // Check if there's a match for this property
+    if (hasPropertyRequest(property.id)) {
+      // Would need to check actual status from housing_matches
+      // For now, assume 'requested' if in set
+      return 'requested';
+    }
+    return null;
+  };
+
+  /**
+   * ✅ NEW: Handle viewing property details in modal
+   */
+  const handleViewPropertyDetails = (property) => {
+    setSelectedProperty(property);
+    setShowPropertyModal(true);
+  };
+
+  /**
+   * ✅ NEW: Handle closing property details modal
+   */
+  const handleClosePropertyModal = () => {
+    setSelectedProperty(null);
+    setShowPropertyModal(false);
   };
 
   // ✅ Handle "Use My Preferences" button
@@ -203,31 +238,33 @@ Thank you!`;
     }
   };
 
+  /**
+   * ✅ Handle sending housing inquiry (can be called from modal or cards)
+   */
+  const handleSendHousingInquiry = async (property) => {
+    if (!property.landlord_id) {
+      alert('Direct inquiries are not available for this property. Please use the contact owner option.');
+      return;
+    }
 
-const handleSendHousingInquiry = async (property) => {
-  if (!property.landlord_id) {
-    alert('Direct inquiries are not available for this property. Please use the contact owner option.');
-    return;
-  }
+    if (!applicantProfileId) {
+      alert('Please complete your applicant profile before sending property requests.');
+      return;
+    }
 
-  if (!applicantProfileId) {
-    alert('Please complete your applicant profile before sending property requests.');
-    return;
-  }
+    // Check if request already exists
+    if (hasPropertyRequest(property.id)) {
+      alert('You have already sent a request for this property.');
+      return;
+    }
 
-  // Check if request already exists
-  if (hasPropertyRequest(property.id)) {
-    alert('You have already sent a request for this property.');
-    return;
-  }
-
-  try {
-    // ✅ Create housing_match entry with new nomenclature
-    const matchData = {
-      applicant_id: applicantProfileId,
-      property_id: property.id,
-      status: 'requested', // ✅ NEW: Use 'requested' status
-      applicant_message: `Hi! I'm interested in your property "${property.title || property.address}". I'm looking for ${property.is_recovery_housing ? 'recovery-friendly ' : ''}housing and this property looks like it could be a great fit for my needs.
+    try {
+      // ✅ Create housing_match entry
+      const matchData = {
+        applicant_id: applicantProfileId,
+        property_id: property.id,
+        status: 'requested',
+        applicant_message: `Hi! I'm interested in your property "${property.title || property.address}". I'm looking for ${property.is_recovery_housing ? 'recovery-friendly ' : ''}housing and this property looks like it could be a great fit for my needs.
 
 Property Details I'm interested in:
 - Monthly Rent: $${property.monthly_rent}
@@ -235,27 +272,32 @@ Property Details I'm interested in:
 - Location: ${property.city}, ${property.state}
 
 I'd love to discuss availability and the application process. Thank you!`,
-      created_at: new Date().toISOString(),
-      updated_at: new Date().toISOString()
-    };
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString()
+      };
 
-    const { error: insertError } = await supabase
-      .from('housing_matches')
-      .insert(matchData);
+      const { error: insertError } = await supabase
+        .from('housing_matches')
+        .insert(matchData);
 
-    if (insertError) throw insertError;
+      if (insertError) throw insertError;
 
-    alert('Property request sent! The landlord will be notified and can respond through their dashboard.');
-    
-    // ✅ Refresh pending requests
-    await loadPendingPropertyRequests();
-  } catch (err) {
-    console.error('Error sending housing inquiry:', err);
-    alert(`Failed to send request: ${err.message}. Please try again.`);
-  }
-};
+      alert('Property request sent! The landlord will be notified and can respond through their dashboard.');
+      
+      // ✅ Close modal if open
+      if (showPropertyModal && selectedProperty?.id === property.id) {
+        handleClosePropertyModal();
+      }
+      
+      // ✅ Refresh pending requests
+      await loadPendingPropertyRequests();
+    } catch (err) {
+      console.error('Error sending housing inquiry:', err);
+      alert(`Failed to send request: ${err.message}. Please try again.`);
+    }
+  };
 
-  // ✅ NEW: Handle save property with proper feedback and error handling
+  // ✅ Handle save property with proper feedback and error handling
   const handleSavePropertyWithFeedback = async (property) => {
     if (savingLoading) {
       return; // Prevent multiple clicks
@@ -281,12 +323,12 @@ I'd love to discuss availability and the application process. Thank you!`,
     }
   };
 
-  // ✅ NEW: Load applicant profile on mount
+  // ✅ Load applicant profile on mount
   useEffect(() => {
     loadApplicantProfileId();
   }, [profile?.id]);
 
-  // ✅ NEW: Load pending requests when applicant profile ID is available
+  // ✅ Load pending requests when applicant profile ID is available
   useEffect(() => {
     if (applicantProfileId) {
       loadPendingPropertyRequests();
@@ -312,7 +354,7 @@ I'd love to discuss availability and the application process. Thank you!`,
         />
       </div>
 
-      {/* ✅ Shared Search Filters (always visible, collapsible sections) */}
+      {/* ✅ Shared Search Filters */}
       <div className={styles.filtersSection}>
         <PropertySharedFilters
           sharedFilters={sharedFilters}
@@ -327,7 +369,7 @@ I'd love to discuss availability and the application process. Thank you!`,
         />
       </div>
 
-      {/* ✅ Recovery-Specific Filters (conditional, collapsible sections) */}
+      {/* ✅ Recovery-Specific Filters */}
       <div className={styles.filtersSection}>
         <PropertyRecoverySearchFilters
           recoveryFilters={recoveryFilters}
@@ -338,7 +380,7 @@ I'd love to discuss availability and the application process. Thank you!`,
         />
       </div>
 
-      {/* ✅ Advanced Filters (collapsible) */}
+      {/* ✅ Advanced Filters */}
       <div className={styles.filtersSection}>
         <PropertyAdvancedFilters
           advancedFilters={advancedFilters}
@@ -350,7 +392,7 @@ I'd love to discuss availability and the application process. Thank you!`,
         />
       </div>
 
-      {/* ✅ UPDATED: Search Results with pending requests data */}
+      {/* ✅ UPDATED: Search Results with view details handler */}
       <div data-results-section className={styles.resultsSection}>
         <PropertySearchResults
           loading={loading}
@@ -366,12 +408,13 @@ I'd love to discuss availability and the application process. Thank you!`,
           onContactLandlord={handleContactLandlord}
           onSaveProperty={handleSavePropertyWithFeedback}
           onSendHousingInquiry={handleSendHousingInquiry}
+          onViewDetails={handleViewPropertyDetails}
           onClearAllFilters={clearAllFilters}
           onSearchTypeChange={handleSearchTypeChange}
         />
       </div>
 
-      {/* ✅ Search Context Help - Only show if no results yet */}
+      {/* ✅ Search Context Help */}
       {!loading && properties.length === 0 && totalResults === 0 && (
         <div className={styles.searchHelpSection}>
           <div className="card">
@@ -425,6 +468,20 @@ I'd love to discuss availability and the application process. Thank you!`,
             </div>
           </div>
         </div>
+      )}
+
+      {/* ✅ NEW: Property Details Modal */}
+      {showPropertyModal && selectedProperty && (
+        <PropertyDetailsModal
+          isOpen={showPropertyModal}
+          property={selectedProperty}
+          connectionStatus={getPropertyConnectionStatus(selectedProperty)}
+          onClose={handleClosePropertyModal}
+          onContact={handleContactLandlord}
+          showContactInfo={getPropertyConnectionStatus(selectedProperty) === 'approved'}
+          showActions={!hasPropertyRequest(selectedProperty.id)}
+          isLandlordView={false}
+        />
       )}
     </div>
   );

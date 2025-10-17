@@ -281,6 +281,7 @@
   background: white;
   border-radius: var(--radius-sm);
   transition: var(--transition-fast);
+  position: relative;
 }
 
 .contactItem:hover {
@@ -306,11 +307,35 @@
   font-weight: 600;
   text-decoration: none;
   transition: var(--transition-fast);
+  flex: 1;
 }
 
 .contactValue:hover {
   color: var(--secondary-purple);
   text-decoration: underline;
+}
+
+/* ==================== CONTACT ICON BUTTONS ==================== */
+.contactIconButton {
+  font-size: 1.25rem;
+  width: 36px;
+  height: 36px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--bg-light-purple);
+  border-radius: var(--radius-md);
+  text-decoration: none;
+  transition: var(--transition-fast);
+  cursor: pointer;
+  flex-shrink: 0;
+  border: 2px solid transparent;
+}
+
+.contactIconButton:hover {
+  background: var(--primary-purple);
+  border-color: var(--primary-purple);
+  transform: scale(1.1);
 }
 
 /* ==================== LOCKED CONTACT INFO ==================== */
@@ -340,6 +365,54 @@
 .lockMessage p {
   font-size: 0.9rem;
   margin-bottom: 0;
+}
+
+/* ==================== MODAL ACTIONS ==================== */
+.modalActions {
+  display: flex;
+  gap: var(--spacing-md);
+  padding-top: var(--spacing-xl);
+  border-top: 1px solid var(--gray-200);
+  margin-top: var(--spacing-xl);
+  flex-wrap: wrap;
+  align-items: center;
+}
+
+.approvalActions {
+  display: flex;
+  gap: var(--spacing-md);
+  flex: 1;
+  flex-wrap: wrap;
+}
+
+.requestSentIndicator {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--spacing-sm);
+  padding: var(--spacing-md) var(--spacing-lg);
+  background: var(--info-bg);
+  color: var(--info-text);
+  border: 2px solid var(--info-border);
+  border-radius: var(--radius-md);
+  font-weight: 600;
+  font-size: 0.95rem;
+}
+
+/* ==================== HIRING NOTICE ==================== */
+.hiringNotice {
+  background: var(--warning-bg);
+  border-left: 4px solid var(--warning-border);
+  padding: var(--spacing-lg);
+  border-radius: var(--radius-md);
+  margin-top: var(--spacing-lg);
+  font-size: 0.95rem;
+  color: var(--warning-text);
+  line-height: 1.6;
+}
+
+.hiringNotice strong {
+  display: inline-block;
+  margin-right: var(--spacing-xs);
 }
 
 /* ==================== RESPONSIVE DESIGN ==================== */
@@ -394,6 +467,21 @@
   .tagList {
     justify-content: center;
   }
+
+  .modalActions {
+    flex-direction: column;
+    gap: var(--spacing-sm);
+  }
+
+  .approvalActions {
+    flex-direction: column;
+    width: 100%;
+  }
+
+  .requestSentIndicator {
+    width: 100%;
+    justify-content: center;
+  }
 }
 
 @media (max-width: 480px) {
@@ -430,6 +518,17 @@
     flex-direction: column;
     align-items: flex-start;
     text-align: left;
+  }
+
+  .contactIconButton {
+    width: 32px;
+    height: 32px;
+    font-size: 1.1rem;
+  }
+
+  .hiringNotice {
+    padding: var(--spacing-md);
+    font-size: 0.875rem;
   }
 }
 

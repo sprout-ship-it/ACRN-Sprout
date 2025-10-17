@@ -7,10 +7,15 @@ const PropertyDetailsModal = ({
   isOpen,
   property,
   connectionStatus,
+  requestingApplicant,
+  matchGroupMembers, // For roommate scenarios
   onClose,
+  onApprove,
+  onDecline,
   onContact,
-  onConnect,
-  showContactInfo = false
+  showContactInfo = false,
+  showActions = false,
+  isLandlordView = false
 }) => {
   if (!isOpen || !property) return null;
 
@@ -58,6 +63,15 @@ const PropertyDetailsModal = ({
   };
 
   /**
+   * Format name to show only first name and last initial
+   */
+  const formatName = (firstName, lastName) => {
+    if (!firstName) return 'Applicant';
+    if (!lastName) return firstName;
+    return `${firstName} ${lastName.charAt(0)}.`;
+  };
+
+  /**
    * Get property header gradient based on type
    */
   const getHeaderGradient = () => {
@@ -65,6 +79,245 @@ const PropertyDetailsModal = ({
       return 'linear-gradient(135deg, #20B2AA 0%, #178B8B 100%)';
     }
     return 'linear-gradient(135deg, #f59e0b 0%, #d97706 100%)';
+  };
+
+  /**
+   * Render requesting applicant section (for landlord view)
+   */
+  const renderRequestingApplicant = () => {
+    if (!isLandlordView || !requestingApplicant) return null;
+
+    const applicant = requestingApplicant;
+    const profile = applicant.registrant_profiles || {};
+
+    return (
+      <div className={styles.infoSection}>
+        <h4 className={styles.sectionTitle}>👤 Requesting Applicant</h4>
+        <div className={styles.applicantCard}>
+          <div className={styles.applicantHeader}>
+            <div className={styles.applicantName}>
+              {formatName(profile.first_name, profile.last_name)}
+            </div>
+            {applicant.recovery_stage && (
+              <span className="badge badge-info">
+                {applicant.recovery_stage.replace(/_/g, ' ')}
+              </span>
+            )}
+          </div>
+
+          <div className={styles.applicantDetails}>
+            {applicant.date_of_birth && (
+              <div className={styles.detailItem}>
+                <strong>Age:</strong> {calculateAge(applicant.date_of_birth)} years old
+              </div>
+            )}
+            
+            {applicant.employment_status && (
+              <div className={styles.detailItem}>
+                <strong>Employment:</strong> {applicant.employment_status.replace(/_/g, ' ')}
+              </div>
+            )}
+
+            {applicant.budget_min && applicant.budget_max && (
+              <div className={styles.detailItem}>
+                <strong>Budget:</strong> ${applicant.budget_min} - ${applicant.budget_max}/month
+              </div>
+            )}
+
+            {applicant.move_in_date && (
+              <div className={styles.detailItem}>
+                <strong>Desired Move-in:</strong> {new Date(applicant.move_in_date).toLocaleDateString()}
+              </div>
+            )}
+          </div>
+
+          {applicant.about_me && (
+            <div className={styles.applicantBio}>
+              <strong>About:</strong>
+              <p>{applicant.about_me.length > 200 ? `${applicant.about_me.substring(0, 200)}...` : applicant.about_me}</p>
+            </div>
+          )}
+        </div>
+      </div>
+    );
+  };
+
+  /**
+   * Render match group members (for roommate scenarios)
+   */
+  const renderMatchGroupMembers = () => {
+    if (!matchGroupMembers || matchGroupMembers.length === 0) return null;
+
+    return (
+      <div className={styles.infoSection}>
+        <h4 className={styles.sectionTitle}>
+          👥 Potential Roommates ({matchGroupMembers.length})
+        </h4>
+        <div className={styles.membersGrid}>
+          {matchGroupMembers.map((member, index) => {
+            const profile = member.registrant_profiles || {};
+            return (
+              <div key={member.id || index} className={styles.memberCard}>
+                <div className={styles.memberName}>
+                  {formatName(profile.first_name, profile.last_name)}
+                </div>
+                {member.recovery_stage && (
+                  <div className={styles.memberDetail}>
+                    🌱 {member.recovery_stage.replace(/_/g, ' ')}
+                  </div>
+                )}
+                {member.work_schedule && (
+                  <div className={styles.memberDetail}>
+                    ⏰ {member.work_schedule.replace(/_/g, ' ')}
+                  </div>
+                )}
+              </div>
+            );
+          })}
+        </div>
+      </div>
+    );
+  };
+
+  /**
+   * Calculate age from date of birth
+   */
+  const calculateAge = (dateOfBirth) => {
+    if (!dateOfBirth) return null;
+    const today = new Date();
+    const birthDate = new Date(dateOfBirth);
+    let age = today.getFullYear() - birthDate.getFullYear();
+    const monthDiff = today.getMonth() - birthDate.getMonth();
+    if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birthDate.getDate())) {
+      age--;
+    }
+    return age;
+  };
+
+  /**
+   * Render landlord contact information
+   */
+  const renderLandlordContact = () => {
+    if (!showContactInfo || !property.landlord_profiles) return null;
+
+    const landlord = property.landlord_profiles;
+    const landlordProfile = landlord.registrant_profiles || {};
+
+    return (
+      <div className={styles.infoSection}>
+        <h4 className={styles.sectionTitle}>📞 Landlord Contact</h4>
+        <div className={styles.contactInfo}>
+          <div className={styles.contactItem}>
+            <span className={styles.contactIcon}>👤</span>
+            <div>
+              <div className={styles.contactLabel}>Name</div>
+              <div className={styles.contactValue}>
+                {landlord.business_name || formatName(landlordProfile.first_name, landlordProfile.last_name)}
+              </div>
+            </div>
+          </div>
+
+          {landlord.primary_phone && (
+            <div className={styles.contactItem}>
+              <span className={styles.contactIcon}>📱</span>
+              <div>
+                <div className={styles.contactLabel}>Phone</div>
+                <a href={`tel:${landlord.primary_phone}`} className={styles.contactValue}>
+                  {landlord.primary_phone}
+                </a>
+              </div>
+              <a 
+                href={`tel:${landlord.primary_phone}`}
+                className={styles.contactIconButton}
+                title="Call"
+              >
+                📱
+              </a>
+            </div>
+          )}
+
+          {(landlord.contact_email || landlordProfile.email) && (
+            <div className={styles.contactItem}>
+              <span className={styles.contactIcon}>📧</span>
+              <div>
+                <div className={styles.contactLabel}>Email</div>
+                <a 
+                  href={`mailto:${landlord.contact_email || landlordProfile.email}`} 
+                  className={styles.contactValue}
+                >
+                  {landlord.contact_email || landlordProfile.email}
+                </a>
+              </div>
+              <a 
+                href={`mailto:${landlord.contact_email || landlordProfile.email}`}
+                className={styles.contactIconButton}
+                title="Email"
+              >
+                📧
+              </a>
+            </div>
+          )}
+        </div>
+      </div>
+    );
+  };
+
+  /**
+   * Render action buttons
+   */
+  const renderActionButtons = () => {
+    if (!showActions) return null;
+
+    // Awaiting approval (landlord view)
+    if (connectionStatus === 'requested' && isLandlordView && onApprove && onDecline) {
+      return (
+        <div className={styles.modalActions}>
+          <button className="btn btn-outline" onClick={onClose}>
+            Close
+          </button>
+          <div className={styles.approvalActions}>
+            <button 
+              className="btn btn-primary" 
+              onClick={() => onApprove && onApprove(property)}
+            >
+              ✅ Approve Request
+            </button>
+            <button 
+              className="btn btn-outline" 
+              onClick={() => onDecline && onDecline(property)}
+              style={{ color: 'var(--error-text)', borderColor: 'var(--error-border)' }}
+            >
+              ❌ Decline Request
+            </button>
+          </div>
+        </div>
+      );
+    }
+
+    // Active connection
+    if ((connectionStatus === 'approved' || connectionStatus === 'confirmed') && showContactInfo) {
+      return (
+        <div className={styles.modalActions}>
+          <button className="btn btn-outline" onClick={onClose}>
+            Close
+          </button>
+          {onContact && (
+            <button className="btn btn-primary" onClick={() => onContact(property)}>
+              📞 Contact Landlord
+            </button>
+          )}
+        </div>
+      );
+    }
+
+    // Default (just close)
+    return (
+      <div className={styles.modalActions}>
+        <button className="btn btn-outline" onClick={onClose}>
+          Close
+        </button>
+      </div>
+    );
   };
 
   return (
@@ -81,7 +334,7 @@ const PropertyDetailsModal = ({
               </div>
               <div className={styles.propertyHeaderInfo}>
                 <h2 className={styles.propertyTitle}>
-                  {property.property_name || property.street_address || 'Property Listing'}
+                  {property.title || property.street_address || 'Property Listing'}
                 </h2>
                 <div className={styles.propertyLocation}>
                   📍 {property.city}{property.state && `, ${property.state}`}
@@ -94,17 +347,14 @@ const PropertyDetailsModal = ({
           {/* Status Badges */}
           <div className={styles.badgeSection}>
             {connectionStatus && (
-              <span className={`badge ${connectionStatus === 'confirmed' || connectionStatus === 'active' ? 'badge-success' : 'badge-warning'}`}>
+              <span className={`badge ${connectionStatus === 'approved' || connectionStatus === 'confirmed' || connectionStatus === 'active' ? 'badge-success' : 'badge-warning'}`}>
                 {connectionStatus}
               </span>
             )}
             {property.is_recovery_housing && (
               <span className="badge badge-success">🌱 Recovery Housing</span>
             )}
-            {property.recovery_friendly && !property.is_recovery_housing && (
-              <span className="badge badge-info">✨ Recovery Friendly</span>
-            )}
-            {property.utilities_included && (
+            {property.utilities_included && property.utilities_included.length > 0 && (
               <span className="badge badge-info">💡 Utilities Included</span>
             )}
             {property.furnished && (
@@ -115,6 +365,12 @@ const PropertyDetailsModal = ({
             )}
           </div>
 
+          {/* Requesting Applicant (for landlord) */}
+          {renderRequestingApplicant()}
+
+          {/* Match Group Members (for roommate scenarios) */}
+          {renderMatchGroupMembers()}
+
           {/* Key Information Grid */}
           <div className={styles.infoSection}>
             <h4 className={styles.sectionTitle}>Property Overview</h4>
@@ -124,8 +380,7 @@ const PropertyDetailsModal = ({
                 <div>
                   <div className={styles.infoLabel}>Monthly Rent</div>
                   <div className={styles.infoValue}>
-                    {formatCurrency(property.rent_amount || property.monthly_rent)}
-                    {property.rent_amount && '/month'}
+                    {formatCurrency(property.monthly_rent)}
                   </div>
                 </div>
               </div>
@@ -166,12 +421,12 @@ const PropertyDetailsModal = ({
                 </div>
               )}
 
-              {property.lease_term && (
+              {property.lease_duration && (
                 <div className={styles.infoItem}>
                   <span className={styles.infoIcon}>📋</span>
                   <div>
                     <div className={styles.infoLabel}>Lease Term</div>
-                    <div className={styles.infoValue}>{formatLeaseTerm(property.lease_term)}</div>
+                    <div className={styles.infoValue}>{formatLeaseTerm(property.lease_duration)}</div>
                   </div>
                 </div>
               )}
@@ -188,12 +443,12 @@ const PropertyDetailsModal = ({
                 </div>
               )}
 
-              {property.deposit_amount && (
+              {property.security_deposit && (
                 <div className={styles.infoItem}>
                   <span className={styles.infoIcon}>🔒</span>
                   <div>
                     <div className={styles.infoLabel}>Security Deposit</div>
-                    <div className={styles.infoValue}>{formatCurrency(property.deposit_amount)}</div>
+                    <div className={styles.infoValue}>{formatCurrency(property.security_deposit)}</div>
                   </div>
                 </div>
               )}
@@ -201,14 +456,11 @@ const PropertyDetailsModal = ({
           </div>
 
           {/* Full Address */}
-          {property.street_address && (
+          {property.address && (
             <div className={styles.infoSection}>
               <h4 className={styles.sectionTitle}>📍 Location</h4>
               <div className={styles.addressBox}>
-                <div className={styles.addressLine}>{property.street_address}</div>
-                {property.unit_number && (
-                  <div className={styles.addressLine}>Unit {property.unit_number}</div>
-                )}
+                <div className={styles.addressLine}>{property.address}</div>
                 <div className={styles.addressLine}>
                   {property.city}, {property.state} {property.zip_code}
                 </div>
@@ -217,27 +469,22 @@ const PropertyDetailsModal = ({
           )}
 
           {/* Recovery Housing Features */}
-          {property.is_recovery_housing && (property.support_services || property.house_rules || property.recovery_stage_requirements) && (
+          {property.is_recovery_housing && (property.required_programs || property.house_rules || property.min_sobriety_time) && (
             <div className={styles.infoSection}>
               <h4 className={styles.sectionTitle}>🌱 Recovery Housing Details</h4>
               <div className={styles.detailsList}>
-                {property.support_services && property.support_services.length > 0 && (
+                {property.min_sobriety_time && (
                   <div className={styles.detailItem}>
-                    <strong>Support Services Available:</strong>
-                    <div className={styles.tagList}>
-                      {property.support_services.map((service, i) => (
-                        <span key={i} className={styles.tag}>{service}</span>
-                      ))}
-                    </div>
+                    <strong>Minimum Sobriety:</strong> {property.min_sobriety_time}
                   </div>
                 )}
                 
-                {property.recovery_stage_requirements && property.recovery_stage_requirements.length > 0 && (
+                {property.required_programs && property.required_programs.length > 0 && (
                   <div className={styles.detailItem}>
-                    <strong>Recovery Stage Requirements:</strong>
+                    <strong>Required Programs:</strong>
                     <div className={styles.tagList}>
-                      {property.recovery_stage_requirements.map((stage, i) => (
-                        <span key={i} className={styles.tag}>{stage}</span>
+                      {property.required_programs.map((program, i) => (
+                        <span key={i} className={styles.tag}>{program}</span>
                       ))}
                     </div>
                   </div>
@@ -277,107 +524,22 @@ const PropertyDetailsModal = ({
             </div>
           )}
 
-          {/* Additional Requirements */}
-          {(property.income_requirement || property.credit_check_required || property.background_check_required) && (
-            <div className={styles.infoSection}>
-              <h4 className={styles.sectionTitle}>📋 Requirements</h4>
-              <div className={styles.detailsList}>
-                {property.income_requirement && (
-                  <div className={styles.detailItem}>
-                    <strong>Income Requirement:</strong> {property.income_requirement}
-                  </div>
-                )}
-                {property.credit_check_required !== undefined && (
-                  <div className={styles.detailItem}>
-                    <strong>Credit Check:</strong> {property.credit_check_required ? 'Required' : 'Not Required'}
-                  </div>
-                )}
-                {property.background_check_required !== undefined && (
-                  <div className={styles.detailItem}>
-                    <strong>Background Check:</strong> {property.background_check_required ? 'Required' : 'Not Required'}
-                  </div>
-                )}
-              </div>
-            </div>
-          )}
-
-          {/* Landlord Contact Info - Only if connection is active */}
-          {showContactInfo && property.landlord_profiles && (
-            <div className={styles.infoSection}>
-              <h4 className={styles.sectionTitle}>📞 Landlord Contact</h4>
-              <div className={styles.contactInfo}>
-                <div className={styles.contactItem}>
-                  <span className={styles.contactIcon}>👤</span>
-                  <div>
-                    <div className={styles.contactLabel}>Name</div>
-                    <div className={styles.contactValue}>
-                      {property.landlord_profiles.registrant_profiles?.first_name || 'Property Owner'}
-                      {property.landlord_profiles.registrant_profiles?.last_name && 
-                        ` ${property.landlord_profiles.registrant_profiles.last_name.charAt(0)}.`
-                      }
-                    </div>
-                  </div>
-                </div>
-
-                {property.landlord_profiles.primary_phone && (
-                  <div className={styles.contactItem}>
-                    <span className={styles.contactIcon}>📱</span>
-                    <div>
-                      <div className={styles.contactLabel}>Phone</div>
-                      <a href={`tel:${property.landlord_profiles.primary_phone}`} className={styles.contactValue}>
-                        {property.landlord_profiles.primary_phone}
-                      </a>
-                    </div>
-                  </div>
-                )}
-
-                {(property.landlord_profiles.contact_email || property.landlord_profiles.registrant_profiles?.email) && (
-                  <div className={styles.contactItem}>
-                    <span className={styles.contactIcon}>📧</span>
-                    <div>
-                      <div className={styles.contactLabel}>Email</div>
-                      <a 
-                        href={`mailto:${property.landlord_profiles.contact_email || property.landlord_profiles.registrant_profiles?.email}`} 
-                        className={styles.contactValue}
-                      >
-                        {property.landlord_profiles.contact_email || property.landlord_profiles.registrant_profiles?.email}
-                      </a>
-                    </div>
-                  </div>
-                )}
-              </div>
-            </div>
-          )}
+          {/* Landlord Contact Info */}
+          {renderLandlordContact()}
 
           {/* Contact Info Locked Message */}
           {!showContactInfo && (
             <div className={styles.contactInfoLocked}>
               <div className={styles.lockIcon}>🔒</div>
               <div className={styles.lockMessage}>
-                <strong>Contact information available after connection is confirmed</strong>
-                <p>Once approved, you'll be able to contact the landlord directly to discuss the property and application process.</p>
+                <strong>Contact information available after connection is approved</strong>
+                <p>Once the landlord approves your request, you'll be able to contact them directly to discuss the property and application process.</p>
               </div>
             </div>
           )}
 
           {/* Action Buttons */}
-          <div className={styles.modalActions}>
-            <button className="btn btn-outline" onClick={onClose}>
-              Close
-            </button>
-            
-            {showContactInfo && onContact && (
-              <button className="btn btn-primary" onClick={() => onContact(property)}>
-                📞 Contact Landlord
-              </button>
-            )}
-            
-            {!showContactInfo && onConnect && connectionStatus !== 'active' && connectionStatus !== 'confirmed' && (
-              <button className="btn btn-primary" onClick={() => onConnect(property)}>
-                🤝 Request Connection
-              </button>
-            )}
-          </div>
+          {renderActionButtons()}
         </div>
       </div>
     </div>
@@ -386,46 +548,23 @@ const PropertyDetailsModal = ({
 
 PropertyDetailsModal.propTypes = {
   isOpen: PropTypes.bool.isRequired,
-  property: PropTypes.shape({
-    property_name: PropTypes.string,
-    street_address: PropTypes.string,
-    unit_number: PropTypes.string,
-    city: PropTypes.string,
-    state: PropTypes.string,
-    zip_code: PropTypes.string,
-    property_type: PropTypes.string,
-    bedrooms: PropTypes.number,
-    bathrooms: PropTypes.number,
-    square_footage: PropTypes.number,
-    rent_amount: PropTypes.number,
-    monthly_rent: PropTypes.number,
-    deposit_amount: PropTypes.number,
-    lease_term: PropTypes.string,
-    available_date: PropTypes.string,
-    description: PropTypes.string,
-    amenities: PropTypes.array,
-    is_recovery_housing: PropTypes.bool,
-    recovery_friendly: PropTypes.bool,
-    support_services: PropTypes.array,
-    house_rules: PropTypes.array,
-    recovery_stage_requirements: PropTypes.array,
-    utilities_included: PropTypes.bool,
-    furnished: PropTypes.bool,
-    pets_allowed: PropTypes.bool,
-    income_requirement: PropTypes.string,
-    credit_check_required: PropTypes.bool,
-    background_check_required: PropTypes.bool,
-    landlord_profiles: PropTypes.object
-  }),
+  property: PropTypes.object.isRequired,
   connectionStatus: PropTypes.string,
+  requestingApplicant: PropTypes.object,
+  matchGroupMembers: PropTypes.array,
   onClose: PropTypes.func.isRequired,
+  onApprove: PropTypes.func,
+  onDecline: PropTypes.func,
   onContact: PropTypes.func,
-  onConnect: PropTypes.func,
-  showContactInfo: PropTypes.bool
+  showContactInfo: PropTypes.bool,
+  showActions: PropTypes.bool,
+  isLandlordView: PropTypes.bool
 };
 
 PropertyDetailsModal.defaultProps = {
-  showContactInfo: false
+  showContactInfo: false,
+  showActions: false,
+  isLandlordView: false
 };
 
 export default PropertyDetailsModal;

@@ -149,6 +149,92 @@
   gap: var(--spacing-sm);
 }
 
+/* ==================== NEW: APPLICANT CARD (FOR LANDLORD VIEW) ==================== */
+.applicantCard {
+  background: var(--bg-light-cream);
+  border: 2px solid var(--border-beige);
+  border-radius: var(--radius-lg);
+  padding: var(--spacing-lg);
+}
+
+.applicantHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: var(--spacing-md);
+  padding-bottom: var(--spacing-md);
+  border-bottom: 2px solid var(--gold);
+}
+
+.applicantName {
+  font-size: 1.25rem;
+  font-weight: 700;
+  color: var(--gray-900);
+  font-family: var(--font-serif);
+}
+
+.applicantDetails {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-sm);
+  margin-bottom: var(--spacing-md);
+}
+
+.applicantBio {
+  margin-top: var(--spacing-md);
+  padding-top: var(--spacing-md);
+  border-top: 1px solid var(--gray-300);
+}
+
+.applicantBio strong {
+  display: block;
+  margin-bottom: var(--spacing-sm);
+  color: var(--gray-900);
+}
+
+.applicantBio p {
+  font-size: 0.95rem;
+  line-height: 1.6;
+  color: var(--gray-700);
+  margin: 0;
+}
+
+/* ==================== NEW: MATCH GROUP MEMBERS GRID ==================== */
+.membersGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  gap: var(--spacing-md);
+}
+
+.memberCard {
+  padding: var(--spacing-md);
+  background: var(--bg-light-cream);
+  border: 1px solid var(--border-beige);
+  border-radius: var(--radius-md);
+  transition: var(--transition-fast);
+}
+
+.memberCard:hover {
+  border-color: var(--gold);
+  box-shadow: var(--shadow-sm);
+}
+
+.memberName {
+  font-weight: 600;
+  color: var(--gray-900);
+  margin-bottom: var(--spacing-xs);
+}
+
+.memberDetail {
+  font-size: 0.875rem;
+  color: var(--gray-600);
+  margin-bottom: var(--spacing-xs);
+}
+
+.memberDetail:last-child {
+  margin-bottom: 0;
+}
+
 /* ==================== INFO GRID ==================== */
 .infoGrid {
   display: grid;
@@ -299,6 +385,7 @@
   background: white;
   border-radius: var(--radius-sm);
   transition: var(--transition-fast);
+  position: relative;
 }
 
 .contactItem:hover {
@@ -324,11 +411,35 @@
   font-weight: 600;
   text-decoration: none;
   transition: var(--transition-fast);
+  flex: 1;
 }
 
 .contactValue:hover {
   color: var(--primary-purple);
   text-decoration: underline;
+}
+
+/* ==================== NEW: CONTACT ICON BUTTONS ==================== */
+.contactIconButton {
+  font-size: 1.25rem;
+  width: 36px;
+  height: 36px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--bg-light-purple);
+  border-radius: var(--radius-md);
+  text-decoration: none;
+  transition: var(--transition-fast);
+  cursor: pointer;
+  flex-shrink: 0;
+  border: 2px solid transparent;
+}
+
+.contactIconButton:hover {
+  background: var(--gold);
+  border-color: var(--gold);
+  transform: scale(1.1);
 }
 
 /* ==================== LOCKED CONTACT INFO ==================== */
@@ -369,6 +480,16 @@
   padding: var(--spacing-xl) var(--spacing-xxl);
   background: var(--gray-100);
   border-radius: 0 0 var(--radius-xl) var(--radius-xl);
+  flex-wrap: wrap;
+  align-items: center;
+}
+
+/* ==================== NEW: APPROVAL ACTIONS ==================== */
+.approvalActions {
+  display: flex;
+  gap: var(--spacing-md);
+  flex: 1;
+  flex-wrap: wrap;
 }
 
 /* ==================== RESPONSIVE DESIGN ==================== */
@@ -430,6 +551,10 @@
     gap: var(--spacing-sm);
   }
 
+  .membersGrid {
+    grid-template-columns: 1fr;
+  }
+
   .modalActions {
     padding: var(--spacing-lg);
     flex-direction: column;
@@ -439,9 +564,22 @@
     width: 100%;
   }
 
+  .approvalActions {
+    flex-direction: column;
+    width: 100%;
+  }
+
   .contactInfoLocked {
     margin: var(--spacing-md) var(--spacing-lg);
     padding: var(--spacing-lg);
+  }
+
+  .applicantCard {
+    padding: var(--spacing-md);
+  }
+
+  .applicantName {
+    font-size: 1.125rem;
   }
 }
 
@@ -483,6 +621,12 @@
     flex-direction: column;
     align-items: flex-start;
     text-align: left;
+  }
+
+  .contactIconButton {
+    width: 32px;
+    height: 32px;
+    font-size: 1.1rem;
   }
 }
 
