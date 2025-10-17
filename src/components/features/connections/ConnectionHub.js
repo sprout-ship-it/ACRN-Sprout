@@ -153,7 +153,7 @@ const ConnectionHub = ({ onBack }) => {
       const { data: matchGroups, error } = await supabase
         .from('match_groups')
         .select('*')
-        .or(`roommate_ids.cs.{${profileIds.applicant}},requested_by_id.eq.${profileIds.applicant},pending_member_ids.cs.{${profileIds.applicant}}`)
+        .or(`roommate_ids.cs.["${profileIds.applicant}"],requested_by_id.eq.${profileIds.applicant},pending_member_ids.cs.["${profileIds.applicant}"]`)
         .is('property_id', null);
 
       if (error) throw error;
