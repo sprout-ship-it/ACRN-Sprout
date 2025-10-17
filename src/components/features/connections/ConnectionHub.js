@@ -605,20 +605,30 @@ const handleApproveRequest = async (connection) => {
         }
         console.log('✅ Legacy match updated:', data);
         
-      } else if (connection.source === 'housing_match' && connection.housing_match_id) {
-        // NEW data in housing_matches
-        console.log('✅ Approving NEW housing match from housing_matches:', connection.housing_match_id);
-        
-        const { data, error } = await supabase
-          .from('housing_matches')
-          .update({ 
-            status: 'approved',
-            landlord_message: 'Your inquiry has been approved! Please contact me to discuss next steps.',
-            updated_at: new Date().toISOString()
-          })
-          .eq('id', connection.housing_match_id)
-          .select();
-        
+} else if (connection.source === 'housing_match' && connection.housing_match_id) {
+  // NEW data in housing_matches
+  console.log('✅ Approving NEW housing match from housing_matches:', connection.housing_match_id);
+  
+  // ✅ FIRST: Check if we can even SELECT this row
+  const { data: existingMatch, error: selectError } = await supabase
+    .from('housing_matches')
+    .select('*')
+    .eq('id', connection.housing_match_id)
+    .single();
+  
+  console.log('🔍 Can we SELECT this row?', { existingMatch, selectError });
+  
+  // NOW try to update
+  const { data, error } = await supabase
+    .from('housing_matches')
+    .update({ 
+      status: 'approved',
+      landlord_message: 'Your inquiry has been approved! Please contact me to discuss next steps.',
+      updated_at: new Date().toISOString()
+    })
+    .eq('id', connection.housing_match_id)
+    .select();
+    
         if (error) {
           console.error('❌ Error updating housing_matches:', error);
           throw error;
