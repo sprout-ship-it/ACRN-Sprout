@@ -15,7 +15,7 @@ import usePropertySearch from './search/hooks/usePropertySearch';
 import useSavedProperties from '../../../hooks/useSavedProperties';
 
 // ✅ NEW: Import PropertyDetailsModal
-import PropertyDetailsModal from '../../connections/modals/PropertyDetailsModal';
+import PropertyDetailsModal from '../connections/modals/PropertyDetailsModal';
 
 // ✅ Import CSS foundation and component module
 import '../../../styles/main.css';

@@ -4,7 +4,7 @@ import { useAuth } from '../../../hooks/useAuth';
 import { supabase } from '../../../utils/supabase';
 import { db } from '../../../utils/supabase';
 import LoadingSpinner from '../../ui/LoadingSpinner';
-import ProfileModal from '../../connections/ProfileModal'; // ✅ UPDATED: Use consolidated ProfileModal
+import ProfileModal from '../connections/ProfileModal'; // ✅ UPDATED: Use consolidated ProfileModal
 import styles from './PeerSupportFinder.module.css';
 
 import { 
