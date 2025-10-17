@@ -906,7 +906,7 @@ const ConnectionHub = ({ onBack }) => {
                               disabled={actionLoading}
                               title="End Connection"
                             >
-                              ❌
+                              ❌ End Connection
                             </button>
                           )}
                         </div>
@@ -915,21 +915,35 @@ const ConnectionHub = ({ onBack }) => {
                       <div className="card-subtitle mb-3" style={{ color: 'var(--gray-600)' }}>
                         {formatTimeAgo(connection.last_activity)}
                       </div>
-{/* Connection-specific details */}
+/* REPLACE the entire section from "Connection-specific details" through "Secondary Actions" */
+/* This goes from around line 746 to line 900 in ConnectionHub.js */
+
+                      {/* Connection-specific details */}
                       <div className={styles.connectionDetails}>
-                        {/* Roommate Details */}
+                        {/* Roommate Details - Each member gets their own card */}
                         {connection.type === 'roommate' && (
                           <div className={styles.detailsSection}>
                             {connection.roommates && connection.roommates.length > 0 && (
                               <>
                                 <div className={styles.detailLabel}>Group Members:</div>
-                                <div className={styles.membersList}>
+                                <div className={styles.roommateCards}>
                                   {connection.roommates.map((roommate, idx) => (
-                                    <div key={idx} className={styles.memberItem}>
-                                      {formatName(
-                                        roommate.registrant_profiles?.first_name,
-                                        roommate.registrant_profiles?.last_name
-                                      )}
+                                    <div key={idx} className={styles.roommateCard}>
+                                      <div className={styles.roommateName}>
+                                        {formatName(
+                                          roommate.registrant_profiles?.first_name,
+                                          roommate.registrant_profiles?.last_name
+                                        )}
+                                      </div>
+                                      <button
+                                        className="btn btn-sm btn-outline"
+                                        onClick={() => handleViewProfile({
+                                          ...connection,
+                                          roommates: [roommate]
+                                        })}
+                                      >
+                                        👁️ View
+                                      </button>
                                     </div>
                                   ))}
                                 </div>
@@ -1020,29 +1034,8 @@ const ConnectionHub = ({ onBack }) => {
                         )}
                       </div>
 
-                      {/* Primary Action - View Details */}
-                      <div className={styles.primaryAction}>
-                        {connection.type === 'landlord' ? (
-                          <button 
-                            className="btn btn-primary"
-                            onClick={() => handleViewProperty(connection)}
-                            style={{ width: '100%' }}
-                          >
-                            👁️ View Property Details
-                          </button>
-                        ) : (
-                          <button 
-                            className="btn btn-primary"
-                            onClick={() => handleViewProfile(connection)}
-                            style={{ width: '100%' }}
-                          >
-                            👁️ View Profile
-                          </button>
-                        )}
-                      </div>
-
-                      {/* Contact Icons (Active connections only) */}
-                      {activeTab === 'active' && (
+                      {/* Contact Icons (Active connections only) - MOVED UP */}
+                      {activeTab === 'active' && connection.type !== 'roommate' && (
                         <div className={styles.contactIcons}>
                           {connection.type === 'landlord' && connection.property?.landlord_profiles?.primary_phone && (
                             <a 
@@ -1082,6 +1075,35 @@ const ConnectionHub = ({ onBack }) => {
                           )}
                         </div>
                       )}
+
+                      {/* Primary Action - View Details - MOVED TO BOTTOM */}
+                      <div className={styles.primaryAction}>
+                        {connection.type === 'landlord' ? (
+                          <button 
+                            className="btn btn-primary"
+                            onClick={() => handleViewProperty(connection)}
+                            style={{ width: '100%' }}
+                          >
+                            👁️ View Property Details
+                          </button>
+                        ) : connection.type === 'roommate' ? (
+                          <button 
+                            className="btn btn-primary"
+                            onClick={() => handleViewProfile(connection)}
+                            style={{ width: '100%' }}
+                          >
+                            👥 View Group Details
+                          </button>
+                        ) : (
+                          <button 
+                            className="btn btn-primary"
+                            onClick={() => handleViewProfile(connection)}
+                            style={{ width: '100%' }}
+                          >
+                            👁️ View Profile
+                          </button>
+                        )}
+                      </div>
 
                       {/* Secondary Actions */}
                       {activeTab === 'awaiting' && (

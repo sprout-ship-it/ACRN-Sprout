@@ -89,41 +89,41 @@
 }
 
 /* Roommate - Purple */
-.connectionCard.roommate {
+.roommate {
   border-color: var(--primary-purple);
 }
 
-.connectionCard.roommate .connectionCardHeader {
+.roommate .connectionCardHeader {
   background: linear-gradient(135deg, var(--primary-purple) 0%, var(--secondary-purple) 100%);
   color: white;
 }
 
 /* Peer Support - Teal */
-.connectionCard.peerSupport {
+.peerSupport {
   border-color: var(--secondary-teal);
 }
 
-.connectionCard.peerSupport .connectionCardHeader {
+.peerSupport .connectionCardHeader {
   background: linear-gradient(135deg, var(--secondary-teal) 0%, var(--secondary-teal-dark) 100%);
   color: white;
 }
 
 /* Landlord - Gold */
-.connectionCard.landlord {
+.landlord {
   border-color: var(--gold);
 }
 
-.connectionCard.landlord .connectionCardHeader {
+.landlord .connectionCardHeader {
   background: linear-gradient(135deg, var(--gold) 0%, var(--gold-dark) 100%);
   color: white;
 }
 
 /* Employer - Coral */
-.connectionCard.employer {
+.employer {
   border-color: var(--coral);
 }
 
-.connectionCard.employer .connectionCardHeader {
+.employer .connectionCardHeader {
   background: linear-gradient(135deg, var(--coral) 0%, var(--coral-dark) 100%);
   color: white;
 }
@@ -230,7 +230,33 @@
   border-radius: var(--radius-sm);
   border: 1px solid var(--border-beige);
 }
+.roommateCards {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-sm);
+}
 
+.roommateCard {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: var(--spacing-sm) var(--spacing-md);
+  background: white;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border-beige);
+  transition: var(--transition-fast);
+}
+
+.roommateCard:hover {
+  border-color: var(--primary-purple);
+  box-shadow: var(--shadow-sm);
+}
+
+.roommateName {
+  font-weight: 500;
+  color: var(--gray-800);
+  flex: 1;
+}
 .memberName {
   font-weight: 500;
   color: var(--gray-800);
@@ -351,13 +377,14 @@
 
 /* ==================== UPDATED: END CONNECTION BUTTON (SMALL IN HEADER) ==================== */
 .endConnectionButton {
-  padding: 6px 10px !important;
+  padding: 6px 12px !important;
   min-width: auto !important;
-  font-size: 1rem !important;
+  font-size: 0.875rem !important;
   background: rgba(255, 255, 255, 0.2) !important;
   color: white !important;
   border: 1px solid rgba(255, 255, 255, 0.4) !important;
   transition: var(--transition-fast) !important;
+  white-space: nowrap !important;
 }
 
 .endConnectionButton:hover {
