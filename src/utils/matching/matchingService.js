@@ -1381,7 +1381,7 @@ async sendMatchRequest(currentUserId, targetMatch) {
 const groupData = {
   roommate_ids: [senderApplicantId, targetApplicantId],
   requested_by_id: senderApplicantId,
-  pending_member_id: targetApplicantId,
+  pending_member_ids: [targetApplicantId],
   status: 'requested',
   message: this.generateRequestMessage(targetMatch),
   member_confirmations: {},

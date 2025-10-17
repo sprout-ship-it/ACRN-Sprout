@@ -86,7 +86,7 @@ const createMatchGroupsService = (supabaseClient) => {
         const { data, error } = await supabaseClient
           .from(tableName)
           .select('*')
-          .contains('roommate_ids', [userId])
+          .contains('roommate_ids', JSON.stringify([userId]))
           .in('status', ['requested', 'active'])
           .is('property_id', null) // Only roommate groups, not housing
           .order('created_at', { ascending: false })
