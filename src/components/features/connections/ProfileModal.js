@@ -20,6 +20,38 @@ const ProfileModal = ({
   const { profile_type } = profile;
 
   /**
+   * Get header gradient based on profile type
+   */
+  const getHeaderGradient = () => {
+    switch (profile_type) {
+      case 'applicant':
+        return 'linear-gradient(135deg, var(--primary-purple) 0%, var(--secondary-purple) 100%)';
+      case 'peer_support':
+        return 'linear-gradient(135deg, var(--secondary-teal) 0%, var(--secondary-teal-dark) 100%)';
+      case 'employer':
+        return 'linear-gradient(135deg, var(--coral) 0%, var(--coral-dark) 100%)';
+      default:
+        return 'linear-gradient(135deg, var(--primary-purple) 0%, var(--secondary-purple) 100%)';
+    }
+  };
+
+  /**
+   * Get header icon based on profile type
+   */
+  const getHeaderIcon = () => {
+    switch (profile_type) {
+      case 'applicant':
+        return '👤';
+      case 'peer_support':
+        return '🤝';
+      case 'employer':
+        return '💼';
+      default:
+        return '👤';
+    }
+  };
+
+  /**
    * Calculate age from date of birth
    */
   const calculateAge = (dateOfBirth) => {
@@ -278,19 +310,6 @@ const ProfileModal = ({
     
     return (
       <>
-        {/* Header */}
-        <div className={styles.profileHeader}>
-          <div className={styles.profileAvatar}>👤</div>
-          <div className={styles.profileHeaderInfo}>
-            <h2 className={styles.profileName}>{profile.name}</h2>
-            <div className={styles.profileSubtitle}>
-              {age && <span>{age} years old</span>}
-              {age && profile.primary_location && <span> • </span>}
-              {profile.primary_location && <span>{profile.primary_location}</span>}
-            </div>
-          </div>
-        </div>
-
         {/* Status Badges */}
         <div className={styles.badgeSection}>
           {connectionStatus && (
@@ -309,6 +328,26 @@ const ProfileModal = ({
         <div className={styles.infoSection}>
           <h4 className={styles.sectionTitle}>Essential Information</h4>
           <div className={styles.infoGrid}>
+            {age && (
+              <div className={styles.infoItem}>
+                <span className={styles.infoIcon}>🎂</span>
+                <div>
+                  <div className={styles.infoLabel}>Age</div>
+                  <div className={styles.infoValue}>{age} years old</div>
+                </div>
+              </div>
+            )}
+
+            {profile.primary_location && (
+              <div className={styles.infoItem}>
+                <span className={styles.infoIcon}>📍</span>
+                <div>
+                  <div className={styles.infoLabel}>Location</div>
+                  <div className={styles.infoValue}>{profile.primary_location}</div>
+                </div>
+              </div>
+            )}
+            
             {profile.recovery_stage && (
               <div className={styles.infoItem}>
                 <span className={styles.infoIcon}>🌱</span>
@@ -470,17 +509,6 @@ const ProfileModal = ({
   const renderPeerSupportProfile = () => {
     return (
       <>
-        {/* Header */}
-        <div className={styles.profileHeader}>
-          <div className={styles.profileAvatar}>🤝</div>
-          <div className={styles.profileHeaderInfo}>
-            <h2 className={styles.profileName}>{profile.name}</h2>
-            <div className={styles.profileSubtitle}>
-              {profile.professional_title || 'Peer Support Specialist'}
-            </div>
-          </div>
-        </div>
-
         {/* Status Badges */}
         <div className={styles.badgeSection}>
           {connectionStatus && (
@@ -603,18 +631,6 @@ const ProfileModal = ({
   const renderEmployerProfile = () => {
     return (
       <>
-        {/* Header */}
-        <div className={styles.profileHeader}>
-          <div className={styles.profileAvatar}>💼</div>
-          <div className={styles.profileHeaderInfo}>
-            <h2 className={styles.profileName}>{profile.company_name || profile.name}</h2>
-            <div className={styles.profileSubtitle}>
-              {profile.industry}
-              {profile.city && profile.state && <span> • {profile.city}, {profile.state}</span>}
-            </div>
-          </div>
-        </div>
-
         {/* Status Badges */}
         <div className={styles.badgeSection}>
           {connectionStatus && (
@@ -636,6 +652,30 @@ const ProfileModal = ({
         <div className={styles.infoSection}>
           <h4 className={styles.sectionTitle}>Company Information</h4>
           <div className={styles.infoGrid}>
+            {profile.industry && (
+              <div className={styles.infoItem}>
+                <span className={styles.infoIcon}>🏢</span>
+                <div>
+                  <div className={styles.infoLabel}>Industry</div>
+                  <div className={styles.infoValue}>{profile.industry}</div>
+                </div>
+              </div>
+            )}
+
+            {(profile.city || profile.state) && (
+              <div className={styles.infoItem}>
+                <span className={styles.infoIcon}>📍</span>
+                <div>
+                  <div className={styles.infoLabel}>Location</div>
+                  <div className={styles.infoValue}>
+                    {profile.city}
+                    {profile.city && profile.state && ', '}
+                    {profile.state}
+                  </div>
+                </div>
+              </div>
+            )}
+
             {profile.business_type && (
               <div className={styles.infoItem}>
                 <span className={styles.infoIcon}>🏢</span>
@@ -754,12 +794,52 @@ const ProfileModal = ({
     );
   };
 
+  /**
+   * Get subtitle for header
+   */
+  const getHeaderSubtitle = () => {
+    switch (profile_type) {
+      case 'applicant':
+        const age = calculateAge(profile.date_of_birth);
+        const parts = [];
+        if (age) parts.push(`${age} years old`);
+        if (profile.primary_location) parts.push(profile.primary_location);
+        return parts.join(' • ');
+      case 'peer_support':
+        return profile.professional_title || 'Peer Support Specialist';
+      case 'employer':
+        const empParts = [];
+        if (profile.industry) empParts.push(profile.industry);
+        if (profile.city && profile.state) empParts.push(`${profile.city}, ${profile.state}`);
+        return empParts.join(' • ');
+      default:
+        return '';
+    }
+  };
+
   return (
     <div className={styles.modalOverlay} onClick={onClose}>
       <div className={styles.modalContent} onClick={(e) => e.stopPropagation()}>
         <button className={styles.modalClose} onClick={onClose}>×</button>
         
         <div className={styles.modalBody}>
+          {/* Profile Header with Gradient Background */}
+          <div className={styles.profileHeader} style={{ background: getHeaderGradient() }}>
+            <div className={styles.profileHeaderContent}>
+              <div className={styles.profileIcon}>
+                {getHeaderIcon()}
+              </div>
+              <div className={styles.profileHeaderInfo}>
+                <h2 className={styles.profileName}>{profile.name}</h2>
+                {getHeaderSubtitle() && (
+                  <div className={styles.profileSubtitle}>
+                    {getHeaderSubtitle()}
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+
           {/* Render appropriate profile type */}
           {profile_type === 'applicant' && renderApplicantProfile()}
           {profile_type === 'peer_support' && renderPeerSupportProfile()}

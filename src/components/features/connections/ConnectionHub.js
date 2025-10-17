@@ -1,4 +1,4 @@
-// src/components/features/connections/ConnectionHub.js - SIMPLIFIED
+// src/components/features/connections/ConnectionHub.js - CORRECTED VERSION
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../../../hooks/useAuth';
 import { supabase } from '../../../utils/supabase';
@@ -800,7 +800,7 @@ const ConnectionHub = ({ onBack }) => {
 
   const getTabCount = (tab) => connections[tab]?.length || 0;
 
-    /**
+  /**
    * Get CSS class name for connection type
    */
   const getConnectionTypeClass = (type) => {
@@ -812,10 +812,6 @@ const ConnectionHub = ({ onBack }) => {
     };
     return typeMap[type] || '';
   };
-
-  useEffect(() => {
-    loadProfileIds();
-  }, [profile?.id]);
 
   useEffect(() => {
     loadProfileIds();
@@ -888,7 +884,7 @@ const ConnectionHub = ({ onBack }) => {
               {connections[activeTab]?.length > 0 ? (
                 <div className={styles.connectionsGrid}>
                   {connections[activeTab].map((connection) => (
-                    <div key={connection.id} className={`card ${styles.connectionCard}`}>
+                    <div key={connection.id} className={`card ${styles.connectionCard} ${getConnectionTypeClass(connection.type)}`}>
                       {/* Card Header with End Connection Button */}
                       <div className={styles.connectionCardHeader}>
                         <div style={{ flex: 1 }}>
@@ -915,8 +911,6 @@ const ConnectionHub = ({ onBack }) => {
                       <div className="card-subtitle mb-3" style={{ color: 'var(--gray-600)' }}>
                         {formatTimeAgo(connection.last_activity)}
                       </div>
-/* REPLACE the entire section from "Connection-specific details" through "Secondary Actions" */
-/* This goes from around line 746 to line 900 in ConnectionHub.js */
 
                       {/* Connection-specific details */}
                       <div className={styles.connectionDetails}>
@@ -1034,7 +1028,7 @@ const ConnectionHub = ({ onBack }) => {
                         )}
                       </div>
 
-                      {/* Contact Icons (Active connections only) - MOVED UP */}
+                      {/* Contact Icons (Active connections only) */}
                       {activeTab === 'active' && connection.type !== 'roommate' && (
                         <div className={styles.contactIcons}>
                           {connection.type === 'landlord' && connection.property?.landlord_profiles?.primary_phone && (
@@ -1076,7 +1070,7 @@ const ConnectionHub = ({ onBack }) => {
                         </div>
                       )}
 
-                      {/* Primary Action - View Details - MOVED TO BOTTOM */}
+                      {/* Primary Action - View Details */}
                       <div className={styles.primaryAction}>
                         {connection.type === 'landlord' ? (
                           <button 
