@@ -54,7 +54,24 @@
   font-size: 0.8rem;
   font-weight: 600;
 }
+.connectionsGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(450px, 1fr));
+  max-width: 100%;
+  gap: var(--spacing-lg);
+}
 
+@media (min-width: 1200px) {
+  .connectionsGrid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (max-width: 768px) {
+  .connectionsGrid {
+    grid-template-columns: 1fr;
+  }
+}
 .tabButton.active .tabCount {
   background: var(--primary-purple);
   color: white;
@@ -66,6 +83,9 @@
   overflow: hidden;
   border: 2px solid;
   transition: var(--transition-normal);
+  display: flex;
+  flex-direction: column;
+  height: 100%;
 }
 
 /* Roommate - Purple */
@@ -215,12 +235,53 @@
   font-weight: 500;
   color: var(--gray-800);
 }
+/* ==================== CONNECTION DETAILS SECTION ==================== */
+.connectionDetails {
+  flex: 1;
+  margin-bottom: var(--spacing-md);
+}
+
+.detailsSection {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-sm);
+  padding: var(--spacing-md);
+  background: var(--gray-50);
+  border-radius: var(--radius-md);
+}
+
+.detailLabel {
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: var(--gray-700);
+  margin-bottom: var(--spacing-xs);
+}
+
+.detailItem {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-sm);
+  font-size: 0.9rem;
+  color: var(--gray-700);
+}
+
+.detailIcon {
+  font-size: 1.1rem;
+  flex-shrink: 0;
+}
+
+.moreCount {
+  color: var(--gray-500);
+  font-size: 0.85rem;
+  font-style: italic;
+}
 
 /* ==================== NEW: PRIMARY ACTION (CENTERED VIEW BUTTON) ==================== */
 .primaryAction {
   display: flex;
   justify-content: center;
   margin: var(--spacing-md) 0;
+  margin-top: auto; /* Push to bottom of card */
 }
 
 .primaryAction button {

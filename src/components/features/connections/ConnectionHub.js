@@ -800,6 +800,23 @@ const ConnectionHub = ({ onBack }) => {
 
   const getTabCount = (tab) => connections[tab]?.length || 0;
 
+    /**
+   * Get CSS class name for connection type
+   */
+  const getConnectionTypeClass = (type) => {
+    const typeMap = {
+      'roommate': styles.roommate,
+      'peer_support': styles.peerSupport,
+      'landlord': styles.landlord,
+      'employer': styles.employer
+    };
+    return typeMap[type] || '';
+  };
+
+  useEffect(() => {
+    loadProfileIds();
+  }, [profile?.id]);
+
   useEffect(() => {
     loadProfileIds();
   }, [profile?.id]);
@@ -869,7 +886,7 @@ const ConnectionHub = ({ onBack }) => {
 
             <div className="card-body">
               {connections[activeTab]?.length > 0 ? (
-                <div className="grid-auto">
+                <div className={styles.connectionsGrid}>
                   {connections[activeTab].map((connection) => (
                     <div key={connection.id} className={`card ${styles.connectionCard}`}>
                       {/* Card Header with End Connection Button */}
@@ -897,6 +914,110 @@ const ConnectionHub = ({ onBack }) => {
 
                       <div className="card-subtitle mb-3" style={{ color: 'var(--gray-600)' }}>
                         {formatTimeAgo(connection.last_activity)}
+                      </div>
+{/* Connection-specific details */}
+                      <div className={styles.connectionDetails}>
+                        {/* Roommate Details */}
+                        {connection.type === 'roommate' && (
+                          <div className={styles.detailsSection}>
+                            {connection.roommates && connection.roommates.length > 0 && (
+                              <>
+                                <div className={styles.detailLabel}>Group Members:</div>
+                                <div className={styles.membersList}>
+                                  {connection.roommates.map((roommate, idx) => (
+                                    <div key={idx} className={styles.memberItem}>
+                                      {formatName(
+                                        roommate.registrant_profiles?.first_name,
+                                        roommate.registrant_profiles?.last_name
+                                      )}
+                                    </div>
+                                  ))}
+                                </div>
+                              </>
+                            )}
+                          </div>
+                        )}
+
+                        {/* Peer Support Details */}
+                        {connection.type === 'peer_support' && connection.other_person && (
+                          <div className={styles.detailsSection}>
+                            {connection.other_person.years_experience && (
+                              <div className={styles.detailItem}>
+                                <span className={styles.detailIcon}>⭐</span>
+                                <span>{connection.other_person.years_experience} years experience</span>
+                              </div>
+                            )}
+                            {connection.other_person.specialties && connection.other_person.specialties.length > 0 && (
+                              <div className={styles.detailItem}>
+                                <span className={styles.detailIcon}>🎯</span>
+                                <span>{connection.other_person.specialties.slice(0, 2).join(', ')}</span>
+                                {connection.other_person.specialties.length > 2 && (
+                                  <span className={styles.moreCount}> +{connection.other_person.specialties.length - 2}</span>
+                                )}
+                              </div>
+                            )}
+                          </div>
+                        )}
+
+                        {/* Landlord/Housing Details */}
+                        {connection.type === 'landlord' && connection.property && (
+                          <div className={styles.detailsSection}>
+                            {connection.property.monthly_rent && (
+                              <div className={styles.detailItem}>
+                                <span className={styles.detailIcon}>💰</span>
+                                <span>${connection.property.monthly_rent}/month</span>
+                              </div>
+                            )}
+                            {connection.property.bedrooms !== undefined && (
+                              <div className={styles.detailItem}>
+                                <span className={styles.detailIcon}>🛏️</span>
+                                <span>{connection.property.bedrooms === 0 ? 'Studio' : `${connection.property.bedrooms} bed`}</span>
+                                {connection.property.bathrooms && ` • ${connection.property.bathrooms} bath`}
+                              </div>
+                            )}
+                            {(connection.property.city || connection.property.state) && (
+                              <div className={styles.detailItem}>
+                                <span className={styles.detailIcon}>📍</span>
+                                <span>
+                                  {connection.property.city}
+                                  {connection.property.city && connection.property.state && ', '}
+                                  {connection.property.state}
+                                </span>
+                              </div>
+                            )}
+                          </div>
+                        )}
+
+                        {/* Employer Details */}
+                        {connection.type === 'employer' && connection.other_person && (
+                          <div className={styles.detailsSection}>
+                            {connection.other_person.industry && (
+                              <div className={styles.detailItem}>
+                                <span className={styles.detailIcon}>🏢</span>
+                                <span>{connection.other_person.industry}</span>
+                              </div>
+                            )}
+                            {(connection.other_person.city || connection.other_person.state) && (
+                              <div className={styles.detailItem}>
+                                <span className={styles.detailIcon}>📍</span>
+                                <span>
+                                  {connection.other_person.city}
+                                  {connection.other_person.city && connection.other_person.state && ', '}
+                                  {connection.other_person.state}
+                                </span>
+                              </div>
+                            )}
+                            {connection.other_person.job_types_available && connection.other_person.job_types_available.length > 0 && (
+                              <div className={styles.detailItem}>
+                                <span className={styles.detailIcon}>💼</span>
+                                <span>{connection.other_person.job_types_available.slice(0, 2).join(', ')}</span>
+                                {connection.other_person.job_types_available.length > 2 && (
+                                  <span className={styles.moreCount}> +{connection.other_person.job_types_available.length - 2}</span>
+                                )}
+                              </div>
+                            )}
+                          </div>
+                        )}
                       </div>
 
                       {/* Primary Action - View Details */}
