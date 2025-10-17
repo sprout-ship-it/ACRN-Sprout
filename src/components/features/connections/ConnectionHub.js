@@ -565,7 +565,7 @@ const handleApproveRequest = async (connection) => {
 
   try {
     if (connection.type === 'roommate') {
-      // Roommate connections use match_groups
+      // ✅ Roommate connections use match_groups
       await supabase
         .from('match_groups')
         .update({ 
@@ -573,25 +573,101 @@ const handleApproveRequest = async (connection) => {
           updated_at: new Date().toISOString()
         })
         .eq('id', connection.match_group_id);
+        
     } else if (connection.type === 'landlord') {
-      // ✅ UPDATED: Housing connections use 'approved' status
-      await supabase
+      // ✅ FIXED: Housing connections use housing_matches table
+      console.log('Approving housing match:', connection.housing_match_id);
+      
+      const { data, error } = await supabase
         .from('housing_matches')
         .update({ 
-          status: 'approved', // ✅ NEW: Use 'approved' instead of 'mutual'
+          status: 'approved',
+          landlord_message: 'Your inquiry has been approved! Please contact me to discuss next steps.',
           updated_at: new Date().toISOString()
         })
-        .eq('id', connection.housing_match_id);
-        
+        .eq('id', connection.housing_match_id)
+        .select();
+      
+      if (error) {
+        console.error('Error updating housing match:', error);
+        throw error;
+      }
+      
+      console.log('Housing match updated:', data);
+      
       // 💰 TODO: Trigger billing for applicant here
+      
     } else if (connection.type === 'peer_support') {
-      // ... existing peer support logic ...
+      // ✅ Peer support logic
+      const { data: matchData, error: matchError } = await supabase
+        .from('peer_support_matches')
+        .update({ 
+          status: 'active',
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', connection.peer_support_match_id)
+        .select()
+        .single();
+
+      if (matchError) throw matchError;
+
+      // CASCADE: Create pss_clients record
+      const isPeerSpecialist = profileIds.peerSupport && connection.other_person?.professional_title;
+      const peerSpecialistId = isPeerSpecialist ? profileIds.peerSupport : connection.other_person?.id;
+      const clientId = isPeerSpecialist ? connection.other_person?.id : profileIds.applicant;
+
+      if (peerSpecialistId && clientId) {
+        const { data: existingClient } = await supabase
+          .from('pss_clients')
+          .select('id, status')
+          .eq('peer_specialist_id', peerSpecialistId)
+          .eq('client_id', clientId)
+          .single();
+
+        if (existingClient) {
+          if (existingClient.status === 'inactive') {
+            await supabase
+              .from('pss_clients')
+              .update({
+                status: 'active',
+                updated_at: new Date().toISOString()
+              })
+              .eq('id', existingClient.id);
+          }
+        } else {
+          const nextFollowupDate = new Date();
+          nextFollowupDate.setDate(nextFollowupDate.getDate() + 7);
+
+          await supabase
+            .from('pss_clients')
+            .insert({
+              peer_specialist_id: peerSpecialistId,
+              client_id: clientId,
+              status: 'active',
+              followup_frequency: 'weekly',
+              next_followup_date: nextFollowupDate.toISOString().split('T')[0],
+              total_sessions: 0,
+              recovery_goals: [],
+              progress_notes: [],
+              consent_to_contact: true,
+              created_by: profile.id
+            });
+        }
+      }
+      
     } else if (connection.type === 'employer') {
-      // ... existing employer logic ...
+      await supabase
+        .from('employment_matches')
+        .update({ 
+          status: 'active',
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', connection.employment_match_id);
     }
 
     alert('Connection approved! You can now exchange contact information.');
     await loadConnections();
+    
   } catch (err) {
     console.error('Error approving request:', err);
     alert('Failed to approve request. Please try again.');
