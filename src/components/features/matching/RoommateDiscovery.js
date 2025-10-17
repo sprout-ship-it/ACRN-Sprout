@@ -123,6 +123,10 @@ const RoommateDiscovery = ({ onRequestMatch, onBack }) => {
    */
   const handleRequestMatch = useCallback(async (match) => {
     try {
+          console.log('🔍 DEBUG: user object:', user);
+    console.log('🔍 DEBUG: user.id:', user.id);
+    console.log('🔍 DEBUG: profile object:', profile);
+    console.log('🔍 DEBUG: profile.id:', profile.id);
       console.log('🤝 Sending roommate match request to:', match.first_name);
       
       const matchUserId = match.user_id || match.id;
