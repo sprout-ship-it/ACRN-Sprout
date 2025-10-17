@@ -859,11 +859,12 @@ async loadSentRequests(userId) {
 async loadSentRequests(userId) {
   try {
     // Get the user's applicant profile ID
+    // userId should be registrant_profiles.id at this point
     const { data: userApplicant } = await supabase
       .from('applicant_matching_profiles')
       .select('id, user_id')
       .eq('user_id', userId)
-      .single();
+      .maybeSingle();  // ✅ Changed from .single()
     
     if (!userApplicant) {
       console.warn('No applicant profile found for user:', userId);
@@ -879,7 +880,7 @@ async loadSentRequests(userId) {
       .select('roommate_ids, requested_by_id, status')
       .eq('requested_by_id', userApplicantId)
       .eq('status', 'requested')
-      .contains('roommate_ids', JSON.stringify([userApplicantId]));
+      .contains('roommate_ids', JSON.stringify([userApplicantId]));  // ✅ JSON.stringify for JSONB
     
     if (pendingGroups && pendingGroups.length > 0) {
       for (const group of pendingGroups) {
@@ -893,7 +894,7 @@ async loadSentRequests(userId) {
                 .from('applicant_matching_profiles')
                 .select('user_id')
                 .eq('id', roommateId)
-                .single();
+                .maybeSingle();  // ✅ Changed from .single()
               
               if (roommate) {
                 sentRequestIds.add(roommate.user_id);
