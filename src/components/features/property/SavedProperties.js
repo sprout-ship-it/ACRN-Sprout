@@ -50,62 +50,55 @@ const SavedProperties = () => {
     }
   };
 
-// ✅ UPDATED: Fetch outreach status AND build pendingPropertyRequests Set
-  const fetchOutreachStatus = async (propertyIds) => {
-    if (!applicantProfileId || propertyIds.length === 0) {
+// ✅ UPDATED: Fetch outreach status from housing_matches with new nomenclature
+const fetchOutreachStatus = async (propertyIds) => {
+  if (!applicantProfileId || propertyIds.length === 0) {
+    return { statusMap: new Map(), pendingSet: new Set() };
+  }
+
+  try {
+    // Get housing_matches for these properties
+    const { data: inquiries, error: inquiriesError } = await supabase
+      .from('housing_matches')
+      .select('property_id, status, created_at, updated_at')
+      .in('property_id', propertyIds)
+      .eq('applicant_id', applicantProfileId)
+      .order('created_at', { ascending: false });
+
+    if (inquiriesError) {
+      console.warn('Error fetching outreach status:', inquiriesError);
       return { statusMap: new Map(), pendingSet: new Set() };
     }
 
-    try {
-      // Get match_groups for these properties where this applicant is in roommate_ids
-      const { data: inquiries, error: inquiriesError } = await supabase
-        .from('match_groups')
-        .select('property_id, status, created_at, updated_at, roommate_ids')
-        .in('property_id', propertyIds)
-        .not('property_id', 'is', null) // Only housing inquiries
-        .order('created_at', { ascending: false });
-
-      if (inquiriesError) {
-        console.warn('Error fetching outreach status:', inquiriesError);
-        return { statusMap: new Map(), pendingSet: new Set() };
-      }
-
-      // Filter to only include inquiries where this applicant is in roommate_ids
-      // and create status map (most recent inquiry per property)
-      const statusMap = new Map();
-      const pendingSet = new Set();
-      
-      if (inquiries && inquiries.length > 0) {
-        inquiries.forEach(inquiry => {
-          const roommateIds = inquiry.roommate_ids || [];
+    const statusMap = new Map();
+    const pendingSet = new Set();
+    
+    if (inquiries && inquiries.length > 0) {
+      inquiries.forEach(inquiry => {
+        // Only store if we haven't already stored this property (keeps most recent)
+        if (!statusMap.has(inquiry.property_id)) {
+          statusMap.set(inquiry.property_id, {
+            status: inquiry.status,
+            requested_at: inquiry.created_at,
+            responded_at: inquiry.updated_at !== inquiry.created_at ? inquiry.updated_at : null
+          });
           
-          // Check if this applicant is in the roommate_ids array
-          if (roommateIds.includes(applicantProfileId)) {
-            // Only store if we haven't already stored this property (keeps most recent)
-            if (!statusMap.has(inquiry.property_id)) {
-              statusMap.set(inquiry.property_id, {
-                status: inquiry.status,
-                requested_at: inquiry.created_at,
-                responded_at: inquiry.updated_at !== inquiry.created_at ? inquiry.updated_at : null
-              });
-              
-              // ✅ NEW: Add to pending set if status is 'requested'
-              if (inquiry.status === 'requested') {
-                pendingSet.add(inquiry.property_id);
-              }
-            }
+          // ✅ NEW: Add to pending set if status is 'requested'
+          if (inquiry.status === 'requested') {
+            pendingSet.add(inquiry.property_id);
           }
-        });
-      }
-
-      console.log(`✅ Loaded ${statusMap.size} outreach statuses, ${pendingSet.size} pending`);
-      return { statusMap, pendingSet };
-
-    } catch (err) {
-      console.warn('Error fetching outreach status:', err);
-      return { statusMap: new Map(), pendingSet: new Set() };
+        }
+      });
     }
-  };
+
+    console.log(`✅ Loaded ${statusMap.size} outreach statuses, ${pendingSet.size} pending`);
+    return { statusMap, pendingSet };
+
+  } catch (err) {
+    console.warn('Error fetching outreach status:', err);
+    return { statusMap: new Map(), pendingSet: new Set() };
+  }
+};
 
   // ✅ UPDATED: Fetch full property details for saved properties with outreach status
   const fetchSavedPropertyDetails = async () => {
@@ -253,38 +246,44 @@ Thank you!`;
   };
 
 
-// ✅ Get outreach status display info (updated for match_groups statuses)
-  const getOutreachStatusInfo = (propertyId) => {
-    const status = outreachStatus.get(propertyId);
-    if (!status) return null;
+// ✅ UPDATED: Get outreach status display info with new nomenclature
+const getOutreachStatusInfo = (propertyId) => {
+  const status = outreachStatus.get(propertyId);
+  if (!status) return null;
 
-    switch (status.status) {
-      case 'requested':
-        return {
-          badge: 'warning',
-          text: '⏳ Inquiry Sent',
-          description: `Sent ${new Date(status.requested_at).toLocaleDateString()}`,
-          class: styles.statusPending
-        };
-      case 'confirmed':
-      case 'active':
-        return {
-          badge: 'success', 
-          text: '✅ Approved',
-          description: status.responded_at ? `Approved ${new Date(status.responded_at).toLocaleDateString()}` : 'Approved',
-          class: styles.statusApproved
-        };
-      case 'inactive':
-        return {
-          badge: 'danger',
-          text: '❌ Declined', 
-          description: status.responded_at ? `Declined ${new Date(status.responded_at).toLocaleDateString()}` : 'Declined',
-          class: styles.statusRejected
-        };
-      default:
-        return null;
-    }
-  };
+  switch (status.status) {
+    case 'requested':
+      return {
+        badge: 'warning',
+        text: '⏳ Inquiry Sent',
+        description: `Sent ${new Date(status.requested_at).toLocaleDateString()}`,
+        class: styles.statusPending
+      };
+    case 'approved':
+      return {
+        badge: 'success', 
+        text: '✅ Approved',
+        description: status.responded_at ? `Approved ${new Date(status.responded_at).toLocaleDateString()}` : 'Approved',
+        class: styles.statusApproved
+      };
+    case 'rejected':
+      return {
+        badge: 'danger',
+        text: '❌ Declined', 
+        description: status.responded_at ? `Declined ${new Date(status.responded_at).toLocaleDateString()}` : 'Declined',
+        class: styles.statusRejected
+      };
+    case 'inactive':
+      return {
+        badge: 'secondary',
+        text: '⭕ Inactive', 
+        description: 'Connection ended',
+        class: styles.statusInactive
+      };
+    default:
+      return null;
+  }
+};
 
   // ✅ UPDATED: Enhanced property card component wrapper with pendingPropertyRequests
   const EnhancedPropertyCard = ({ property, ...props }) => {

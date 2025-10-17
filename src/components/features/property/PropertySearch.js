@@ -103,12 +103,12 @@ const loadPendingPropertyRequests = async () => {
   setRequestsLoading(true);
 
   try {
-    // ✅ FIXED: Query housing_matches instead of match_groups
+    // ✅ Query housing_matches for pending requests
     const { data: housingMatches, error } = await supabase
-      .from('housing_matches')  // ✅ CHANGED from match_groups to housing_matches
+      .from('housing_matches')
       .select('property_id, status')
       .eq('applicant_id', applicantProfileId)
-      .in('status', ['requested', 'applicant-liked']); // Check for pending statuses
+      .eq('status', 'requested'); // ✅ NEW: Use 'requested' status
 
     if (error) throw error;
 
@@ -125,6 +125,7 @@ const loadPendingPropertyRequests = async () => {
     setRequestsLoading(false);
   }
 };
+
 
   /**
    * ✅ NEW: Check if property has pending request
@@ -221,11 +222,11 @@ const handleSendHousingInquiry = async (property) => {
   }
 
   try {
-    // ✅ FIXED: Write to housing_matches table (proper table for property inquiries!)
+    // ✅ Create housing_match entry with new nomenclature
     const matchData = {
       applicant_id: applicantProfileId,
       property_id: property.id,
-      status: 'requested',
+      status: 'requested', // ✅ NEW: Use 'requested' status
       applicant_message: `Hi! I'm interested in your property "${property.title || property.address}". I'm looking for ${property.is_recovery_housing ? 'recovery-friendly ' : ''}housing and this property looks like it could be a great fit for my needs.
 
 Property Details I'm interested in:
@@ -239,7 +240,7 @@ I'd love to discuss availability and the application process. Thank you!`,
     };
 
     const { error: insertError } = await supabase
-      .from('housing_matches')  // ✅ CHANGED from match_groups to housing_matches
+      .from('housing_matches')
       .insert(matchData);
 
     if (insertError) throw insertError;
