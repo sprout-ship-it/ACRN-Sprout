@@ -1,12 +1,14 @@
-// src/components/features/matching/RoommateDiscovery.js - UPDATED FOR PROFILEMODAL
+// src/components/features/matching/RoommateDiscovery.js - UPDATED: Group-aware requests
 import React, { useState, useEffect, useCallback } from 'react';
 import { useAuth } from '../../../context/AuthContext';
 import matchingService from '../../../utils/matching/matchingService';
+import createMatchGroupsService from '../../../utils/database/matchGroupsService';
+import { supabase } from '../../../utils/supabase';
 import { DEFAULT_FILTERS } from '../../../utils/matching/config';
 
 // Import new components
 import MatchCard from './components/MatchCard';
-import ProfileModal from '../connections/ProfileModal'; // ✅ UPDATED: Use consolidated ProfileModal
+import ProfileModal from '../connections/ProfileModal';
 import LoadingSpinner from '../../ui/LoadingSpinner';
 
 // Import CSS foundation and component module
@@ -15,6 +17,9 @@ import styles from './RoommateDiscovery.module.css';
 
 const RoommateDiscovery = ({ onRequestMatch, onBack }) => {
   const { user, profile, hasRole } = useAuth();
+
+  // Initialize match groups service
+  const matchGroupsService = createMatchGroupsService(supabase);
 
   // State management
   const [matches, setMatches] = useState([]);
@@ -94,7 +99,7 @@ const RoommateDiscovery = ({ onRequestMatch, onBack }) => {
   }, []);
 
   /**
-   * ✅ UPDATED: Handle showing match details with ProfileModal format
+   * Handle showing match details with ProfileModal format
    */
   const handleShowDetails = useCallback((match) => {
     // Transform match data to profile format expected by ProfileModal
@@ -113,45 +118,105 @@ const RoommateDiscovery = ({ onRequestMatch, onBack }) => {
     setSelectedMatch(null);
   }, []);
 
+  /**
+   * ✅ UPDATED: Smart request handling - checks for existing groups
+   */
   const handleRequestMatch = useCallback(async (match) => {
     try {
       console.log('🤝 Sending roommate match request to:', match.first_name);
       
       const matchUserId = match.user_id || match.id;
       
-      const result = await matchingService.sendMatchRequest(profile.id, {
-        ...match,
-        user_id: matchUserId
-      });
+      // Get current user's applicant profile ID
+      const { data: applicantProfile, error: profileError } = await supabase
+        .from('applicant_matching_profiles')
+        .select('id')
+        .eq('user_id', user.id)
+        .single();
       
-      if (result.success) {
-        alert(`Roommate request sent to ${match.first_name}!`);
+      if (profileError || !applicantProfile) {
+        throw new Error('Could not find your applicant profile');
+      }
+
+      const currentUserId = applicantProfile.id;
+
+      // ✅ NEW: Check if user is already in an active group
+      console.log('🔍 Checking for existing active group...');
+      const existingGroupResult = await matchGroupsService.findActiveGroupForUser(currentUserId);
+      
+      if (existingGroupResult.success && existingGroupResult.data) {
+        // User is already in a group - invite this match to join
+        const existingGroup = existingGroupResult.data;
+        console.log('🏠 User is in an existing group:', existingGroup.id);
+        console.log(`📊 Current group has ${existingGroup.roommate_ids?.length || 0} members`);
         
-        setMatches(prev => prev.map(m => 
-          (m.user_id === matchUserId || m.id === matchUserId)
-            ? { ...m, isRequestSent: true }
-            : m
-        ));
+        // Get the target match's applicant profile ID
+        const { data: targetProfile, error: targetError } = await supabase
+          .from('applicant_matching_profiles')
+          .select('id')
+          .eq('user_id', matchUserId)
+          .single();
         
-        setSentRequestsCount(prev => prev + 1);
+        if (targetError || !targetProfile) {
+          throw new Error('Could not find target user profile');
+        }
+
+        const targetUserId = targetProfile.id;
         
-        if (onRequestMatch) {
-          await onRequestMatch(match);
+        // Invite the target user to join the existing group
+        console.log('📤 Inviting to existing group...');
+        const inviteResult = await matchGroupsService.inviteMemberToGroup(
+          existingGroup.id,
+          currentUserId,
+          targetUserId
+        );
+        
+        if (!inviteResult.success) {
+          throw new Error(inviteResult.error?.message || 'Failed to invite to group');
         }
         
-        if (filters.hideRequestsSent) {
-          setTimeout(() => findMatches(), 1000);
-        }
+        console.log('✅ Successfully invited to existing group');
+        alert(`${match.first_name} has been invited to join your roommate group! Your existing group members will also need to approve.`);
         
       } else {
-        throw new Error(result.error || 'Failed to send match request');
+        // No existing group - create new 2-person request
+        console.log('ℹ️ No existing group found, creating new roommate request');
+        
+        const result = await matchingService.sendMatchRequest(profile.id, {
+          ...match,
+          user_id: matchUserId
+        });
+        
+        if (!result.success) {
+          throw new Error(result.error || 'Failed to send match request');
+        }
+        
+        console.log('✅ New roommate request created successfully');
+        alert(`Roommate request sent to ${match.first_name}!`);
+      }
+      
+      // Update UI state
+      setMatches(prev => prev.map(m => 
+        (m.user_id === matchUserId || m.id === matchUserId)
+          ? { ...m, isRequestSent: true }
+          : m
+      ));
+      
+      setSentRequestsCount(prev => prev + 1);
+      
+      if (onRequestMatch) {
+        await onRequestMatch(match);
+      }
+      
+      if (filters.hideRequestsSent) {
+        setTimeout(() => findMatches(), 1000);
       }
       
     } catch (err) {
       console.error('💥 Error sending match request:', err);
-      alert('Failed to send match request. Please try again.');
+      alert(`Failed to send match request: ${err.message}`);
     }
-  }, [profile?.id, onRequestMatch, filters.hideRequestsSent, findMatches]);
+  }, [user?.id, profile?.id, onRequestMatch, filters.hideRequestsSent, findMatches, matchGroupsService]);
 
   const handleUseMyLocation = useCallback(() => {
     const userLocation = getUserLocation(userProfile);
@@ -480,7 +545,7 @@ const RoommateDiscovery = ({ onRequestMatch, onBack }) => {
         )}
       </div>
       
-      {/* ✅ UPDATED: Use consolidated ProfileModal */}
+      {/* Use consolidated ProfileModal */}
       {showDetails && selectedMatch && (
         <ProfileModal
           isOpen={showDetails}

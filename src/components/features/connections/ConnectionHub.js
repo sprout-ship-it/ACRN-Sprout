@@ -1,10 +1,11 @@
-// src/components/features/connections/ConnectionHub.js - CORRECTED VERSION
+// src/components/features/connections/ConnectionHub.js - WITH GROUP MODAL
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../../../hooks/useAuth';
 import { supabase } from '../../../utils/supabase';
 import LoadingSpinner from '../../ui/LoadingSpinner';
 import ProfileModal from './ProfileModal';
 import PropertyDetailsModal from './modals/PropertyDetailsModal';
+import GroupDetailsModal from './modals/GroupDetailsModal';
 import styles from './ConnectionHub.module.css';
 
 const ConnectionHub = ({ onBack }) => {
@@ -21,9 +22,11 @@ const ConnectionHub = ({ onBack }) => {
   // Modal state
   const [showProfileModal, setShowProfileModal] = useState(false);
   const [showPropertyModal, setShowPropertyModal] = useState(false);
+  const [showGroupModal, setShowGroupModal] = useState(false);
   const [selectedConnection, setSelectedConnection] = useState(null);
   const [selectedProfile, setSelectedProfile] = useState(null);
   const [selectedProperty, setSelectedProperty] = useState(null);
+  const [selectedGroup, setSelectedGroup] = useState(null);
   
   const [actionLoading, setActionLoading] = useState(false);
 
@@ -37,6 +40,7 @@ const ConnectionHub = ({ onBack }) => {
 
   /**
    * Format name to show only first name and last initial
+   * CRITICAL PRIVACY FUNCTION - Used everywhere names are displayed
    */
   const formatName = (firstName, lastName) => {
     if (!firstName) return 'Unknown';
@@ -163,7 +167,7 @@ const ConnectionHub = ({ onBack }) => {
         
         const { data: roommateData } = await supabase
           .from('applicant_matching_profiles')
-          .select('id, user_id, primary_phone, registrant_profiles(first_name, last_name, email)')
+          .select('id, user_id, primary_phone, date_of_birth, recovery_stage, work_schedule, budget_min, budget_max, primary_location, registrant_profiles(first_name, last_name, email)')
           .in('id', otherRoommateIds);
         const roommates = roommateData || [];
 
@@ -180,7 +184,9 @@ const ConnectionHub = ({ onBack }) => {
           requested_by_id: group.requested_by_id,
           pending_member_id: group.pending_member_id,
           member_confirmations: group.member_confirmations,
-          message: group.message
+          message: group.message,
+          group_name: group.group_name,
+          move_in_date: group.move_in_date
         };
 
         if (group.status === 'requested') {
@@ -422,13 +428,26 @@ const ConnectionHub = ({ onBack }) => {
   };
 
   /**
-   * Handle viewing profile in modal
+   * Handle viewing individual profile in modal
+   * PRIVACY FIX: Always use formatName for profile.name
    */
-  const handleViewProfile = async (connection) => {
+  const handleViewProfile = async (connection, specificRoommate = null) => {
     try {
       let profileData = null;
       
-      if (connection.type === 'roommate' && connection.roommates?.length > 0) {
+      // If viewing a specific roommate from the group modal
+      if (specificRoommate) {
+        profileData = {
+          ...specificRoommate,
+          profile_type: 'applicant',
+          name: formatName(
+            specificRoommate.registrant_profiles?.first_name,
+            specificRoommate.registrant_profiles?.last_name
+          )
+        };
+      }
+      // If viewing first roommate from connection card
+      else if (connection.type === 'roommate' && connection.roommates?.length > 0) {
         const roommate = connection.roommates[0];
         const { data } = await supabase
           .from('applicant_matching_profiles')
@@ -440,14 +459,20 @@ const ConnectionHub = ({ onBack }) => {
           profileData = {
             ...data,
             profile_type: 'applicant',
-            name: `${data.registrant_profiles?.first_name || ''} ${data.registrant_profiles?.last_name || ''}`.trim()
+            name: formatName(
+              data.registrant_profiles?.first_name,
+              data.registrant_profiles?.last_name
+            )
           };
         }
       } else if (connection.type === 'landlord' && connection.requesting_applicant) {
         profileData = {
           ...connection.requesting_applicant,
           profile_type: 'applicant',
-          name: `${connection.requesting_applicant.registrant_profiles?.first_name || ''} ${connection.requesting_applicant.registrant_profiles?.last_name || ''}`.trim()
+          name: formatName(
+            connection.requesting_applicant.registrant_profiles?.first_name,
+            connection.requesting_applicant.registrant_profiles?.last_name
+          )
         };
       } else if (connection.other_person) {
         const isPeerSupportProfile = connection.other_person.professional_title || connection.other_person.specialties;
@@ -457,10 +482,16 @@ const ConnectionHub = ({ onBack }) => {
           ...connection.other_person,
           profile_type: isPeerSupportProfile ? 'peer_support' : isEmployerProfile ? 'employer' : 'applicant',
           name: isPeerSupportProfile 
-            ? (connection.other_person.professional_title || `${connection.other_person.registrant_profiles?.first_name || ''} ${connection.other_person.registrant_profiles?.last_name || ''}`.trim())
+            ? (connection.other_person.professional_title || formatName(
+                connection.other_person.registrant_profiles?.first_name,
+                connection.other_person.registrant_profiles?.last_name
+              ))
             : isEmployerProfile
             ? connection.other_person.company_name 
-            : `${connection.other_person.registrant_profiles?.first_name || ''} ${connection.other_person.registrant_profiles?.last_name || ''}`.trim()
+            : formatName(
+                connection.other_person.registrant_profiles?.first_name,
+                connection.other_person.registrant_profiles?.last_name
+              )
         };
       }
       
@@ -471,6 +502,25 @@ const ConnectionHub = ({ onBack }) => {
       console.error('Error loading profile:', err);
       alert('Failed to load profile.');
     }
+  };
+
+  /**
+   * NEW: Handle viewing group details in GroupDetailsModal
+   */
+  const handleViewGroupDetails = (connection) => {
+    setSelectedGroup({
+      id: connection.match_group_id,
+      status: connection.status,
+      group_name: connection.group_name,
+      move_in_date: connection.move_in_date,
+      message: connection.message,
+      roommate_ids: connection.roommates?.map(r => r.id) || [],
+      requested_by_id: connection.requested_by_id,
+      pending_member_id: connection.pending_member_id,
+      member_confirmations: connection.member_confirmations
+    });
+    setSelectedConnection(connection);
+    setShowGroupModal(true);
   };
 
   /**
@@ -582,6 +632,7 @@ const ConnectionHub = ({ onBack }) => {
       // Close modals if open
       setShowProfileModal(false);
       setShowPropertyModal(false);
+      setShowGroupModal(false);
       
       await loadConnections();
       
@@ -641,6 +692,7 @@ const ConnectionHub = ({ onBack }) => {
       // Close modals if open
       setShowProfileModal(false);
       setShowPropertyModal(false);
+      setShowGroupModal(false);
       
       await loadConnections();
     } catch (err) {
@@ -1083,7 +1135,7 @@ const ConnectionHub = ({ onBack }) => {
                         ) : connection.type === 'roommate' ? (
                           <button 
                             className="btn btn-primary"
-                            onClick={() => handleViewProfile(connection)}
+                            onClick={() => handleViewGroupDetails(connection)}
                             style={{ width: '100%' }}
                           >
                             👥 View Group Details
@@ -1184,6 +1236,27 @@ const ConnectionHub = ({ onBack }) => {
           showContactInfo={selectedConnection?.status === 'confirmed' || selectedConnection?.status === 'active' || selectedConnection?.status === 'approved'}
           showActions={activeTab === 'awaiting'}
           isLandlordView={!selectedConnection?.is_applicant}
+        />
+      )}
+
+      {/* Group Details Modal - NEW */}
+      {showGroupModal && selectedGroup && selectedConnection && (
+        <GroupDetailsModal
+          isOpen={showGroupModal}
+          matchGroup={selectedGroup}
+          roommates={selectedConnection.roommates || []}
+          currentUserId={profile?.user_id}
+          connectionStatus={selectedConnection?.status}
+          onClose={() => {
+            setShowGroupModal(false);
+            setSelectedGroup(null);
+            setSelectedConnection(null);
+          }}
+          onViewProfile={(roommate) => handleViewProfile(selectedConnection, roommate)}
+          onApprove={() => handleApproveRequest(selectedConnection)}
+          onDecline={() => handleDeclineRequest(selectedConnection)}
+          showActions={activeTab === 'awaiting'}
+          isAwaitingApproval={activeTab === 'awaiting'}
         />
       )}
     </div>

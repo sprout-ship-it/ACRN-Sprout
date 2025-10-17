@@ -20,6 +20,16 @@ const PropertyDetailsModal = ({
   if (!isOpen || !property) return null;
 
   /**
+   * Format name to show only first name and last initial
+   * CRITICAL PRIVACY FUNCTION
+   */
+  const formatName = (firstName, lastName) => {
+    if (!firstName) return 'Applicant';
+    if (!lastName) return firstName;
+    return `${firstName} ${lastName.charAt(0)}.`;
+  };
+
+  /**
    * Format currency
    */
   const formatCurrency = (amount) => {
@@ -63,26 +73,33 @@ const PropertyDetailsModal = ({
   };
 
   /**
-   * Format name to show only first name and last initial
-   */
-  const formatName = (firstName, lastName) => {
-    if (!firstName) return 'Applicant';
-    if (!lastName) return firstName;
-    return `${firstName} ${lastName.charAt(0)}.`;
-  };
-
-  /**
    * Get property header gradient based on type
    */
   const getHeaderGradient = () => {
     if (property.is_recovery_housing) {
       return 'linear-gradient(135deg, #20B2AA 0%, #178B8B 100%)';
     }
-    return 'linear-gradient(135deg, #f59e0b 0%, #d97706 100%)';
+    return 'linear-gradient(135deg, var(--gold) 0%, var(--gold-dark) 100%)';
+  };
+
+  /**
+   * Calculate age from date of birth
+   */
+  const calculateAge = (dateOfBirth) => {
+    if (!dateOfBirth) return null;
+    const today = new Date();
+    const birthDate = new Date(dateOfBirth);
+    let age = today.getFullYear() - birthDate.getFullYear();
+    const monthDiff = today.getMonth() - birthDate.getMonth();
+    if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birthDate.getDate())) {
+      age--;
+    }
+    return age;
   };
 
   /**
    * Render requesting applicant section (for landlord view)
+   * PRIVACY FIX: Always use formatName
    */
   const renderRequestingApplicant = () => {
     if (!isLandlordView || !requestingApplicant) return null;
@@ -96,6 +113,7 @@ const PropertyDetailsModal = ({
         <div className={styles.applicantCard}>
           <div className={styles.applicantHeader}>
             <div className={styles.applicantName}>
+              {/* PRIVACY FIX: Use formatName */}
               {formatName(profile.first_name, profile.last_name)}
             </div>
             {applicant.recovery_stage && (
@@ -144,6 +162,7 @@ const PropertyDetailsModal = ({
 
   /**
    * Render match group members (for roommate scenarios)
+   * PRIVACY FIX: Always use formatName
    */
   const renderMatchGroupMembers = () => {
     if (!matchGroupMembers || matchGroupMembers.length === 0) return null;
@@ -159,6 +178,7 @@ const PropertyDetailsModal = ({
             return (
               <div key={member.id || index} className={styles.memberCard}>
                 <div className={styles.memberName}>
+                  {/* PRIVACY FIX: Use formatName */}
                   {formatName(profile.first_name, profile.last_name)}
                 </div>
                 {member.recovery_stage && (
@@ -180,22 +200,8 @@ const PropertyDetailsModal = ({
   };
 
   /**
-   * Calculate age from date of birth
-   */
-  const calculateAge = (dateOfBirth) => {
-    if (!dateOfBirth) return null;
-    const today = new Date();
-    const birthDate = new Date(dateOfBirth);
-    let age = today.getFullYear() - birthDate.getFullYear();
-    const monthDiff = today.getMonth() - birthDate.getMonth();
-    if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birthDate.getDate())) {
-      age--;
-    }
-    return age;
-  };
-
-  /**
    * Render landlord contact information
+   * PRIVACY FIX: Use formatName for landlord name if no business name
    */
   const renderLandlordContact = () => {
     if (!showContactInfo || !property.landlord_profiles) return null;
@@ -212,6 +218,7 @@ const PropertyDetailsModal = ({
             <div>
               <div className={styles.contactLabel}>Name</div>
               <div className={styles.contactValue}>
+                {/* PRIVACY FIX: Use formatName if no business name */}
                 {landlord.business_name || formatName(landlordProfile.first_name, landlordProfile.last_name)}
               </div>
             </div>

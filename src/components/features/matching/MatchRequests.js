@@ -323,7 +323,7 @@ const MatchRequests = () => {
       const matchType = getMatchType(request);
       console.log('🔄 Approving request:', { id: request.id, matchType });
       
-      const result = await handleApprove(request.id, matchType);
+      const result = await handleApprove(request.id, matchType, profileIds.applicant);
       if (result.success) {
         alert('Connection approved successfully!');
       } else {

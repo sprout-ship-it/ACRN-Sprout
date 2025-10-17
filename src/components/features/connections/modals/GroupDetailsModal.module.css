@@ -1,4 +1,4 @@
-/* src/components/features/connections/modals/PropertyDetailsModal.module.css */
+/* src/components/features/connections/modals/GroupDetailsModal.module.css */
 
 /* ==================== MODAL OVERLAY & CONTAINER ==================== */
 .modalOverlay {
@@ -20,7 +20,7 @@
   background: white;
   border-radius: var(--radius-xl);
   box-shadow: var(--shadow-xl);
-  max-width: 800px;
+  max-width: 900px;
   width: 100%;
   max-height: 90vh;
   overflow-y: auto;
@@ -69,22 +69,22 @@
   padding: 0;
 }
 
-/* ==================== PROPERTY HEADER - GOLD GRADIENT ==================== */
-.propertyHeader {
-  background: linear-gradient(135deg, var(--gold) 0%, var(--gold-dark) 100%);
+/* ==================== GROUP HEADER - PURPLE GRADIENT ==================== */
+.groupHeader {
+  background: linear-gradient(135deg, var(--primary-purple) 0%, var(--secondary-purple) 100%);
   padding: var(--spacing-xxl);
   color: white;
   border-radius: var(--radius-xl) var(--radius-xl) 0 0;
   position: relative;
 }
 
-.propertyHeaderContent {
+.groupHeaderContent {
   display: flex;
   align-items: center;
   gap: var(--spacing-lg);
 }
 
-.propertyIcon {
+.groupIcon {
   font-size: 4rem;
   width: 80px;
   height: 80px;
@@ -97,12 +97,12 @@
   backdrop-filter: blur(10px);
 }
 
-.propertyHeaderInfo {
+.groupHeaderInfo {
   flex: 1;
   min-width: 0;
 }
 
-.propertyTitle {
+.groupTitle {
   font-size: 2rem;
   margin-bottom: var(--spacing-sm);
   color: white;
@@ -111,7 +111,7 @@
   text-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
 }
 
-.propertyLocation {
+.groupSubtitle {
   font-size: 1.1rem;
   opacity: 0.95;
   display: flex;
@@ -126,6 +126,7 @@
   gap: var(--spacing-sm);
   padding: var(--spacing-lg) var(--spacing-xxl);
   background: var(--gray-100);
+  justify-content: center;
 }
 
 /* ==================== INFO SECTIONS ==================== */
@@ -149,96 +150,10 @@
   gap: var(--spacing-sm);
 }
 
-/* ==================== APPLICANT CARD (FOR LANDLORD VIEW) ==================== */
-.applicantCard {
-  background: var(--bg-light-cream);
-  border: 2px solid var(--border-beige);
-  border-radius: var(--radius-lg);
-  padding: var(--spacing-lg);
-}
-
-.applicantHeader {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: var(--spacing-md);
-  padding-bottom: var(--spacing-md);
-  border-bottom: 2px solid var(--gold);
-}
-
-.applicantName {
-  font-size: 1.25rem;
-  font-weight: 700;
-  color: var(--gray-900);
-  font-family: var(--font-serif);
-}
-
-.applicantDetails {
-  display: flex;
-  flex-direction: column;
-  gap: var(--spacing-sm);
-  margin-bottom: var(--spacing-md);
-}
-
-.applicantBio {
-  margin-top: var(--spacing-md);
-  padding-top: var(--spacing-md);
-  border-top: 1px solid var(--gray-300);
-}
-
-.applicantBio strong {
-  display: block;
-  margin-bottom: var(--spacing-sm);
-  color: var(--gray-900);
-}
-
-.applicantBio p {
-  font-size: 0.95rem;
-  line-height: 1.6;
-  color: var(--gray-700);
-  margin: 0;
-}
-
-/* ==================== MATCH GROUP MEMBERS GRID ==================== */
-.membersGrid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
-  gap: var(--spacing-md);
-}
-
-.memberCard {
-  padding: var(--spacing-md);
-  background: var(--bg-light-cream);
-  border: 1px solid var(--border-beige);
-  border-radius: var(--radius-md);
-  transition: var(--transition-fast);
-}
-
-.memberCard:hover {
-  border-color: var(--gold);
-  box-shadow: var(--shadow-sm);
-}
-
-.memberName {
-  font-weight: 600;
-  color: var(--gray-900);
-  margin-bottom: var(--spacing-xs);
-}
-
-.memberDetail {
-  font-size: 0.875rem;
-  color: var(--gray-600);
-  margin-bottom: var(--spacing-xs);
-}
-
-.memberDetail:last-child {
-  margin-bottom: 0;
-}
-
 /* ==================== INFO GRID ==================== */
 .infoGrid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
   gap: var(--spacing-lg);
 }
 
@@ -276,150 +191,138 @@
   font-weight: 600;
 }
 
-/* ==================== ADDRESS BOX ==================== */
-.addressBox {
+/* ==================== GROUP MESSAGE ==================== */
+.groupMessage {
+  margin-top: var(--spacing-lg);
   padding: var(--spacing-lg);
-  background: var(--bg-light-cream);
+  background: var(--bg-light-purple);
   border-radius: var(--radius-md);
-  border-left: 4px solid var(--gold);
+  border-left: 4px solid var(--primary-purple);
 }
 
-.addressLine {
-  font-size: 1rem;
-  color: var(--gray-800);
-  line-height: 1.6;
-  margin-bottom: var(--spacing-xs);
-}
-
-.addressLine:last-child {
-  margin-bottom: 0;
-}
-
-/* ==================== DETAILS LIST ==================== */
-.detailsList {
-  display: flex;
-  flex-direction: column;
-  gap: var(--spacing-lg);
-}
-
-.detailItem {
-  padding: var(--spacing-md);
-  background: var(--gray-100);
-  border-radius: var(--radius-md);
-}
-
-.detailItem strong {
-  display: block;
+.messageLabel {
+  font-weight: 600;
   color: var(--gray-900);
   margin-bottom: var(--spacing-sm);
+}
+
+.messageText {
   font-size: 0.95rem;
-}
-
-.rulesList {
-  margin: var(--spacing-sm) 0 0 var(--spacing-lg);
-  padding: 0;
-  list-style: disc;
-}
-
-.rulesList li {
+  line-height: 1.6;
   color: var(--gray-700);
-  margin-bottom: var(--spacing-xs);
-  line-height: 1.5;
-}
-
-/* ==================== TAG SECTION ==================== */
-.tagList {
-  display: flex;
-  flex-wrap: wrap;
-  gap: var(--spacing-sm);
-  margin-top: var(--spacing-sm);
-}
-
-.tag {
-  display: inline-block;
-  padding: 6px 12px;
-  background: var(--bg-light-purple);
-  color: var(--primary-purple);
-  border-radius: var(--radius-md);
-  font-size: 0.875rem;
-  font-weight: 500;
-  border: 1px solid rgba(160, 32, 240, 0.2);
-  transition: var(--transition-fast);
-}
-
-.tag:hover {
-  background: var(--primary-purple);
-  color: white;
-  border-color: var(--primary-purple);
-  transform: translateY(-1px);
-}
-
-/* ==================== BIO TEXT ==================== */
-.bioText {
-  font-size: 1rem;
-  line-height: 1.7;
-  color: var(--gray-700);
-  white-space: pre-wrap;
-  background: var(--gray-100);
-  padding: var(--spacing-lg);
-  border-radius: var(--radius-md);
-  border-left: 4px solid var(--gold);
   margin: 0;
 }
 
-/* ==================== CONTACT INFO ==================== */
-.contactInfo {
+/* ==================== ROOMMATES GRID ==================== */
+.roommatesGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: var(--spacing-lg);
+}
+
+/* ==================== ROOMMATE CARD ==================== */
+.roommateCard {
+  background: var(--bg-light-cream);
+  border: 2px solid var(--border-beige);
+  border-radius: var(--radius-lg);
+  padding: var(--spacing-lg);
+  transition: var(--transition-fast);
   display: flex;
   flex-direction: column;
-  gap: var(--spacing-md);
-  background: var(--bg-light-cream);
-  padding: var(--spacing-lg);
-  border-radius: var(--radius-md);
 }
 
-.contactItem {
-  display: flex;
-  align-items: center;
-  gap: var(--spacing-md);
-  padding: var(--spacing-md);
-  background: white;
-  border-radius: var(--spacing-sm);
-  transition: var(--transition-fast);
-  position: relative;
-}
-
-.contactItem:hover {
-  box-shadow: var(--shadow-sm);
+.roommateCard:hover {
+  border-color: var(--primary-purple);
+  box-shadow: var(--shadow-md);
   transform: translateY(-2px);
 }
 
-.contactIcon {
-  font-size: 1.5rem;
+/* ==================== ROOMMATE HEADER ==================== */
+.roommateHeader {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-md);
+  margin-bottom: var(--spacing-md);
+  padding-bottom: var(--spacing-md);
+  border-bottom: 2px solid var(--primary-purple);
+}
+
+.roommateAvatar {
+  font-size: 2.5rem;
+  width: 50px;
+  height: 50px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--bg-light-purple);
+  border-radius: var(--radius-lg);
   flex-shrink: 0;
 }
 
-.contactLabel {
+.roommateHeaderInfo {
+  flex: 1;
+  min-width: 0;
+}
+
+.roommateName {
+  font-size: 1.125rem;
+  font-weight: 700;
+  color: var(--gray-900);
+  font-family: var(--font-serif);
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-sm);
+  flex-wrap: wrap;
+}
+
+.youBadge {
+  display: inline-block;
+  padding: 2px 8px;
+  background: var(--primary-purple);
+  color: white;
+  border-radius: var(--radius-sm);
+  font-size: 0.75rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.roommateAge {
   font-size: 0.875rem;
   color: var(--gray-600);
-  font-weight: 500;
-  margin-bottom: 2px;
+  margin-top: 2px;
 }
 
-.contactValue {
-  font-size: 1rem;
-  color: var(--gold-dark);
-  font-weight: 600;
-  text-decoration: none;
-  transition: var(--transition-fast);
-  flex: 1;
+/* ==================== ROOMMATE QUICK INFO ==================== */
+.roommateQuickInfo {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-sm);
+  margin-bottom: var(--spacing-md);
 }
 
-.contactValue:hover {
-  color: var(--primary-purple);
-  text-decoration: underline;
+.quickInfoItem {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-sm);
+  font-size: 0.9rem;
+  color: var(--gray-700);
 }
 
-/* ==================== CONTACT ICON BUTTONS ==================== */
+.quickInfoIcon {
+  font-size: 1.1rem;
+  flex-shrink: 0;
+}
+
+/* ==================== ROOMMATE CONTACT ==================== */
+.roommateContact {
+  display: flex;
+  justify-content: center;
+  gap: var(--spacing-md);
+  padding: var(--spacing-sm) 0;
+  margin-bottom: var(--spacing-sm);
+}
+
 .contactIconButton {
   font-size: 1.25rem;
   width: 36px;
@@ -432,44 +335,82 @@
   text-decoration: none;
   transition: var(--transition-fast);
   cursor: pointer;
-  flex-shrink: 0;
   border: 2px solid transparent;
 }
 
 .contactIconButton:hover {
-  background: var(--gold);
-  border-color: var(--gold);
+  background: var(--primary-purple);
+  border-color: var(--primary-purple);
   transform: scale(1.1);
 }
 
-/* ==================== LOCKED CONTACT INFO ==================== */
-.contactInfoLocked {
+/* ==================== CONTACT AVAILABILITY MESSAGES ==================== */
+.contactAvailable {
+  background: var(--success-bg);
+  border: 2px solid var(--success-border);
+  border-radius: var(--radius-md);
+  padding: var(--spacing-xl);
+  display: flex;
+  align-items: flex-start;
+  gap: var(--spacing-lg);
+  margin: var(--spacing-lg) var(--spacing-xxl);
+}
+
+.contactAvailableIcon {
+  font-size: 2.5rem;
+  flex-shrink: 0;
+}
+
+.contactAvailable strong {
+  display: block;
+  font-size: 1.125rem;
+  color: var(--success-text);
+  margin-bottom: var(--spacing-sm);
+}
+
+.contactAvailable p {
+  font-size: 0.9rem;
+  color: var(--success-text);
+  margin: 0;
+  line-height: 1.5;
+}
+
+.contactLocked {
   background: var(--warning-bg);
   border: 2px solid var(--warning-border);
   border-radius: var(--radius-md);
   padding: var(--spacing-xl);
-  text-align: center;
+  display: flex;
+  align-items: flex-start;
+  gap: var(--spacing-lg);
   margin: var(--spacing-lg) var(--spacing-xxl);
 }
 
 .lockIcon {
-  font-size: 3rem;
-  margin-bottom: var(--spacing-md);
+  font-size: 2.5rem;
+  flex-shrink: 0;
 }
 
-.lockMessage {
-  color: var(--warning-text);
-}
-
-.lockMessage strong {
+.contactLocked strong {
   display: block;
   font-size: 1.125rem;
+  color: var(--warning-text);
   margin-bottom: var(--spacing-sm);
 }
 
-.lockMessage p {
+.contactLocked p {
   font-size: 0.9rem;
-  margin-bottom: 0;
+  color: var(--warning-text);
+  margin: 0;
+  line-height: 1.5;
+}
+
+/* ==================== EMPTY MESSAGE ==================== */
+.emptyMessage {
+  text-align: center;
+  color: var(--gray-600);
+  padding: var(--spacing-xl);
+  font-style: italic;
 }
 
 /* ==================== MODAL ACTIONS ==================== */
@@ -484,7 +425,6 @@
   align-items: center;
 }
 
-/* ==================== APPROVAL ACTIONS ==================== */
 .approvalActions {
   display: flex;
   gap: var(--spacing-md);
@@ -504,34 +444,34 @@
     margin: var(--spacing-md) 0;
   }
 
-  .propertyHeader {
+  .groupHeader {
     padding: var(--spacing-xl) var(--spacing-lg);
   }
 
-  .propertyHeaderContent {
+  .groupHeaderContent {
     flex-direction: column;
     text-align: center;
     align-items: center;
   }
 
-  .propertyIcon {
+  .groupIcon {
     width: 60px;
     height: 60px;
     font-size: 3rem;
   }
 
-  .propertyTitle {
+  .groupTitle {
     font-size: 1.5rem;
   }
 
-  .propertyLocation {
+  .groupSubtitle {
     font-size: 1rem;
     justify-content: center;
+    flex-wrap: wrap;
   }
 
   .badgeSection {
     padding: var(--spacing-md) var(--spacing-lg);
-    justify-content: center;
   }
 
   .infoSection {
@@ -551,7 +491,7 @@
     gap: var(--spacing-sm);
   }
 
-  .membersGrid {
+  .roommatesGrid {
     grid-template-columns: 1fr;
   }
 
@@ -569,30 +509,36 @@
     width: 100%;
   }
 
-  .contactInfoLocked {
+  .contactAvailable,
+  .contactLocked {
     margin: var(--spacing-md) var(--spacing-lg);
     padding: var(--spacing-lg);
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
   }
 
-  .applicantCard {
-    padding: var(--spacing-md);
+  .roommateHeader {
+    flex-direction: column;
+    text-align: center;
+    align-items: center;
   }
 
-  .applicantName {
-    font-size: 1.125rem;
+  .roommateName {
+    justify-content: center;
   }
 }
 
 @media (max-width: 480px) {
-  .propertyHeader {
+  .groupHeader {
     padding: var(--spacing-lg) var(--spacing-md);
   }
 
-  .propertyTitle {
+  .groupTitle {
     font-size: 1.25rem;
   }
 
-  .propertyLocation {
+  .groupSubtitle {
     font-size: 0.9rem;
   }
 
@@ -604,23 +550,22 @@
     padding: var(--spacing-sm);
   }
 
-  .addressBox {
+  .groupMessage {
     padding: var(--spacing-md);
   }
 
-  .bioText {
-    padding: var(--spacing-md);
-    font-size: 0.9rem;
-  }
-
-  .contactInfo {
+  .roommateCard {
     padding: var(--spacing-md);
   }
 
-  .contactItem {
-    flex-direction: column;
-    align-items: flex-start;
-    text-align: left;
+  .roommateAvatar {
+    width: 40px;
+    height: 40px;
+    font-size: 2rem;
+  }
+
+  .roommateName {
+    font-size: 1rem;
   }
 
   .contactIconButton {

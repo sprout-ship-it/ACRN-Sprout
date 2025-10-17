@@ -1,13 +1,14 @@
-// src/utils/database/matchGroupsService.js - UPDATED FOR JSONB roommate_ids
+// src/utils/database/matchGroupsService.js - UPDATED FOR GROUP EXPANSION
 /**
  * UPDATED SCHEMA STRUCTURE:
- * - roommate_ids: JSONB array of applicant_matching_profiles.id values
+ * - roommate_ids: JSONB array of applicant_matching_profiles.id values (confirmed members)
+ * - pending_member_ids: JSONB array of applicant IDs waiting to join
+ * - member_confirmations: JSONB object tracking approval status
  * - property_id: properties.id (optional)
  * - peer_support_id: peer_support_profiles.id (optional)
  * - requested_by_id: applicant_matching_profiles.id (who created/requested)
- * - pending_member_id: applicant_matching_profiles.id (who needs to accept)
  * 
- * Status flow: requested → forming → confirmed → active → completed/disbanded
+ * Status flow (SIMPLIFIED): requested → active → inactive
  */
 import { supabase } from '../supabase';
 
@@ -17,7 +18,7 @@ const createMatchGroupsService = (supabaseClient) => {
   }
 
   const tableName = 'match_groups';
-  const VALID_STATUSES = ['requested', 'forming', 'confirmed', 'active', 'completed', 'disbanded'];
+  const VALID_STATUSES = ['requested', 'active', 'inactive'];
 
   const service = {
     /**
@@ -42,14 +43,14 @@ const createMatchGroupsService = (supabaseClient) => {
         const { data, error } = await supabaseClient
           .from(tableName)
           .insert({
-            roommate_ids: JSON.stringify(groupData.roommate_ids), // Convert to JSONB
+            roommate_ids: groupData.roommate_ids,
+            pending_member_ids: groupData.pending_member_ids || [],
             property_id: groupData.property_id || null,
             peer_support_id: groupData.peer_support_id || null,
             group_name: groupData.group_name || null,
             move_in_date: groupData.move_in_date || null,
             status: groupData.status || 'requested',
             requested_by_id: groupData.requested_by_id || null,
-            pending_member_id: groupData.pending_member_id || null,
             message: groupData.message || null,
             member_confirmations: groupData.member_confirmations || {},
             group_chat_active: groupData.group_chat_active || false,
@@ -69,6 +70,292 @@ const createMatchGroupsService = (supabaseClient) => {
 
       } catch (err) {
         console.error('💥 MatchGroups: Create exception:', err);
+        return { success: false, data: null, error: { message: err.message } };
+      }
+    },
+
+    /**
+     * Find if user is in an active group (for roommate requests)
+     * @param {string} userId - Applicant matching profile ID
+     * @returns {Object} Database response with group or null
+     */
+    findActiveGroupForUser: async (userId) => {
+      try {
+        console.log('🔍 MatchGroups: Finding active group for user:', userId);
+
+        const { data, error } = await supabaseClient
+          .from(tableName)
+          .select('*')
+          .contains('roommate_ids', [userId])
+          .in('status', ['requested', 'active'])
+          .is('property_id', null) // Only roommate groups, not housing
+          .order('created_at', { ascending: false })
+          .limit(1);
+
+        if (error) {
+          console.error('❌ MatchGroups: FindActiveGroup failed:', error.message);
+          return { success: false, data: null, error };
+        }
+
+        const group = data && data.length > 0 ? data[0] : null;
+        console.log(group ? '✅ Found active group' : 'ℹ️ No active group found');
+        
+        return { success: true, data: group, error: null };
+
+      } catch (err) {
+        console.error('💥 MatchGroups: FindActiveGroup exception:', err);
+        return { success: false, data: null, error: { message: err.message } };
+      }
+    },
+
+    /**
+     * Invite a new member to an existing group
+     * @param {string} groupId - Match group ID
+     * @param {string} inviterId - ID of person sending invite (auto-approves)
+     * @param {string} inviteeId - ID of person being invited
+     * @returns {Object} Database response
+     */
+    inviteMemberToGroup: async (groupId, inviterId, inviteeId) => {
+      try {
+        console.log('🏠 MatchGroups: Inviting member to group:', { groupId, inviterId, inviteeId });
+
+        // Get current group
+        const groupResult = await service.getById(groupId);
+        if (!groupResult.success) {
+          return groupResult;
+        }
+
+        const group = groupResult.data;
+        const currentMembers = group.roommate_ids || [];
+        const pendingMembers = group.pending_member_ids || [];
+        const confirmations = group.member_confirmations || {};
+
+        // Validate inviter is in the group
+        if (!currentMembers.includes(inviterId)) {
+          return { 
+            success: false, 
+            error: { message: 'Inviter is not a member of this group' } 
+          };
+        }
+
+        // Check if invitee is already a member or pending
+        if (currentMembers.includes(inviteeId)) {
+          return { 
+            success: false, 
+            error: { message: 'User is already a member of this group' } 
+          };
+        }
+
+        if (pendingMembers.includes(inviteeId)) {
+          return { 
+            success: false, 
+            error: { message: 'User already has a pending invitation to this group' } 
+          };
+        }
+
+        // Get other members who need to approve (everyone except inviter)
+        const needsApprovalFrom = currentMembers.filter(id => id !== inviterId);
+
+        // Create confirmation tracking for this invitee
+        const newConfirmations = {
+          ...confirmations,
+          [inviteeId]: {
+            invited_by: inviterId,
+            invited_at: new Date().toISOString(),
+            approved_by_existing: [inviterId], // Auto-approve by inviter
+            accepted_by_invitee: false,
+            needs_approval_from: needsApprovalFrom
+          }
+        };
+
+        // Update group with new pending member
+        return await service.update(groupId, {
+          pending_member_ids: [...pendingMembers, inviteeId],
+          member_confirmations: newConfirmations
+        });
+
+      } catch (err) {
+        console.error('💥 MatchGroups: InviteMember exception:', err);
+        return { success: false, data: null, error: { message: err.message } };
+      }
+    },
+
+    /**
+     * Existing member approves a pending invitee
+     * @param {string} groupId - Match group ID
+     * @param {string} approverId - ID of existing member approving
+     * @param {string} inviteeId - ID of pending member
+     * @returns {Object} Database response
+     */
+    approvePendingMember: async (groupId, approverId, inviteeId) => {
+      try {
+        console.log('✅ MatchGroups: Approving pending member:', { groupId, approverId, inviteeId });
+
+        // Get current group
+        const groupResult = await service.getById(groupId);
+        if (!groupResult.success) {
+          return groupResult;
+        }
+
+        const group = groupResult.data;
+        const confirmations = group.member_confirmations || {};
+
+        // Validate invitee is pending
+        if (!confirmations[inviteeId]) {
+          return { 
+            success: false, 
+            error: { message: 'No pending invitation found for this user' } 
+          };
+        }
+
+        const invitation = confirmations[inviteeId];
+        
+        // Check if approver needs to approve
+        if (!invitation.needs_approval_from.includes(approverId)) {
+          return { 
+            success: false, 
+            error: { message: 'You have already approved this member or are not required to approve' } 
+          };
+        }
+
+        // Add approver and remove from needs_approval
+        const updatedInvitation = {
+          ...invitation,
+          approved_by_existing: [...invitation.approved_by_existing, approverId],
+          needs_approval_from: invitation.needs_approval_from.filter(id => id !== approverId)
+        };
+
+        const updatedConfirmations = {
+          ...confirmations,
+          [inviteeId]: updatedInvitation
+        };
+
+        // Update group
+        const updateResult = await service.update(groupId, {
+          member_confirmations: updatedConfirmations
+        });
+
+        if (!updateResult.success) {
+          return updateResult;
+        }
+
+        // Check if all approvals complete and invitee has accepted
+        if (updatedInvitation.needs_approval_from.length === 0 && updatedInvitation.accepted_by_invitee) {
+          console.log('🎉 All approvals complete! Moving member to active group');
+          return await service.confirmPendingMember(groupId, inviteeId);
+        }
+
+        return updateResult;
+
+      } catch (err) {
+        console.error('💥 MatchGroups: ApprovePendingMember exception:', err);
+        return { success: false, data: null, error: { message: err.message } };
+      }
+    },
+
+    /**
+     * Pending invitee accepts the invitation
+     * @param {string} groupId - Match group ID
+     * @param {string} inviteeId - ID of pending member accepting
+     * @returns {Object} Database response
+     */
+    acceptGroupInvitation: async (groupId, inviteeId) => {
+      try {
+        console.log('✅ MatchGroups: Invitee accepting invitation:', { groupId, inviteeId });
+
+        // Get current group
+        const groupResult = await service.getById(groupId);
+        if (!groupResult.success) {
+          return groupResult;
+        }
+
+        const group = groupResult.data;
+        const confirmations = group.member_confirmations || {};
+
+        // Validate invitee is pending
+        if (!confirmations[inviteeId]) {
+          return { 
+            success: false, 
+            error: { message: 'No pending invitation found' } 
+          };
+        }
+
+        const invitation = confirmations[inviteeId];
+
+        // Update acceptance status
+        const updatedInvitation = {
+          ...invitation,
+          accepted_by_invitee: true,
+          accepted_at: new Date().toISOString()
+        };
+
+        const updatedConfirmations = {
+          ...confirmations,
+          [inviteeId]: updatedInvitation
+        };
+
+        // Update group
+        const updateResult = await service.update(groupId, {
+          member_confirmations: updatedConfirmations
+        });
+
+        if (!updateResult.success) {
+          return updateResult;
+        }
+
+        // Check if all approvals complete
+        if (updatedInvitation.needs_approval_from.length === 0) {
+          console.log('🎉 All approvals complete! Moving member to active group');
+          return await service.confirmPendingMember(groupId, inviteeId);
+        }
+
+        return updateResult;
+
+      } catch (err) {
+        console.error('💥 MatchGroups: AcceptGroupInvitation exception:', err);
+        return { success: false, data: null, error: { message: err.message } };
+      }
+    },
+
+    /**
+     * Move pending member to confirmed members (called after all approvals)
+     * @param {string} groupId - Match group ID
+     * @param {string} inviteeId - ID of member to confirm
+     * @returns {Object} Database response
+     */
+    confirmPendingMember: async (groupId, inviteeId) => {
+      try {
+        console.log('🏠 MatchGroups: Confirming pending member:', { groupId, inviteeId });
+
+        // Get current group
+        const groupResult = await service.getById(groupId);
+        if (!groupResult.success) {
+          return groupResult;
+        }
+
+        const group = groupResult.data;
+        const currentMembers = group.roommate_ids || [];
+        const pendingMembers = group.pending_member_ids || [];
+        const confirmations = group.member_confirmations || {};
+
+        // Move from pending to active
+        const updatedMembers = [...currentMembers, inviteeId];
+        const updatedPending = pendingMembers.filter(id => id !== inviteeId);
+
+        // Remove from confirmations tracking
+        const updatedConfirmations = { ...confirmations };
+        delete updatedConfirmations[inviteeId];
+
+        // Update group
+        return await service.update(groupId, {
+          roommate_ids: updatedMembers,
+          pending_member_ids: updatedPending,
+          member_confirmations: updatedConfirmations,
+          status: 'active' // Ensure group is active when member joins
+        });
+
+      } catch (err) {
+        console.error('💥 MatchGroups: ConfirmPendingMember exception:', err);
         return { success: false, data: null, error: { message: err.message } };
       }
     },
@@ -115,7 +402,7 @@ const createMatchGroupsService = (supabaseClient) => {
                   service_state
                 )
               `)
-              .contains('roommate_ids', JSON.stringify([userId]));
+              .contains('roommate_ids', [userId]);
             break;
             
           case 'landlord':
@@ -271,11 +558,6 @@ const createMatchGroupsService = (supabaseClient) => {
           updated_at: new Date().toISOString()
         };
 
-        // Convert roommate_ids to JSONB if present
-        if (updateData.roommate_ids && Array.isArray(updateData.roommate_ids)) {
-          updateData.roommate_ids = JSON.stringify(updateData.roommate_ids);
-        }
-
         // Update last_activity when group data changes
         if (Object.keys(updates).some(key => key !== 'last_activity')) {
           updateData.last_activity = new Date().toISOString();
@@ -303,43 +585,6 @@ const createMatchGroupsService = (supabaseClient) => {
     },
 
     /**
-     * Add member to group
-     * @param {string} groupId - Match group ID
-     * @param {string} memberId - Applicant ID to add
-     * @returns {Object} Database response
-     */
-    addMember: async (groupId, memberId) => {
-      try {
-        console.log('🏠 MatchGroups: Adding member to group:', groupId, memberId);
-
-        // Get current group
-        const groupResult = await service.getById(groupId);
-        if (!groupResult.success) {
-          return groupResult;
-        }
-
-        const currentIds = groupResult.data.roommate_ids || [];
-        
-        // Check if member already in group
-        if (currentIds.includes(memberId)) {
-          return { success: false, error: { message: 'Member already in group' } };
-        }
-
-        // Add member
-        const updatedIds = [...currentIds, memberId];
-
-        return await service.update(groupId, {
-          roommate_ids: updatedIds,
-          status: 'forming'
-        });
-
-      } catch (err) {
-        console.error('💥 MatchGroups: AddMember exception:', err);
-        return { success: false, data: null, error: { message: err.message } };
-      }
-    },
-
-    /**
      * Remove member from group
      * @param {string} groupId - Match group ID
      * @param {string} memberId - Applicant ID to remove
@@ -358,9 +603,12 @@ const createMatchGroupsService = (supabaseClient) => {
         const currentIds = groupResult.data.roommate_ids || [];
         const updatedIds = currentIds.filter(id => id !== memberId);
 
-        // If no members left, disband the group
-        if (updatedIds.length === 0) {
-          return await service.update(groupId, { status: 'disbanded' });
+        // If only 1 member left, mark as inactive
+        if (updatedIds.length <= 1) {
+          return await service.update(groupId, { 
+            roommate_ids: updatedIds,
+            status: 'inactive' 
+          });
         }
 
         return await service.update(groupId, {
@@ -371,34 +619,6 @@ const createMatchGroupsService = (supabaseClient) => {
         console.error('💥 MatchGroups: RemoveMember exception:', err);
         return { success: false, data: null, error: { message: err.message } };
       }
-    },
-
-    /**
-     * Confirm a forming group (move from 'requested' or 'forming' to 'confirmed')
-     */
-    confirmGroup: async (groupId) => {
-      return await service.update(groupId, { status: 'confirmed' });
-    },
-
-    /**
-     * Activate a confirmed group (move to 'active' status)
-     */
-    activateGroup: async (groupId) => {
-      return await service.update(groupId, { status: 'active' });
-    },
-
-    /**
-     * Complete a match group
-     */
-    completeGroup: async (groupId) => {
-      return await service.update(groupId, { status: 'completed' });
-    },
-
-    /**
-     * Disband a match group
-     */
-    disbandGroup: async (groupId) => {
-      return await service.update(groupId, { status: 'disbanded' });
     },
 
     /**
@@ -429,7 +649,7 @@ const createMatchGroupsService = (supabaseClient) => {
     },
 
     /**
-     * Check if user is in group
+     * Check if user is in group (confirmed members only)
      */
     isUserInGroup: (matchGroup, userId) => {
       const roommateIds = matchGroup.roommate_ids || [];
@@ -437,12 +657,23 @@ const createMatchGroupsService = (supabaseClient) => {
     },
 
     /**
+     * Check if user has pending invitation
+     */
+    isUserPendingInGroup: (matchGroup, userId) => {
+      const pendingIds = matchGroup.pending_member_ids || [];
+      return pendingIds.includes(userId);
+    },
+
+    /**
      * Get group composition summary
      */
     getGroupComposition: (matchGroup) => {
       const roommateIds = matchGroup.roommate_ids || [];
+      const pendingIds = matchGroup.pending_member_ids || [];
+      
       return {
-        roommateCount: roommateIds.length,
+        confirmedCount: roommateIds.length,
+        pendingCount: pendingIds.length,
         hasPeerSupport: !!matchGroup.peer_support_id,
         hasProperty: !!matchGroup.property_id,
         totalMembers: roommateIds.length + (matchGroup.peer_support_id ? 1 : 0),
@@ -465,6 +696,18 @@ export const createMatchGroup = async (groupData, authenticatedSupabase = null) 
   const supabaseClient = authenticatedSupabase || supabase;
   const service = createMatchGroupsService(supabaseClient);
   return await service.create(groupData);
+};
+
+export const findActiveGroupForUser = async (userId, authenticatedSupabase = null) => {
+  const supabaseClient = authenticatedSupabase || supabase;
+  const service = createMatchGroupsService(supabaseClient);
+  return await service.findActiveGroupForUser(userId);
+};
+
+export const inviteMemberToGroup = async (groupId, inviterId, inviteeId, authenticatedSupabase = null) => {
+  const supabaseClient = authenticatedSupabase || supabase;
+  const service = createMatchGroupsService(supabaseClient);
+  return await service.inviteMemberToGroup(groupId, inviterId, inviteeId);
 };
 
 export const updateMatchGroupStatus = async (groupId, status, authenticatedSupabase = null) => {

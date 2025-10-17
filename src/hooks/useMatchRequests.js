@@ -1,10 +1,10 @@
-// src/hooks/useMatchRequests.js - REWRITTEN for individual match tables
+// src/hooks/useMatchRequests.js - UPDATED: Show group expansion requests in tabs
 import { useState, useEffect } from 'react';
 import { supabase } from '../utils/supabase';
 
 /**
  * Hook to load and categorize all connection requests across different match types
- * Now queries individual tables instead of unified match_requests table
+ * Now includes pending group member approvals in the appropriate tabs
  */
 export const useMatchRequests = (profileIds) => {
   const [categorizedRequests, setCategorizedRequests] = useState({
@@ -166,7 +166,8 @@ export const useMatchRequests = (profileIds) => {
   };
 
   /**
-   * Load roommate and housing matches from match_groups
+   * ✅ UPDATED: Load roommate and housing matches from match_groups
+   * Now includes pending group member approvals as separate request entries
    */
   const loadMatchGroups = async () => {
     if (!profileIds.applicant) return [];
@@ -174,19 +175,102 @@ export const useMatchRequests = (profileIds) => {
     try {
       const matches = [];
 
-      // Get match groups where user is in roommate_ids array
+      // Get match groups where user is in roommate_ids array OR pending_member_ids array
       const { data, error } = await supabase
         .from('match_groups')
         .select('*')
-        .contains('roommate_ids', [profileIds.applicant]);
+        .or(`roommate_ids.cs.{${profileIds.applicant}},pending_member_ids.cs.{${profileIds.applicant}}`);
 
       if (!error && data) {
         data.forEach(group => {
           const roommateIds = group.roommate_ids || [];
+          const pendingIds = group.pending_member_ids || [];
+          const confirmations = group.member_confirmations || {};
           const isRequester = group.requested_by_id === profileIds.applicant;
-          
-          // For single applicant housing inquiries (property_id exists, single roommate)
-          if (group.property_id && roommateIds.length === 1) {
+          const isConfirmedMember = roommateIds.includes(profileIds.applicant);
+          const isPendingMember = pendingIds.includes(profileIds.applicant);
+
+          // ✅ CASE 1: User is a pending invitee (needs to accept)
+          if (isPendingMember) {
+            const confirmation = confirmations[profileIds.applicant];
+            if (confirmation) {
+              const inviterId = confirmation.invited_by;
+              
+              matches.push({
+                id: group.id,
+                requester_type: 'applicant',
+                requester_id: inviterId,
+                recipient_type: 'applicant',
+                recipient_id: profileIds.applicant,
+                request_type: 'roommate',
+                status: 'pending',
+                message: group.message || `${confirmation.invited_by} invited you to join their roommate group`,
+                created_at: confirmation.invited_at || group.created_at,
+                responded_at: null,
+                is_group_expansion: true,
+                group_size: roommateIds.length,
+                needs_approval_from: confirmation.needs_approval_from || []
+              });
+            }
+          }
+
+          // ✅ CASE 2: User is confirmed member and there are pending members they need to approve
+          if (isConfirmedMember && pendingIds.length > 0) {
+            pendingIds.forEach(pendingId => {
+              const confirmation = confirmations[pendingId];
+              
+              // Check if current user needs to approve this pending member
+              if (confirmation && confirmation.needs_approval_from.includes(profileIds.applicant)) {
+                const inviterId = confirmation.invited_by;
+                
+                matches.push({
+                  id: group.id,
+                  requester_type: 'applicant',
+                  requester_id: inviterId,
+                  recipient_type: 'applicant',
+                  recipient_id: profileIds.applicant,
+                  request_type: 'roommate',
+                  status: 'pending',
+                  message: group.message || `New member wants to join your roommate group`,
+                  created_at: confirmation.invited_at || group.created_at,
+                  responded_at: null,
+                  is_group_expansion: true,
+                  pending_member_id: pendingId,
+                  group_size: roommateIds.length
+                });
+              }
+            });
+          }
+
+          // ✅ CASE 3: User sent invitation(s) - show in sent requests
+          if (isConfirmedMember && pendingIds.length > 0) {
+            pendingIds.forEach(pendingId => {
+              const confirmation = confirmations[pendingId];
+              
+              // Check if current user was the inviter
+              if (confirmation && confirmation.invited_by === profileIds.applicant) {
+                matches.push({
+                  id: group.id,
+                  requester_type: 'applicant',
+                  requester_id: profileIds.applicant,
+                  recipient_type: 'applicant',
+                  recipient_id: pendingId,
+                  request_type: 'roommate',
+                  status: 'pending',
+                  message: group.message || `Waiting for group members to approve`,
+                  created_at: confirmation.invited_at || group.created_at,
+                  responded_at: null,
+                  is_group_expansion: true,
+                  pending_member_id: pendingId,
+                  group_size: roommateIds.length,
+                  awaiting_approvals: confirmation.needs_approval_from || []
+                });
+              }
+            });
+          }
+
+          // ✅ CASE 4: Single applicant housing inquiries (property_id exists, single roommate)
+          if (group.property_id && roommateIds.length === 1 && !isPendingMember) {
             matches.push({
               id: group.id,
               requester_type: 'applicant',
@@ -194,30 +278,49 @@ export const useMatchRequests = (profileIds) => {
               recipient_type: 'landlord',
               recipient_id: null, // We'd need to lookup from property
               request_type: 'housing',
-              status: group.status === 'requested' ? 'pending' : group.status === 'confirmed' || group.status === 'active' ? 'accepted' : 'rejected',
+              status: group.status === 'requested' ? 'pending' : group.status === 'active' ? 'accepted' : 'rejected',
               message: group.message,
               created_at: group.created_at,
               responded_at: group.updated_at !== group.created_at ? group.updated_at : null,
               property_id: group.property_id
             });
           }
-          // For roommate matches (no property, multiple roommates)
-          else if (!group.property_id && roommateIds.length > 1) {
-            // Find the other roommate
+
+          // ✅ CASE 5: Standard roommate matches (no property, confirmed members, no pending)
+          if (!group.property_id && roommateIds.length >= 2 && pendingIds.length === 0 && isConfirmedMember) {
+            // Only show as active/history, not as pending request
             const otherRoommateId = roommateIds.find(id => id !== profileIds.applicant);
             
-            matches.push({
-              id: group.id,
-              requester_type: 'applicant',
-              requester_id: isRequester ? profileIds.applicant : otherRoommateId,
-              recipient_type: 'applicant',
-              recipient_id: isRequester ? otherRoommateId : profileIds.applicant,
-              request_type: 'roommate',
-              status: group.status === 'requested' ? 'pending' : group.status === 'confirmed' || group.status === 'active' ? 'accepted' : 'rejected',
-              message: group.message,
-              created_at: group.created_at,
-              responded_at: group.updated_at !== group.created_at ? group.updated_at : null
-            });
+            // For initial 2-person groups still in 'requested' status
+            if (group.status === 'requested') {
+              matches.push({
+                id: group.id,
+                requester_type: 'applicant',
+                requester_id: isRequester ? profileIds.applicant : otherRoommateId,
+                recipient_type: 'applicant',
+                recipient_id: isRequester ? otherRoommateId : profileIds.applicant,
+                request_type: 'roommate',
+                status: 'pending',
+                message: group.message,
+                created_at: group.created_at,
+                responded_at: null
+              });
+            } else {
+              // Active or inactive group
+              matches.push({
+                id: group.id,
+                requester_type: 'applicant',
+                requester_id: isRequester ? profileIds.applicant : otherRoommateId,
+                recipient_type: 'applicant',
+                recipient_id: isRequester ? otherRoommateId : profileIds.applicant,
+                request_type: 'roommate',
+                status: group.status === 'active' ? 'accepted' : 'rejected',
+                message: group.message,
+                created_at: group.created_at,
+                responded_at: group.updated_at !== group.created_at ? group.updated_at : null,
+                group_size: roommateIds.length
+              });
+            }
           }
         });
       }
@@ -322,13 +425,18 @@ export const useMatchRequests = (profileIds) => {
         ...employmentMatches
       ];
 
-      // Remove duplicates by ID
+      // Remove duplicates by ID (but keep group expansion requests which may share IDs)
       const uniqueRequests = [];
-      const seenIds = new Set();
+      const seenKeys = new Set();
       
       allRequests.forEach(request => {
-        if (!seenIds.has(request.id)) {
-          seenIds.add(request.id);
+        // Create unique key for group expansion requests
+        const key = request.is_group_expansion 
+          ? `${request.id}-${request.pending_member_id || request.recipient_id}-${request.requester_id}`
+          : request.id;
+        
+        if (!seenKeys.has(key)) {
+          seenKeys.add(key);
           uniqueRequests.push(request);
         }
       });
