@@ -7,7 +7,6 @@ import ProfileModal from './ProfileModal';
 import PropertyDetailsModal from './modals/PropertyDetailsModal';
 import GroupDetailsModal from './modals/GroupDetailsModal';
 import styles from './ConnectionHub.module.css';
-import { approvePendingMember, acceptGroupInvitation, confirmPendingMember } from '../../../services/matchGroupsService';
 import createMatchGroupsService from '../../../utils/database/matchGroupsService';
 
 const ConnectionHub = ({ onBack }) => {
