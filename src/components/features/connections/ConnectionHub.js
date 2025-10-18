@@ -7,6 +7,7 @@ import ProfileModal from './ProfileModal';
 import PropertyDetailsModal from './modals/PropertyDetailsModal';
 import GroupDetailsModal from './modals/GroupDetailsModal';
 import styles from './ConnectionHub.module.css';
+import { approvePendingMember, acceptGroupInvitation, confirmPendingMember } from '../../../services/matchGroupsService';
 
 const ConnectionHub = ({ onBack }) => {
   const { user, profile } = useAuth();
@@ -148,29 +149,146 @@ const ConnectionHub = ({ onBack }) => {
   /**
    * Load roommate connections from match_groups (no properties)
    */
-  const loadMatchGroupConnections = async (categories) => {
-    try {
-      const { data: matchGroups, error } = await supabase
-        .from('match_groups')
-        .select('*')
-        .or(`roommate_ids.cs.["${profileIds.applicant}"],requested_by_id.eq.${profileIds.applicant},pending_member_ids.cs.["${profileIds.applicant}"]`)
-        .is('property_id', null);
+/**
+ * Load roommate connections from match_groups (no properties)
+ * ✅ FIXED: Implements all 5 cases with proper array checking and member_confirmations parsing
+ */
+const loadMatchGroupConnections = async (categories) => {
+  try {
+    const { data: matchGroups, error } = await supabase
+      .from('match_groups')
+      .select('*')
+      .or(`roommate_ids.cs.["${profileIds.applicant}"],requested_by_id.eq.${profileIds.applicant},pending_member_ids.cs.["${profileIds.applicant}"]`)
+      .is('property_id', null);
 
-      if (error) throw error;
-      if (!matchGroups || matchGroups.length === 0) return;
+    if (error) throw error;
+    if (!matchGroups || matchGroups.length === 0) return;
 
-      for (const group of matchGroups) {
-        const roommateIds = group.roommate_ids || [];
-        const otherRoommateIds = roommateIds.filter(id => id !== profileIds.applicant);
-        
-        if (otherRoommateIds.length === 0) continue;
-        
-        const { data: roommateData } = await supabase
-          .from('applicant_matching_profiles')
-          .select('id, user_id, primary_phone, date_of_birth, recovery_stage, work_schedule, budget_min, budget_max, primary_location, registrant_profiles(first_name, last_name, email)')
-          .in('id', otherRoommateIds);
-        const roommates = roommateData || [];
+    for (const group of matchGroups) {
+      const roommateIds = group.roommate_ids || [];
+      const pendingIds = group.pending_member_ids || [];
+      const confirmations = group.member_confirmations || {};
+      const isRequester = group.requested_by_id === profileIds.applicant;
+      const isConfirmedMember = roommateIds.includes(profileIds.applicant);
+      const isPendingMember = pendingIds.includes(profileIds.applicant);
 
+      // Load profiles for ALL members (both confirmed and pending)
+      const allMemberIds = [...roommateIds, ...pendingIds].filter(id => id !== profileIds.applicant);
+      
+      if (allMemberIds.length === 0) continue;
+      
+      const { data: memberData } = await supabase
+        .from('applicant_matching_profiles')
+        .select('id, user_id, primary_phone, date_of_birth, recovery_stage, work_schedule, budget_min, budget_max, primary_location, registrant_profiles(first_name, last_name, email)')
+        .in('id', allMemberIds);
+      
+      const members = memberData || [];
+      
+      // Split into confirmed and pending for display purposes
+      const confirmedMembers = members.filter(m => roommateIds.includes(m.id));
+      const pendingMembers = members.filter(m => pendingIds.includes(m.id));
+
+      // ✅ CASE 1: User is pending invitee (needs to accept invitation)
+      if (isPendingMember) {
+        const confirmation = confirmations[profileIds.applicant];
+        if (confirmation) {
+          const connection = {
+            id: `${group.id}-invitee-${profileIds.applicant}`,
+            type: 'roommate',
+            status: group.status,
+            source: 'match_group',
+            match_group_id: group.id,
+            created_at: confirmation.invited_at || group.created_at,
+            last_activity: group.updated_at || group.created_at,
+            avatar: '👥',
+            roommates: confirmedMembers, // Show existing members
+            requested_by_id: confirmation.invited_by,
+            pending_member_ids: pendingIds,
+            member_confirmations: confirmations,
+            message: group.message || `You've been invited to join this roommate group`,
+            group_name: group.group_name,
+            move_in_date: group.move_in_date,
+            is_group_expansion: true,
+            needs_approval_from: confirmation.needs_approval_from || []
+          };
+          
+          categories.awaiting.push(connection);
+        }
+      }
+
+      // ✅ CASE 2: User is confirmed member and needs to approve pending member(s)
+      if (isConfirmedMember && pendingIds.length > 0) {
+        pendingIds.forEach(pendingId => {
+          const confirmation = confirmations[pendingId];
+          
+          // Check if current user needs to approve this pending member
+          if (confirmation && confirmation.needs_approval_from?.includes(profileIds.applicant)) {
+            const pendingMember = members.find(m => m.id === pendingId);
+            
+            const connection = {
+              id: `${group.id}-approve-${pendingId}`,
+              type: 'roommate',
+              status: group.status,
+              source: 'match_group',
+              match_group_id: group.id,
+              created_at: confirmation.invited_at || group.created_at,
+              last_activity: group.updated_at || group.created_at,
+              avatar: '👥',
+              roommates: pendingMember ? [pendingMember] : [], // Show who wants to join
+              requested_by_id: confirmation.invited_by,
+              pending_member_ids: [pendingId],
+              pending_member_id: pendingId,
+              member_confirmations: confirmations,
+              message: group.message || `New member wants to join your roommate group`,
+              group_name: group.group_name,
+              move_in_date: group.move_in_date,
+              is_group_expansion: true,
+              group_size: roommateIds.length
+            };
+            
+            categories.awaiting.push(connection);
+          }
+        });
+      }
+
+      // ✅ CASE 3: User sent invitation(s) - show in sent requests
+      if (isConfirmedMember && pendingIds.length > 0) {
+        pendingIds.forEach(pendingId => {
+          const confirmation = confirmations[pendingId];
+          
+          // Check if current user was the inviter
+          if (confirmation && confirmation.invited_by === profileIds.applicant) {
+            const pendingMember = members.find(m => m.id === pendingId);
+            
+            const connection = {
+              id: `${group.id}-invited-${pendingId}`,
+              type: 'roommate',
+              status: group.status,
+              source: 'match_group',
+              match_group_id: group.id,
+              created_at: confirmation.invited_at || group.created_at,
+              last_activity: group.updated_at || group.created_at,
+              avatar: '👥',
+              roommates: pendingMember ? [pendingMember] : [], // Show who was invited
+              requested_by_id: profileIds.applicant,
+              pending_member_ids: [pendingId],
+              pending_member_id: pendingId,
+              member_confirmations: confirmations,
+              message: group.message || `Waiting for group members to approve`,
+              group_name: group.group_name,
+              move_in_date: group.move_in_date,
+              is_group_expansion: true,
+              group_size: roommateIds.length,
+              awaiting_approvals: confirmation.needs_approval_from || []
+            };
+            
+            categories.sent.push(connection);
+          }
+        });
+      }
+
+      // ✅ CASE 5: Standard roommate groups (no property, no pending members)
+      if (!group.property_id && roommateIds.length >= 2 && pendingIds.length === 0 && isConfirmedMember) {
         const connection = {
           id: group.id,
           type: 'roommate',
@@ -180,36 +298,32 @@ const ConnectionHub = ({ onBack }) => {
           created_at: group.created_at,
           last_activity: group.updated_at || group.created_at,
           avatar: '👥',
-          roommates: roommates,
+          roommates: confirmedMembers,
           requested_by_id: group.requested_by_id,
-          pending_member_id: group.pending_member_id,
-          member_confirmations: group.member_confirmations,
+          pending_member_ids: [],
+          member_confirmations: confirmations,
           message: group.message,
           group_name: group.group_name,
           move_in_date: group.move_in_date
         };
 
+        // Categorize based on status
         if (group.status === 'requested') {
-          if (group.requested_by_id === profileIds.applicant) {
+          if (isRequester) {
             categories.sent.push(connection);
-          } else if (group.pending_member_id === profileIds.applicant) {
-            categories.awaiting.push(connection);
-          }
-        } else if (group.status === 'forming') {
-          if (group.pending_member_id === profileIds.applicant) {
-            categories.awaiting.push(connection);
           } else {
-            categories.active.push(connection);
+            categories.awaiting.push(connection);
           }
         } else if (group.status === 'confirmed' || group.status === 'active') {
           categories.active.push(connection);
         }
       }
-    } catch (error) {
-      console.error('Error in loadMatchGroupConnections:', error);
-      throw error;
     }
-  };
+  } catch (error) {
+    console.error('Error in loadMatchGroupConnections:', error);
+    throw error;
+  }
+};
 
   /**
    * Load housing matches from housing_matches table
@@ -535,12 +649,75 @@ const ConnectionHub = ({ onBack }) => {
   /**
    * Handle approving a connection request
    */
-  const handleApproveRequest = async (connection) => {
-    if (actionLoading) return;
-    setActionLoading(true);
+/**
+ * Handle approving a connection request
+ * ✅ UPDATED: Detects 3 scenarios for roommate approvals (invitee accepting, member approving, initial 2-person)
+ */
+const handleApproveRequest = async (connection) => {
+  if (actionLoading) return;
+  setActionLoading(true);
 
-    try {
-      if (connection.type === 'roommate') {
+  try {
+    if (connection.type === 'roommate') {
+      // ✅ Import these at the top of ConnectionHub.js:
+      // import { approvePendingMember, acceptGroupInvitation, confirmPendingMember } from '../../../services/matchGroupsService';
+      
+      const { approvePendingMember, acceptGroupInvitation, confirmPendingMember } = require('../../../services/matchGroupsService');
+
+      // SCENARIO 1: User is invitee accepting invitation
+      const isPendingInvitee = connection.pending_member_ids?.includes(profileIds.applicant);
+      
+      // SCENARIO 2: User is member approving a pending member
+      const isApprovingMember = connection.is_group_expansion && 
+                                connection.pending_member_id && 
+                                !isPendingInvitee;
+      
+      if (isPendingInvitee) {
+        // User is the invitee - they're accepting the invitation
+        console.log('Invitee accepting group invitation');
+        const result = await acceptGroupInvitation(
+          connection.match_group_id,
+          profileIds.applicant
+        );
+        
+        if (!result.success) {
+          throw new Error(result.error || 'Failed to accept invitation');
+        }
+        
+        alert('Invitation accepted! You will be added to the group once all members approve.');
+        
+      } else if (isApprovingMember) {
+        // User is an existing member approving a pending member
+        console.log('Member approving pending member:', connection.pending_member_id);
+        const result = await approvePendingMember(
+          connection.match_group_id,
+          connection.pending_member_id,
+          profileIds.applicant
+        );
+        
+        if (!result.success) {
+          throw new Error(result.error || 'Failed to approve member');
+        }
+        
+        // Check if all approvals are complete
+        if (result.allApproved) {
+          const confirmResult = await confirmPendingMember(
+            connection.match_group_id,
+            connection.pending_member_id
+          );
+          
+          if (confirmResult.success) {
+            alert('Member approved and added to the group!');
+          } else {
+            alert('Member approved! Waiting for final confirmation.');
+          }
+        } else {
+          alert('Approval recorded! Waiting for other members to approve.');
+        }
+        
+      } else {
+        // SCENARIO 3: Standard 2-person roommate match approval
+        console.log('Standard 2-person match approval');
         await supabase
           .from('match_groups')
           .update({ 
@@ -549,100 +726,107 @@ const ConnectionHub = ({ onBack }) => {
           })
           .eq('id', connection.match_group_id);
         
-      } else if (connection.type === 'landlord') {
-        if (connection.source === 'housing_match' && connection.housing_match_id) {
-          await supabase
-            .from('housing_matches')
-            .update({ 
-              status: 'approved',
-              landlord_message: 'Your inquiry has been approved! Please contact me to discuss next steps.',
-              updated_at: new Date().toISOString()
-            })
-            .eq('id', connection.housing_match_id);
-        }
-        
-      } else if (connection.type === 'peer_support') {
-        const { data: matchData, error: matchError } = await supabase
-          .from('peer_support_matches')
-          .update({ 
-            status: 'active',
-            updated_at: new Date().toISOString()
-          })
-          .eq('id', connection.peer_support_match_id)
-          .select()
-          .single();
-
-        if (matchError) throw matchError;
-
-        const isPeerSpecialist = profileIds.peerSupport && connection.other_person?.professional_title;
-        const peerSpecialistId = isPeerSpecialist ? profileIds.peerSupport : connection.other_person?.id;
-        const clientId = isPeerSpecialist ? connection.other_person?.id : profileIds.applicant;
-
-        if (peerSpecialistId && clientId) {
-          const { data: existingClient } = await supabase
-            .from('pss_clients')
-            .select('id, status')
-            .eq('peer_specialist_id', peerSpecialistId)
-            .eq('client_id', clientId)
-            .single();
-
-          if (existingClient) {
-            if (existingClient.status === 'inactive') {
-              await supabase
-                .from('pss_clients')
-                .update({
-                  status: 'active',
-                  updated_at: new Date().toISOString()
-                })
-                .eq('id', existingClient.id);
-            }
-          } else {
-            const nextFollowupDate = new Date();
-            nextFollowupDate.setDate(nextFollowupDate.getDate() + 7);
-
-            await supabase
-              .from('pss_clients')
-              .insert({
-                peer_specialist_id: peerSpecialistId,
-                client_id: clientId,
-                status: 'active',
-                followup_frequency: 'weekly',
-                next_followup_date: nextFollowupDate.toISOString().split('T')[0],
-                total_sessions: 0,
-                recovery_goals: [],
-                progress_notes: [],
-                consent_to_contact: true,
-                created_by: profile.id
-              });
-          }
-        }
-        
-      } else if (connection.type === 'employer') {
-        await supabase
-          .from('employment_matches')
-          .update({ 
-            status: 'active',
-            updated_at: new Date().toISOString()
-          })
-          .eq('id', connection.employment_match_id);
+        alert('Connection approved! You can now exchange contact information.');
       }
-
+      
+    } else if (connection.type === 'landlord') {
+      if (connection.source === 'housing_match' && connection.housing_match_id) {
+        await supabase
+          .from('housing_matches')
+          .update({ 
+            status: 'approved',
+            landlord_message: 'Your inquiry has been approved! Please contact me to discuss next steps.',
+            updated_at: new Date().toISOString()
+          })
+          .eq('id', connection.housing_match_id);
+      }
+      
       alert('Connection approved! You can now exchange contact information.');
       
-      // Close modals if open
-      setShowProfileModal(false);
-      setShowPropertyModal(false);
-      setShowGroupModal(false);
+    } else if (connection.type === 'peer_support') {
+      const { data: matchData, error: matchError } = await supabase
+        .from('peer_support_matches')
+        .update({ 
+          status: 'active',
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', connection.peer_support_match_id)
+        .select()
+        .single();
+
+      if (matchError) throw matchError;
+
+      const isPeerSpecialist = profileIds.peerSupport && connection.other_person?.professional_title;
+      const peerSpecialistId = isPeerSpecialist ? profileIds.peerSupport : connection.other_person?.id;
+      const clientId = isPeerSpecialist ? connection.other_person?.id : profileIds.applicant;
+
+      if (peerSpecialistId && clientId) {
+        const { data: existingClient } = await supabase
+          .from('pss_clients')
+          .select('id, status')
+          .eq('peer_specialist_id', peerSpecialistId)
+          .eq('client_id', clientId)
+          .single();
+
+        if (existingClient) {
+          if (existingClient.status === 'inactive') {
+            await supabase
+              .from('pss_clients')
+              .update({
+                status: 'active',
+                updated_at: new Date().toISOString()
+              })
+              .eq('id', existingClient.id);
+          }
+        } else {
+          const nextFollowupDate = new Date();
+          nextFollowupDate.setDate(nextFollowupDate.getDate() + 7);
+
+          await supabase
+            .from('pss_clients')
+            .insert({
+              peer_specialist_id: peerSpecialistId,
+              client_id: clientId,
+              status: 'active',
+              followup_frequency: 'weekly',
+              next_followup_date: nextFollowupDate.toISOString().split('T')[0],
+              total_sessions: 0,
+              recovery_goals: [],
+              progress_notes: [],
+              consent_to_contact: true,
+              created_by: profile.id
+            });
+        }
+      }
       
-      await loadConnections();
+      alert('Connection approved! You can now exchange contact information.');
       
-    } catch (err) {
-      console.error('Error approving request:', err);
-      alert('Failed to approve request. Please try again.');
-    } finally {
-      setActionLoading(false);
+    } else if (connection.type === 'employer') {
+      await supabase
+        .from('employment_matches')
+        .update({ 
+          status: 'active',
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', connection.employment_match_id);
+      
+      alert('Connection approved! You can now exchange contact information.');
     }
-  };
+
+    // Close modals if open
+    setShowProfileModal(false);
+    setShowPropertyModal(false);
+    setShowGroupModal(false);
+    
+    await loadConnections();
+    
+  } catch (err) {
+    console.error('Error approving request:', err);
+    alert(err.message || 'Failed to approve request. Please try again.');
+  } finally {
+    setActionLoading(false);
+  }
+};
 
   /**
    * Handle declining a connection request
