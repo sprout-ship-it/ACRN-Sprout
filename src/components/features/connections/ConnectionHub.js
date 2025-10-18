@@ -8,6 +8,7 @@ import PropertyDetailsModal from './modals/PropertyDetailsModal';
 import GroupDetailsModal from './modals/GroupDetailsModal';
 import styles from './ConnectionHub.module.css';
 import { approvePendingMember, acceptGroupInvitation, confirmPendingMember } from '../../../services/matchGroupsService';
+import createMatchGroupsService from '../../../utils/database/matchGroupsService';
 
 const ConnectionHub = ({ onBack }) => {
   const { user, profile } = useAuth();
@@ -646,12 +647,9 @@ const loadMatchGroupConnections = async (categories) => {
     setShowPropertyModal(true);
   };
 
-  /**
-   * Handle approving a connection request
-   */
 /**
  * Handle approving a connection request
- * ✅ UPDATED: Detects 3 scenarios for roommate approvals (invitee accepting, member approving, initial 2-person)
+ * ✅ UPDATED: Uses factory pattern matching useMatchActions.js
  */
 const handleApproveRequest = async (connection) => {
   if (actionLoading) return;
@@ -659,10 +657,8 @@ const handleApproveRequest = async (connection) => {
 
   try {
     if (connection.type === 'roommate') {
-      // ✅ Import these at the top of ConnectionHub.js:
-      // import { approvePendingMember, acceptGroupInvitation, confirmPendingMember } from '../../../services/matchGroupsService';
-      
-      const { approvePendingMember, acceptGroupInvitation, confirmPendingMember } = require('../../../services/matchGroupsService');
+      // ✅ Create service instance (add import at top: import createMatchGroupsService from '../../../utils/database/matchGroupsService';)
+      const matchGroupsService = createMatchGroupsService(supabase);
 
       // SCENARIO 1: User is invitee accepting invitation
       const isPendingInvitee = connection.pending_member_ids?.includes(profileIds.applicant);
@@ -674,34 +670,38 @@ const handleApproveRequest = async (connection) => {
       
       if (isPendingInvitee) {
         // User is the invitee - they're accepting the invitation
-        console.log('Invitee accepting group invitation');
-        const result = await acceptGroupInvitation(
+        console.log('🎯 Invitee accepting group invitation');
+        const result = await matchGroupsService.acceptGroupInvitation(
           connection.match_group_id,
           profileIds.applicant
         );
         
         if (!result.success) {
-          throw new Error(result.error || 'Failed to accept invitation');
+          throw new Error(result.error?.message || 'Failed to accept invitation');
         }
         
         alert('Invitation accepted! You will be added to the group once all members approve.');
         
       } else if (isApprovingMember) {
         // User is an existing member approving a pending member
-        console.log('Member approving pending member:', connection.pending_member_id);
-        const result = await approvePendingMember(
+        console.log('🎯 Member approving pending member:', connection.pending_member_id);
+        const result = await matchGroupsService.approvePendingMember(
           connection.match_group_id,
-          connection.pending_member_id,
-          profileIds.applicant
+          profileIds.applicant,
+          connection.pending_member_id
         );
         
         if (!result.success) {
-          throw new Error(result.error || 'Failed to approve member');
+          throw new Error(result.error?.message || 'Failed to approve member');
         }
         
-        // Check if all approvals are complete
-        if (result.allApproved) {
-          const confirmResult = await confirmPendingMember(
+        // Check if all approvals are complete (result.data will have updated group)
+        const updatedGroup = result.data;
+        const updatedConfirmation = updatedGroup?.member_confirmations?.[connection.pending_member_id];
+        
+        if (updatedConfirmation && updatedConfirmation.needs_approval_from.length === 0 && updatedConfirmation.accepted_by_invitee) {
+          // All approvals complete - confirm the member
+          const confirmResult = await matchGroupsService.confirmPendingMember(
             connection.match_group_id,
             connection.pending_member_id
           );
@@ -717,7 +717,7 @@ const handleApproveRequest = async (connection) => {
         
       } else {
         // SCENARIO 3: Standard 2-person roommate match approval
-        console.log('Standard 2-person match approval');
+        console.log('🎯 Standard 2-person match approval');
         await supabase
           .from('match_groups')
           .update({ 
