@@ -253,69 +253,96 @@ const createMatchGroupsService = (supabaseClient) => {
       }
     },
 
-    /**
-     * Pending invitee accepts the invitation
-     * @param {string} groupId - Match group ID
-     * @param {string} inviteeId - ID of pending member accepting
-     * @returns {Object} Database response
-     */
-    acceptGroupInvitation: async (groupId, inviteeId) => {
-      try {
-        console.log('✅ MatchGroups: Invitee accepting invitation:', { groupId, inviteeId });
+/**
+ * Pending invitee accepts the invitation
+ * ✅ UPDATED: Handles both initial 2-person requests AND group expansion
+ * @param {string} groupId - Match group ID
+ * @param {string} inviteeId - ID of pending member accepting
+ * @returns {Object} Database response
+ */
+acceptGroupInvitation: async (groupId, inviteeId) => {
+  try {
+    console.log('✅ MatchGroups: Invitee accepting invitation:', { groupId, inviteeId });
 
-        // Get current group
-        const groupResult = await service.getById(groupId);
-        if (!groupResult.success) {
-          return groupResult;
-        }
+    // Get current group
+    const groupResult = await service.getById(groupId);
+    if (!groupResult.success) {
+      return groupResult;
+    }
 
-        const group = groupResult.data;
-        const confirmations = group.member_confirmations || {};
+    const group = groupResult.data;
+    const confirmations = group.member_confirmations || {};
+    const pendingIds = group.pending_member_ids || [];
+    const currentMembers = group.roommate_ids || [];
 
-        // Validate invitee is pending
-        if (!confirmations[inviteeId]) {
-          return { 
-            success: false, 
-            error: { message: 'No pending invitation found' } 
-          };
-        }
+    // Validate invitee is pending
+    if (!pendingIds.includes(inviteeId)) {
+      return { 
+        success: false, 
+        error: { message: 'User is not pending in this group' } 
+      };
+    }
 
-        const invitation = confirmations[inviteeId];
+    // ✅ CASE 1: Initial 2-person request (no confirmations tracking)
+    if (Object.keys(confirmations).length === 0) {
+      console.log('🎯 Initial 2-person request - moving to confirmed status');
+      
+      // Move from pending to confirmed members
+      const updatedMembers = [...currentMembers, inviteeId];
+      const updatedPending = pendingIds.filter(id => id !== inviteeId);
 
-        // Update acceptance status
-        const updatedInvitation = {
-          ...invitation,
-          accepted_by_invitee: true,
-          accepted_at: new Date().toISOString()
-        };
+      // Update group to confirmed status
+      return await service.update(groupId, {
+        roommate_ids: updatedMembers,
+        pending_member_ids: updatedPending,
+        status: 'confirmed'
+      });
+    }
 
-        const updatedConfirmations = {
-          ...confirmations,
-          [inviteeId]: updatedInvitation
-        };
+    // ✅ CASE 2: Group expansion with confirmation tracking
+    const invitation = confirmations[inviteeId];
+    
+    if (!invitation) {
+      return { 
+        success: false, 
+        error: { message: 'No pending invitation found for this user' } 
+      };
+    }
 
-        // Update group
-        const updateResult = await service.update(groupId, {
-          member_confirmations: updatedConfirmations
-        });
+    // Update acceptance status
+    const updatedInvitation = {
+      ...invitation,
+      accepted_by_invitee: true,
+      accepted_at: new Date().toISOString()
+    };
 
-        if (!updateResult.success) {
-          return updateResult;
-        }
+    const updatedConfirmations = {
+      ...confirmations,
+      [inviteeId]: updatedInvitation
+    };
 
-        // Check if all approvals complete
-        if (updatedInvitation.needs_approval_from.length === 0) {
-          console.log('🎉 All approvals complete! Moving member to active group');
-          return await service.confirmPendingMember(groupId, inviteeId);
-        }
+    // Update group
+    const updateResult = await service.update(groupId, {
+      member_confirmations: updatedConfirmations
+    });
 
-        return updateResult;
+    if (!updateResult.success) {
+      return updateResult;
+    }
 
-      } catch (err) {
-        console.error('💥 MatchGroups: AcceptGroupInvitation exception:', err);
-        return { success: false, data: null, error: { message: err.message } };
-      }
-    },
+    // Check if all approvals complete
+    if (updatedInvitation.needs_approval_from.length === 0) {
+      console.log('🎉 All approvals complete! Moving member to active group');
+      return await service.confirmPendingMember(groupId, inviteeId);
+    }
+
+    return updateResult;
+
+  } catch (err) {
+    console.error('💥 MatchGroups: AcceptGroupInvitation exception:', err);
+    return { success: false, data: null, error: { message: err.message } };
+  }
+},
 
     /**
      * Move pending member to confirmed members (called after all approvals)
