@@ -360,132 +360,23 @@ const createMatchGroupsService = (supabaseClient) => {
       }
     },
 
-    /**
-     * Get match groups by user ID (checks if user is in roommate_ids array)
-     * @param {string} userType - User type (applicant, landlord, peer-support)
-     * @param {string} userId - Role-specific user ID
-     * @returns {Object} Database response
-     */
-    getByUserId: async (userType, userId) => {
-      try {
-        console.log('🏠 MatchGroups: Fetching match groups for', `${userType}:${userId}`);
+/**
+ * Get match groups by user ID (checks if user is in roommate_ids array)
+ * ✅ CLEANED UP: Removed peer_support joins (now handled in peer_support_matches table)
+ * @param {string} userType - User type (applicant, landlord)
+ * @param {string} userId - Role-specific user ID
+ * @returns {Object} Database response
+ */
+getByUserId: async (userType, userId) => {
+  try {
+    console.log('🏠 MatchGroups: Fetching match groups for', `${userType}:${userId}`);
 
-        let query;
-        
-        switch (userType) {
-          case 'applicant':
-            // Check if userId is in the roommate_ids JSONB array
-            query = supabaseClient
-              .from(tableName)
-              .select(`
-                *,
-                property:properties!property_id(
-                  id,
-                  title,
-                  address,
-                  city,
-                  state,
-                  monthly_rent,
-                  property_type,
-                  landlord:landlord_profiles!landlord_id(
-                    id,
-                    primary_phone,
-                    business_name,
-                    contact_email
-                  )
-                ),
-                peer_support:peer_support_profiles!peer_support_id(
-                  id, 
-                  primary_phone,
-                  bio,
-                  service_city,
-                  service_state
-                )
-              `)
-              .contains('roommate_ids', [userId]);
-            break;
-            
-          case 'landlord':
-            // Get properties owned by landlord, then get groups for those properties
-            const { data: properties, error: propsError } = await supabaseClient
-              .from('properties')
-              .select('id')
-              .eq('landlord_id', userId);
-            
-            if (propsError) {
-              console.error('❌ MatchGroups: Failed to get landlord properties:', propsError);
-              return { success: false, data: [], error: propsError };
-            }
-            
-            if (!properties || properties.length === 0) {
-              console.log('ℹ️ MatchGroups: No properties found for landlord:', userId);
-              return { success: true, data: [], error: null };
-            }
-            
-            const propertyIds = properties.map(p => p.id);
-            query = supabaseClient
-              .from(tableName)
-              .select(`
-                *,
-                property:properties!property_id(
-                  id,
-                  title,
-                  address,
-                  city,
-                  state,
-                  monthly_rent,
-                  property_type
-                )
-              `)
-              .in('property_id', propertyIds);
-            break;
-            
-          case 'peer-support':
-            query = supabaseClient
-              .from(tableName)
-              .select(`
-                *,
-                property:properties!property_id(
-                  id,
-                  title,
-                  address,
-                  city,
-                  state
-                )
-              `)
-              .eq('peer_support_id', userId);
-            break;
-            
-          default:
-            throw new Error(`Invalid user type: ${userType}`);
-        }
-
-        const { data, error } = await query.order('created_at', { ascending: false });
-
-        if (error) {
-          console.error('❌ MatchGroups: GetByUserId failed:', error.message);
-          return { success: false, data: [], error };
-        }
-
-        console.log(`✅ MatchGroups: Found ${data?.length || 0} match groups`);
-        return { success: true, data: data || [], error: null };
-
-      } catch (err) {
-        console.error('💥 MatchGroups: GetByUserId exception:', err);
-        return { success: false, data: [], error: { message: err.message } };
-      }
-    },
-
-    /**
-     * Get match group by ID with full details
-     * @param {string} groupId - Match group ID
-     * @returns {Object} Database response
-     */
-    getById: async (groupId) => {
-      try {
-        console.log('🏠 MatchGroups: Fetching match group by ID:', groupId);
-
-        const { data, error } = await supabaseClient
+    let query;
+    
+    switch (userType) {
+      case 'applicant':
+        // Check if userId is in the roommate_ids JSONB array
+        query = supabaseClient
           .from(tableName)
           .select(`
             *,
@@ -497,46 +388,125 @@ const createMatchGroupsService = (supabaseClient) => {
               state,
               monthly_rent,
               property_type,
-              bedrooms,
-              bathrooms,
               landlord:landlord_profiles!landlord_id(
                 id,
                 primary_phone,
-                contact_email,
                 business_name,
-                bio
+                contact_email
               )
-            ),
-            peer_support:peer_support_profiles!peer_support_id(
-              id, 
-              primary_phone,
-              contact_email,
-              bio,
-              professional_title,
-              service_city,
-              service_state,
-              specialties
             )
           `)
-          .eq('id', groupId)
-          .single();
-
-        if (error) {
-          if (error.code === 'PGRST116') {
-            return { success: false, data: null, error: { code: 'NOT_FOUND', message: 'Match group not found' } };
-          }
-          console.error('❌ MatchGroups: GetById failed:', error.message);
-          return { success: false, data: null, error };
+          .contains('roommate_ids', [userId]);
+        break;
+        
+      case 'landlord':
+        // Get properties owned by landlord, then get groups for those properties
+        const { data: properties, error: propsError } = await supabaseClient
+          .from('properties')
+          .select('id')
+          .eq('landlord_id', userId);
+        
+        if (propsError) {
+          console.error('❌ MatchGroups: Failed to get landlord properties:', propsError);
+          return { success: false, data: [], error: propsError };
         }
+        
+        if (!properties || properties.length === 0) {
+          console.log('ℹ️ MatchGroups: No properties found for landlord:', userId);
+          return { success: true, data: [], error: null };
+        }
+        
+        const propertyIds = properties.map(p => p.id);
+        query = supabaseClient
+          .from(tableName)
+          .select(`
+            *,
+            property:properties!property_id(
+              id,
+              title,
+              address,
+              city,
+              state,
+              monthly_rent,
+              property_type
+            )
+          `)
+          .in('property_id', propertyIds);
+        break;
+        
+      default:
+        throw new Error(`Invalid user type: ${userType}`);
+    }
 
-        console.log('✅ MatchGroups: Match group retrieved successfully');
-        return { success: true, data, error: null };
+    const { data, error } = await query.order('created_at', { ascending: false });
 
-      } catch (err) {
-        console.error('💥 MatchGroups: GetById exception:', err);
-        return { success: false, data: null, error: { message: err.message } };
+    if (error) {
+      console.error('❌ MatchGroups: GetByUserId failed:', error.message);
+      return { success: false, data: [], error };
+    }
+
+    console.log(`✅ MatchGroups: Found ${data?.length || 0} match groups`);
+    return { success: true, data: data || [], error: null };
+
+  } catch (err) {
+    console.error('💥 MatchGroups: GetByUserId exception:', err);
+    return { success: false, data: [], error: { message: err.message } };
+  }
+},
+
+
+/**
+ * Get match group by ID with full details
+ * ✅ CLEANED UP: Removed peer_support join (now handled in peer_support_matches table)
+ * @param {string} groupId - Match group ID
+ * @returns {Object} Database response
+ */
+getById: async (groupId) => {
+  try {
+    console.log('🏠 MatchGroups: Fetching match group by ID:', groupId);
+
+    const { data, error } = await supabaseClient
+      .from(tableName)
+      .select(`
+        *,
+        property:properties!property_id(
+          id,
+          title,
+          address,
+          city,
+          state,
+          monthly_rent,
+          property_type,
+          bedrooms,
+          bathrooms,
+          landlord:landlord_profiles!landlord_id(
+            id,
+            primary_phone,
+            contact_email,
+            business_name,
+            bio
+          )
+        )
+      `)
+      .eq('id', groupId)
+      .single();
+
+    if (error) {
+      if (error.code === 'PGRST116') {
+        return { success: false, data: null, error: { code: 'NOT_FOUND', message: 'Match group not found' } };
       }
-    },
+      console.error('❌ MatchGroups: GetById failed:', error.message);
+      return { success: false, data: null, error };
+    }
+
+    console.log('✅ MatchGroups: Match group retrieved successfully');
+    return { success: true, data, error: null };
+
+  } catch (err) {
+    console.error('💥 MatchGroups: GetById exception:', err);
+    return { success: false, data: null, error: { message: err.message } };
+  }
+},
 
     /**
      * Update match group
