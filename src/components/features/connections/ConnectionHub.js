@@ -146,9 +146,6 @@ const ConnectionHub = ({ onBack }) => {
     }
   };
 
-  /**
-   * Load roommate connections from match_groups (no properties)
-   */
 /**
  * Load roommate connections from match_groups (no properties)
  * ✅ FIXED: Implements all 5 cases with proper array checking and member_confirmations parsing
@@ -187,6 +184,43 @@ const loadMatchGroupConnections = async (categories) => {
       // Split into confirmed and pending for display purposes
       const confirmedMembers = members.filter(m => roommateIds.includes(m.id));
       const pendingMembers = members.filter(m => pendingIds.includes(m.id));
+
+      // ✅ CASE 0: Initial 2-person request (no member_confirmations yet)
+      // This handles the very first request where A sends to B
+      if (group.status === 'requested' && 
+          roommateIds.length === 2 && 
+          pendingIds.length === 1 &&
+          Object.keys(confirmations).length === 0) {
+        
+        const pendingMember = members.find(m => m.id === pendingIds[0]);
+        const isPendingUser = pendingIds.includes(profileIds.applicant);
+        
+        const connection = {
+          id: group.id,
+          type: 'roommate',
+          status: group.status,
+          source: 'match_group',
+          match_group_id: group.id,
+          created_at: group.created_at,
+          last_activity: group.updated_at || group.created_at,
+          avatar: '👥',
+          roommates: pendingMember ? [pendingMember] : confirmedMembers,
+          requested_by_id: group.requested_by_id,
+          pending_member_ids: pendingIds,
+          member_confirmations: confirmations,
+          message: group.message || (isPendingUser ? 'You have a new roommate request' : 'Waiting for response'),
+          group_name: group.group_name,
+          move_in_date: group.move_in_date
+        };
+
+        if (isPendingUser) {
+          categories.awaiting.push(connection);
+        } else if (isRequester) {
+          categories.sent.push(connection);
+        }
+        
+        continue; // Skip other cases for initial requests
+      }
 
       // ✅ CASE 1: User is pending invitee (needs to accept invitation)
       if (isPendingMember) {
