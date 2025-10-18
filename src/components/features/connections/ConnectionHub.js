@@ -348,7 +348,7 @@ const loadMatchGroupConnections = async (categories) => {
           } else {
             categories.awaiting.push(connection);
           }
-        } else if (group.status === 'confirmed' || group.status === 'active') {
+        } else if (group.status === 'active') {
           categories.active.push(connection);
         }
       }

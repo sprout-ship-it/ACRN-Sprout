@@ -285,17 +285,17 @@ acceptGroupInvitation: async (groupId, inviteeId) => {
 
     // ✅ CASE 1: Initial 2-person request (no confirmations tracking)
     if (Object.keys(confirmations).length === 0) {
-      console.log('🎯 Initial 2-person request - moving to confirmed status');
+      console.log('🎯 Initial 2-person request - moving to active status');
       
       // Move from pending to confirmed members
       const updatedMembers = [...currentMembers, inviteeId];
       const updatedPending = pendingIds.filter(id => id !== inviteeId);
 
-      // Update group to confirmed status
+      // Update group to active status (schema only has: requested, active, inactive)
       return await service.update(groupId, {
         roommate_ids: updatedMembers,
         pending_member_ids: updatedPending,
-        status: 'confirmed'
+        status: 'active'
       });
     }
 
