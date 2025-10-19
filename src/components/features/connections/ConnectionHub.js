@@ -1368,38 +1368,26 @@ const handleApproveRequest = async (connection) => {
                         )}
                       </div>
 
-/* Secondary Actions - Updated to include Approve button */
-{activeTab === 'awaiting' && (
-  <div className={styles.secondaryActions}>
-    <button 
-      className="btn btn-sm btn-success" 
-      onClick={() => handleApproveRequest(connection)} 
-      disabled={actionLoading}
-    >
-      ✅ Approve
-    </button>
-    <button 
-      className="btn btn-sm btn-outline" 
-      onClick={() => handleDeclineRequest(connection)} 
-      disabled={actionLoading}
-    >
-      ❌ Decline
-    </button>
-  </div>
-)}
-
-{activeTab === 'sent' && (
-  <div className={styles.secondaryActions}>
-    <div className={styles.waitingStatus}>⏳ Waiting for response...</div>
-    <button 
-      className="btn btn-sm btn-outline" 
-      onClick={() => handleWithdrawRequest(connection)} 
-      disabled={actionLoading}
-    >
-      🗑️ Withdraw
-    </button>
-  </div>
-)}
+                      {/* ✅ FIXED: JSX comment syntax */}
+                      {/* Secondary Actions - Updated to include Approve button */}
+                      {activeTab === 'awaiting' && (
+                        <div className={styles.secondaryActions}>
+                          <button 
+                            className="btn btn-sm btn-success" 
+                            onClick={() => handleApproveRequest(connection)} 
+                            disabled={actionLoading}
+                          >
+                            ✅ Approve
+                          </button>
+                          <button 
+                            className="btn btn-sm btn-outline" 
+                            onClick={() => handleDeclineRequest(connection)} 
+                            disabled={actionLoading}
+                          >
+                            ❌ Decline
+                          </button>
+                        </div>
+                      )}
 
                       {activeTab === 'sent' && (
                         <div className={styles.secondaryActions}>

@@ -788,6 +788,7 @@ async loadMatchGroups(userId) {
    * SCHEMA COMPLIANT: Load sent requests for UI feedback
    */
 /**
+ * ✅ FIX #3: Load sent requests with .maybeSingle() for safer lookups
  * Load sent requests from match_groups for UI feedback
  * @param {string} userId - Registrant profile ID
  * @returns {Set} Set of user IDs with pending requests
@@ -799,7 +800,7 @@ async loadSentRequests(userId) {
       .from('applicant_matching_profiles')
       .select('id, user_id')
       .eq('user_id', userId)
-      .single();
+      .maybeSingle();  // ✅ FIXED: Changed from .single()
     
     if (!userApplicant) {
       console.warn('No applicant profile found for user:', userId);
@@ -829,72 +830,7 @@ async loadSentRequests(userId) {
                 .from('applicant_matching_profiles')
                 .select('user_id')
                 .eq('id', roommateId)
-                .single();
-              
-              if (roommate) {
-                sentRequestIds.add(roommate.user_id);
-              }
-            } catch (err) {
-              console.warn('Could not find roommate profile for ID:', roommateId);
-            }
-          }
-        }
-      }
-    }
-    
-    console.log(`Found ${sentRequestIds.size} pending requests sent`);
-    return sentRequestIds;
-    
-  } catch (err) {
-    console.error('Error loading sent requests:', err);
-    return new Set();
-  }
-}
-
-/**
- * Load sent requests from match_groups for UI feedback
- * @param {string} userId - Registrant profile ID
- * @returns {Set} Set of user IDs with pending requests
- */
-async loadSentRequests(userId) {
-  try {
-    // Get the user's applicant profile ID
-    // userId should be registrant_profiles.id at this point
-    const { data: userApplicant } = await supabase
-      .from('applicant_matching_profiles')
-      .select('id, user_id')
-      .eq('user_id', userId)
-      .maybeSingle();  // ✅ Changed from .single()
-    
-    if (!userApplicant) {
-      console.warn('No applicant profile found for user:', userId);
-      return new Set();
-    }
-    
-    const userApplicantId = userApplicant.id;
-    const sentRequestIds = new Set();
-    
-    // Query match_groups where user is the requester with pending status
-    const { data: pendingGroups } = await supabase
-      .from('match_groups')
-      .select('roommate_ids, requested_by_id, status')
-      .eq('requested_by_id', userApplicantId)
-      .eq('status', 'requested')
-      .contains('roommate_ids', JSON.stringify([userApplicantId]));  // ✅ JSON.stringify for JSONB
-    
-    if (pendingGroups && pendingGroups.length > 0) {
-      for (const group of pendingGroups) {
-        const roommateIds = group.roommate_ids || [];
-        
-        // Get the other roommate(s) in the group
-        for (const roommateId of roommateIds) {
-          if (roommateId !== userApplicantId) {
-            try {
-              const { data: roommate } = await supabase
-                .from('applicant_matching_profiles')
-                .select('user_id')
-                .eq('id', roommateId)
-                .maybeSingle();  // ✅ Changed from .single()
+                .maybeSingle();  // ✅ FIXED: Changed from .single()
               
               if (roommate) {
                 sentRequestIds.add(roommate.user_id);
@@ -1271,6 +1207,7 @@ applySchemaCompliantFilters(candidates, filters) {
 
 
 /**
+ * ✅ FIX #1: Send match request - try user_id FIRST, then id as fallback
  * Send match request by creating a match_groups entry
  * @param {string} currentUserId - Current user's registrant profile ID
  * @param {Object} targetMatch - Target match profile
@@ -1280,30 +1217,30 @@ async sendMatchRequest(currentUserId, targetMatch) {
   try {
     console.log('🤝 Sending roommate match request to:', targetMatch.first_name);
     
-    // Get sender's applicant profile ID
+    // ✅ FIXED: Try user_id FIRST (registrant profile ID), then id as fallback
     let senderApplicantId;
     try {
-      // Try to find applicant profile by currentUserId (could be registrant ID or applicant ID)
+      // FIRST: Try as registrant profile ID (most common case)
       let { data: senderApplicant } = await supabase
         .from('applicant_matching_profiles')
         .select('id, user_id')
-        .eq('id', currentUserId)
-        .single();
+        .eq('user_id', currentUserId)
+        .maybeSingle();  // ✅ Use maybeSingle for safer lookups
       
       if (senderApplicant) {
         senderApplicantId = senderApplicant.id;
-        console.log('✅ currentUserId is applicant profile ID:', senderApplicantId);
+        console.log('✅ currentUserId is registrant profile ID, found applicant ID:', senderApplicantId);
       } else {
-        // Try as registrant profile ID
+        // FALLBACK: Try as applicant profile ID
         ({ data: senderApplicant } = await supabase
           .from('applicant_matching_profiles')
           .select('id, user_id')
-          .eq('user_id', currentUserId)
-          .single());
+          .eq('id', currentUserId)
+          .maybeSingle());
         
         if (senderApplicant) {
           senderApplicantId = senderApplicant.id;
-          console.log('✅ Converted registrant profile ID to applicant profile ID:', senderApplicantId);
+          console.log('✅ currentUserId is applicant profile ID:', senderApplicantId);
         } else {
           throw new Error('Could not find sender applicant profile');
         }
@@ -1334,7 +1271,7 @@ async sendMatchRequest(currentUserId, targetMatch) {
           .from('applicant_matching_profiles')
           .select('id, user_id')
           .eq('user_id', targetMatch.user_id)
-          .single();
+          .maybeSingle();  // ✅ Use maybeSingle
         
         if (!targetApplicant) {
           throw new Error(`No applicant profile found for target user ${targetMatch.user_id}`);
@@ -1379,24 +1316,24 @@ async sendMatchRequest(currentUserId, targetMatch) {
     }
     
     // Create match_groups entry with JSONB roommate_ids
-const groupData = {
-  roommate_ids: [senderApplicantId, targetApplicantId],
-  requested_by_id: senderApplicantId,
-  pending_member_ids: [targetApplicantId],
-  status: 'requested',
-  message: this.generateRequestMessage(targetMatch),
-  member_confirmations: {},
-  created_at: new Date().toISOString(),
-  updated_at: new Date().toISOString()
-};
+    const groupData = {
+      roommate_ids: [senderApplicantId, targetApplicantId],
+      requested_by_id: senderApplicantId,
+      pending_member_ids: [targetApplicantId],
+      status: 'requested',
+      message: this.generateRequestMessage(targetMatch),
+      member_confirmations: {},
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString()
+    };
 
-console.log('📤 Creating match group:', groupData);
+    console.log('📤 Creating match group:', groupData);
 
-const { data, error } = await supabase
-  .from('match_groups')
-  .insert(groupData) 
-  .select()
-  .single();
+    const { data, error } = await supabase
+      .from('match_groups')
+      .insert(groupData) 
+      .select()
+      .single();
     
     if (error) {
       console.error('❌ Supabase error creating match group:', error);
@@ -1541,12 +1478,14 @@ const { data, error } = await supabase
   }
 
   /**
+   * ✅ FIX #2: Invalidate cached results with correct version prefix
    * Invalidate cached results for a user
    */
   invalidateUserCache(userId) {
     const keysToDelete = [];
     for (const key of this.cache.keys()) {
-      if (key.includes(`schema_compliant_matches_${userId}_`)) {
+      // ✅ FIXED: Added v2_ to match the cache key format
+      if (key.includes(`schema_compliant_matches_v2_${userId}_`)) {
         keysToDelete.push(key);
       }
     }
