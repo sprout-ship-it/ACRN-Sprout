@@ -268,7 +268,7 @@ const loadMatchGroupConnections = async (categories) => {
               created_at: confirmation.invited_at || group.created_at,
               last_activity: group.updated_at || group.created_at,
               avatar: '👥',
-              roommates: pendingMember ? [pendingMember] : [], // Show who wants to join
+              roommates: pendingMember ? [...confirmedMembers, pendingMember] : confirmedMembers, // Show group context + who wants to join
               requested_by_id: confirmation.invited_by,
               pending_member_ids: [pendingId],
               pending_member_id: pendingId,
@@ -303,7 +303,7 @@ const loadMatchGroupConnections = async (categories) => {
               created_at: confirmation.invited_at || group.created_at,
               last_activity: group.updated_at || group.created_at,
               avatar: '👥',
-              roommates: pendingMember ? [pendingMember] : [], // Show who was invited
+              roommates: pendingMember ? [...confirmedMembers, pendingMember] : confirmedMembers, // Show confirmed members + who was invited
               requested_by_id: profileIds.applicant,
               pending_member_ids: [pendingId],
               pending_member_id: pendingId,
