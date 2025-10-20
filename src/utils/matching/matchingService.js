@@ -604,11 +604,9 @@ async loadUserProfile(userId) {
   }
 }
 
-  /**
-   * SCHEMA COMPLIANT: Load excluded users using exact table names
-   */
 /**
  * Load excluded users from match_groups, peer_support_matches, and employment_matches
+ * Includes BIDIRECTIONAL exclusion: both confirmed connections AND pending requests
  * @param {string} userId - Registrant profile ID
  * @returns {Set} Set of excluded user IDs (registrant profile IDs)
  */
@@ -631,20 +629,21 @@ async loadExcludedUsers(userId) {
     const userApplicantId = userApplicant.id;
     console.log('User applicant profile ID:', userApplicantId);
     
-    const excludedUserIds = new Set(); // Will contain registrant_profiles.id values
+    const excludedUserIds = new Set();
 
-    // 1. Load from match_groups (roommate connections)
-    const { data: matchGroups } = await supabase
+    // ===== MATCH GROUPS (Roommate Connections) =====
+    
+    // 1A. Exclude confirmed group members (in roommate_ids)
+    const { data: confirmedGroups } = await supabase
       .from('match_groups')
       .select('roommate_ids, status')
       .contains('roommate_ids', JSON.stringify([userApplicantId]));
     
-    if (matchGroups && matchGroups.length > 0) {
-      for (const group of matchGroups) {
+    if (confirmedGroups && confirmedGroups.length > 0) {
+      for (const group of confirmedGroups) {
         if (['requested', 'forming', 'confirmed', 'active'].includes(group.status)) {
           const roommateIds = group.roommate_ids || [];
           
-          // Get registrant profile IDs for all roommates except current user
           for (const roommateId of roommateIds) {
             if (roommateId !== userApplicantId) {
               try {
@@ -656,7 +655,7 @@ async loadExcludedUsers(userId) {
                 
                 if (roommate) {
                   excludedUserIds.add(roommate.user_id);
-                  console.log(`Excluding user ${roommate.user_id} - match group ${group.status}`);
+                  console.log(`Excluding user ${roommate.user_id} - confirmed group member ${group.status}`);
                 }
               } catch (err) {
                 console.warn('Could not find applicant profile for ID:', roommateId);
@@ -667,7 +666,71 @@ async loadExcludedUsers(userId) {
       }
     }
 
-    // 2. Load from peer_support_matches
+    // 1B. Exclude pending invitations WHERE USER IS INVITEE (in pending_member_ids)
+    const { data: pendingInviteeGroups } = await supabase
+      .from('match_groups')
+      .select('roommate_ids, pending_member_ids, status')
+      .contains('pending_member_ids', JSON.stringify([userApplicantId]));
+    
+    if (pendingInviteeGroups && pendingInviteeGroups.length > 0) {
+      for (const group of pendingInviteeGroups) {
+        if (['requested', 'forming', 'active'].includes(group.status)) {
+          const roommateIds = group.roommate_ids || [];
+          
+          // Exclude all confirmed members from this group I'm invited to
+          for (const roommateId of roommateIds) {
+            try {
+              const { data: roommate } = await supabase
+                .from('applicant_matching_profiles')
+                .select('user_id')
+                .eq('id', roommateId)
+                .single();
+              
+              if (roommate) {
+                excludedUserIds.add(roommate.user_id);
+                console.log(`Excluding user ${roommate.user_id} - pending invitation from them`);
+              }
+            } catch (err) {
+              console.warn('Could not find applicant profile for ID:', roommateId);
+            }
+          }
+        }
+      }
+    }
+
+    // 1C. Exclude pending invitations WHERE USER IS INVITER (requested_by_id)
+    const { data: pendingInviterGroups } = await supabase
+      .from('match_groups')
+      .select('roommate_ids, pending_member_ids, status')
+      .eq('requested_by_id', userApplicantId);
+    
+    if (pendingInviterGroups && pendingInviterGroups.length > 0) {
+      for (const group of pendingInviterGroups) {
+        if (['requested', 'forming', 'active'].includes(group.status)) {
+          const pendingIds = group.pending_member_ids || [];
+          
+          // Exclude all pending invitees
+          for (const pendingId of pendingIds) {
+            try {
+              const { data: pendingMember } = await supabase
+                .from('applicant_matching_profiles')
+                .select('user_id')
+                .eq('id', pendingId)
+                .single();
+              
+              if (pendingMember) {
+                excludedUserIds.add(pendingMember.user_id);
+                console.log(`Excluding user ${pendingMember.user_id} - pending invitation to them`);
+              }
+            } catch (err) {
+              console.warn('Could not find applicant profile for ID:', pendingId);
+            }
+          }
+        }
+      }
+    }
+
+    // ===== PEER SUPPORT MATCHES =====
     const { data: peerMatches } = await supabase
       .from('peer_support_matches')
       .select('applicant_id, peer_support_id, status')
@@ -676,23 +739,20 @@ async loadExcludedUsers(userId) {
     if (peerMatches && peerMatches.length > 0) {
       for (const match of peerMatches) {
         if (['requested', 'active'].includes(match.status)) {
-          // Determine the other party's ID
           const otherProfileId = match.applicant_id === userApplicantId ? 
             match.peer_support_id : match.applicant_id;
           
-          // Convert to registrant profile ID
-          // Note: peer_support_id and applicant_id are already registrant-level IDs in this table
           excludedUserIds.add(otherProfileId);
           console.log(`Excluding user ${otherProfileId} - peer support ${match.status}`);
         }
       }
     }
 
-    // 3. Load from employment_matches
+    // ===== EMPLOYMENT MATCHES =====
     const { data: employmentMatches } = await supabase
       .from('employment_matches')
       .select('applicant_id, employer_id, status')
-      .or(`applicant_id.eq.${userApplicantId}`); // Only check as applicant
+      .or(`applicant_id.eq.${userApplicantId}`);
     
     if (employmentMatches && employmentMatches.length > 0) {
       for (const match of employmentMatches) {

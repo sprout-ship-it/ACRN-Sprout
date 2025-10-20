@@ -1493,12 +1493,13 @@ const handleApproveRequest = async (connection) => {
     onViewProfile={(roommate) => handleViewProfile(selectedConnection, roommate)}
     onApprove={() => handleApproveRequest(selectedConnection)}
     onDecline={() => handleDeclineRequest(selectedConnection)}
-    showContactInfo={
-      (selectedConnection?.status === 'confirmed' || 
-       selectedConnection?.status === 'active' || 
-       selectedConnection?.status === 'approved') &&
-      !selectedConnection?.pending_member_ids?.includes(profileIds.applicant)
-    }
+showContactInfo={
+  (selectedConnection?.status === 'confirmed' || 
+   selectedConnection?.status === 'active' || 
+   selectedConnection?.status === 'approved') &&
+  !selectedConnection?.pending_member_ids?.includes(profileIds.applicant) &&
+  (selectedConnection?.pending_member_ids?.length === 0 || false)
+}
     showActions={activeTab === 'awaiting'}
     isAwaitingApproval={activeTab === 'awaiting'}
   />
