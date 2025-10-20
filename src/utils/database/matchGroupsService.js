@@ -286,10 +286,12 @@ acceptGroupInvitation: async (groupId, inviteeId) => {
     // ✅ CASE 1: Initial 2-person request (no confirmations tracking)
     if (Object.keys(confirmations).length === 0) {
       console.log('🎯 Initial 2-person request - moving to active status');
-      
-      // Move from pending to confirmed members
-      const updatedMembers = [...currentMembers, inviteeId];
-      const updatedPending = pendingIds.filter(id => id !== inviteeId);
+
+    // Move from pending to confirmed members (prevent duplicates)
+    const updatedMembers = currentMembers.includes(inviteeId) 
+      ? currentMembers 
+      : [...currentMembers, inviteeId];
+    const updatedPending = pendingIds.filter(id => id !== inviteeId);
 
       // Update group to active status (schema only has: requested, active, inactive)
       return await service.update(groupId, {

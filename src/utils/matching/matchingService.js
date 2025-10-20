@@ -1317,7 +1317,7 @@ async sendMatchRequest(currentUserId, targetMatch) {
     
     // Create match_groups entry with JSONB roommate_ids
     const groupData = {
-      roommate_ids: [senderApplicantId, targetApplicantId],
+      roommate_ids: [senderApplicantId],
       requested_by_id: senderApplicantId,
       pending_member_ids: [targetApplicantId],
       status: 'requested',

@@ -1438,7 +1438,13 @@ const handleApproveRequest = async (connection) => {
           }}
           onApprove={handleApproveRequest}
           onDecline={handleDeclineRequest}
-          showContactInfo={selectedConnection?.status === 'confirmed' || selectedConnection?.status === 'active' || selectedConnection?.status === 'approved'}
+          showContactInfo={
+  (selectedConnection?.status === 'confirmed' || 
+   selectedConnection?.status === 'active' || 
+   selectedConnection?.status === 'approved') &&
+  (selectedConnection?.type !== 'roommate' || 
+   !selectedConnection?.pending_member_ids?.includes(profileIds.applicant))
+}
           showActions={activeTab === 'awaiting'}
           isAwaitingApproval={activeTab === 'awaiting'}
         />
@@ -1458,32 +1464,42 @@ const handleApproveRequest = async (connection) => {
           }}
           onApprove={handleApproveRequest}
           onDecline={handleDeclineRequest}
-          showContactInfo={selectedConnection?.status === 'confirmed' || selectedConnection?.status === 'active' || selectedConnection?.status === 'approved'}
+          showContactInfo={
+  (selectedConnection?.status === 'confirmed' || 
+   selectedConnection?.status === 'active' || 
+   selectedConnection?.status === 'approved')
+}
           showActions={activeTab === 'awaiting'}
           isLandlordView={!selectedConnection?.is_applicant}
         />
       )}
 
-      {/* Group Details Modal - NEW */}
-      {showGroupModal && selectedGroup && selectedConnection && (
-        <GroupDetailsModal
-          isOpen={showGroupModal}
-          matchGroup={selectedGroup}
-          roommates={selectedConnection.roommates || []}
-          currentUserId={profile?.user_id}
-          connectionStatus={selectedConnection?.status}
-          onClose={() => {
-            setShowGroupModal(false);
-            setSelectedGroup(null);
-            setSelectedConnection(null);
-          }}
-          onViewProfile={(roommate) => handleViewProfile(selectedConnection, roommate)}
-          onApprove={() => handleApproveRequest(selectedConnection)}
-          onDecline={() => handleDeclineRequest(selectedConnection)}
-          showActions={activeTab === 'awaiting'}
-          isAwaitingApproval={activeTab === 'awaiting'}
-        />
-      )}
+{/* Group Details Modal - NEW */}
+{showGroupModal && selectedGroup && selectedConnection && (
+  <GroupDetailsModal
+    isOpen={showGroupModal}
+    matchGroup={selectedGroup}
+    roommates={selectedConnection.roommates || []}
+    currentUserId={profile?.user_id}
+    connectionStatus={selectedConnection?.status}
+    onClose={() => {
+      setShowGroupModal(false);
+      setSelectedGroup(null);
+      setSelectedConnection(null);
+    }}
+    onViewProfile={(roommate) => handleViewProfile(selectedConnection, roommate)}
+    onApprove={() => handleApproveRequest(selectedConnection)}
+    onDecline={() => handleDeclineRequest(selectedConnection)}
+    showContactInfo={
+      (selectedConnection?.status === 'confirmed' || 
+       selectedConnection?.status === 'active' || 
+       selectedConnection?.status === 'approved') &&
+      !selectedConnection?.pending_member_ids?.includes(profileIds.applicant)
+    }
+    showActions={activeTab === 'awaiting'}
+    isAwaitingApproval={activeTab === 'awaiting'}
+  />
+)}
     </div>
   );
 };
