@@ -784,11 +784,7 @@ async loadMatchGroups(userId) {
   }
 }
 
-  /**
-   * SCHEMA COMPLIANT: Load sent requests for UI feedback
-   */
 /**
- * ✅ FIX #3: Load sent requests with .maybeSingle() for safer lookups
  * Load sent requests from match_groups for UI feedback
  * @param {string} userId - Registrant profile ID
  * @returns {Set} Set of user IDs with pending requests
@@ -800,7 +796,7 @@ async loadSentRequests(userId) {
       .from('applicant_matching_profiles')
       .select('id, user_id')
       .eq('user_id', userId)
-      .maybeSingle();  // ✅ FIXED: Changed from .single()
+      .maybeSingle();
     
     if (!userApplicant) {
       console.warn('No applicant profile found for user:', userId);
@@ -810,37 +806,36 @@ async loadSentRequests(userId) {
     const userApplicantId = userApplicant.id;
     const sentRequestIds = new Set();
     
-    // Query match_groups where user is the requester with pending status
+    // ✅ FIX: Query match_groups where user is the requester with pending status
     const { data: pendingGroups } = await supabase
       .from('match_groups')
-      .select('roommate_ids, requested_by_id, status')
+      .select('roommate_ids, pending_member_ids, requested_by_id, status')
       .eq('requested_by_id', userApplicantId)
-      .eq('status', 'requested')
-      .contains('roommate_ids', JSON.stringify([userApplicantId]));
+      .eq('status', 'requested');
     
-if (pendingGroups && pendingGroups.length > 0) {
-  for (const group of pendingGroups) {
-    const roommateIds = group.roommate_ids || [];
-    const pendingIds = group.pending_member_ids || [];  // ← Add this line
-    
-    // Get pending members (they're who we sent requests to)
-    for (const pendingId of pendingIds) {  // ← Look at pending_member_ids instead!
-      try {
-        const { data: pendingMember } = await supabase
-          .from('applicant_matching_profiles')
-          .select('user_id')
-          .eq('id', pendingId)
-          .maybeSingle();
+    if (pendingGroups && pendingGroups.length > 0) {
+      for (const group of pendingGroups) {
+        const pendingIds = group.pending_member_ids || [];
         
-        if (pendingMember) {
-          sentRequestIds.add(pendingMember.user_id);
+        // ✅ FIX: Look at pending_member_ids (that's where invitees are!)
+        for (const pendingId of pendingIds) {
+          try {
+            const { data: pendingMember } = await supabase
+              .from('applicant_matching_profiles')
+              .select('user_id')
+              .eq('id', pendingId)
+              .maybeSingle();
+            
+            if (pendingMember) {
+              sentRequestIds.add(pendingMember.user_id);
+              console.log(`📤 Found pending request to user: ${pendingMember.user_id}`);
+            }
+          } catch (err) {
+            console.warn('Could not find pending member profile for ID:', pendingId);
+          }
         }
-      } catch (err) {
-        console.warn('Could not find pending member profile for ID:', pendingId);
       }
     }
-  }
-}
     
     console.log(`Found ${sentRequestIds.size} pending requests sent`);
     return sentRequestIds;
