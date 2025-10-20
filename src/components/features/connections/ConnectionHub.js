@@ -187,10 +187,10 @@ const loadMatchGroupConnections = async (categories) => {
 
       // ✅ CASE 0: Initial 2-person request (no member_confirmations yet)
       // This handles the very first request where A sends to B
-      if (group.status === 'requested' && 
-          roommateIds.length === 2 && 
-          pendingIds.length === 1 &&
-          Object.keys(confirmations).length === 0) {
+if (group.status === 'requested' && 
+    roommateIds.length === 1 &&  // ← Changed from 2 to 1
+    pendingIds.length === 1 &&
+    Object.keys(confirmations).length === 0) {
         
         const pendingMember = members.find(m => m.id === pendingIds[0]);
         const isPendingUser = pendingIds.includes(profileIds.applicant);
