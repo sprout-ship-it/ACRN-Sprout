@@ -1430,27 +1430,46 @@ const handleApproveRequest = async (connection) => {
 
 {/* Profile Modal */}
 {showProfileModal && selectedProfile && (
-  <ProfileModal
-    isOpen={showProfileModal}
-    profile={selectedProfile}
-    connectionStatus={selectedConnection?.status}
-    onClose={() => {
-      setShowProfileModal(false);
-      setSelectedProfile(null);
-      setSelectedConnection(null);
-    }}
-    onApprove={handleApproveRequest}
-    onDecline={handleDeclineRequest}
-    showContactInfo={
-      (selectedConnection?.status === 'confirmed' || 
-       selectedConnection?.status === 'active' || 
-       selectedConnection?.status === 'approved') &&
-      !selectedConnection?.pending_member_ids?.includes(profileIds.applicant) &&
-      (!selectedConnection?.pending_member_ids || selectedConnection?.pending_member_ids?.length === 0)
-    }
-    showActions={activeTab === 'awaiting'}
-    isAwaitingApproval={activeTab === 'awaiting'}
-  />
+  <>
+    {(() => {
+      const debugInfo = {
+        connectionType: selectedConnection?.type,
+        connectionStatus: selectedConnection?.status,
+        pending_member_ids: selectedConnection?.pending_member_ids,
+        roommate_ids: selectedConnection?.roommates?.map(r => r.id),
+        selectedProfileId: selectedProfile?.id,
+        selectedProfileUserId: selectedProfile?.user_id,
+        currentUserApplicantId: profileIds.applicant,
+        viewerIsPending: selectedConnection?.pending_member_ids?.includes(profileIds.applicant),
+        profileIdIsPending: selectedConnection?.pending_member_ids?.includes(selectedProfile?.id),
+        profileUserIdIsPending: selectedConnection?.pending_member_ids?.includes(selectedProfile?.user_id)
+      };
+      console.log('🔍 ProfileModal Debug:', debugInfo);
+      return null;
+    })()}
+    <ProfileModal
+      isOpen={showProfileModal}
+      profile={selectedProfile}
+      connectionStatus={selectedConnection?.status}
+      onClose={() => {
+        setShowProfileModal(false);
+        setSelectedProfile(null);
+        setSelectedConnection(null);
+      }}
+      onApprove={handleApproveRequest}
+      onDecline={handleDeclineRequest}
+      showContactInfo={
+        (selectedConnection?.status === 'confirmed' || 
+         selectedConnection?.status === 'active' || 
+         selectedConnection?.status === 'approved') &&
+        !selectedConnection?.pending_member_ids?.includes(profileIds.applicant) &&
+        (selectedConnection?.type !== 'roommate' || 
+         !(selectedConnection?.pending_member_ids || []).includes(selectedProfile?.id || selectedProfile?.user_id))
+      }
+      showActions={activeTab === 'awaiting'}
+      isAwaitingApproval={activeTab === 'awaiting'}
+    />
+  </>
 )}
 
       {/* Property Details Modal */}
