@@ -13,6 +13,7 @@ const GroupDetailsModal = ({
   onViewProfile,
   onApprove,
   onDecline,
+  showContactInfo = false,  // ← Add this line
   showActions = false,
   isAwaitingApproval = false
 }) => {
@@ -107,11 +108,6 @@ const GroupDetailsModal = ({
     };
     return statusMap[status] || statusMap['forming'];
   };
-
-  /**
-   * Check if contact info should be shown
-   */
-  const showContactInfo = connectionStatus === 'confirmed' || connectionStatus === 'active';
 
   /**
    * Render group overview section
@@ -420,12 +416,14 @@ GroupDetailsModal.propTypes = {
   onViewProfile: PropTypes.func,
   onApprove: PropTypes.func,
   onDecline: PropTypes.func,
+  showContactInfo: PropTypes.bool,  
   showActions: PropTypes.bool,
   isAwaitingApproval: PropTypes.bool
 };
 
 GroupDetailsModal.defaultProps = {
   roommates: [],
+  showContactInfo: false, 
   showActions: false,
   isAwaitingApproval: false
 };

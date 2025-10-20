@@ -786,6 +786,7 @@ async loadMatchGroups(userId) {
 
 /**
  * Load sent requests from match_groups for UI feedback
+ * Includes both initial requests AND group expansion invitations
  * @param {string} userId - Registrant profile ID
  * @returns {Set} Set of user IDs with pending requests
  */
@@ -806,18 +807,17 @@ async loadSentRequests(userId) {
     const userApplicantId = userApplicant.id;
     const sentRequestIds = new Set();
     
-    // ✅ FIX: Query match_groups where user is the requester with pending status
-    const { data: pendingGroups } = await supabase
+    // ✅ CASE 1: Initial 2-person requests (status = 'requested')
+    const { data: requestedGroups } = await supabase
       .from('match_groups')
       .select('roommate_ids, pending_member_ids, requested_by_id, status')
       .eq('requested_by_id', userApplicantId)
       .eq('status', 'requested');
     
-    if (pendingGroups && pendingGroups.length > 0) {
-      for (const group of pendingGroups) {
+    if (requestedGroups && requestedGroups.length > 0) {
+      for (const group of requestedGroups) {
         const pendingIds = group.pending_member_ids || [];
         
-        // ✅ FIX: Look at pending_member_ids (that's where invitees are!)
         for (const pendingId of pendingIds) {
           try {
             const { data: pendingMember } = await supabase
@@ -828,16 +828,52 @@ async loadSentRequests(userId) {
             
             if (pendingMember) {
               sentRequestIds.add(pendingMember.user_id);
-              console.log(`📤 Found pending request to user: ${pendingMember.user_id}`);
+              console.log(`📤 Found initial pending request to: ${pendingMember.user_id}`);
             }
           } catch (err) {
-            console.warn('Could not find pending member profile for ID:', pendingId);
+            console.warn('Could not find pending member:', pendingId);
           }
         }
       }
     }
     
-    console.log(`Found ${sentRequestIds.size} pending requests sent`);
+    // ✅ CASE 2: Group expansion invitations (status = 'active', check member_confirmations)
+    const { data: activeGroups } = await supabase
+      .from('match_groups')
+      .select('roommate_ids, pending_member_ids, member_confirmations, status')
+      .contains('roommate_ids', JSON.stringify([userApplicantId]))
+      .eq('status', 'active');
+    
+    if (activeGroups && activeGroups.length > 0) {
+      for (const group of activeGroups) {
+        const pendingIds = group.pending_member_ids || [];
+        const confirmations = group.member_confirmations || {};
+        
+        // Check if current user invited any pending members
+        for (const pendingId of pendingIds) {
+          const confirmation = confirmations[pendingId];
+          
+          if (confirmation && confirmation.invited_by === userApplicantId) {
+            try {
+              const { data: pendingMember } = await supabase
+                .from('applicant_matching_profiles')
+                .select('user_id')
+                .eq('id', pendingId)
+                .maybeSingle();
+              
+              if (pendingMember) {
+                sentRequestIds.add(pendingMember.user_id);
+                console.log(`📤 Found group expansion invite to: ${pendingMember.user_id}`);
+              }
+            } catch (err) {
+              console.warn('Could not find pending member:', pendingId);
+            }
+          }
+        }
+      }
+    }
+    
+    console.log(`Found ${sentRequestIds.size} pending requests sent (initial + group expansions)`);
     return sentRequestIds;
     
   } catch (err) {
