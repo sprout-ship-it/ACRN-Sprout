@@ -1,4 +1,4 @@
-// src/components/features/matching/sections/LifestylePreferencesSection.js - FULLY ALIGNED WITH NEW SCHEMA
+// src/components/features/matching/sections/LifestylePreferencesSection.js - PRODUCTION READY
 import React, { useMemo, useCallback } from 'react';
 import PropTypes from 'prop-types';
 import {
@@ -16,10 +16,10 @@ const LifestylePreferencesSection = ({
   onArrayChange,
   onRangeChange,
   styles = {},
-  fieldMapping,   // Schema field mapping from parent
-  sectionId,      // Section identifier
-  isActive,       // Whether this section is currently active
-  validationMessage // Current validation message
+  fieldMapping,
+  sectionId,
+  isActive,
+  validationMessage
 }) => {
   // Enhanced lifestyle level descriptions with recovery context
   const getLifestyleLevelDescription = useCallback((type, value) => {
@@ -57,7 +57,6 @@ const LifestylePreferencesSection = ({
     
     const warnings = [];
     
-    // Check for extreme combinations that might limit matches
     if (social === 1 && noise === 5) {
       warnings.push('Very private social preference with high noise tolerance seems contradictory');
     }
@@ -99,14 +98,14 @@ const LifestylePreferencesSection = ({
             Advanced Lifestyle Compatibility Matching
           </h4>
           <p className="mb-0">
-            Your daily lifestyle preferences are crucial for finding compatible roommates. Our enhanced matching 
-            algorithm uses these standardized lifestyle factors to create harmonious living environments that 
-            support everyone's recovery journey and personal well-being.
+            Your daily lifestyle preferences are crucial for finding compatible roommates. Our matching 
+            algorithm uses these factors to create harmonious living environments that support everyone's 
+            recovery journey and personal well-being.
           </p>
         </div>
       </div>
 
-      {/* Work & Schedule Information - Schema Standardized Fields */}
+      {/* Work & Schedule Information */}
       <div className="card-header">
         <h4 className="card-title">Work & Daily Schedule</h4>
         <p className="card-subtitle">Understanding your routine helps match you with roommates who have compatible schedules</p>
@@ -187,7 +186,7 @@ const LifestylePreferencesSection = ({
         </div>
       </div>
 
-      {/* Core Lifestyle Compatibility Scales - Schema Standardized Fields */}
+      {/* Core Lifestyle Compatibility Scales */}
       <div className="card-header">
         <h4 className="card-title">Core Lifestyle Compatibility Factors</h4>
         <p className="card-subtitle">
@@ -196,7 +195,7 @@ const LifestylePreferencesSection = ({
       </div>
 
       <div className="grid-3 mb-4">
-        {/* Social Level - Enhanced with Recovery Context */}
+        {/* Social Level */}
         <div className="form-group">
           <div className={styles.enhancedRangeContainer || 'enhanced-range-container'}>
             <div className={styles.rangeLabel || 'range-label'}>
@@ -234,7 +233,7 @@ const LifestylePreferencesSection = ({
           </div>
         </div>
         
-        {/* Cleanliness Level - Enhanced with Recovery Context */}
+        {/* Cleanliness Level */}
         <div className="form-group">
           <div className={styles.enhancedRangeContainer || 'enhanced-range-container'}>
             <div className={styles.rangeLabel || 'range-label'}>
@@ -272,7 +271,7 @@ const LifestylePreferencesSection = ({
           </div>
         </div>
         
-        {/* Noise Tolerance - Enhanced with Recovery Context */}
+        {/* Noise Tolerance */}
         <div className="form-group">
           <div className={styles.enhancedRangeContainer || 'enhanced-range-container'}>
             <div className={styles.rangeLabel || 'range-label'}>
@@ -326,7 +325,7 @@ const LifestylePreferencesSection = ({
         </div>
       )}
 
-      {/* Social & Guest Preferences - Schema Standardized Fields */}
+      {/* Social & Guest Preferences */}
       <div className="card-header">
         <h4 className="card-title">Social & Guest Management</h4>
         <p className="card-subtitle">How you prefer to handle guests, visitors, and social activities in your home</p>
@@ -380,7 +379,7 @@ const LifestylePreferencesSection = ({
         </div>
       </div>
 
-      {/* Daily Living Habits & Preferences - Schema Standardized Fields */}
+      {/* Daily Living Habits & Preferences */}
       <div className="card-header">
         <h4 className="card-title">Daily Living Habits & Activities</h4>
         <p className="card-subtitle">Your typical daily activities and preferences for shared spaces</p>
@@ -463,58 +462,30 @@ const LifestylePreferencesSection = ({
       </div>
 
       {/* Additional Daily Living Details */}
-      <div className="grid-2 mb-4">
-        <div className="form-group">
-          <label className="label">Cooking Frequency</label>
-          <select
-            className={`input ${errors.cooking_frequency ? 'border-red-500 bg-red-50' : ''}`}
-            value={formData.cooking_frequency || ''}
-            onChange={(e) => onInputChange('cooking_frequency', e.target.value)}
-            disabled={loading}
-          >
-            <option value="">Select frequency</option>
-            <option value="never">Never cook at home</option>
-            <option value="rarely">Rarely (1-2 times/week)</option>
-            <option value="sometimes">Sometimes (3-4 times/week)</option>
-            <option value="frequently">Frequently (5-6 times/week)</option>
-            <option value="daily">Daily cooking</option>
-          </select>
-          {errors.cooking_frequency && (
-            <div className="text-red-500 mt-1 text-sm font-medium">{errors.cooking_frequency}</div>
-          )}
-          <div className="text-gray-500 mt-1 text-sm">
-            How often you use the kitchen for meal preparation
-          </div>
-        </div>
-
-        <div className="form-group">
-          <label className="label">Transportation Method</label>
-          <select
-            className={`input ${errors.transportation_method ? 'border-red-500 bg-red-50' : ''}`}
-            value={formData.transportation_method || ''}
-            onChange={(e) => onInputChange('transportation_method', e.target.value)}
-            disabled={loading}
-          >
-            <option value="">Select primary method</option>
-            <option value="personal-vehicle">Personal vehicle</option>
-            <option value="public-transit">Public transportation</option>
-            <option value="bike">Bicycle</option>
-            <option value="walk">Walking</option>
-            <option value="rideshare">Rideshare/Uber/Lyft</option>
-            <option value="family-friends">Family/friends transportation</option>
-            <option value="combination">Combination of methods</option>
-            <option value="limited-mobility">Limited mobility/transportation</option>
-          </select>
-          {errors.transportation_method && (
-            <div className="text-red-500 mt-1 text-sm font-medium">{errors.transportation_method}</div>
-          )}
-          <div className="text-gray-500 mt-1 text-sm">
-            How you typically get around day-to-day
-          </div>
+      <div className="form-group mb-4">
+        <label className="label">Cooking Frequency</label>
+        <select
+          className={`input ${errors.cooking_frequency ? 'border-red-500 bg-red-50' : ''}`}
+          value={formData.cooking_frequency || ''}
+          onChange={(e) => onInputChange('cooking_frequency', e.target.value)}
+          disabled={loading}
+        >
+          <option value="">Select frequency</option>
+          <option value="never">Never cook at home</option>
+          <option value="rarely">Rarely (1-2 times/week)</option>
+          <option value="sometimes">Sometimes (3-4 times/week)</option>
+          <option value="frequently">Frequently (5-6 times/week)</option>
+          <option value="daily">Daily cooking</option>
+        </select>
+        {errors.cooking_frequency && (
+          <div className="text-red-500 mt-1 text-sm font-medium">{errors.cooking_frequency}</div>
+        )}
+        <div className="text-gray-500 mt-1 text-sm">
+          How often you use the kitchen for meal preparation
         </div>
       </div>
 
-      {/* Household Management Style - Schema Standardized Fields */}
+      {/* Household Management Style */}
       <div className="card-header">
         <h4 className="card-title">Household Management & Communication</h4>
         <p className="card-subtitle">How you prefer to handle shared responsibilities and communication with roommates</p>
@@ -667,92 +638,31 @@ const LifestylePreferencesSection = ({
           )}
         </div>
       )}
-
-      {/* Advanced Lifestyle Matching Information */}
-      <div className="alert alert-info mt-6">
-        <h4 className="mb-2">
-          <span style={{ marginRight: '8px' }}>🎯</span>
-          Advanced Lifestyle Compatibility Matching
-        </h4>
-        <p className="mb-2">
-          <strong>Our enhanced algorithm analyzes lifestyle compatibility through:</strong>
-        </p>
-        <ul style={{ marginLeft: '20px', marginBottom: '10px' }}>
-          <li><strong>Core Factors (High Weight):</strong> Social level, cleanliness, noise tolerance, work schedule</li>
-          <li><strong>Daily Routines:</strong> Sleep patterns, cooking habits, home activities</li>
-          <li><strong>Communication Style:</strong> How you prefer to interact and resolve conflicts</li>
-          <li><strong>Household Management:</strong> Chore sharing and responsibility preferences</li>
-          <li><strong>Recovery Support:</strong> Environmental factors that support your healing journey</li>
-          <li><strong>Balance Analysis:</strong> Identifies potential compatibility conflicts before matching</li>
-        </ul>
-        <div className="mt-3">
-          <a 
-            href="/help/lifestyle-compatibility-matching" 
-            target="_blank" 
-            className="text-blue-600 hover:text-blue-800 underline text-sm"
-          >
-            Learn more about our lifestyle compatibility system →
-          </a>
-        </div>
-      </div>
-
-      {/* Lifestyle Optimization Tips */}
-      <div className="alert alert-success mt-4">
-        <h4 className="mb-2">
-          <span style={{ marginRight: '8px' }}>💡</span>
-          Lifestyle Compatibility Tips
-        </h4>
-        <p className="mb-2">
-          <strong>Creating successful roommate relationships:</strong>
-        </p>
-        <ul style={{ marginLeft: '20px', marginBottom: '10px' }}>
-          <li><strong>Be Honest:</strong> Accurate self-assessment leads to better long-term compatibility</li>
-          <li><strong>Recovery Priority:</strong> Consider what environment best supports your healing and growth</li>
-          <li><strong>Flexibility Balance:</strong> Small differences often work out, major conflicts usually don't</li>
-          <li><strong>Communication Matters:</strong> Compatible communication styles prevent most issues</li>
-          <li><strong>Daily Rhythms:</strong> Matching daily schedules and energy levels reduces friction</li>
-          <li><strong>Growth Mindset:</strong> Choose roommates who support personal development</li>
-        </ul>
-        <p className="text-sm">
-          The most successful roommate relationships combine lifestyle compatibility with mutual respect, 
-          support for each other's recovery journey, and shared commitment to a harmonious living environment.
-        </p>
-      </div>
     </>
   );
 };
 
 LifestylePreferencesSection.propTypes = {
   formData: PropTypes.shape({
-    // Work and schedule - schema standardized
-    work_schedule: PropTypes.string,                     // Required - standardized
-    work_from_home_frequency: PropTypes.string,          // Optional - standardized
-    bedtime_preference: PropTypes.string,                // Optional - standardized
-    transportation_method: PropTypes.string,             // Optional
-    
-    // Core lifestyle factors - schema standardized
-    social_level: PropTypes.number,                      // Required - standardized
-    cleanliness_level: PropTypes.number,                 // Required - standardized
-    noise_tolerance: PropTypes.number,                   // Required - standardized
-    
-    // Social and guest management - schema standardized
-    guests_policy: PropTypes.string,                     // Optional - standardized
-    social_activities_at_home: PropTypes.string,         // Optional - standardized
-    
-    // Daily living habits - schema standardized
-    early_riser: PropTypes.bool,                         // Optional - standardized
-    night_owl: PropTypes.bool,                           // Optional - standardized
-    cooking_enthusiast: PropTypes.bool,                  // Optional - standardized
-    cooking_frequency: PropTypes.string,                 // Optional - standardized
-    exercise_at_home: PropTypes.bool,                    // Optional - standardized
-    plays_instruments: PropTypes.bool,                   // Optional - standardized
-    tv_streaming_regular: PropTypes.bool,                // Optional - standardized
-    
-    // Household management - schema standardized
-    chore_sharing_style: PropTypes.string,               // Optional - standardized
-    communication_style: PropTypes.string,               // Optional - standardized
-    conflict_resolution_style: PropTypes.string,         // Optional - standardized
-    preferred_support_structure: PropTypes.string        // Optional - standardized
+    work_schedule: PropTypes.string,
+    work_from_home_frequency: PropTypes.string,
+    bedtime_preference: PropTypes.string,
+    social_level: PropTypes.number,
+    cleanliness_level: PropTypes.number,
+    noise_tolerance: PropTypes.number,
+    guests_policy: PropTypes.string,
+    social_activities_at_home: PropTypes.string,
+    early_riser: PropTypes.bool,
+    night_owl: PropTypes.bool,
+    cooking_enthusiast: PropTypes.bool,
+    cooking_frequency: PropTypes.string,
+    exercise_at_home: PropTypes.bool,
+    plays_instruments: PropTypes.bool,
+    tv_streaming_regular: PropTypes.bool,
+    chore_sharing_style: PropTypes.string,
+    communication_style: PropTypes.string,
+    conflict_resolution_style: PropTypes.string,
+    preferred_support_structure: PropTypes.string
   }).isRequired,
   errors: PropTypes.object.isRequired,
   loading: PropTypes.bool.isRequired,
@@ -764,11 +674,11 @@ LifestylePreferencesSection.propTypes = {
   onInputChange: PropTypes.func.isRequired,
   onArrayChange: PropTypes.func.isRequired,
   onRangeChange: PropTypes.func.isRequired,
-  styles: PropTypes.object,                           // CSS module styles
-  fieldMapping: PropTypes.object,                     // Schema field mapping
-  sectionId: PropTypes.string,                        // Section identifier
-  isActive: PropTypes.bool,                           // Whether section is active
-  validationMessage: PropTypes.string                 // Current validation message
+  styles: PropTypes.object,
+  fieldMapping: PropTypes.object,
+  sectionId: PropTypes.string,
+  isActive: PropTypes.bool,
+  validationMessage: PropTypes.string
 };
 
 LifestylePreferencesSection.defaultProps = {

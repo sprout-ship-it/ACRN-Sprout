@@ -1,4 +1,4 @@
-// src/components/features/matching/sections/LocationPreferencesSection.js - FULLY FIXED VERSION
+// src/components/features/matching/sections/LocationPreferencesSection.js - PRODUCTION READY
 import React, { useMemo, useCallback } from 'react';
 import PropTypes from 'prop-types';
 import { housingTypeOptions } from '../constants/matchingFormConstants';
@@ -103,23 +103,19 @@ const LocationPreferencesSection = ({
 
   // Handle budget input with validation
   const handleBudgetChange = useCallback((field, value) => {
-    // Allow only numbers
     const cleanValue = value.replace(/\D/g, '');
-    if (cleanValue.length <= 4) { // Max 4 digits ($9999)
+    if (cleanValue.length <= 4) {
       onInputChange(field, cleanValue);
     }
   }, [onInputChange]);
 
-  // ✅ FIXED: Handle ZIP code input with improved validation - allows partial entry
+  // Handle ZIP code input with improved validation
   const handleZipCodeChange = useCallback((value) => {
-    // Clean input - allow only numbers, commas, and spaces
     const cleanValue = value.replace(/[^\d,\s]/g, '');
-    
-    // Allow immediate input (don't block partial ZIP codes while typing)
     onInputChange('target_zip_codes', cleanValue);
   }, [onInputChange]);
 
-  // ✅ FIXED: Add function to validate ZIP codes for display purposes only
+  // Validate ZIP codes for display purposes only
   const validateZipCodes = useCallback((zipString) => {
     if (!zipString || zipString.trim() === '') return { isValid: true, message: '' };
     
@@ -136,7 +132,7 @@ const LocationPreferencesSection = ({
     return { isValid: true, message: '' };
   }, []);
 
-  // ✅ NEW: Get computed location display (read-only)
+  // Get computed location display (read-only)
   const getComputedLocation = useCallback(() => {
     if (formData.primary_city && formData.primary_state) {
       return `${formData.primary_city}, ${formData.primary_state}`;
@@ -157,7 +153,7 @@ const LocationPreferencesSection = ({
     const selectedDate = new Date(date);
     const today = new Date();
     const maxDate = new Date();
-    maxDate.setFullYear(maxDate.getFullYear() + 1); // Max 1 year from now
+    maxDate.setFullYear(maxDate.getFullYear() + 1);
     
     if (selectedDate < today) {
       return 'Move-in date cannot be in the past';
@@ -182,13 +178,13 @@ const LocationPreferencesSection = ({
             Enhanced Location Matching System
           </h4>
           <p className="mb-0">
-            Our improved location matching uses standardized city/state fields and enhanced budget compatibility 
-            to find housing and roommates in your preferred area with accurate financial alignment.
+            Our matching system uses your location preferences and budget to find housing and roommates 
+            in your preferred area with accurate financial alignment.
           </p>
         </div>
       </div>
 
-      {/* Primary Location Preferences - Schema Standardized Fields */}
+      {/* Primary Location Preferences */}
       <div className="card-header">
         <h4 className="card-title">Preferred Housing Location</h4>
         <p className="card-subtitle">Where would you like to live? This is the primary location for housing search.</p>
@@ -242,7 +238,6 @@ const LocationPreferencesSection = ({
           </div>
         </div>
         
-        {/* ✅ FIXED: ZIP Code input with proper validation */}
         <div className="form-group">
           <label className="label">Specific ZIP Codes (Optional)</label>
           <input
@@ -255,7 +250,6 @@ const LocationPreferencesSection = ({
             maxLength="100"
           />
           
-          {/* Show validation only when user stops typing */}
           {formData.target_zip_codes && !validateZipCodes(formData.target_zip_codes).isValid && (
             <div className="text-orange-600 mt-1 text-sm">
               {validateZipCodes(formData.target_zip_codes).message}
@@ -270,7 +264,6 @@ const LocationPreferencesSection = ({
             Optional: Specific ZIP codes you'd prefer, separated by commas
           </div>
           
-          {/* Show parsed ZIP codes if valid */}
           {formData.target_zip_codes && validateZipCodes(formData.target_zip_codes).isValid && (
             <div className="text-green-600 mt-1 text-sm">
               ZIP codes: {formData.target_zip_codes.split(/[,\s]+/).filter(zip => zip.length === 5).join(', ')}
@@ -279,19 +272,18 @@ const LocationPreferencesSection = ({
         </div>
       </div>
 
-      {/* ✅ NEW: Display computed location if both city and state are provided */}
       {getComputedLocation() && (
         <div className="mb-4 p-3 bg-blue-50 rounded-md border border-blue-200">
           <div className="text-blue-800 font-medium">
             🏠 Primary Search Location: {getComputedLocation()}
           </div>
           <div className="text-blue-600 text-sm mt-1">
-            ✅ This computed location will be automatically saved and used for matching
+            ✅ This location will be used for matching
           </div>
         </div>
       )}
 
-      {/* Budget Information - Schema Standardized Fields */}
+      {/* Budget Information */}
       <div className="card-header">
         <h4 className="card-title">Monthly Housing Budget</h4>
         <p className="card-subtitle">
@@ -359,7 +351,6 @@ const LocationPreferencesSection = ({
         </div>
       </div>
 
-      {/* Budget Range Validation */}
       {budgetValidationError && (
         <div className="alert alert-warning mb-4">
           <span className="alert-icon">⚠️</span>
@@ -367,14 +358,13 @@ const LocationPreferencesSection = ({
         </div>
       )}
 
-      {/* Budget Range Display */}
       {formData.budget_min && formData.budget_max && !budgetValidationError && (
         <div className="mb-4 p-3 bg-green-50 rounded-md border border-green-200">
           <div className="text-green-800 font-medium">
             Budget Range: {formatCurrency(formData.budget_min)} - {formatCurrency(formData.budget_max)} per month
           </div>
           <div className="text-green-600 text-sm mt-1">
-            This standardized budget range improves financial compatibility matching with roommates and available housing.
+            This budget range improves financial compatibility matching with roommates and available housing.
           </div>
         </div>
       )}
@@ -512,7 +502,7 @@ const LocationPreferencesSection = ({
         </div>
       </div>
 
-      {/* Housing Type Selection - Schema Standardized Field */}
+      {/* Housing Type Selection */}
       <div className="form-group mb-4">
         <label className="label">
           Acceptable Housing Types <span className="text-red-500">*</span>
@@ -606,18 +596,6 @@ const LocationPreferencesSection = ({
           />
           <span className={styles.checkboxText || ''}>
             Need public transit access
-          </span>
-        </label>
-
-        <label className={styles.checkboxLabel || 'checkbox-item'}>
-          <input
-            type="checkbox"
-            checked={formData.pets_allowed || false}
-            onChange={(e) => onInputChange('pets_allowed', e.target.checked)}
-            disabled={loading}
-          />
-          <span className={styles.checkboxText || ''}>
-            Need pet-friendly housing
           </span>
         </label>
       </div>
@@ -741,8 +719,7 @@ LocationPreferencesSection.propTypes = {
     utilities_included_preference: PropTypes.bool,
     accessibility_needed: PropTypes.bool,
     parking_required: PropTypes.bool,
-    public_transit_access: PropTypes.bool,
-    pets_allowed: PropTypes.bool
+    public_transit_access: PropTypes.bool
   }).isRequired,
   errors: PropTypes.object.isRequired,
   loading: PropTypes.bool.isRequired,

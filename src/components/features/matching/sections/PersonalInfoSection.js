@@ -1,4 +1,4 @@
-// src/components/features/matching/sections/PersonalInfoSection.js - FULLY ALIGNED WITH NEW SCHEMA
+// src/components/features/matching/sections/PersonalInfoSection.js - PRODUCTION READY
 import React from 'react';
 import PropTypes from 'prop-types';
 import { genderOptions, sexOptions, states } from '../constants/matchingFormConstants';
@@ -9,25 +9,18 @@ const PersonalInfoSection = ({
   loading,
   profile,
   onInputChange,
-  onArrayChange, // For interface consistency
-  onRangeChange,  // For interface consistency
-  styles = {},    // CSS module styles passed from parent
-  fieldMapping,   // Schema field mapping from parent
-  sectionId,      // Section identifier
-  isActive,       // Whether this section is currently active
-  validationMessage // Current validation message
+  onArrayChange,
+  onRangeChange,
+  styles = {},
+  fieldMapping,
+  sectionId,
+  isActive,
+  validationMessage
 }) => {
-  // Helper to get field name with schema mapping
-  const getFieldName = (field) => {
-    return fieldMapping?.personal?.[field] || field;
-  };
-
   // Enhanced validation for phone numbers
   const validatePhoneNumber = (phone) => {
     if (!phone) return false;
-    // Remove all non-digits
     const digits = phone.replace(/\D/g, '');
-    // Check if it's a valid US phone number (10 or 11 digits)
     return digits.length === 10 || (digits.length === 11 && digits[0] === '1');
   };
 
@@ -38,12 +31,11 @@ const PersonalInfoSection = ({
     if (digits.length === 10) {
       return `(${digits.slice(0,3)}) ${digits.slice(3,6)}-${digits.slice(6)}`;
     }
-    return phone; // Return as-is if not 10 digits
+    return phone;
   };
 
   // Handle phone number input with auto-formatting
   const handlePhoneChange = (value) => {
-    // Allow only digits, spaces, parentheses, and dashes
     const cleanValue = value.replace(/[^\d\s()-]/g, '');
     onInputChange('primary_phone', cleanValue);
   };
@@ -56,7 +48,6 @@ const PersonalInfoSection = ({
     const age = today.getFullYear() - birthDate.getFullYear();
     const monthDiff = today.getMonth() - birthDate.getMonth();
     
-    // Adjust age if birthday hasn't occurred this year
     const adjustedAge = monthDiff < 0 || (monthDiff === 0 && today.getDate() < birthDate.getDate()) 
       ? age - 1 
       : age;
@@ -483,72 +474,23 @@ const PersonalInfoSection = ({
           )}
         </div>
       )}
-
-      {/* Privacy and Security Notice */}
-      <div className="alert alert-info mt-6">
-        <h4 className="mb-2">
-          <span style={{ marginRight: '8px' }}>🔒</span>
-          Privacy Protection & Data Security
-        </h4>
-        <p className="mb-2">
-          <strong>Your personal information is protected:</strong>
-        </p>
-        <ul style={{ marginLeft: '20px', marginBottom: '10px' }}>
-          <li><strong>Identity Verification:</strong> Used only to confirm you are who you say you are</li>
-          <li><strong>Contact Information:</strong> Emergency contact used only in genuine emergencies</li>
-          <li><strong>Location Data:</strong> Current address helps suggest nearby housing but isn't shared publicly</li>
-          <li><strong>Matching Privacy:</strong> Only basic compatibility info shared with potential matches</li>
-          <li><strong>Data Security:</strong> All information encrypted and stored securely</li>
-        </ul>
-        <div className="mt-3">
-          <a 
-            href="/privacy" 
-            target="_blank" 
-            className="text-blue-600 hover:text-blue-800 underline text-sm"
-          >
-            Read our complete Privacy Policy →
-          </a>
-        </div>
-      </div>
-
-      {/* Section Completion Help */}
-      <div className="alert alert-success mt-4">
-        <h4 className="mb-2">
-          <span style={{ marginRight: '8px' }}>💡</span>
-          Personal Information Tips
-        </h4>
-        <p className="mb-2">
-          <strong>Creating a trustworthy profile:</strong>
-        </p>
-        <ul style={{ marginLeft: '20px', marginBottom: '10px' }}>
-          <li><strong>Accuracy:</strong> Ensure all information is current and correct</li>
-          <li><strong>Completeness:</strong> Fill out optional fields to improve matching quality</li>
-          <li><strong>Emergency Contact:</strong> Choose someone who can be reached reliably</li>
-          <li><strong>Phone Number:</strong> Use your primary number - this may be used for verification</li>
-        </ul>
-        <p className="text-sm">
-          Complete and accurate personal information helps build trust with potential roommates and 
-          ensures you receive the best possible matching suggestions.
-        </p>
-      </div>
     </>
   );
 };
 
 PersonalInfoSection.propTypes = {
   formData: PropTypes.shape({
-    // Schema-aligned field names
-    date_of_birth: PropTypes.string,              // Required
-    primary_phone: PropTypes.string,              // Required
-    gender_identity: PropTypes.string,            // Optional
-    biological_sex: PropTypes.string,             // Optional
-    current_address: PropTypes.string,            // Optional
-    current_city: PropTypes.string,               // Optional
-    current_state: PropTypes.string,              // Optional
-    current_zip_code: PropTypes.string,           // Optional
-    emergency_contact_name: PropTypes.string,     // Recommended
-    emergency_contact_phone: PropTypes.string,    // Recommended
-    emergency_contact_relationship: PropTypes.string // Recommended
+    date_of_birth: PropTypes.string,
+    primary_phone: PropTypes.string,
+    gender_identity: PropTypes.string,
+    biological_sex: PropTypes.string,
+    current_address: PropTypes.string,
+    current_city: PropTypes.string,
+    current_state: PropTypes.string,
+    current_zip_code: PropTypes.string,
+    emergency_contact_name: PropTypes.string,
+    emergency_contact_phone: PropTypes.string,
+    emergency_contact_relationship: PropTypes.string
   }).isRequired,
   errors: PropTypes.object.isRequired,
   loading: PropTypes.bool.isRequired,
@@ -558,13 +500,13 @@ PersonalInfoSection.propTypes = {
     email: PropTypes.string
   }),
   onInputChange: PropTypes.func.isRequired,
-  onArrayChange: PropTypes.func.isRequired,  // For interface consistency
-  onRangeChange: PropTypes.func.isRequired,  // For interface consistency
-  styles: PropTypes.object,                   // CSS module styles
-  fieldMapping: PropTypes.object,             // Schema field mapping
-  sectionId: PropTypes.string,                // Section identifier
-  isActive: PropTypes.bool,                   // Whether section is active
-  validationMessage: PropTypes.string         // Current validation message
+  onArrayChange: PropTypes.func.isRequired,
+  onRangeChange: PropTypes.func.isRequired,
+  styles: PropTypes.object,
+  fieldMapping: PropTypes.object,
+  sectionId: PropTypes.string,
+  isActive: PropTypes.bool,
+  validationMessage: PropTypes.string
 };
 
 PersonalInfoSection.defaultProps = {

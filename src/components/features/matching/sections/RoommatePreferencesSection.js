@@ -1,4 +1,4 @@
-// src/components/features/matching/sections/RoommatePreferencesSection.js - FULLY ALIGNED WITH NEW SCHEMA
+// src/components/features/matching/sections/RoommatePreferencesSection.js - PRODUCTION READY
 import React, { useMemo, useCallback } from 'react';
 import PropTypes from 'prop-types';
 import {
@@ -15,10 +15,10 @@ const RoommatePreferencesSection = ({
   onArrayChange,
   onRangeChange,
   styles = {},
-  fieldMapping,   // Schema field mapping from parent
-  sectionId,      // Section identifier
-  isActive,       // Whether this section is currently active
-  validationMessage // Current validation message
+  fieldMapping,
+  sectionId,
+  isActive,
+  validationMessage
 }) => {
   // Enhanced smoking preference options
   const smokingPreferenceOptions = useMemo(() => [
@@ -85,14 +85,13 @@ const RoommatePreferencesSection = ({
             Smart Roommate Compatibility Matching
           </h4>
           <p className="mb-0">
-            These preferences help our enhanced matching algorithm find compatible roommates who will support 
-            your recovery journey and create a positive living environment. Be specific about your needs while 
-            remaining open to great matches.
+            These preferences help our matching algorithm find compatible roommates who will support 
+            your recovery journey and create a positive living environment.
           </p>
         </div>
       </div>
 
-      {/* Essential Demographics - Schema Standardized Fields */}
+      {/* Essential Demographics */}
       <div className="card-header">
         <h4 className="card-title">Essential Roommate Demographics</h4>
         <p className="card-subtitle">Core demographic preferences that affect safety, comfort, and compatibility</p>
@@ -168,7 +167,7 @@ const RoommatePreferencesSection = ({
         </div>
       </div>
 
-      {/* Age Range Preferences - Schema Standardized Fields */}
+      {/* Age Range Preferences */}
       <div className="card-header">
         <h4 className="card-title">Age Range Preferences</h4>
         <p className="card-subtitle">What age range would work best for your living situation?</p>
@@ -258,7 +257,7 @@ const RoommatePreferencesSection = ({
         </div>
       </div>
 
-      {/* Lifestyle Compatibility Preferences - Schema Standardized Fields */}
+      {/* Lifestyle Compatibility Preferences */}
       <div className="card-header">
         <h4 className="card-title">Lifestyle Compatibility</h4>
         <p className="card-subtitle">Preferences that affect daily living, house rules, and lifestyle alignment</p>
@@ -310,7 +309,7 @@ const RoommatePreferencesSection = ({
         </div>
       </div>
 
-      {/* Recovery-Specific Compatibility - Schema Standardized Fields */}
+      {/* Recovery-Specific Compatibility */}
       <div className="card-header">
         <h4 className="card-title">Recovery Journey Compatibility</h4>
         <p className="card-subtitle">Preferences related to recovery support, understanding, and living environment</p>
@@ -368,60 +367,7 @@ const RoommatePreferencesSection = ({
         </div>
       </div>
 
-      {/* Social & Living Style Preferences - Schema Standardized Fields */}
-      <div className="card-header">
-        <h4 className="card-title">Social & Communication Preferences</h4>
-        <p className="card-subtitle">How you prefer to interact and communicate with roommates</p>
-      </div>
-
-      <div className="grid-2 mb-4">
-        <div className="form-group">
-          <label className="label">Social Interaction Preference</label>
-          <select
-            className={`input ${errors.social_interaction_level ? 'border-red-500 bg-red-50' : ''}`}
-            value={formData.social_interaction_level || ''}
-            onChange={(e) => onInputChange('social_interaction_level', e.target.value)}
-            disabled={loading}
-          >
-            <option value="">Select interaction level</option>
-            <option value="minimal">Minimal - Respectful but private lifestyle</option>
-            <option value="friendly">Friendly - Occasional conversations and check-ins</option>
-            <option value="social">Social - Regular interaction and some shared activities</option>
-            <option value="close-friends">Close friends - Very involved, like family</option>
-          </select>
-          {errors.social_interaction_level && (
-            <div className="text-red-500 mt-1 text-sm font-medium">{errors.social_interaction_level}</div>
-          )}
-          <div className="text-gray-500 mt-1 text-sm">
-            How much day-to-day interaction you want with roommates
-          </div>
-        </div>
-
-        <div className="form-group">
-          <label className="label">Conflict Resolution Preference</label>
-          <select
-            className={`input ${errors.conflict_resolution_style ? 'border-red-500 bg-red-50' : ''}`}
-            value={formData.conflict_resolution_style || ''}
-            onChange={(e) => onInputChange('conflict_resolution_style', e.target.value)}
-            disabled={loading}
-          >
-            <option value="">Select resolution style</option>
-            <option value="direct-communication">Direct, honest communication</option>
-            <option value="mediated-discussion">Prefer mediated discussions</option>
-            <option value="written-communication">Written communication first</option>
-            <option value="avoid-conflict">Prefer to avoid conflict when possible</option>
-            <option value="collaborative-problem-solving">Collaborative problem-solving approach</option>
-          </select>
-          {errors.conflict_resolution_style && (
-            <div className="text-red-500 mt-1 text-sm font-medium">{errors.conflict_resolution_style}</div>
-          )}
-          <div className="text-gray-500 mt-1 text-sm">
-            Your preferred approach for handling disagreements
-          </div>
-        </div>
-      </div>
-
-      {/* Compatibility Factors - Schema Standardized Fields */}
+      {/* Additional Compatibility Preferences */}
       <div className="card-header">
         <h4 className="card-title">Additional Compatibility Preferences</h4>
         <p className="card-subtitle">Other factors that contribute to a harmonious living arrangement</p>
@@ -503,7 +449,7 @@ const RoommatePreferencesSection = ({
         </div>
       </div>
 
-      {/* Absolute Deal Breakers - Schema Standardized Fields */}
+      {/* Absolute Deal Breakers */}
       <div className="card-header">
         <h4 className="card-title">Absolute Deal Breakers</h4>
         <p className="card-subtitle">
@@ -634,101 +580,36 @@ const RoommatePreferencesSection = ({
           )}
         </div>
       )}
-
-      {/* Smart Matching Information */}
-      <div className="alert alert-info mt-6">
-        <h4 className="mb-2">
-          <span style={{ marginRight: '8px' }}>🎯</span>
-          Smart Roommate Matching Strategy
-        </h4>
-        <p className="mb-2">
-          <strong>Our enhanced matching algorithm balances:</strong>
-        </p>
-        <ul style={{ marginLeft: '20px', marginBottom: '10px' }}>
-          <li><strong>Essential Compatibility:</strong> Gender preferences, smoking status, recovery support needs</li>
-          <li><strong>Lifestyle Alignment:</strong> Social interaction levels, communication styles, daily routines</li>
-          <li><strong>Boundary Respect:</strong> Deal breakers and non-negotiable requirements</li>
-          <li><strong>Growth Potential:</strong> Mutual support for recovery and personal development</li>
-          <li><strong>Flexibility Balance:</strong> Matching specificity with opportunity expansion</li>
-        </ul>
-        <div className="mt-3">
-          <a 
-            href="/help/roommate-compatibility-matching" 
-            target="_blank" 
-            className="text-blue-600 hover:text-blue-800 underline text-sm"
-          >
-            Learn more about our compatibility matching algorithm →
-          </a>
-        </div>
-      </div>
-
-      {/* Roommate Selection Tips */}
-      <div className="alert alert-success mt-4">
-        <h4 className="mb-2">
-          <span style={{ marginRight: '8px' }}>💡</span>
-          Effective Roommate Preference Tips
-        </h4>
-        <p className="mb-2">
-          <strong>Optimizing your roommate preferences:</strong>
-        </p>
-        <ul style={{ marginLeft: '20px', marginBottom: '10px' }}>
-          <li><strong>Prioritize Essentials:</strong> Focus on must-haves for safety, recovery support, and basic respect</li>
-          <li><strong>Be Realistic:</strong> Too many requirements can limit good matches - focus on what truly matters</li>
-          <li><strong>Recovery First:</strong> Prioritize roommates who understand and support your recovery journey</li>
-          <li><strong>Communication Style:</strong> Matching communication preferences prevents most conflicts</li>
-          <li><strong>Growth Mindset:</strong> Consider roommates who share your commitment to personal development</li>
-          <li><strong>Flexibility Value:</strong> Some preferences can be compromised if the overall fit is strong</li>
-        </ul>
-        <p className="text-sm">
-          The best roommate matches balance your essential needs with mutual respect, support, and the potential 
-          for positive shared experiences that enhance both of your recovery journeys.
-        </p>
-      </div>
     </>
   );
 };
 
 RoommatePreferencesSection.propTypes = {
   formData: PropTypes.shape({
-    // Essential demographics - schema standardized
-    preferred_roommate_gender: PropTypes.string,          // Required - standardized
-    smoking_status: PropTypes.string,                     // Required - standardized
-    gender_inclusive: PropTypes.bool,                     // Optional - standardized
-    
-    // Age preferences - schema standardized
-    age_range_min: PropTypes.number,                      // Optional - standardized
-    age_range_max: PropTypes.number,                      // Optional - standardized
-    age_flexibility: PropTypes.string,                    // Optional - standardized
-    
-    // Lifestyle compatibility - schema standardized
-    pet_preference: PropTypes.string,                     // Optional - standardized
-    smoking_preference: PropTypes.string,                 // Optional - standardized
-    
-    // Recovery compatibility - schema standardized
-    prefer_recovery_experience: PropTypes.bool,           // Optional - standardized
-    supportive_of_recovery: PropTypes.bool,               // Optional - standardized
-    substance_free_home_required: PropTypes.bool,         // Optional - standardized
-    respect_privacy: PropTypes.bool,                      // Optional - standardized
-    
-    // Social preferences - schema standardized
-    social_interaction_level: PropTypes.string,           // Optional - standardized
-    conflict_resolution_style: PropTypes.string,          // Optional - standardized
-    
-    // Additional compatibility - schema standardized
-    similar_schedules: PropTypes.bool,                    // Optional - standardized
-    shared_chores: PropTypes.bool,                        // Optional - standardized
-    financially_stable: PropTypes.bool,                   // Optional - standardized
-    respectful_guests: PropTypes.bool,                    // Optional - standardized
-    lgbtq_friendly: PropTypes.bool,                       // Optional - standardized
-    culturally_sensitive: PropTypes.bool,                 // Optional - standardized
-    
-    // Deal breakers - schema standardized
-    deal_breaker_substance_use: PropTypes.bool,           // Optional - standardized
-    deal_breaker_loudness: PropTypes.bool,                // Optional - standardized
-    deal_breaker_uncleanliness: PropTypes.bool,           // Optional - standardized
-    deal_breaker_financial_issues: PropTypes.bool,        // Optional - standardized
-    deal_breaker_pets: PropTypes.bool,                    // Optional - standardized
-    deal_breaker_smoking: PropTypes.bool                  // Optional - standardized
+    preferred_roommate_gender: PropTypes.string,
+    smoking_status: PropTypes.string,
+    gender_inclusive: PropTypes.bool,
+    age_range_min: PropTypes.number,
+    age_range_max: PropTypes.number,
+    age_flexibility: PropTypes.string,
+    pet_preference: PropTypes.string,
+    smoking_preference: PropTypes.string,
+    prefer_recovery_experience: PropTypes.bool,
+    supportive_of_recovery: PropTypes.bool,
+    substance_free_home_required: PropTypes.bool,
+    respect_privacy: PropTypes.bool,
+    similar_schedules: PropTypes.bool,
+    shared_chores: PropTypes.bool,
+    financially_stable: PropTypes.bool,
+    respectful_guests: PropTypes.bool,
+    lgbtq_friendly: PropTypes.bool,
+    culturally_sensitive: PropTypes.bool,
+    deal_breaker_substance_use: PropTypes.bool,
+    deal_breaker_loudness: PropTypes.bool,
+    deal_breaker_uncleanliness: PropTypes.bool,
+    deal_breaker_financial_issues: PropTypes.bool,
+    deal_breaker_pets: PropTypes.bool,
+    deal_breaker_smoking: PropTypes.bool
   }).isRequired,
   errors: PropTypes.object.isRequired,
   loading: PropTypes.bool.isRequired,
@@ -740,11 +621,11 @@ RoommatePreferencesSection.propTypes = {
   onInputChange: PropTypes.func.isRequired,
   onArrayChange: PropTypes.func.isRequired,
   onRangeChange: PropTypes.func.isRequired,
-  styles: PropTypes.object,                           // CSS module styles
-  fieldMapping: PropTypes.object,                     // Schema field mapping
-  sectionId: PropTypes.string,                        // Section identifier
-  isActive: PropTypes.bool,                           // Whether section is active
-  validationMessage: PropTypes.string                 // Current validation message
+  styles: PropTypes.object,
+  fieldMapping: PropTypes.object,
+  sectionId: PropTypes.string,
+  isActive: PropTypes.bool,
+  validationMessage: PropTypes.string
 };
 
 RoommatePreferencesSection.defaultProps = {
