@@ -1498,7 +1498,9 @@ showContactInfo={
    selectedConnection?.status === 'active' || 
    selectedConnection?.status === 'approved') &&
   !selectedConnection?.pending_member_ids?.includes(profileIds.applicant) &&
-  (selectedConnection?.pending_member_ids?.length === 0 || false)
+  // For individual profiles: check if THIS person is pending
+  (selectedConnection?.type !== 'roommate' || 
+   !selectedConnection?.pending_member_ids?.includes(selectedProfile?.id))
 }
     showActions={activeTab === 'awaiting'}
     isAwaitingApproval={activeTab === 'awaiting'}
