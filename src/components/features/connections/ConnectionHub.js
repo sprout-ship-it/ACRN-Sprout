@@ -575,82 +575,85 @@ if (group.status === 'requested' &&
     }
   };
 
-  /**
-   * Handle viewing individual profile in modal
-   * PRIVACY FIX: Always use formatName for profile.name
-   */
-  const handleViewProfile = async (connection, specificRoommate = null) => {
-    try {
-      let profileData = null;
-      
-      // If viewing a specific roommate from the group modal
-      if (specificRoommate) {
-        profileData = {
-          ...specificRoommate,
-          profile_type: 'applicant',
-          name: formatName(
-            specificRoommate.registrant_profiles?.first_name,
-            specificRoommate.registrant_profiles?.last_name
-          )
-        };
-      }
-      // If viewing first roommate from connection card
-      else if (connection.type === 'roommate' && connection.roommates?.length > 0) {
-        const roommate = connection.roommates[0];
-        const { data } = await supabase
-          .from('applicant_matching_profiles')
-          .select('*, registrant_profiles(*)')
-          .eq('id', roommate.id)
-          .single();
-        
-        if (data) {
-          profileData = {
-            ...data,
-            profile_type: 'applicant',
-            name: formatName(
-              data.registrant_profiles?.first_name,
-              data.registrant_profiles?.last_name
-            )
-          };
-        }
-      } else if (connection.type === 'landlord' && connection.requesting_applicant) {
-        profileData = {
-          ...connection.requesting_applicant,
-          profile_type: 'applicant',
-          name: formatName(
-            connection.requesting_applicant.registrant_profiles?.first_name,
-            connection.requesting_applicant.registrant_profiles?.last_name
-          )
-        };
-      } else if (connection.other_person) {
-        const isPeerSupportProfile = connection.other_person.professional_title || connection.other_person.specialties;
-        const isEmployerProfile = connection.other_person.company_name || connection.other_person.industry;
-        
-        profileData = {
-          ...connection.other_person,
-          profile_type: isPeerSupportProfile ? 'peer_support' : isEmployerProfile ? 'employer' : 'applicant',
-          name: isPeerSupportProfile 
-            ? (connection.other_person.professional_title || formatName(
-                connection.other_person.registrant_profiles?.first_name,
-                connection.other_person.registrant_profiles?.last_name
-              ))
-            : isEmployerProfile
-            ? connection.other_person.company_name 
-            : formatName(
-                connection.other_person.registrant_profiles?.first_name,
-                connection.other_person.registrant_profiles?.last_name
-              )
-        };
-      }
-      
-      setSelectedProfile(profileData);
-      setSelectedConnection(connection);
-      setShowProfileModal(true);
-    } catch (err) {
-      console.error('Error loading profile:', err);
-      alert('Failed to load profile.');
+const handleViewProfile = async (connection, specificRoommate = null) => {
+  try {
+    // Close group modal first to prevent z-index issues
+    if (showGroupModal) {
+      setShowGroupModal(false);
+      // Small delay to allow modal close animation
+      await new Promise(resolve => setTimeout(resolve, 150));
     }
-  };
+    
+    let profileData = null;
+    
+    // If viewing a specific roommate from the group modal
+    if (specificRoommate) {
+      profileData = {
+        ...specificRoommate,
+        profile_type: 'applicant',
+        name: formatName(
+          specificRoommate.registrant_profiles?.first_name,
+          specificRoommate.registrant_profiles?.last_name
+        )
+      };
+    }
+    // If viewing first roommate from connection card
+    else if (connection.type === 'roommate' && connection.roommates?.length > 0) {
+      const roommate = connection.roommates[0];
+      const { data } = await supabase
+        .from('applicant_matching_profiles')
+        .select('*, registrant_profiles(*)')
+        .eq('id', roommate.id)
+        .single();
+      
+      if (data) {
+        profileData = {
+          ...data,
+          profile_type: 'applicant',
+          name: formatName(
+            data.registrant_profiles?.first_name,
+            data.registrant_profiles?.last_name
+          )
+        };
+      }
+    } else if (connection.type === 'landlord' && connection.requesting_applicant) {
+      profileData = {
+        ...connection.requesting_applicant,
+        profile_type: 'applicant',
+        name: formatName(
+          connection.requesting_applicant.registrant_profiles?.first_name,
+          connection.requesting_applicant.registrant_profiles?.last_name
+        )
+      };
+    } else if (connection.other_person) {
+      const isPeerSupportProfile = connection.other_person.professional_title || connection.other_person.specialties;
+      const isEmployerProfile = connection.other_person.company_name || connection.other_person.industry;
+      
+      profileData = {
+        ...connection.other_person,
+        profile_type: isPeerSupportProfile ? 'peer_support' : isEmployerProfile ? 'employer' : 'applicant',
+        name: isPeerSupportProfile 
+          ? (connection.other_person.professional_title || formatName(
+              connection.other_person.registrant_profiles?.first_name,
+              connection.other_person.registrant_profiles?.last_name
+            ))
+          : isEmployerProfile
+          ? connection.other_person.company_name 
+          : formatName(
+              connection.other_person.registrant_profiles?.first_name,
+              connection.other_person.registrant_profiles?.last_name
+            )
+      };
+    }
+    
+    setSelectedProfile(profileData);
+    setSelectedConnection(connection);
+    setShowProfileModal(true);
+  } catch (err) {
+    console.error('Error loading profile:', err);
+    alert('Failed to load profile.');
+  }
+};
 
   /**
    * NEW: Handle viewing group details in GroupDetailsModal

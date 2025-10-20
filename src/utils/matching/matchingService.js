@@ -818,30 +818,29 @@ async loadSentRequests(userId) {
       .eq('status', 'requested')
       .contains('roommate_ids', JSON.stringify([userApplicantId]));
     
-    if (pendingGroups && pendingGroups.length > 0) {
-      for (const group of pendingGroups) {
-        const roommateIds = group.roommate_ids || [];
+if (pendingGroups && pendingGroups.length > 0) {
+  for (const group of pendingGroups) {
+    const roommateIds = group.roommate_ids || [];
+    const pendingIds = group.pending_member_ids || [];  // ← Add this line
+    
+    // Get pending members (they're who we sent requests to)
+    for (const pendingId of pendingIds) {  // ← Look at pending_member_ids instead!
+      try {
+        const { data: pendingMember } = await supabase
+          .from('applicant_matching_profiles')
+          .select('user_id')
+          .eq('id', pendingId)
+          .maybeSingle();
         
-        // Get the other roommate(s) in the group
-        for (const roommateId of roommateIds) {
-          if (roommateId !== userApplicantId) {
-            try {
-              const { data: roommate } = await supabase
-                .from('applicant_matching_profiles')
-                .select('user_id')
-                .eq('id', roommateId)
-                .maybeSingle();  // ✅ FIXED: Changed from .single()
-              
-              if (roommate) {
-                sentRequestIds.add(roommate.user_id);
-              }
-            } catch (err) {
-              console.warn('Could not find roommate profile for ID:', roommateId);
-            }
-          }
+        if (pendingMember) {
+          sentRequestIds.add(pendingMember.user_id);
         }
+      } catch (err) {
+        console.warn('Could not find pending member profile for ID:', pendingId);
       }
     }
+  }
+}
     
     console.log(`Found ${sentRequestIds.size} pending requests sent`);
     return sentRequestIds;
