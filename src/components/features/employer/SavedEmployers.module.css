@@ -1,0 +1,551 @@
+/* src/components/features/employer/SavedEmployers.module.css */
+/* Dedicated styling for Saved Employers page */
+
+/* ==================== PAGE LAYOUT ==================== */
+.savedEmployersContainer {
+  max-width: 1400px;
+  margin: 0 auto;
+  padding: 2rem;
+}
+
+/* ==================== HEADER SECTION ==================== */
+.headerSection {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 2rem;
+  margin-bottom: 2rem;
+  padding-bottom: 1.5rem;
+  border-bottom: 2px solid var(--border-beige);
+}
+
+.headerContent {
+  flex: 1;
+}
+
+.headerTitle {
+  font-family: var(--font-serif);
+  font-size: 2.25rem;
+  font-weight: 700;
+  color: var(--primary-purple);
+  margin-bottom: 0.5rem;
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.headerTitle::before {
+  content: '💼';
+  font-size: 2rem;
+}
+
+.headerSubtitle {
+  font-size: 1rem;
+  color: var(--gray-600);
+  line-height: 1.5;
+  margin: 0;
+}
+
+.headerActions {
+  display: flex;
+  gap: 0.75rem;
+  flex-shrink: 0;
+}
+
+/* ==================== EMPLOYERS GRID ==================== */
+.employersGrid {
+  margin-bottom: 3rem;
+}
+
+.gridContainer {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
+  gap: 1.5rem;
+}
+
+/* ==================== EMPLOYER CARD ==================== */
+.employerCard {
+  background: white;
+  border: 2px solid var(--border-beige);
+  border-radius: var(--radius-xl);
+  padding: 1.5rem;
+  box-shadow: var(--shadow-md);
+  transition: all 0.3s ease;
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+}
+
+.employerCard:hover {
+  transform: translateY(-4px);
+  box-shadow: var(--shadow-lg);
+  border-color: var(--primary-purple);
+}
+
+/* Card Header */
+.cardHeader {
+  margin-bottom: 1rem;
+  padding-bottom: 1rem;
+  border-bottom: 1px solid var(--gray-200);
+}
+
+.cardHeaderContent {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 1rem;
+}
+
+.cardTitle {
+  font-family: var(--font-serif);
+  font-size: 1.35rem;
+  font-weight: 700;
+  color: var(--gray-900);
+  margin: 0;
+  line-height: 1.3;
+  flex: 1;
+}
+
+.badgeGroup {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  align-items: flex-end;
+}
+
+/* Card Body */
+.cardBody {
+  flex: 1;
+  margin-bottom: 1rem;
+}
+
+.cardDetail {
+  margin-bottom: 0.75rem;
+  font-size: 0.95rem;
+  line-height: 1.5;
+}
+
+.cardDetail strong {
+  color: var(--gray-700);
+  font-weight: 600;
+  display: inline-block;
+  min-width: 100px;
+}
+
+.cardDetail:last-child {
+  margin-bottom: 0;
+}
+
+/* Location Display */
+.locationDisplay {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  color: var(--gray-700);
+  margin-bottom: 0.75rem;
+}
+
+.locationIcon {
+  color: var(--secondary-teal);
+  font-size: 1.1rem;
+}
+
+/* Industry & Type Display */
+.industryType {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-bottom: 0.75rem;
+  font-size: 0.9rem;
+  color: var(--gray-600);
+}
+
+/* Tag Section */
+.tagSection {
+  margin-top: 1rem;
+  padding-top: 1rem;
+  border-top: 1px solid var(--gray-200);
+}
+
+.tagLabel {
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--gray-700);
+  margin-bottom: 0.5rem;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.tagList {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.tag {
+  background: rgba(160, 32, 240, 0.08);
+  color: var(--primary-purple);
+  padding: 0.4rem 0.75rem;
+  border-radius: 20px;
+  font-size: 0.8rem;
+  font-weight: 500;
+  border: 1px solid rgba(160, 32, 240, 0.2);
+  transition: all 0.2s ease;
+}
+
+.tag:hover {
+  background: rgba(160, 32, 240, 0.15);
+  transform: scale(1.05);
+}
+
+/* Description */
+.description {
+  font-size: 0.9rem;
+  color: var(--gray-700);
+  line-height: 1.6;
+  margin-top: 0.75rem;
+  padding: 0.75rem;
+  background: var(--gray-50);
+  border-radius: var(--radius-md);
+  border-left: 3px solid var(--secondary-teal);
+}
+
+/* Card Actions */
+.cardActions {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  margin-top: auto;
+  padding-top: 1rem;
+  border-top: 1px solid var(--gray-200);
+}
+
+.cardActions button {
+  width: 100%;
+}
+
+/* ==================== LOADING STATE ==================== */
+.loadingContainer {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 400px;
+  gap: 1.5rem;
+}
+
+.loadingSpinner {
+  width: 50px;
+  height: 50px;
+  border: 4px solid var(--gray-200);
+  border-top-color: var(--primary-purple);
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+}
+
+.loadingText {
+  font-size: 1.1rem;
+  color: var(--gray-600);
+  font-weight: 500;
+}
+
+/* ==================== EMPTY STATE ==================== */
+.emptyState {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 400px;
+  padding: 3rem 2rem;
+  text-align: center;
+}
+
+.emptyIcon {
+  font-size: 4rem;
+  margin-bottom: 1rem;
+  opacity: 0.8;
+}
+
+.emptyTitle {
+  font-family: var(--font-serif);
+  font-size: 1.75rem;
+  color: var(--gray-800);
+  margin-bottom: 0.75rem;
+}
+
+.emptyMessage {
+  font-size: 1rem;
+  color: var(--gray-600);
+  max-width: 500px;
+  line-height: 1.6;
+  margin-bottom: 2rem;
+}
+
+.emptyStateActions {
+  display: flex;
+  gap: 1rem;
+  flex-wrap: wrap;
+  justify-content: center;
+}
+
+/* ==================== ERROR STATE ==================== */
+.errorContainer {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 400px;
+  padding: 3rem 2rem;
+  text-align: center;
+}
+
+.errorIcon {
+  font-size: 4rem;
+  margin-bottom: 1rem;
+}
+
+.errorTitle {
+  font-family: var(--font-serif);
+  font-size: 1.75rem;
+  color: var(--error-text);
+  margin-bottom: 0.75rem;
+}
+
+.errorMessage {
+  font-size: 1rem;
+  color: var(--gray-700);
+  max-width: 500px;
+  line-height: 1.6;
+  margin-bottom: 2rem;
+}
+
+/* ==================== TIPS SECTION ==================== */
+.tipsSection {
+  background: linear-gradient(135deg, rgba(160, 32, 240, 0.05), rgba(32, 178, 170, 0.05));
+  border: 2px solid var(--border-beige);
+  border-radius: var(--radius-xl);
+  padding: 2rem;
+  margin-top: 3rem;
+}
+
+.tipsTitle {
+  font-family: var(--font-serif);
+  font-size: 1.5rem;
+  color: var(--gray-800);
+  margin-bottom: 1.5rem;
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.tipsGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 1.5rem;
+}
+
+.tipItem {
+  display: flex;
+  gap: 1rem;
+  align-items: flex-start;
+}
+
+.tipIcon {
+  font-size: 1.5rem;
+  flex-shrink: 0;
+  margin-top: 0.25rem;
+}
+
+.tipContent {
+  flex: 1;
+  font-size: 0.95rem;
+  line-height: 1.6;
+  color: var(--gray-700);
+}
+
+.tipContent strong {
+  color: var(--gray-900);
+  display: block;
+  margin-bottom: 0.25rem;
+}
+
+/* ==================== STATS BAR ==================== */
+.statsBar {
+  display: flex;
+  justify-content: space-around;
+  align-items: center;
+  background: white;
+  border: 2px solid var(--border-beige);
+  border-radius: var(--radius-xl);
+  padding: 1.5rem;
+  margin-bottom: 2rem;
+  box-shadow: var(--shadow-sm);
+}
+
+.statItem {
+  text-align: center;
+}
+
+.statValue {
+  display: block;
+  font-size: 2rem;
+  font-weight: 700;
+  color: var(--primary-purple);
+  font-family: var(--font-serif);
+}
+
+.statLabel {
+  display: block;
+  font-size: 0.85rem;
+  color: var(--gray-600);
+  margin-top: 0.25rem;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+/* ==================== BUTTON UTILITIES ==================== */
+.btnIcon {
+  margin-right: 0.5rem;
+  font-size: 1.1em;
+}
+
+/* ==================== RESPONSIVE DESIGN ==================== */
+@media (max-width: 1024px) {
+  .gridContainer {
+    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+    gap: 1.25rem;
+  }
+
+  .tipsGrid {
+    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+    gap: 1.25rem;
+  }
+}
+
+@media (max-width: 768px) {
+  .savedEmployersContainer {
+    padding: 1.5rem;
+  }
+
+  .headerSection {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 1.5rem;
+  }
+
+  .headerTitle {
+    font-size: 1.75rem;
+  }
+
+  .headerActions {
+    width: 100%;
+  }
+
+  .headerActions button {
+    flex: 1;
+  }
+
+  .gridContainer {
+    grid-template-columns: 1fr;
+    gap: 1rem;
+  }
+
+  .cardHeaderContent {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .badgeGroup {
+    flex-direction: row;
+    align-items: center;
+    width: 100%;
+    justify-content: flex-start;
+  }
+
+  .statsBar {
+    flex-direction: column;
+    gap: 1.5rem;
+  }
+
+  .statItem {
+    width: 100%;
+    padding: 1rem 0;
+    border-bottom: 1px solid var(--gray-200);
+  }
+
+  .statItem:last-child {
+    border-bottom: none;
+  }
+
+  .tipsGrid {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 480px) {
+  .savedEmployersContainer {
+    padding: 1rem;
+  }
+
+  .headerTitle {
+    font-size: 1.5rem;
+  }
+
+  .headerTitle::before {
+    font-size: 1.5rem;
+  }
+
+  .employerCard {
+    padding: 1.25rem;
+  }
+
+  .cardTitle {
+    font-size: 1.2rem;
+  }
+
+  .cardActions {
+    gap: 0.75rem;
+  }
+
+  .tipsSection {
+    padding: 1.5rem;
+  }
+
+  .tipsTitle {
+    font-size: 1.25rem;
+  }
+}
+
+/* ==================== ANIMATIONS ==================== */
+@keyframes spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.employerCard {
+  animation: fadeIn 0.3s ease-out;
+}
+
+/* Stagger animation for cards */
+.employerCard:nth-child(1) { animation-delay: 0.05s; }
+.employerCard:nth-child(2) { animation-delay: 0.1s; }
+.employerCard:nth-child(3) { animation-delay: 0.15s; }
+.employerCard:nth-child(4) { animation-delay: 0.2s; }
+.employerCard:nth-child(5) { animation-delay: 0.25s; }
+.employerCard:nth-child(6) { animation-delay: 0.3s; }

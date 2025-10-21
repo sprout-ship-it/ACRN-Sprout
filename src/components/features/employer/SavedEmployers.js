@@ -1,11 +1,12 @@
-// src/components/features/employer/SavedEmployers.js - UPDATED with connection management
+// src/components/features/employer/SavedEmployers.js - UPDATED with styled display
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../../../context/AuthContext';
 import { useNavigate } from 'react-router-dom';
 import createEmployerService from '../../../utils/database/employerService';
+import { transformEmployerForDisplay, getEmployerStats } from '../../../utils/database/employerDisplayUtils';
 import { supabase } from '../../../utils/supabase';
 import ProfileModal from '../connections/ProfileModal';
-import styles from '../property/SavedProperties.module.css';
+import styles from './SavedEmployers.module.css';
 
 const SavedEmployers = ({ onBack }) => {
   const { profile } = useAuth();
@@ -64,7 +65,6 @@ const SavedEmployers = ({ onBack }) => {
 
       if (error) throw error;
 
-      // Create set of employer_profile IDs that are active connections
       const activeSet = new Set(matches?.map(m => m.employer_id) || []);
       setActiveConnections(activeSet);
       
@@ -87,7 +87,6 @@ const SavedEmployers = ({ onBack }) => {
     try {
       setError(null);
       
-      // Get user's favorite employers
       console.log('📋 Fetching favorites for user:', profile.id);
       const favoritesResult = await employerService.favorites.getByUserId(profile.id);
       
@@ -103,7 +102,6 @@ const SavedEmployers = ({ onBack }) => {
       const favoritesList = favoritesResult.data || [];
       console.log(`✅ Found ${favoritesList.length} favorites`);
 
-      // Update favorites set
       const favoritesSet = new Set(favoritesList.map(fav => fav.employer_user_id));
       setFavorites(favoritesSet);
 
@@ -113,11 +111,9 @@ const SavedEmployers = ({ onBack }) => {
         return;
       }
 
-      // Get full employer profiles for favorited employers
       const employerUserIds = favoritesList.map(fav => fav.employer_user_id);
       console.log('💼 Fetching employer profiles for:', employerUserIds);
 
-      // Fetch employer profiles that match the favorited user IDs
       const { data: employerProfiles, error: profilesError } = await supabase
         .from('employer_profiles')
         .select('*')
@@ -146,7 +142,7 @@ const SavedEmployers = ({ onBack }) => {
   };
 
   /**
-   * ✅ NEW: Add employer as active connection (direct to active status)
+   * Add employer as active connection
    */
   const handleAddAsEmployer = async (employer) => {
     if (!applicantProfileId) {
@@ -164,7 +160,6 @@ const SavedEmployers = ({ onBack }) => {
     setActionLoading(employer.id);
 
     try {
-      // Check if match already exists
       const { data: existingMatch } = await supabase
         .from('employment_matches')
         .select('id, status')
@@ -179,7 +174,6 @@ const SavedEmployers = ({ onBack }) => {
           return;
         }
         
-        // Update existing inactive match to active
         const { error: updateError } = await supabase
           .from('employment_matches')
           .update({ 
@@ -190,7 +184,6 @@ const SavedEmployers = ({ onBack }) => {
 
         if (updateError) throw updateError;
       } else {
-        // Create new employment match with active status
         const { error: insertError } = await supabase
           .from('employment_matches')
           .insert({
@@ -205,7 +198,6 @@ const SavedEmployers = ({ onBack }) => {
         if (insertError) throw insertError;
       }
 
-      // Update local state
       setActiveConnections(prev => new Set([...prev, employer.id]));
       
       alert(`${employer.company_name} added as your employer! You can now access their contact information.`);
@@ -219,7 +211,7 @@ const SavedEmployers = ({ onBack }) => {
   };
 
   /**
-   * ✅ NEW: Remove employer as active connection
+   * Remove employer as active connection
    */
   const handleRemoveAsEmployer = async (employer) => {
     if (!applicantProfileId) return;
@@ -233,7 +225,6 @@ const SavedEmployers = ({ onBack }) => {
     setActionLoading(employer.id);
 
     try {
-      // Set employment match to inactive
       const { error } = await supabase
         .from('employment_matches')
         .update({ 
@@ -246,7 +237,6 @@ const SavedEmployers = ({ onBack }) => {
 
       if (error) throw error;
 
-      // Update local state
       setActiveConnections(prev => {
         const newSet = new Set(prev);
         newSet.delete(employer.id);
@@ -273,14 +263,12 @@ const SavedEmployers = ({ onBack }) => {
       const result = await employerService.favorites.remove(profile.id, employerUserId);
       
       if (result.success) {
-        // Update local state
         setFavorites(prev => {
           const newSet = new Set(prev);
           newSet.delete(employerUserId);
           return newSet;
         });
         
-        // Remove from saved employers list
         setSavedEmployers(prev => prev.filter(emp => emp.user_id !== employerUserId));
         
         console.log('✅ Favorite removed successfully');
@@ -298,7 +286,7 @@ const SavedEmployers = ({ onBack }) => {
   };
 
   /**
-   * ✅ NEW: Handle viewing employer details in modal
+   * Handle viewing employer details in modal
    */
   const handleViewDetails = (employer) => {
     setSelectedEmployer(employer);
@@ -346,6 +334,9 @@ const SavedEmployers = ({ onBack }) => {
     }
   }, [profile?.id, applicantProfileId]);
 
+  // Calculate stats
+  const stats = getEmployerStats(savedEmployers);
+
   // Render loading state
   if (loading) {
     return (
@@ -390,238 +381,289 @@ const SavedEmployers = ({ onBack }) => {
 
   return (
     <div className="content">
-      {/* Header Section */}
-      <div className={styles.headerSection}>
-        <div className={styles.headerContent}>
-          <h1 className={styles.headerTitle}>Saved Employers</h1>
-          <p className={styles.headerSubtitle}>
-            Recovery-friendly employers you've saved for future reference
-          </p>
-        </div>
-        <div className={styles.headerActions}>
-          <button 
-            className="btn btn-outline btn-sm"
-            onClick={handleRefresh}
-            disabled={refreshing}
-            title="Refresh saved employers"
-          >
-            <span className={styles.btnIcon}>🔄</span>
-            {refreshing ? 'Refreshing...' : 'Refresh'}
-          </button>
-          <button 
-            className="btn btn-primary btn-sm"
-            onClick={handleFindEmployers}
-            title="Find more employers"
-          >
-            <span className={styles.btnIcon}>🔍</span>
-            Find More
-          </button>
-        </div>
-      </div>
-
-      {/* Saved Employers Grid or Empty State */}
-      {savedEmployers.length > 0 ? (
-        <div className={styles.propertiesGrid}>
-          <div className="grid-auto">
-            {savedEmployers.map((employer) => {
-              const isActive = isActiveConnection(employer.id);
-              const isLoading = actionLoading === employer.id;
-
-              return (
-                <div key={employer.id} className="card">
-                  <div className={styles.cardHeader}>
-                    <div className={styles.cardHeaderContent}>
-                      <h3 className={styles.cardTitle}>
-                        {employer.company_name || 'Company'}
-                      </h3>
-                      <div className={styles.badgeGroup}>
-                        {employer.is_actively_hiring ? (
-                          <span className="badge badge-success">🟢 Hiring</span>
-                        ) : (
-                          <span className="badge badge-warning">⏸️ Not Hiring</span>
-                        )}
-                        {isActive && (
-                          <span className="badge badge-success">💼 My Employer</span>
-                        )}
-                      </div>
-                    </div>
-                  </div>
-
-                  <div className={styles.cardBody}>
-                    {employer.industry && (
-                      <div className={styles.cardDetail}>
-                        <strong>Industry:</strong> {employer.industry}
-                      </div>
-                    )}
-                    
-                    {employer.city && employer.state && (
-                      <div className={styles.cardDetail}>
-                        <strong>Location:</strong> {employer.city}, {employer.state}
-                      </div>
-                    )}
-
-                    {employer.job_types_available && employer.job_types_available.length > 0 && (
-                      <div className={styles.cardDetail}>
-                        <strong>Job Types:</strong> {employer.job_types_available.slice(0, 2).join(', ')}
-                        {employer.job_types_available.length > 2 && ` (+${employer.job_types_available.length - 2} more)`}
-                      </div>
-                    )}
-
-                    {employer.recovery_friendly_features && employer.recovery_friendly_features.length > 0 && (
-                      <div className={styles.tagSection}>
-                        <div className={styles.tagLabel}>Recovery-Friendly:</div>
-                        <div className={styles.tagList}>
-                          {employer.recovery_friendly_features.slice(0, 3).map((feature, i) => (
-                            <span key={i} className={styles.tag}>
-                              {feature}
-                            </span>
-                          ))}
-                        </div>
-                      </div>
-                    )}
-
-                    {employer.description && (
-                      <div className={styles.cardDetail}>
-                        <p className={styles.description}>
-                          {employer.description.length > 150 
-                            ? `${employer.description.substring(0, 150)}...` 
-                            : employer.description
-                          }
-                        </p>
-                      </div>
-                    )}
-                  </div>
-
-                  <div className={styles.cardActions}>
-                    <button
-                      className="btn btn-outline"
-                      onClick={() => handleViewDetails(employer)}
-                    >
-                      👁️ View Details
-                    </button>
-
-                    {isActive ? (
-                      <button
-                        className="btn btn-outline"
-                        onClick={() => handleRemoveAsEmployer(employer)}
-                        disabled={isLoading}
-                        style={{ 
-                          color: 'var(--error-text)', 
-                          borderColor: 'var(--error-border)' 
-                        }}
-                      >
-                        {isLoading ? 'Removing...' : '❌ Remove as Employer'}
-                      </button>
-                    ) : (
-                      <button
-                        className="btn btn-primary"
-                        onClick={() => handleAddAsEmployer(employer)}
-                        disabled={isLoading}
-                      >
-                        {isLoading ? 'Adding...' : '💼 Add as My Employer'}
-                      </button>
-                    )}
-
-                    <button
-                      className="btn btn-outline"
-                      onClick={() => handleToggleFavorite(employer.user_id)}
-                      title="Remove from favorites"
-                    >
-                      💔 Unsave
-                    </button>
-                  </div>
-                </div>
-              );
-            })}
+      <div className={styles.savedEmployersContainer}>
+        {/* Header Section */}
+        <div className={styles.headerSection}>
+          <div className={styles.headerContent}>
+            <h1 className={styles.headerTitle}>Saved Employers</h1>
+            <p className={styles.headerSubtitle}>
+              Recovery-friendly employers you've saved for future reference
+            </p>
           </div>
-        </div>
-      ) : (
-        <div className={styles.errorContainer}>
-          <div className={styles.errorIcon}>❤️</div>
-          <h2 className={styles.errorTitle}>No Saved Employers Yet</h2>
-          <p className={styles.errorMessage}>
-            Start building your network by saving recovery-friendly employers that interest you. 
-            You can save employers while browsing to easily find them later.
-          </p>
-          <div className={styles.emptyStateActions}>
+          <div className={styles.headerActions}>
             <button 
-              className="btn btn-primary"
+              className="btn btn-outline btn-sm"
+              onClick={handleRefresh}
+              disabled={refreshing}
+              title="Refresh saved employers"
+            >
+              <span className={styles.btnIcon}>🔄</span>
+              {refreshing ? 'Refreshing...' : 'Refresh'}
+            </button>
+            <button 
+              className="btn btn-primary btn-sm"
               onClick={handleFindEmployers}
+              title="Find more employers"
             >
               <span className={styles.btnIcon}>🔍</span>
-              Find Employers
+              Find More
             </button>
           </div>
         </div>
-      )}
 
-      {/* Tips Section */}
-      <div className={styles.tipsSection}>
-        <h3 className={styles.tipsTitle}>
-          <span>💡</span>
-          Tips for Managing Saved Employers
-        </h3>
-        <div className={styles.tipsGrid}>
-          <div className={styles.tipItem}>
-            <span className={styles.tipIcon}>❤️</span>
-            <div className={styles.tipContent}>
-              <strong>Save employers while browsing</strong> to create your personalized list of 
-              recovery-friendly companies that align with your career goals.
+        {/* Stats Bar */}
+        {savedEmployers.length > 0 && (
+          <div className={styles.statsBar}>
+            <div className={styles.statItem}>
+              <span className={styles.statValue}>{stats.total}</span>
+              <span className={styles.statLabel}>Saved</span>
+            </div>
+            <div className={styles.statItem}>
+              <span className={styles.statValue}>{stats.activelyHiring}</span>
+              <span className={styles.statLabel}>Hiring Now</span>
+            </div>
+            <div className={styles.statItem}>
+              <span className={styles.statValue}>{activeConnections.size}</span>
+              <span className={styles.statLabel}>My Employers</span>
             </div>
           </div>
-          <div className={styles.tipItem}>
-            <span className={styles.tipIcon}>💼</span>
-            <div className={styles.tipContent}>
-              <strong>Add as My Employer</strong> to mark companies as your current or prospective 
-              employers and gain immediate access to their contact information.
+        )}
+
+        {/* Saved Employers Grid or Empty State */}
+        {savedEmployers.length > 0 ? (
+          <div className={styles.employersGrid}>
+            <div className={styles.gridContainer}>
+              {savedEmployers.map((employer) => {
+                const displayData = transformEmployerForDisplay(employer);
+                const isActive = isActiveConnection(employer.id);
+                const isLoading = actionLoading === employer.id;
+
+                return (
+                  <div key={employer.id} className={styles.employerCard}>
+                    {/* Card Header */}
+                    <div className={styles.cardHeader}>
+                      <div className={styles.cardHeaderContent}>
+                        <h3 className={styles.cardTitle}>
+                          {displayData.companyName}
+                        </h3>
+                        <div className={styles.badgeGroup}>
+                          <span className={`badge ${displayData.hiringStatus.className}`}>
+                            {displayData.hiringStatus.emoji} {displayData.hiringStatus.text}
+                          </span>
+                          {isActive && (
+                            <span className="badge badge-success">💼 My Employer</span>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Card Body */}
+                    <div className={styles.cardBody}>
+                      {/* Location */}
+                      <div className={styles.locationDisplay}>
+                        <span className={styles.locationIcon}>📍</span>
+                        <span>{displayData.location}</span>
+                      </div>
+
+                      {/* Industry & Type */}
+                      <div className={styles.industryType}>
+                        <span><strong>Industry:</strong> {displayData.industry}</span>
+                      </div>
+
+                      {displayData.companySize && (
+                        <div className={styles.cardDetail}>
+                          <strong>Size:</strong> {displayData.companySize}
+                        </div>
+                      )}
+
+                      {displayData.businessType && (
+                        <div className={styles.cardDetail}>
+                          <strong>Type:</strong> {displayData.businessType}
+                        </div>
+                      )}
+
+                      {/* Job Types */}
+                      {displayData.jobTypes.display.length > 0 && (
+                        <div className={styles.tagSection}>
+                          <div className={styles.tagLabel}>
+                            💼 Job Types Available
+                          </div>
+                          <div className={styles.tagList}>
+                            {displayData.jobTypes.display.map((jobType, i) => (
+                              <span key={i} className={styles.tag}>
+                                {jobType}
+                              </span>
+                            ))}
+                            {displayData.jobTypes.remaining > 0 && (
+                              <span className={styles.tag}>
+                                +{displayData.jobTypes.remaining} more
+                              </span>
+                            )}
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Recovery Features */}
+                      {displayData.recoveryFeatures.display.length > 0 && (
+                        <div className={styles.tagSection}>
+                          <div className={styles.tagLabel}>
+                            🤝 Recovery-Friendly Features
+                          </div>
+                          <div className={styles.tagList}>
+                            {displayData.recoveryFeatures.display.map((feature, i) => (
+                              <span key={i} className={styles.tag}>
+                                {feature}
+                              </span>
+                            ))}
+                            {displayData.recoveryFeatures.remaining > 0 && (
+                              <span className={styles.tag}>
+                                +{displayData.recoveryFeatures.remaining} more
+                              </span>
+                            )}
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Description */}
+                      {displayData.truncatedDescription && (
+                        <div className={styles.description}>
+                          {displayData.truncatedDescription}
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Card Actions */}
+                    <div className={styles.cardActions}>
+                      <button
+                        className="btn btn-outline"
+                        onClick={() => handleViewDetails(employer)}
+                      >
+                        👁️ View Details
+                      </button>
+
+                      {isActive ? (
+                        <button
+                          className="btn btn-outline"
+                          onClick={() => handleRemoveAsEmployer(employer)}
+                          disabled={isLoading}
+                          style={{ 
+                            color: 'var(--error-text)', 
+                            borderColor: 'var(--error-border)' 
+                          }}
+                        >
+                          {isLoading ? 'Removing...' : '❌ Remove as Employer'}
+                        </button>
+                      ) : (
+                        <button
+                          className="btn btn-primary"
+                          onClick={() => handleAddAsEmployer(employer)}
+                          disabled={isLoading}
+                        >
+                          {isLoading ? 'Adding...' : '💼 Add as My Employer'}
+                        </button>
+                      )}
+
+                      <button
+                        className="btn btn-outline"
+                        onClick={() => handleToggleFavorite(employer.user_id)}
+                        title="Remove from favorites"
+                      >
+                        💔 Unsave
+                      </button>
+                    </div>
+                  </div>
+                );
+              })}
             </div>
           </div>
-          <div className={styles.tipItem}>
-            <span className={styles.tipIcon}>📋</span>
-            <div className={styles.tipContent}>
-              <strong>Review regularly</strong> to stay updated on new opportunities and 
-              maintain engagement with employers you're interested in.
+        ) : (
+          <div className={styles.emptyState}>
+            <div className={styles.emptyIcon}>❤️</div>
+            <h2 className={styles.emptyTitle}>No Saved Employers Yet</h2>
+            <p className={styles.emptyMessage}>
+              Start building your network by saving recovery-friendly employers that interest you. 
+              You can save employers while browsing to easily find them later.
+            </p>
+            <div className={styles.emptyStateActions}>
+              <button 
+                className="btn btn-primary"
+                onClick={handleFindEmployers}
+              >
+                <span className={styles.btnIcon}>🔍</span>
+                Find Employers
+              </button>
             </div>
           </div>
-          <div className={styles.tipItem}>
-            <span className={styles.tipIcon}>🎯</span>
-            <div className={styles.tipContent}>
-              <strong>Quality over quantity</strong> - Focus on saving employers that truly 
-              match your values, skills, and recovery-friendly workplace preferences.
+        )}
+
+        {/* Tips Section */}
+        <div className={styles.tipsSection}>
+          <h3 className={styles.tipsTitle}>
+            <span>💡</span>
+            Tips for Managing Saved Employers
+          </h3>
+          <div className={styles.tipsGrid}>
+            <div className={styles.tipItem}>
+              <span className={styles.tipIcon}>❤️</span>
+              <div className={styles.tipContent}>
+                <strong>Save employers while browsing</strong> to create your personalized list of 
+                recovery-friendly companies that align with your career goals.
+              </div>
+            </div>
+            <div className={styles.tipItem}>
+              <span className={styles.tipIcon}>💼</span>
+              <div className={styles.tipContent}>
+                <strong>Add as My Employer</strong> to mark companies as your current or prospective 
+                employers and gain immediate access to their contact information.
+              </div>
+            </div>
+            <div className={styles.tipItem}>
+              <span className={styles.tipIcon}>📋</span>
+              <div className={styles.tipContent}>
+                <strong>Review regularly</strong> to stay updated on new opportunities and 
+                maintain engagement with employers you're interested in.
+              </div>
+            </div>
+            <div className={styles.tipItem}>
+              <span className={styles.tipIcon}>🎯</span>
+              <div className={styles.tipContent}>
+                <strong>Quality over quantity</strong> - Focus on saving employers that truly 
+                match your values, skills, and recovery-friendly workplace preferences.
+              </div>
             </div>
           </div>
         </div>
+
+        {/* Navigation Back Button */}
+        {onBack && (
+          <div className="text-center mt-5">
+            <button
+              className="btn btn-outline"
+              onClick={onBack}
+            >
+              ← Back to Dashboard
+            </button>
+          </div>
+        )}
+
+        {/* Profile Modal */}
+        {showEmployerModal && selectedEmployer && (
+          <ProfileModal
+            isOpen={showEmployerModal}
+            profile={{
+              ...selectedEmployer,
+              profile_type: 'employer',
+              name: selectedEmployer.company_name || 'Company'
+            }}
+            connectionStatus={isActiveConnection(selectedEmployer.id) ? 'active' : null}
+            onClose={() => setShowEmployerModal(false)}
+            onConnect={() => handleAddAsEmployer(selectedEmployer)}
+            showContactInfo={isActiveConnection(selectedEmployer.id)}
+            showActions={!isActiveConnection(selectedEmployer.id)}
+            isAwaitingApproval={false}
+          />
+        )}
       </div>
-
-      {/* Navigation Back Button */}
-      {onBack && (
-        <div className="text-center mt-5">
-          <button
-            className="btn btn-outline"
-            onClick={onBack}
-          >
-            ← Back to Dashboard
-          </button>
-        </div>
-      )}
-
-{/* ✅ UPDATED: Use consolidated ProfileModal */}
-{showEmployerModal && selectedEmployer && (
-  <ProfileModal
-    isOpen={showEmployerModal}
-    profile={{
-      ...selectedEmployer,
-      profile_type: 'employer',
-      name: selectedEmployer.company_name || 'Company'
-    }}
-    connectionStatus={isActiveConnection(selectedEmployer.id) ? 'active' : null}
-    onClose={() => setShowEmployerModal(false)}
-    onConnect={() => handleAddAsEmployer(selectedEmployer)}
-    showContactInfo={isActiveConnection(selectedEmployer.id)}
-    showActions={!isActiveConnection(selectedEmployer.id)}
-    isAwaitingApproval={false}
-  />
-)}
     </div>
   );
 };
