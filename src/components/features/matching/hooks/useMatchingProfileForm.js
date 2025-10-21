@@ -84,7 +84,6 @@ export const useMatchingProfileForm = () => {
     prefer_recovery_experience: false,
     supportive_of_recovery: true,
     respect_privacy: true,
-    social_interaction_level: '',
     similar_schedules: false,
     shared_chores: false,
     financially_stable: true,
@@ -663,7 +662,6 @@ validateBudgets();
         
         // Recovery & Wellness
         recovery_stage: formData.recovery_stage,
-        time_in_recovery: formData.time_in_recovery || null,
         sobriety_date: formData.sobriety_date || null,
         primary_substance: formData.primary_substance || null,
         recovery_methods: formData.recovery_methods || [],
@@ -689,7 +687,6 @@ validateBudgets();
         prefer_recovery_experience: formData.prefer_recovery_experience || false,
         supportive_of_recovery: formData.supportive_of_recovery !== false,
         respect_privacy: formData.respect_privacy !== false,
-        social_interaction_level: formData.social_interaction_level || null,
         similar_schedules: formData.similar_schedules || false,
         shared_chores: formData.shared_chores || false,
         financially_stable: formData.financially_stable !== false,
