@@ -8,6 +8,11 @@
  * This service manages applicant matching profiles with proper relationship handling
  */
 
+// ===== MODULE-LEVEL CONSTANTS =====
+const TABLE_NAME = 'applicant_matching_profiles';
+const VIEW_NAME = 'applicant_profiles_with_conditional_contact';
+const REGISTRANT_TABLE_NAME = 'registrant_profiles';
+
 const createMatchingProfilesService = (supabaseClient) => {
   if (!supabaseClient) {
     throw new Error('Supabase client is required for matching profiles service');
@@ -642,7 +647,7 @@ export const getMatchingProfile = async (registrantProfileId, supabaseClient) =>
     }
 
 const { data, error } = await supabaseClient
-  .from(viewName)
+  .from(VIEW_NAME)
   .select('*')
   .eq('user_id', registrantProfileId)
   .single();
