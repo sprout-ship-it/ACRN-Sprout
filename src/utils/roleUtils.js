@@ -1,7 +1,358 @@
-// src/utils/roleUtils.js
+// src/utils/roleUtils.js - Enhanced with profile completion status
 /**
  * Role-specific utility functions for the matching system
+ * UPDATED: Added multi-role support with completion status tracking
  */
+
+/**
+ * Get completion status level from percentage
+ * @param {number} percentage - Completion percentage (0-100)
+ * @returns {string} Status level: 'complete', 'incomplete', or 'not-started'
+ */
+export const getCompletionStatus = (percentage) => {
+  if (percentage === null || percentage === undefined) return 'not-started';
+  if (percentage === 0) return 'not-started';
+  if (percentage === 100) return 'complete';
+  return 'incomplete'; // 1-99%
+};
+
+/**
+ * Get status icon based on completion status
+ * @param {string} status - Status level
+ * @returns {string} Emoji icon
+ */
+export const getStatusIcon = (status) => {
+  const icons = {
+    'complete': '✅',
+    'incomplete': '⚠️',
+    'not-started': '🔒'
+  };
+  return icons[status] || '❓';
+};
+
+/**
+ * Get status color based on completion status
+ * @param {string} status - Status level
+ * @returns {string} CSS color value
+ */
+export const getStatusColor = (status) => {
+  const colors = {
+    'complete': '#10b981', // green
+    'incomplete': '#f59e0b', // yellow/orange
+    'not-started': '#6b7280' // gray
+  };
+  return colors[status] || '#6b7280';
+};
+
+/**
+ * Get status label for display
+ * @param {string} status - Status level
+ * @returns {string} Human-readable label
+ */
+export const getStatusLabel = (status) => {
+  const labels = {
+    'complete': 'Profile Complete',
+    'incomplete': 'Profile Incomplete',
+    'not-started': 'Profile Not Started'
+  };
+  return labels[status] || 'Unknown Status';
+};
+
+/**
+ * Get user-friendly role label
+ * @param {string} role - Role identifier
+ * @returns {string} Display name
+ */
+export const getRoleLabel = (role) => {
+  const labels = {
+    'applicant': 'Housing Seeker',
+    'peer-support': 'Peer Support',
+    'landlord': 'Property Owner',
+    'employer': 'Employer'
+  };
+  return labels[role] || role;
+};
+
+/**
+ * Get role icon emoji
+ * @param {string} role - Role identifier
+ * @returns {string} Emoji icon
+ */
+export const getRoleIcon = (role) => {
+  const icons = {
+    'applicant': '🏠',
+    'peer-support': '🤝',
+    'landlord': '🏢',
+    'employer': '💼'
+  };
+  return icons[role] || '👤';
+};
+
+/**
+ * Get role color for styling
+ * @param {string} role - Role identifier
+ * @returns {string} CSS color value
+ */
+export const getRoleColor = (role) => {
+  const colors = {
+    'applicant': '#a020f0', // purple
+    'peer-support': '#20b2aa', // teal
+    'landlord': '#ffd700', // gold
+    'employer': '#ff6f61' // coral
+  };
+  return colors[role] || '#6366f1';
+};
+
+/**
+ * Calculate profile completion for a specific role
+ * @param {string} role - Role identifier
+ * @param {Object} profileData - Role-specific profile data
+ * @returns {number} Completion percentage (0-100)
+ */
+export const calculateRoleCompletion = (role, profileData) => {
+  if (!profileData) return 0;
+
+  // Check if profile has explicit completion_percentage field
+  if (profileData.completion_percentage !== null && 
+      profileData.completion_percentage !== undefined) {
+    return profileData.completion_percentage;
+  }
+
+  // Calculate based on profile_completed flag
+  if (profileData.profile_completed === true) {
+    return 100;
+  }
+  if (profileData.profile_completed === false && profileData.id) {
+    // Profile exists but not completed - estimate based on filled fields
+    return estimateCompletionFromFields(role, profileData);
+  }
+
+  // No profile data at all
+  return 0;
+};
+
+/**
+ * Estimate completion percentage from filled fields
+ * @private
+ * @param {string} role - Role identifier
+ * @param {Object} profileData - Profile data
+ * @returns {number} Estimated completion percentage
+ */
+const estimateCompletionFromFields = (role, profileData) => {
+  switch (role) {
+    case 'applicant':
+      return estimateApplicantCompletion(profileData);
+    case 'peer-support':
+      return estimatePeerSupportCompletion(profileData);
+    case 'landlord':
+      return estimateLandlordCompletion(profileData);
+    case 'employer':
+      return estimateEmployerCompletion(profileData);
+    default:
+      return 0;
+  }
+};
+
+/**
+ * Estimate applicant profile completion
+ * @private
+ */
+const estimateApplicantCompletion = (profile) => {
+  let completedFields = 0;
+  const totalFields = 10;
+  
+  if (profile.date_of_birth) completedFields++;
+  if (profile.primary_phone) completedFields++;
+  if (profile.about_me) completedFields++;
+  if (profile.looking_for) completedFields++;
+  if (profile.recovery_stage) completedFields++;
+  if (profile.budget_min && profile.budget_max) completedFields++;
+  if (profile.primary_city && profile.primary_state) completedFields++;
+  if (profile.interests?.length > 0) completedFields++;
+  if (profile.recovery_methods?.length > 0) completedFields++;
+  if (profile.spiritual_affiliation) completedFields++;
+  
+  return Math.round((completedFields / totalFields) * 100);
+};
+
+/**
+ * Estimate peer support profile completion
+ * @private
+ */
+const estimatePeerSupportCompletion = (profile) => {
+  let completedFields = 0;
+  const totalFields = 8;
+  
+  if (profile.primary_phone) completedFields++;
+  if (profile.bio) completedFields++;
+  if (profile.professional_title) completedFields++;
+  if (profile.specialties?.length > 0) completedFields++;
+  if (profile.recovery_stage) completedFields++;
+  if (profile.supported_recovery_methods?.length > 0) completedFields++;
+  if (profile.service_city && profile.service_state) completedFields++;
+  if (profile.about_me) completedFields++;
+  
+  return Math.round((completedFields / totalFields) * 100);
+};
+
+/**
+ * Estimate landlord profile completion
+ * @private
+ */
+const estimateLandlordCompletion = (profile) => {
+  let completedFields = 0;
+  const totalFields = 6;
+  
+  if (profile.primary_phone) completedFields++;
+  if (profile.business_type) completedFields++;
+  if (profile.primary_service_city && profile.primary_service_state) completedFields++;
+  if (profile.bio) completedFields++;
+  if (profile.years_in_business) completedFields++;
+  if (profile.recovery_friendly !== null) completedFields++;
+  
+  return Math.round((completedFields / totalFields) * 100);
+};
+
+/**
+ * Estimate employer profile completion
+ * @private
+ */
+const estimateEmployerCompletion = (profile) => {
+  // For employers, having at least one company profile = 100%
+  // No profile = 0%
+  return profile ? 100 : 0;
+};
+
+/**
+ * Calculate completion status for all user roles
+ * @param {Array} userRoles - Array of role strings
+ * @param {Object} profilesData - Object with role-specific profile data
+ * @returns {Object} Status object for each role
+ * 
+ * @example
+ * const status = calculateAllRolesCompletion(
+ *   ['applicant', 'peer-support'],
+ *   {
+ *     applicant: { completion_percentage: 100, profile_completed: true },
+ *     'peer-support': { completion_percentage: 45, profile_completed: false }
+ *   }
+ * );
+ * // Returns: { applicant: 'complete', 'peer-support': 'incomplete' }
+ */
+export const calculateAllRolesCompletion = (userRoles, profilesData = {}) => {
+  if (!userRoles || !Array.isArray(userRoles)) {
+    return {};
+  }
+
+  const completionStatus = {};
+
+  userRoles.forEach(role => {
+    const profileData = profilesData[role];
+    const percentage = calculateRoleCompletion(role, profileData);
+    completionStatus[role] = getCompletionStatus(percentage);
+  });
+
+  return completionStatus;
+};
+
+/**
+ * Get the most complete role from user's roles
+ * @param {Array} userRoles - Array of role strings
+ * @param {Object} profilesData - Object with role-specific profile data
+ * @returns {string} Role with highest completion
+ */
+export const getMostCompleteRole = (userRoles, profilesData = {}) => {
+  if (!userRoles || userRoles.length === 0) return null;
+  if (userRoles.length === 1) return userRoles[0];
+
+  let maxCompletion = -1;
+  let mostCompleteRole = userRoles[0];
+
+  userRoles.forEach(role => {
+    const profileData = profilesData[role];
+    const percentage = calculateRoleCompletion(role, profileData);
+    
+    if (percentage > maxCompletion) {
+      maxCompletion = percentage;
+      mostCompleteRole = role;
+    }
+  });
+
+  return mostCompleteRole;
+};
+
+/**
+ * Get localStorage key for selected role
+ * @param {string} userId - User ID for scoping
+ * @returns {string} localStorage key
+ */
+export const getSelectedRoleKey = (userId) => {
+  return `rhc_selected_role_${userId}`;
+};
+
+/**
+ * Save selected role to localStorage
+ * @param {string} userId - User ID
+ * @param {string} role - Selected role
+ */
+export const saveSelectedRole = (userId, role) => {
+  try {
+    const key = getSelectedRoleKey(userId);
+    localStorage.setItem(key, role);
+  } catch (error) {
+    console.warn('Failed to save selected role to localStorage:', error);
+  }
+};
+
+/**
+ * Load selected role from localStorage
+ * @param {string} userId - User ID
+ * @param {Array} userRoles - Valid roles for this user
+ * @returns {string|null} Selected role or null
+ */
+export const loadSelectedRole = (userId, userRoles) => {
+  try {
+    const key = getSelectedRoleKey(userId);
+    const savedRole = localStorage.getItem(key);
+    
+    // Validate that saved role is still valid for this user
+    if (savedRole && userRoles && userRoles.includes(savedRole)) {
+      return savedRole;
+    }
+    
+    return null;
+  } catch (error) {
+    console.warn('Failed to load selected role from localStorage:', error);
+    return null;
+  }
+};
+
+/**
+ * Get initial selected role for user
+ * Priority: localStorage → most complete → first role
+ * @param {string} userId - User ID
+ * @param {Array} userRoles - Array of user roles
+ * @param {Object} profilesData - Profile data for all roles
+ * @returns {string} Initial role to select
+ */
+export const getInitialSelectedRole = (userId, userRoles, profilesData = {}) => {
+  if (!userRoles || userRoles.length === 0) return null;
+
+  // Try localStorage first
+  const savedRole = loadSelectedRole(userId, userRoles);
+  if (savedRole) return savedRole;
+
+  // Try most complete role
+  const mostComplete = getMostCompleteRole(userRoles, profilesData);
+  if (mostComplete) return mostComplete;
+
+  // Fallback to first role
+  return userRoles[0];
+};
+
+// ============================================================================
+// EXISTING FUNCTIONS (preserved from original roleUtils.js)
+// ============================================================================
 
 /**
  * Get role-specific tab labels based on user's primary role
@@ -219,6 +570,23 @@ export const categorizeRequests = (requests, userProfileIds) => {
  * Default export with all utilities
  */
 const roleUtils = {
+  // NEW: Multi-role completion functions
+  getCompletionStatus,
+  getStatusIcon,
+  getStatusColor,
+  getStatusLabel,
+  getRoleLabel,
+  getRoleIcon,
+  getRoleColor,
+  calculateRoleCompletion,
+  calculateAllRolesCompletion,
+  getMostCompleteRole,
+  getSelectedRoleKey,
+  saveSelectedRole,
+  loadSelectedRole,
+  getInitialSelectedRole,
+  
+  // EXISTING: Connection/request functions
   getTabLabels,
   isUserRecipient,
   isUserRequester,
@@ -231,4 +599,4 @@ const roleUtils = {
   categorizeRequests
 };
 
-export default roleUtils;   
+export default roleUtils;
