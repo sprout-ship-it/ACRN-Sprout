@@ -174,7 +174,7 @@ export const AuthProvider = ({ children }) => {
           data: {
             first_name: userData.first_name || '',
             last_name: userData.last_name || '',
-            role: userData.role || 'applicant'
+            roles: userData.roles || [userData.role || 'applicant']  // ✅ Pass array!
           }
         }
       })
