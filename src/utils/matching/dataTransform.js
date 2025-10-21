@@ -211,7 +211,6 @@ export const transformProfileForAlgorithm = (dbProfile) => {
     
     // RECOVERY & WELLNESS (Schema Compliant)
     recovery_stage: dbProfile.recovery_stage,
-    time_in_recovery: dbProfile.time_in_recovery,
     sobriety_date: dbProfile.sobriety_date,
     primary_substance: dbProfile.primary_substance,
     recovery_methods: dbProfile.recovery_methods || [],
@@ -321,7 +320,6 @@ export const transformProfileForAlgorithm = (dbProfile) => {
     prefer_recovery_experience: dbProfile.prefer_recovery_experience || false,
     supportive_of_recovery: dbProfile.supportive_of_recovery !== false,
     respect_privacy: dbProfile.respect_privacy !== false,
-    social_interaction_level: dbProfile.social_interaction_level,
     similar_schedules: dbProfile.similar_schedules || false,
     shared_chores: dbProfile.shared_chores || false,
     financially_stable: dbProfile.financially_stable !== false,
@@ -845,7 +843,6 @@ export const transformFormDataToDatabase = (formData, userId) => {
     has_section8: formData.hasSection8 || formData.has_section8 || false,
     
     // RECOVERY FIELDS (OPTIONAL)
-    time_in_recovery: formData.timeInRecovery || formData.time_in_recovery,
     sobriety_date: validateDate(formData.sobrietyDate || formData.sobriety_date),
     primary_substance: formData.primarySubstance || formData.primary_substance,
     treatment_history: formData.treatmentHistory || formData.treatment_history,
@@ -936,7 +933,6 @@ export const transformFormDataToDatabase = (formData, userId) => {
     prefer_recovery_experience: formData.preferRecoveryExperience || formData.prefer_recovery_experience || false,
     supportive_of_recovery: formData.supportiveOfRecovery !== false && formData.supportive_of_recovery !== false, // Default true
     respect_privacy: formData.respectPrivacy !== false && formData.respect_privacy !== false, // Default true
-    social_interaction_level: formData.socialInteractionLevel || formData.social_interaction_level,
     similar_schedules: formData.similarSchedules || formData.similar_schedules || false,
     shared_chores: formData.sharedChores || formData.shared_chores || false,
     financially_stable: formData.financiallyStable !== false && formData.financially_stable !== false, // Default true

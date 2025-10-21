@@ -185,6 +185,37 @@ getCacheKey(userId, filters) {
     };
   }
 
+/**
+ * Calculate time in recovery from sobriety date
+ */
+calculateRecoveryTime(sobrietyDate) {
+  if (!sobrietyDate) return null;
+  
+  const daysDiff = Math.floor((new Date() - new Date(sobrietyDate)) / (1000 * 60 * 60 * 24));
+  
+  if (daysDiff < 30) return `${daysDiff} days`;
+  if (daysDiff < 365) return `${Math.floor(daysDiff / 30)} months`;
+  return `${Math.floor(daysDiff / 365)} years`;
+}
+/**
+ * Calculate recovery stage from sobriety date
+ * @param {string|Date} sobrietyDate - ISO date string or Date object
+ * @returns {string} Recovery stage identifier
+ */
+calculateRecoveryStage(sobrietyDate) {
+  if (!sobrietyDate) return null;
+  
+  const daysSober = Math.floor(
+    (new Date() - new Date(sobrietyDate)) / (1000 * 60 * 60 * 24)
+  );
+  
+  // Standard recovery stage thresholds
+  if (daysSober < 90) return 'early';                    // 0-3 months
+  if (daysSober < 365) return 'stabilizing';             // 3-12 months
+  if (daysSober < 1095) return 'stable';                 // 1-3 years
+  if (daysSober < 1825) return 'long-term';              // 3-5 years
+  return 'maintenance';                                   // 5+ years
+}
 
 transformSchemaCompliantProfile(dbProfile) {
   try {
@@ -253,8 +284,9 @@ transformSchemaCompliantProfile(dbProfile) {
       
       // RECOVERY & WELLNESS
       recovery_stage: dbProfile.recovery_stage,
-      time_in_recovery: dbProfile.time_in_recovery,
       sobriety_date: dbProfile.sobriety_date,
+      calculated_time_in_recovery: this.calculateRecoveryTime(dbProfile.sobriety_date),
+      calculated_recovery_stage: this.calculateRecoveryStage(dbProfile.sobriety_date),
       primary_substance: dbProfile.primary_substance,
       recovery_methods: dbProfile.recovery_methods || [],
       program_types: dbProfile.program_types || [],
@@ -348,7 +380,6 @@ transformSchemaCompliantProfile(dbProfile) {
       prefer_recovery_experience: dbProfile.prefer_recovery_experience,
       supportive_of_recovery: dbProfile.supportive_of_recovery,
       respect_privacy: dbProfile.respect_privacy,
-      social_interaction_level: dbProfile.social_interaction_level,
       similar_schedules: dbProfile.similar_schedules,
       shared_chores: dbProfile.shared_chores,
       financially_stable: dbProfile.financially_stable,

@@ -49,7 +49,6 @@ const createPSSClientsService = (supabaseClient) => {
               user_id,
               primary_phone,
               recovery_stage,
-              time_in_recovery,
               sobriety_date,
               primary_substance,
               primary_issues,

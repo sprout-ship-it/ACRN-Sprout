@@ -176,6 +176,8 @@ const MatchDetailsModal = ({
     primary_state,
     primary_location, // Generated column
     recovery_stage,
+    calculated_recovery_stage,
+    sobriety_date,
     recovery_methods,
     program_types, // ✅ FIXED: Array field name
     primary_issues,
@@ -228,6 +230,23 @@ const MatchDetailsModal = ({
     
     return calculatedAge;
   };
+
+      /**
+       * Calculate recovery stage from sobriety date
+       */
+      const calculateRecoveryStage = (sobrietyDate) => {
+        if (!sobrietyDate) return null;
+        
+        const daysSober = Math.floor(
+          (new Date() - new Date(sobrietyDate)) / (1000 * 60 * 60 * 24)
+        );
+        
+        if (daysSober < 90) return 'early';
+        if (daysSober < 365) return 'stabilizing';
+        if (daysSober < 1095) return 'stable';
+        if (daysSober < 1825) return 'long-term';
+        return 'maintenance';
+      };
 
   const getLocation = () => {
     // Use generated primary_location if available, otherwise construct
@@ -414,11 +433,15 @@ const MatchDetailsModal = ({
           <div className={styles.profileBasics}>
             {displayAge && <span className={styles.basicItem}>{displayAge} years old</span>}
             {displayLocation && <span className={styles.basicItem}>{displayLocation}</span>}
-            {recovery_stage && (
-              <span className={`${styles.basicItem} ${styles.recoveryHighlight}`}>
-                {formatRecoveryStage(recovery_stage)}
-              </span>
+        {(calculated_recovery_stage || recovery_stage || sobriety_date) && (
+          <span className={`${styles.basicItem} ${styles.recoveryHighlight}`}>
+            {formatRecoveryStage(
+              calculated_recovery_stage || 
+              recovery_stage || 
+              calculateRecoveryStage(sobriety_date)
             )}
+          </span>
+        )}
           </div>
         </div>
         
@@ -489,7 +512,11 @@ const MatchDetailsModal = ({
         <div className={`${styles.infoCard} ${styles.fullWidth}`}>
           <h4 className={styles.infoTitle}>Recovery Stage</h4>
           <p className={`${styles.infoContent} ${styles.recoveryStage}`}>
-            {formatRecoveryStage(recovery_stage)}
+            {formatRecoveryStage(
+              calculated_recovery_stage || 
+              recovery_stage || 
+              calculateRecoveryStage(sobriety_date)
+            )}
           </p>
         </div>
 

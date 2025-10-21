@@ -66,6 +66,36 @@ const ProfileModal = ({
     return age;
   };
 
+    /**
+     * Calculate time in recovery from sobriety date
+     */
+    const calculateRecoveryTime = (sobrietyDate) => {
+      if (!sobrietyDate) return null;
+      
+      const daysDiff = Math.floor((new Date() - new Date(sobrietyDate)) / (1000 * 60 * 60 * 24));
+      
+      if (daysDiff < 30) return `${daysDiff} days`;
+      if (daysDiff < 365) return `${Math.floor(daysDiff / 30)} months`;
+      return `${Math.floor(daysDiff / 365)} years`;
+    };
+
+    /**
+ * Calculate recovery stage from sobriety date
+ */
+const calculateRecoveryStage = (sobrietyDate) => {
+  if (!sobrietyDate) return null;
+  
+  const daysSober = Math.floor(
+    (new Date() - new Date(sobrietyDate)) / (1000 * 60 * 60 * 24)
+  );
+  
+  if (daysSober < 90) return 'early';
+  if (daysSober < 365) return 'stabilizing';
+  if (daysSober < 1095) return 'stable';
+  if (daysSober < 1825) return 'long-term';
+  return 'maintenance';
+};
+
   /**
    * Format various display values
    */
@@ -317,11 +347,16 @@ const ProfileModal = ({
               {connectionStatus}
             </span>
           )}
-          {profile.recovery_stage && (
-            <span className="badge badge-info">
-              {formatValue(profile.recovery_stage, 'recovery_stage')}
-            </span>
-          )}
+{(profile.calculated_recovery_stage || profile.recovery_stage || profile.sobriety_date) && (
+  <span className="badge badge-info">
+    {formatValue(
+      profile.calculated_recovery_stage || 
+      profile.recovery_stage || 
+      calculateRecoveryStage(profile.sobriety_date), 
+      'recovery_stage'
+    )}
+  </span>
+)}
         </div>
 
         {/* Essential Information Grid */}
@@ -348,12 +383,19 @@ const ProfileModal = ({
               </div>
             )}
             
-            {profile.recovery_stage && (
+            {(profile.calculated_recovery_stage || profile.recovery_stage || profile.sobriety_date) && (
               <div className={styles.infoItem}>
                 <span className={styles.infoIcon}>🌱</span>
                 <div>
                   <div className={styles.infoLabel}>Recovery Stage</div>
-                  <div className={styles.infoValue}>{formatValue(profile.recovery_stage, 'recovery_stage')}</div>
+                  <div className={styles.infoValue}>
+                    {formatValue(
+                      profile.calculated_recovery_stage || 
+                      profile.recovery_stage || 
+                      calculateRecoveryStage(profile.sobriety_date), 
+                      'recovery_stage'
+                    )}
+                  </div>
                 </div>
               </div>
             )}
@@ -395,11 +437,14 @@ const ProfileModal = ({
           <div className={styles.infoSection}>
             <h4 className={styles.sectionTitle}>Recovery Journey</h4>
             <div className={styles.detailsList}>
-              {profile.time_in_recovery && (
-                <div className={styles.detailItem}>
-                  <strong>Time in Recovery:</strong> {profile.time_in_recovery}
-                </div>
-              )}
+        {(profile.calculated_time_in_recovery || profile.sobriety_date) && (
+          <div className={styles.detailItem}>
+            <strong>Time in Recovery:</strong> {
+              profile.calculated_time_in_recovery || 
+              calculateRecoveryTime(profile.sobriety_date)
+            }
+          </div>
+        )}
               {profile.spiritual_affiliation && (
                 <div className={styles.detailItem}>
                   <strong>Spiritual Affiliation:</strong> {profile.spiritual_affiliation}

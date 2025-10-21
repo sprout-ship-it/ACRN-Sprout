@@ -126,7 +126,6 @@ const PeerSupportDashboard = ({ onBack, onClientSelect }) => {
           // Recovery information
           primarySubstances: applicant.primary_substance ? [applicant.primary_substance] : [],
           recoveryStage: applicant.recovery_stage || 'Not specified',
-          timeInRecovery: applicant.time_in_recovery || 'Not specified',
           sobrietyDate: applicant.sobriety_date || null,
           recoveryMethods: applicant.recovery_methods || [],
           supportMeetings: applicant.support_meetings || 'Not specified',

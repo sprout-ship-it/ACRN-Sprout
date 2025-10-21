@@ -189,11 +189,11 @@ const MatchCard = ({
 
       {/* Essential Information */}
       <div className={styles.essentials}>
-        {recovery_stage && (
+        {(calculated_recovery_stage || recovery_stage) && (
           <div className={styles.essentialItem}>
             <span className={styles.essentialIcon}>🌱</span>
             <span className={styles.essentialText}>
-              {formatRecoveryStage(recovery_stage)}
+              {formatRecoveryStage(calculated_recovery_stage || recovery_stage)}
             </span>
           </div>
         )}
@@ -324,6 +324,7 @@ MatchCard.propTypes = {
     primary_state: PropTypes.string,
     primary_location: PropTypes.string, // Generated column
     recovery_stage: PropTypes.string,
+    calculated_recovery_stage: PropTypes.string,
     work_schedule: PropTypes.string,
     interests: PropTypes.arrayOf(PropTypes.string),
     smoking_status: PropTypes.string,
