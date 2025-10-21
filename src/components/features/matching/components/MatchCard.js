@@ -88,6 +88,7 @@ const MatchCard = ({
   const location = getLocation();
   const score = getMatchScore();
   const { greenFlags: compatibilityGreenFlags, redFlags: compatibilityRedFlags } = getCompatibilityFlags();
+  const recoveryStage = match.calculated_recovery_stage || match.recovery_stage;
 
   // Helper function to get match score color class
   const getScoreColorClass = (score) => {
@@ -189,11 +190,11 @@ const MatchCard = ({
 
       {/* Essential Information */}
       <div className={styles.essentials}>
-        {(calculated_recovery_stage || recovery_stage) && (
+        {recoveryStage && (
           <div className={styles.essentialItem}>
             <span className={styles.essentialIcon}>🌱</span>
             <span className={styles.essentialText}>
-              {formatRecoveryStage(calculated_recovery_stage || recovery_stage)}
+              {formatRecoveryStage(recoveryStage)}
             </span>
           </div>
         )}
