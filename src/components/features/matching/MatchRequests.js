@@ -56,14 +56,14 @@ const MatchRequests = () => {
       if (request.request_type === 'roommate' || 
           (request.requester_type === 'applicant' && request.recipient_type === 'applicant')) {
         
-        const { data: requesterProfile, error: requesterError } = await supabase
-          .from('applicant_matching_profiles')
-          .select(`
-            *,
-            registrant_profiles(*)
-          `)
-          .eq('id', request.requester_id)
-          .single();
+const { data: requesterProfile, error: requesterError } = await supabase
+  .from('applicant_profiles_with_conditional_contact')  // ← Changed
+  .select(`
+    *,
+    registrant_profiles(*)
+  `)
+  .eq('id', request.requester_id)
+  .single();
         
         if (requesterError) throw requesterError;
         
@@ -164,14 +164,14 @@ const MatchRequests = () => {
 
       // Query the appropriate profile table based on user type
       if (otherUserType === 'applicant') {
-        const { data: applicantProfile, error } = await supabase
-          .from('applicant_matching_profiles')
-          .select(`
-            *,
-            registrant_profiles(*)
-          `)
-          .eq('id', otherUserId)
-          .single();
+const { data: applicantProfile, error } = await supabase
+  .from('applicant_profiles_with_conditional_contact')  // ← Changed
+  .select(`
+    *,
+    registrant_profiles(*)
+  `)
+  .eq('id', otherUserId)
+  .single();
         
         if (error) throw error;
         

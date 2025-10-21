@@ -499,16 +499,16 @@ async loadActiveProfiles(excludeUserId = null) {
     console.log('🔍 Loading active profiles with registrant data...');
     console.log('🔍 excludeUserId:', excludeUserId);
     
-    let query = supabase
-      .from(this.matchingTableName)
-      .select(`
-        *,
-        registrant_profiles!user_id (
-          first_name,
-          last_name,
-          email
-        )
-      `)
+let query = supabase
+  .from('applicant_profiles_with_conditional_contact')  // ← Changed
+  .select(`
+    *,
+    registrant_profiles!user_id (
+      first_name,
+      last_name,
+      email
+    )
+  `)
       .eq('is_active', true)
       .eq('profile_completed', true)
       .order('updated_at', { ascending: false });
@@ -586,16 +586,16 @@ async loadUserProfile(userId) {
   try {
     console.log('🔍 Loading user matching profile with registrant data for userId:', userId);
     
-    const { data, error } = await supabase
-      .from(this.matchingTableName)
-      .select(`
-        *,
-        registrant_profiles!user_id (
-          first_name,
-          last_name,
-          email
-        )
-      `)
+const { data, error } = await supabase
+  .from('applicant_profiles_with_conditional_contact')  // ← Changed
+  .select(`
+    *,
+    registrant_profiles!user_id (
+      first_name,
+      last_name,
+      email
+    )
+  `)
       .eq('user_id', userId)
       .eq('is_active', true)
       .single();

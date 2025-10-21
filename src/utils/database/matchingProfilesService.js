@@ -14,6 +14,7 @@ const createMatchingProfilesService = (supabaseClient) => {
   }
 
   const tableName = 'applicant_matching_profiles';
+  const viewName = 'applicant_profiles_with_conditional_contact';
   const registrantTableName = 'registrant_profiles';
   const cache = new Map();
   const cacheTimeout = 5 * 60 * 1000; // 5 minutes
@@ -148,12 +149,12 @@ const createMatchingProfilesService = (supabaseClient) => {
       // Get the registrant profile ID first
       const registrantProfileId = await getRegistrantProfileId(authUserId);
 
-      // Query using the registrant profile ID
-      const { data, error } = await supabaseClient
-        .from(tableName)
-        .select('*')
-        .eq('user_id', registrantProfileId) // Use registrant_profiles.id
-        .single();
+// Query using the registrant profile ID
+const { data, error } = await supabaseClient
+  .from(viewName)
+  .select('*')
+  .eq('user_id', registrantProfileId) // Use registrant_profiles.id
+  .single();
 
       if (error) {
         if (error.code === 'PGRST116') {
@@ -186,11 +187,11 @@ const createMatchingProfilesService = (supabaseClient) => {
     try {
       console.log('🔍 Fetching matching profile by profile ID:', profileId);
 
-      const { data, error } = await supabaseClient
-        .from(tableName)
-        .select('*')
-        .eq('id', profileId)
-        .single();
+const { data, error } = await supabaseClient
+  .from(viewName)
+  .select('*')
+  .eq('id', profileId)
+  .single();
 
       if (error) {
         if (error.code === 'PGRST116') {
@@ -356,11 +357,11 @@ const createMatchingProfilesService = (supabaseClient) => {
     try {
       console.log('🔍 Fetching active profiles, excluding auth user:', excludeAuthUserId);
 
-      let query = supabaseClient
-        .from(tableName)
-        .select('*')
-        .eq('is_active', true)
-        .eq('profile_completed', true);
+let query = supabaseClient
+  .from(viewName)
+  .select('*')
+  .eq('is_active', true)
+  .eq('profile_completed', true);
 
       // Exclude current user if specified
       if (excludeAuthUserId) {
@@ -417,10 +418,10 @@ const createMatchingProfilesService = (supabaseClient) => {
     try {
       console.log('🔍 Searching profiles with params:', searchParams);
 
-      let query = supabaseClient
-        .from(tableName)
-        .select('*')
-        .eq('is_active', true);
+let query = supabaseClient
+  .from(viewName)
+  .select('*')
+  .eq('is_active', true);
 
       // Apply search filters
       Object.entries(searchParams).forEach(([key, value]) => {
@@ -640,11 +641,11 @@ export const getMatchingProfile = async (registrantProfileId, supabaseClient) =>
       throw new Error('Authenticated Supabase client is required');
     }
 
-    const { data, error } = await supabaseClient
-      .from('applicant_matching_profiles')
-      .select('*')
-      .eq('user_id', registrantProfileId)
-      .single();
+const { data, error } = await supabaseClient
+  .from(viewName)
+  .select('*')
+  .eq('user_id', registrantProfileId)
+  .single();
 
     if (error) {
       if (error.code === 'PGRST116') {
