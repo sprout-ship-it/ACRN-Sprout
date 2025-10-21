@@ -190,34 +190,39 @@ const EnhancedMatchingProfileForm = ({ editMode = false, onComplete, onCancel })
     };
   }, [currentSectionIndex, formData]);
 
-  const cleanFormDataForSubmission = useCallback((formData) => {
-    const cleaned = { ...formData };
-    
-    delete cleaned.primary_location;
-    delete cleaned.id;
-    delete cleaned.created_at;
-    delete cleaned.updated_at;
-    
-    Object.keys(cleaned).forEach(key => {
-      if (cleaned[key] === undefined || cleaned[key] === null) {
-        delete cleaned[key];
-      }
-    });
-    
-    const arrayFields = [
-      'recovery_methods', 'program_types', 'primary_issues', 
-      'housing_types_accepted', 'interests', 'housing_assistance',
-      'important_qualities', 'deal_breakers'
-    ];
-    
-    arrayFields.forEach(field => {
-      if (cleaned[field] && !Array.isArray(cleaned[field])) {
-        cleaned[field] = [];
-      }
-    });
-    
-    return cleaned;
-  }, []);
+const cleanFormDataForSubmission = useCallback((formData) => {
+  const cleaned = { ...formData };
+  
+  // ✅ Remove auto-generated columns
+  delete cleaned.primary_location;
+  delete cleaned.id;
+  delete cleaned.created_at;
+  delete cleaned.updated_at;
+  
+  // ✅ REMOVE DELETED SCHEMA COLUMNS
+  delete cleaned.time_in_recovery;
+  delete cleaned.social_interaction_level;
+  
+  Object.keys(cleaned).forEach(key => {
+    if (cleaned[key] === undefined || cleaned[key] === null) {
+      delete cleaned[key];
+    }
+  });
+  
+  const arrayFields = [
+    'recovery_methods', 'program_types', 'primary_issues', 
+    'housing_types_accepted', 'interests', 'housing_assistance',
+    'important_qualities', 'deal_breakers'
+  ];
+  
+  arrayFields.forEach(field => {
+    if (cleaned[field] && !Array.isArray(cleaned[field])) {
+      cleaned[field] = [];
+    }
+  });
+  
+  return cleaned;
+}, []);
 
   const handleNext = useCallback((e) => {
     if (e) {
