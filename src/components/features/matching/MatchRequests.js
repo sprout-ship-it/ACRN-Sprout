@@ -57,7 +57,7 @@ const MatchRequests = () => {
           (request.requester_type === 'applicant' && request.recipient_type === 'applicant')) {
         
 const { data: requesterProfile, error: requesterError } = await supabase
-  .from('applicant_profiles_with_conditional_contact')  // ← Changed
+  .from('applicant_matching_profiles')  // ← Changed
   .select(`
     *,
     registrant_profiles(*)
@@ -165,7 +165,7 @@ const { data: requesterProfile, error: requesterError } = await supabase
       // Query the appropriate profile table based on user type
       if (otherUserType === 'applicant') {
 const { data: applicantProfile, error } = await supabase
-  .from('applicant_profiles_with_conditional_contact')  // ← Changed
+  .from('applicant_matching_profiles')  // ← Changed
   .select(`
     *,
     registrant_profiles(*)

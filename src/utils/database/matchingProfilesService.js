@@ -10,7 +10,7 @@
 
 // ===== MODULE-LEVEL CONSTANTS =====
 const TABLE_NAME = 'applicant_matching_profiles';
-const VIEW_NAME = 'applicant_profiles_with_conditional_contact';
+const VIEW_NAME = 'applicant_matching_profiles';
 const REGISTRANT_TABLE_NAME = 'registrant_profiles';
 
 const createMatchingProfilesService = (supabaseClient) => {
@@ -19,7 +19,7 @@ const createMatchingProfilesService = (supabaseClient) => {
   }
 
   const tableName = 'applicant_matching_profiles';
-  const viewName = 'applicant_profiles_with_conditional_contact';
+  const viewName = 'applicant_matching_profiles';
   const registrantTableName = 'registrant_profiles';
   const cache = new Map();
   const cacheTimeout = 5 * 60 * 1000; // 5 minutes

@@ -28,7 +28,7 @@ export const useMatchRequests = (profileIds) => {
       // Load requester profile based on type
       if (request.requester_type === 'applicant') {
 const { data } = await supabase
-  .from('applicant_profiles_with_conditional_contact')  // ← Changed
+  .from('applicant_matching_profiles')  // ← Changed
   .select('id, user_id, registrant_profiles!inner(first_name, last_name, email)')
   .eq('id', request.requester_id)
   .single();

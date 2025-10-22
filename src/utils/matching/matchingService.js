@@ -500,7 +500,7 @@ async loadActiveProfiles(excludeUserId = null) {
     console.log('🔍 excludeUserId:', excludeUserId);
     
 let query = supabase
-  .from('applicant_profiles_with_conditional_contact')  // ← Changed
+  .from('applicant_matching_profiles')  // ← Changed
   .select(`
     *,
     registrant_profiles!user_id (
@@ -587,7 +587,7 @@ async loadUserProfile(userId) {
     console.log('🔍 Loading user matching profile with registrant data for userId:', userId);
     
 const { data, error } = await supabase
-  .from('applicant_profiles_with_conditional_contact')  // ← Changed
+  .from('applicant_matching_profiles')  // ← Changed
   .select(`
     *,
     registrant_profiles!user_id (

@@ -175,7 +175,7 @@ const loadMatchGroupConnections = async (categories) => {
       if (allMemberIds.length === 0) continue;
       
 const { data: memberData } = await supabase
-  .from('applicant_profiles_with_conditional_contact')  // ← Changed
+  .from('applicant_matching_profiles')  // ← Changed
   .select(`
     id, 
     user_id, 
@@ -431,7 +431,7 @@ if (group.status === 'requested' &&
         let applicant = null;
         if (!isApplicant && match.applicant_id) {
 const { data: applicantData } = await supabase
-  .from('applicant_profiles_with_conditional_contact')  // ← Changed
+  .from('applicant_matching_profiles')  // ← Changed
   .select('*, registrant_profiles(*)')
   .eq('id', match.applicant_id)
   .single();
@@ -499,7 +499,7 @@ const { data: applicantData } = await supabase
         otherPerson = data;
       } else {
 const { data } = await supabase
-  .from('applicant_profiles_with_conditional_contact')  // ← Changed
+  .from('applicant_matching_profiles')  // ← Changed
   .select('*, registrant_profiles(*)')
   .eq('id', match.applicant_id)
   .single();
@@ -559,7 +559,7 @@ const { data } = await supabase
         otherPerson = data;
       } else {
 const { data } = await supabase
-  .from('applicant_profiles_with_conditional_contact')  // ← Changed
+  .from('applicant_matching_profiles')  // ← Changed
   .select('*, registrant_profiles(*)')
   .eq('id', match.applicant_id)
   .single();
@@ -614,7 +614,7 @@ const handleViewProfile = async (connection, specificRoommate = null) => {
     else if (connection.type === 'roommate' && connection.roommates?.length > 0) {
       const roommate = connection.roommates[0];
 const { data } = await supabase
-  .from('applicant_profiles_with_conditional_contact')  // ← Changed
+  .from('applicant_matching_profiles')  // ← Changed
   .select('*, registrant_profiles(*)')
   .eq('id', roommate.id)
   .single();
