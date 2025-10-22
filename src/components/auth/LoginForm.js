@@ -24,8 +24,7 @@ const LoginForm = ({ onBackToLanding }) => {
     const { success } = await signIn(email, password);
     
     if (success) {
-      // Navigation will be handled by MainApp component
-      // based on authentication state
+    navigate('/app');
     }
   };
 
