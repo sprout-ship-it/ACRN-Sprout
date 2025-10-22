@@ -156,7 +156,7 @@ const createMatchingProfilesService = (supabaseClient) => {
 
 // Query using the registrant profile ID
 const { data, error } = await supabaseClient
-  .from(viewName)
+  .from(tableName)
   .select('*')
   .eq('user_id', registrantProfileId) // Use registrant_profiles.id
   .single();
@@ -193,7 +193,7 @@ const { data, error } = await supabaseClient
       console.log('🔍 Fetching matching profile by profile ID:', profileId);
 
 const { data, error } = await supabaseClient
-  .from(viewName)
+  .from(tableName)
   .select('*')
   .eq('id', profileId)
   .single();
@@ -363,7 +363,7 @@ const { data, error } = await supabaseClient
       console.log('🔍 Fetching active profiles, excluding auth user:', excludeAuthUserId);
 
 let query = supabaseClient
-  .from(viewName)
+  .from(tableName)
   .select('*')
   .eq('is_active', true)
   .eq('profile_completed', true);
@@ -424,7 +424,7 @@ let query = supabaseClient
       console.log('🔍 Searching profiles with params:', searchParams);
 
 let query = supabaseClient
-  .from(viewName)
+  .from(tableName)
   .select('*')
   .eq('is_active', true);
 
