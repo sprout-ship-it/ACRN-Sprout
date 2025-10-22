@@ -129,19 +129,12 @@ export const AuthProvider = ({ children }) => {
       } else if (event === 'SIGNED_IN' && session.user) {
         console.log('👤 AuthProvider: User signed in')
         setUser(session.user)
-        setLoading(true)
         
-        // Profile should be created by database trigger, so just load it
-        // Add small delay to allow trigger to complete
-        setTimeout(async () => {
-          try {
-            await loadUserProfile(session.user.id)
-          } catch (err) {
-            console.error('❌ AuthProvider: Profile load after sign in failed:', err)
-            setProfile(null)
-          }
-          setLoading(false)
-        }, 1000) // 1 second delay for trigger to complete
+        // Load profile immediately without blocking navigation
+        loadUserProfile(session.user.id).catch(err => {
+          console.error('❌ AuthProvider: Profile load after sign in failed:', err)
+          setProfile(null)
+        })
         
       } else if (event === 'TOKEN_REFRESHED' && session.user) {
         console.log('🔄 AuthProvider: Token refreshed')
