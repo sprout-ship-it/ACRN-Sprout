@@ -126,15 +126,21 @@ export const AuthProvider = ({ children }) => {
         setProfile(null)
         setError(null)
         setLoading(false)
-      } else if (event === 'SIGNED_IN' && session.user) {
-        console.log('👤 AuthProvider: User signed in')
-        setUser(session.user)
-        
-        // Load profile immediately without blocking navigation
-        loadUserProfile(session.user.id).catch(err => {
-          console.error('❌ AuthProvider: Profile load after sign in failed:', err)
-          setProfile(null)
-        })
+} else if (event === 'SIGNED_IN' && session.user) {
+  console.log('👤 AuthProvider: User signed in')
+  setUser(session.user)
+  setLoading(true)
+  
+  // Load profile and wait for it
+  loadUserProfile(session.user.id)
+    .then(() => {
+      setLoading(false)
+    })
+    .catch(err => {
+      console.error('❌ AuthProvider: Profile load after sign in failed:', err)
+      setProfile(null)
+      setLoading(false)
+    })
         
       } else if (event === 'TOKEN_REFRESHED' && session.user) {
         console.log('🔄 AuthProvider: Token refreshed')
