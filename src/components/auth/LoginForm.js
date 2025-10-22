@@ -1,17 +1,24 @@
 // src/components/auth/LoginForm.js
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import LoadingSpinner from '../ui/LoadingSpinner';
 import '../../styles/global.css';
 
+
 const LoginForm = ({ onBackToLanding }) => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
-  const { signIn, loading, error, clearError } = useAuth();
+  const { signIn, loading, error, clearError, isAuthenticated } = useAuth(); 
   const navigate = useNavigate();
 
+  useEffect(() => {
+    if (isAuthenticated && !loading) {
+      navigate('/app', { replace: true });
+    }
+  }, [isAuthenticated, loading, navigate]);
+    
   const handleSubmit = async (e) => {
     e.preventDefault();
     
