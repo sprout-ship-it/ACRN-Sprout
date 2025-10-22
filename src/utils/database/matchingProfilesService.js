@@ -647,7 +647,7 @@ export const getMatchingProfile = async (registrantProfileId, supabaseClient) =>
     }
 
 const { data, error } = await supabaseClient
-  .from(TABLE_NAME)
+  .from(VIEW_NAME)
   .select('*')
   .eq('user_id', registrantProfileId)
   .single();
