@@ -1,58 +1,65 @@
-/* PropertyTypeSelection.module.css */
+/* PropertyTypeSelection.module.css - Compact Cards with Better Borders */
 
 .propertyTypeSelection {
-  margin-bottom: 2rem;
+  margin-bottom: var(--spacing-xl);
 }
 
+/* ==================== HEADER ==================== */
 .selectionHeader {
   text-align: center;
-  margin-bottom: 2rem;
+  margin-bottom: var(--spacing-xl);
 }
 
 .selectionTitle {
+  font-family: var(--font-serif);
   font-size: 1.875rem;
   font-weight: 700;
-  color: var(--text-primary);
-  margin-bottom: 0.5rem;
+  color: var(--primary-purple);
+  margin-bottom: var(--spacing-sm);
+  line-height: 1.2;
 }
 
 .selectionSubtitle {
   font-size: 1.125rem;
-  color: var(--text-secondary);
-  max-width: 600px;
+  color: var(--gray-600);
+  max-width: 700px;
   margin: 0 auto;
+  line-height: 1.5;
 }
 
+/* ==================== TYPE OPTIONS GRID ==================== */
 .typeOptionsGrid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
-  gap: 1.5rem;
-  margin-bottom: 2rem;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: var(--spacing-lg);
+  margin-bottom: var(--spacing-lg);
 }
 
+/* ==================== TYPE OPTION CARDS ==================== */
 .typeOption {
   position: relative;
   background: white;
-  border: 2px solid var(--border-light);
-  border-radius: 12px;
-  padding: 1.5rem;
+  border: 2px solid var(--border-beige);
+  border-radius: var(--radius-lg);
+  padding: var(--spacing-lg);
   cursor: pointer;
   transition: all 0.2s ease;
   display: flex;
   flex-direction: column;
-  min-height: 280px;
+  min-height: 240px;
 }
 
-.typeOption:hover {
-  border-color: var(--primary);
-  box-shadow: 0 8px 25px rgba(0, 0, 0, 0.1);
+.typeOption:hover:not(.disabled) {
+  border-color: var(--primary-purple);
+  box-shadow: var(--shadow-lg);
   transform: translateY(-2px);
 }
 
 .typeOption.selected {
-  border-color: var(--primary);
-  background: var(--primary-light);
-  box-shadow: 0 8px 25px rgba(var(--primary-rgb), 0.15);
+  border-color: var(--primary-purple);
+  border-width: 3px;
+  background: linear-gradient(135deg, rgba(160, 32, 240, 0.02) 0%, white 100%);
+  box-shadow: 0 8px 24px rgba(160, 32, 240, 0.15);
 }
 
 .typeOption.disabled {
@@ -61,18 +68,22 @@
   pointer-events: none;
 }
 
+/* ==================== SELECTION INDICATOR ==================== */
 .selectionIndicator {
   position: absolute;
-  top: 1rem;
-  right: 1rem;
+  top: var(--spacing-md);
+  right: var(--spacing-md);
+  z-index: 2;
 }
 
 .selectionIndicator input[type="radio"] {
   width: 20px;
   height: 20px;
-  accent-color: var(--primary);
+  cursor: pointer;
+  accent-color: var(--primary-purple);
 }
 
+/* ==================== OPTION CONTENT ==================== */
 .optionContent {
   flex: 1;
   display: flex;
@@ -82,39 +93,42 @@
 .optionHeader {
   display: flex;
   align-items: flex-start;
-  gap: 1rem;
-  margin-bottom: 1rem;
+  gap: var(--spacing-md);
+  margin-bottom: var(--spacing-md);
 }
 
 .optionIcon {
-  font-size: 2.5rem;
+  font-size: 2rem;
   flex-shrink: 0;
+  line-height: 1;
 }
 
 .optionTitleSection {
   flex: 1;
+  padding-right: var(--spacing-lg); /* Space for radio button */
 }
 
 .optionTitle {
-  font-size: 1.25rem;
+  font-size: 1.125rem;
   font-weight: 600;
   color: var(--text-primary);
-  margin-bottom: 0.5rem;
+  margin-bottom: var(--spacing-xs);
+  line-height: 1.3;
 }
 
 .optionBadge {
   display: inline-block;
-  padding: 0.25rem 0.75rem;
-  border-radius: 20px;
-  font-size: 0.75rem;
-  font-weight: 500;
+  padding: 0.25rem 0.625rem;
+  border-radius: var(--radius-sm);
+  font-size: 0.7rem;
+  font-weight: 600;
   text-transform: uppercase;
   letter-spacing: 0.5px;
 }
 
 .optionBadge.success {
-  background: var(--success-light);
-  color: var(--success-dark);
+  background: rgba(34, 197, 94, 0.1);
+  color: rgb(21, 128, 61);
 }
 
 .optionBadge.secondary {
@@ -123,167 +137,265 @@
 }
 
 .optionBadge.primary {
-  background: var(--primary-light);
-  color: var(--primary-dark);
+  background: rgba(160, 32, 240, 0.1);
+  color: var(--primary-purple);
 }
 
 .optionDescription {
-  color: var(--text-secondary);
-  margin-bottom: 1.5rem;
+  color: var(--gray-600);
+  margin-bottom: var(--spacing-md);
   line-height: 1.5;
-  flex: 1;
+  font-size: 0.9rem;
 }
 
+/* ==================== FEATURES LIST ==================== */
 .optionFeatures {
   list-style: none;
   padding: 0;
-  margin: 0 0 1.5rem 0;
+  margin: 0;
+  flex: 1;
 }
 
 .featureItem {
   display: flex;
   align-items: center;
-  gap: 0.5rem;
-  margin-bottom: 0.5rem;
+  gap: var(--spacing-sm);
+  margin-bottom: var(--spacing-xs);
   font-size: 0.875rem;
-  color: var(--text-secondary);
+  color: var(--gray-600);
+  line-height: 1.4;
 }
 
 .featureIcon {
-  color: var(--success);
+  color: var(--primary-purple);
+  font-weight: 700;
+  flex-shrink: 0;
+  font-size: 0.875rem;
+}
+
+/* ==================== SELECTED BANNER ==================== */
+.selectedBanner {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  background: var(--primary-purple);
+  color: white;
+  padding: var(--spacing-sm);
+  text-align: center;
   font-weight: 600;
+  font-size: 0.875rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--spacing-xs);
+  border-radius: 0 0 calc(var(--radius-lg) - 2px) calc(var(--radius-lg) - 2px);
+}
+
+.selectedIcon {
+  font-size: 1rem;
+  font-weight: 700;
+}
+
+/* ==================== SELECTION CONTEXT ==================== */
+.selectionContext {
+  background: rgba(160, 32, 240, 0.05);
+  border: 2px solid var(--primary-purple);
+  border-radius: var(--radius-lg);
+  padding: var(--spacing-lg);
+  margin-bottom: var(--spacing-lg);
+}
+
+.contextContent {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-md);
+}
+
+.contextIcon {
+  font-size: 1.5rem;
   flex-shrink: 0;
 }
 
-.optionAction {
-  margin-top: auto;
-  text-align: center;
-}
-
-.selectedText {
-  color: var(--primary);
-  font-weight: 600;
-  font-size: 0.875rem;
-}
-
-.selectText {
-  color: var(--text-secondary);
-  font-size: 0.875rem;
-}
-
-.selectionSummary {
-  background: var(--primary-light);
-  border: 1px solid var(--primary);
-  border-radius: 8px;
-  padding: 1rem;
-  margin-bottom: 2rem;
-}
-
-.summaryContent {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 1rem;
-}
-
-.summaryIcon {
-  font-size: 1.25rem;
-}
-
-.summaryText {
+.contextText {
   flex: 1;
-  color: var(--text-primary);
+  color: var(--gray-700);
+  line-height: 1.5;
+  font-size: 0.95rem;
+}
+
+.contextText strong {
+  color: var(--primary-purple);
+  font-weight: 600;
 }
 
 .expandSearchBtn {
-  background: white;
-  border: 1px solid var(--primary);
-  color: var(--primary);
-  padding: 0.5rem 1rem;
-  border-radius: 6px;
+  background: var(--primary-purple);
+  color: white;
+  border: 2px solid var(--primary-purple);
+  padding: var(--spacing-sm) var(--spacing-lg);
+  border-radius: var(--radius-md);
   font-size: 0.875rem;
+  font-weight: 600;
   cursor: pointer;
   transition: all 0.2s ease;
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-}
-
-.expandSearchBtn:hover {
-  background: var(--primary);
-  color: white;
-}
-
-.expandIcon {
-  font-size: 0.875rem;
-}
-
-.searchContextHelp {
-  background: var(--gray-50);
-  border-radius: 8px;
-  padding: 1.5rem;
-}
-
-.helpItem {
-  display: flex;
-  align-items: flex-start;
-  gap: 0.75rem;
-  margin-bottom: 1rem;
-}
-
-.helpItem:last-child {
-  margin-bottom: 0;
-}
-
-.helpIcon {
-  font-size: 1.25rem;
+  white-space: nowrap;
   flex-shrink: 0;
-  margin-top: 0.125rem;
 }
 
-.helpText {
-  color: var(--text-secondary);
-  line-height: 1.5;
+.expandSearchBtn:hover:not(:disabled) {
+  background: rgba(160, 32, 240, 0.9);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(160, 32, 240, 0.3);
 }
 
-.helpText strong {
-  color: var(--text-primary);
+.expandSearchBtn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
 }
 
-/* Responsive Design */
-@media (max-width: 768px) {
+/* ==================== RESPONSIVE DESIGN ==================== */
+@media (max-width: 1024px) {
   .typeOptionsGrid {
-    grid-template-columns: 1fr;
-    gap: 1rem;
+    grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+    gap: var(--spacing-md);
   }
-  
-  .typeOption {
-    padding: 1rem;
-    min-height: auto;
-  }
-  
-  .optionHeader {
-    gap: 0.75rem;
-  }
-  
-  .optionIcon {
-    font-size: 2rem;
-  }
-  
-  .optionTitle {
-    font-size: 1.125rem;
-  }
-  
-  .summaryContent {
-    flex-direction: column;
-    text-align: center;
-  }
-  
+
   .selectionTitle {
-    font-size: 1.5rem;
+    font-size: 1.625rem;
   }
-  
+
   .selectionSubtitle {
     font-size: 1rem;
   }
+}
+
+@media (max-width: 768px) {
+  .typeOptionsGrid {
+    grid-template-columns: 1fr;
+    gap: var(--spacing-md);
+  }
+
+  .typeOption {
+    padding: var(--spacing-md);
+    min-height: auto;
+  }
+
+  .optionHeader {
+    gap: var(--spacing-sm);
+  }
+
+  .optionIcon {
+    font-size: 1.75rem;
+  }
+
+  .optionTitle {
+    font-size: 1rem;
+  }
+
+  .optionDescription {
+    font-size: 0.875rem;
+  }
+
+  .selectionTitle {
+    font-size: 1.5rem;
+  }
+
+  .selectionSubtitle {
+    font-size: 0.95rem;
+  }
+
+  .contextContent {
+    flex-direction: column;
+    text-align: center;
+  }
+
+  .expandSearchBtn {
+    width: 100%;
+  }
+}
+
+@media (max-width: 480px) {
+  .selectionHeader {
+    margin-bottom: var(--spacing-lg);
+  }
+
+  .selectionTitle {
+    font-size: 1.375rem;
+  }
+
+  .selectionSubtitle {
+    font-size: 0.875rem;
+  }
+
+  .typeOption {
+    padding: var(--spacing-sm) var(--spacing-md);
+    min-height: auto;
+  }
+
+  .selectionIndicator input[type="radio"] {
+    width: 18px;
+    height: 18px;
+  }
+
+  .optionIcon {
+    font-size: 1.5rem;
+  }
+
+  .optionTitle {
+    font-size: 0.95rem;
+  }
+
+  .optionBadge {
+    font-size: 0.65rem;
+    padding: 0.2rem 0.5rem;
+  }
+
+  .featureItem {
+    font-size: 0.8rem;
+  }
+
+  .selectedBanner {
+    font-size: 0.8rem;
+    padding: var(--spacing-xs);
+  }
+
+  .selectionContext {
+    padding: var(--spacing-md);
+  }
+
+  .contextIcon {
+    font-size: 1.25rem;
+  }
+
+  .contextText {
+    font-size: 0.875rem;
+  }
+}
+
+/* ==================== ACCESSIBILITY ==================== */
+.typeOption:focus-visible {
+  outline: 2px solid var(--primary-purple);
+  outline-offset: 2px;
+}
+
+.expandSearchBtn:focus-visible {
+  outline: 2px solid var(--primary-purple);
+  outline-offset: 2px;
+}
+
+/* ==================== ANIMATIONS ==================== */
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(-10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.selectionContext {
+  animation: fadeIn 0.3s ease-out;
 }

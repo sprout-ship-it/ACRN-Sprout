@@ -1,4 +1,4 @@
-// src/components/features/property/PropertySearch.js - UPDATED with PropertyDetailsModal
+// src/components/features/property/PropertySearch.js - UPDATED with Tabbed Filter Interface
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../../../hooks/useAuth';
 import { supabase } from '../../../utils/supabase';
@@ -14,7 +14,7 @@ import usePropertySearch from './search/hooks/usePropertySearch';
 // ✅ Import saved properties hook
 import useSavedProperties from '../../../hooks/useSavedProperties';
 
-// ✅ NEW: Import PropertyDetailsModal
+// ✅ Import PropertyDetailsModal
 import PropertyDetailsModal from '../connections/modals/PropertyDetailsModal';
 
 // ✅ Import CSS foundation and component module
@@ -24,15 +24,16 @@ import styles from './PropertySearch.module.css';
 const PropertySearch = () => {
   const { user, profile } = useAuth();
   
-  // ✅ Advanced filters toggle state
-  const [showAdvancedFilters, setShowAdvancedFilters] = useState(false);
+  // ✅ NEW: Active tab state - always start on 'basic'
+  const [activeTab, setActiveTab] = useState('basic');
   
   // ✅ Track applicant profile ID and pending property requests
   const [applicantProfileId, setApplicantProfileId] = useState(null);
   const [pendingPropertyRequests, setPendingPropertyRequests] = useState(new Set());
   const [requestsLoading, setRequestsLoading] = useState(false);
+  const [hasSearched, setHasSearched] = useState(false);
 
-  // ✅ NEW: Modal state for property details
+  // ✅ Modal state for property details
   const [selectedProperty, setSelectedProperty] = useState(null);
   const [showPropertyModal, setShowPropertyModal] = useState(false);
 
@@ -110,7 +111,6 @@ const PropertySearch = () => {
     setRequestsLoading(true);
 
     try {
-      // ✅ Query housing_matches for pending requests
       const { data: housingMatches, error } = await supabase
         .from('housing_matches')
         .select('property_id, status')
@@ -119,7 +119,6 @@ const PropertySearch = () => {
 
       if (error) throw error;
 
-      // Create set of property IDs with pending requests
       const pendingSet = new Set(
         housingMatches?.map(match => match.property_id).filter(Boolean) || []
       );
@@ -141,20 +140,17 @@ const PropertySearch = () => {
   };
 
   /**
-   * ✅ NEW: Get connection status for property modal
+   * ✅ Get connection status for property modal
    */
   const getPropertyConnectionStatus = (property) => {
-    // Check if there's a match for this property
     if (hasPropertyRequest(property.id)) {
-      // Would need to check actual status from housing_matches
-      // For now, assume 'requested' if in set
       return 'requested';
     }
     return null;
   };
 
   /**
-   * ✅ NEW: Handle viewing property details in modal
+   * ✅ Handle viewing property details in modal
    */
   const handleViewPropertyDetails = (property) => {
     setSelectedProperty(property);
@@ -162,14 +158,16 @@ const PropertySearch = () => {
   };
 
   /**
-   * ✅ NEW: Handle closing property details modal
+   * ✅ Handle closing property details modal
    */
   const handleClosePropertyModal = () => {
     setSelectedProperty(null);
     setShowPropertyModal(false);
   };
 
-  // ✅ Handle "Use My Preferences" button
+  /**
+   * ✅ Handle "Use My Preferences" button
+   */
   const handleUseMyPreferences = () => {
     const success = applyUserPreferences();
     if (success) {
@@ -179,14 +177,15 @@ const PropertySearch = () => {
     }
   };
 
-  // ✅ Enhanced contact landlord with profile lookup
+  /**
+   * ✅ Enhanced contact landlord with profile lookup
+   */
   const handleContactLandlord = async (property) => {
     try {
       let landlordName = 'Property Owner';
       let contactEmail = property.contact_email;
       let contactPhone = property.phone;
 
-      // Try to get landlord info for better contact experience
       if (property.landlord_id) {
         try {
           const { data: landlordProfile } = await supabase
@@ -239,7 +238,7 @@ Thank you!`;
   };
 
   /**
-   * ✅ Handle sending housing inquiry (can be called from modal or cards)
+   * ✅ Handle sending housing inquiry
    */
   const handleSendHousingInquiry = async (property) => {
     if (!property.landlord_id) {
@@ -252,14 +251,12 @@ Thank you!`;
       return;
     }
 
-    // Check if request already exists
     if (hasPropertyRequest(property.id)) {
       alert('You have already sent a request for this property.');
       return;
     }
 
     try {
-      // ✅ Create housing_match entry
       const matchData = {
         applicant_id: applicantProfileId,
         property_id: property.id,
@@ -284,12 +281,10 @@ I'd love to discuss availability and the application process. Thank you!`,
 
       alert('Property request sent! The landlord will be notified and can respond through their dashboard.');
       
-      // ✅ Close modal if open
       if (showPropertyModal && selectedProperty?.id === property.id) {
         handleClosePropertyModal();
       }
       
-      // ✅ Refresh pending requests
       await loadPendingPropertyRequests();
     } catch (err) {
       console.error('Error sending housing inquiry:', err);
@@ -297,11 +292,11 @@ I'd love to discuss availability and the application process. Thank you!`,
     }
   };
 
-  // ✅ Handle save property with proper feedback and error handling
+  /**
+   * ✅ Handle save property with feedback
+   */
   const handleSavePropertyWithFeedback = async (property) => {
-    if (savingLoading) {
-      return; // Prevent multiple clicks
-    }
+    if (savingLoading) return;
 
     const wasAlreadySaved = isPropertySaved(property.id);
     
@@ -323,6 +318,46 @@ I'd love to discuss availability and the application process. Thank you!`,
     }
   };
 
+  /**
+   * ✅ NEW: Handle search with scroll to results
+   */
+  const handleSearchWithScroll = () => {
+    performSearch();
+    setHasSearched(true);
+    
+    // Scroll to results after brief delay
+    setTimeout(() => {
+      const resultsElement = document.querySelector('[data-results-section]');
+      if (resultsElement) {
+        resultsElement.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      }
+    }, 300);
+  };
+
+  /**
+   * ✅ NEW: Jump to results function
+   */
+  const handleJumpToResults = () => {
+    const resultsElement = document.querySelector('[data-results-section]');
+    if (resultsElement) {
+      resultsElement.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+  };
+
+  /**
+   * ✅ NEW: Determine which tabs should be visible
+   */
+  const getVisibleTabs = () => {
+    const tabs = ['basic', 'advanced'];
+    
+    // Only show recovery tab if not searching general rentals only
+    if (searchType !== 'general_only') {
+      tabs.splice(1, 0, 'recovery');
+    }
+    
+    return tabs;
+  };
+
   // ✅ Load applicant profile on mount
   useEffect(() => {
     loadApplicantProfileId();
@@ -335,6 +370,13 @@ I'd love to discuss availability and the application process. Thank you!`,
     }
   }, [applicantProfileId]);
 
+  // ✅ Reset to basic tab when search type changes
+  useEffect(() => {
+    setActiveTab('basic');
+  }, [searchType]);
+
+  const visibleTabs = getVisibleTabs();
+
   return (
     <div className="content">
       {/* ✅ Header */}
@@ -345,7 +387,7 @@ I'd love to discuss availability and the application process. Thank you!`,
         </p>
       </div>
 
-      {/* ✅ Property Type Selection */}
+      {/* ✅ UPDATED: More Compact Property Type Selection */}
       <div className={styles.typeSelectionSection}>
         <PropertyTypeSelection
           selectedType={searchType}
@@ -354,45 +396,148 @@ I'd love to discuss availability and the application process. Thank you!`,
         />
       </div>
 
-      {/* ✅ Shared Search Filters */}
-      <div className={styles.filtersSection}>
-        <PropertySharedFilters
-          sharedFilters={sharedFilters}
-          onSharedFilterChange={handleSharedFilterChange}
-          onArrayFilterChange={handleArrayFilterChange}
-          onUseMyPreferences={handleUseMyPreferences}
-          onManualSearch={performSearch}
-          onClearAllFilters={clearAllFilters}
-          userPreferences={userPreferences}
-          loading={loading}
-          searchType={searchType}
-        />
+      {/* ✅ NEW: Tabbed Filter Interface */}
+      <div className={styles.tabbedFiltersContainer}>
+        {/* Tab Navigation */}
+        <div className={styles.tabNavigation}>
+          <div className={styles.tabsList}>
+            <button
+              className={`${styles.tabButton} ${activeTab === 'basic' ? styles.active : ''}`}
+              onClick={() => setActiveTab('basic')}
+              disabled={loading}
+            >
+              <span className={styles.tabIcon}>📍</span>
+              <span className={styles.tabLabel}>Basic</span>
+            </button>
+            
+            {searchType !== 'general_only' && (
+              <button
+                className={`${styles.tabButton} ${activeTab === 'recovery' ? styles.active : ''}`}
+                onClick={() => setActiveTab('recovery')}
+                disabled={loading}
+              >
+                <span className={styles.tabIcon}>🌱</span>
+                <span className={styles.tabLabel}>Recovery</span>
+              </button>
+            )}
+            
+            <button
+              className={`${styles.tabButton} ${activeTab === 'advanced' ? styles.active : ''}`}
+              onClick={() => setActiveTab('advanced')}
+              disabled={loading}
+            >
+              <span className={styles.tabIcon}>⚙️</span>
+              <span className={styles.tabLabel}>Advanced</span>
+            </button>
+          </div>
+        </div>
+
+        {/* Tab Content */}
+        <div className={styles.tabContent}>
+          {activeTab === 'basic' && (
+            <PropertySharedFilters
+              sharedFilters={sharedFilters}
+              onSharedFilterChange={handleSharedFilterChange}
+              onArrayFilterChange={handleArrayFilterChange}
+              onUseMyPreferences={handleUseMyPreferences}
+              onManualSearch={handleSearchWithScroll}
+              onClearAllFilters={clearAllFilters}
+              userPreferences={userPreferences}
+              loading={loading}
+              searchType={searchType}
+            />
+          )}
+
+          {activeTab === 'recovery' && searchType !== 'general_only' && (
+            <PropertyRecoverySearchFilters
+              recoveryFilters={recoveryFilters}
+              onRecoveryFilterChange={handleRecoveryFilterChange}
+              onArrayFilterChange={handleArrayFilterChange}
+              searchType={searchType}
+              loading={loading}
+            />
+          )}
+
+          {activeTab === 'advanced' && (
+            <PropertyAdvancedFilters
+              advancedFilters={advancedFilters}
+              onAdvancedFilterChange={handleAdvancedFilterChange}
+              onArrayFilterChange={handleArrayFilterChange}
+              showAdvancedFilters={true}
+              onToggleAdvancedFilters={() => {}}
+              loading={loading}
+            />
+          )}
+        </div>
+
+        {/* ✅ NEW: Sticky Search Actions Bar */}
+        <div className={styles.stickySearchBar}>
+          <div className={styles.searchBarContent}>
+            <div className={styles.searchBarInfo}>
+              <span className={styles.searchBarIcon}>🔍</span>
+              <span className={styles.searchBarText}>
+                <strong>Searching:</strong> {
+                  searchType === 'all_housing' ? 'All Housing Types' :
+                  searchType === 'general_only' ? 'General Rentals Only' :
+                  'Recovery Housing Only'
+                }
+              </span>
+            </div>
+
+            <div className={styles.searchBarActions}>
+              {userPreferences && (
+                <button
+                  className="btn btn-outline btn-sm"
+                  onClick={handleUseMyPreferences}
+                  disabled={loading}
+                >
+                  <span className={styles.btnIcon}>⚙️</span>
+                  Use My Preferences
+                </button>
+              )}
+
+              <button
+                className="btn btn-outline btn-sm"
+                onClick={clearAllFilters}
+                disabled={loading}
+              >
+                <span className={styles.btnIcon}>🗑️</span>
+                Clear Filters
+              </button>
+
+              {hasSearched && properties.length > 0 && (
+                <button
+                  className="btn btn-secondary btn-sm"
+                  onClick={handleJumpToResults}
+                >
+                  <span className={styles.btnIcon}>⬇️</span>
+                  Jump to Results
+                </button>
+              )}
+
+              <button
+                className="btn btn-primary"
+                onClick={handleSearchWithScroll}
+                disabled={loading}
+              >
+                {loading ? (
+                  <>
+                    <span className={styles.loadingSpinner}></span>
+                    Searching...
+                  </>
+                ) : (
+                  <>
+                    <span className={styles.btnIcon}>🔍</span>
+                    Search Properties
+                  </>
+                )}
+              </button>
+            </div>
+          </div>
+        </div>
       </div>
 
-      {/* ✅ Recovery-Specific Filters */}
-      <div className={styles.filtersSection}>
-        <PropertyRecoverySearchFilters
-          recoveryFilters={recoveryFilters}
-          onRecoveryFilterChange={handleRecoveryFilterChange}
-          onArrayFilterChange={handleArrayFilterChange}
-          searchType={searchType}
-          loading={loading}
-        />
-      </div>
-
-      {/* ✅ Advanced Filters */}
-      <div className={styles.filtersSection}>
-        <PropertyAdvancedFilters
-          advancedFilters={advancedFilters}
-          onAdvancedFilterChange={handleAdvancedFilterChange}
-          onArrayFilterChange={handleArrayFilterChange}
-          showAdvancedFilters={showAdvancedFilters}
-          onToggleAdvancedFilters={() => setShowAdvancedFilters(!showAdvancedFilters)}
-          loading={loading}
-        />
-      </div>
-
-      {/* ✅ UPDATED: Search Results with view details handler */}
+      {/* ✅ Search Results */}
       <div data-results-section className={styles.resultsSection}>
         <PropertySearchResults
           loading={loading}
@@ -461,7 +606,7 @@ I'd love to discuss availability and the application process. Thank you!`,
                 <div className={styles.helpItem}>
                   <span className={styles.helpIcon}>🔍</span>
                   <div className={styles.helpText}>
-                    <strong>Expand Sections:</strong> Click on any filter section header to expand and see more options
+                    <strong>Use Tabs:</strong> Switch between Basic, Recovery, and Advanced tabs to access different filter options
                   </div>
                 </div>
               </div>
@@ -470,7 +615,7 @@ I'd love to discuss availability and the application process. Thank you!`,
         </div>
       )}
 
-      {/* ✅ NEW: Property Details Modal */}
+      {/* ✅ Property Details Modal */}
       {showPropertyModal && selectedProperty && (
         <PropertyDetailsModal
           isOpen={showPropertyModal}

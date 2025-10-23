@@ -1,8 +1,11 @@
-/* PropertySearch.module.css - Updated for New Search Strategy with Design System */
+/* PropertySearch.module.css - Styling for Tabbed Interface and Sticky Bar */
 
 /* ==================== MAIN CONTAINER ==================== */
 .searchContainer {
   width: 100%;
+  max-width: 1400px;
+  margin: 0 auto;
+  padding: var(--spacing-lg);
 }
 
 /* ==================== HEADER SECTION ==================== */
@@ -30,86 +33,146 @@
   margin-right: auto;
 }
 
-/* ==================== PROPERTY TYPE SELECTION SECTION ==================== */
+/* ==================== PROPERTY TYPE SELECTION ==================== */
 .typeSelectionSection {
   margin-bottom: var(--spacing-xl);
 }
 
-.typeSelectionSection .card {
+/* ==================== FILTERS CONTAINER ==================== */
+.filtersContainer {
+  margin-bottom: var(--spacing-xl);
   background: white;
   border-radius: var(--radius-xl);
-  padding: var(--spacing-xl);
   border: 2px solid var(--border-beige);
   box-shadow: var(--shadow-md);
-  transition: var(--transition-normal);
-  position: relative;
   overflow: hidden;
 }
 
-.typeSelectionSection .card:hover {
-  box-shadow: var(--shadow-lg);
+/* ==================== TABS NAVIGATION ==================== */
+.tabsHeader {
+  background: var(--bg-light-cream);
+  border-bottom: 2px solid var(--border-beige);
+  padding: var(--spacing-sm) var(--spacing-lg);
 }
 
-.typeSelectionSection .card::before {
-  content: '';
-  position: absolute;
-  top: 0;
-  left: -100%;
-  width: 100%;
-  height: 100%;
-  background: linear-gradient(90deg, transparent, rgba(160, 32, 240, 0.03), transparent);
-  transition: left 0.6s ease;
-  z-index: 1;
-  pointer-events: none;
+.tabsNav {
+  display: flex;
+  gap: var(--spacing-xs);
+  align-items: center;
 }
 
-.typeSelectionSection .card:hover::before {
-  left: 100%;
-}
-
-.typeSelectionSection .card > * {
-  position: relative;
-  z-index: 2;
-}
-
-/* ==================== FILTERS SECTIONS ==================== */
-.filtersSection {
-  margin-bottom: var(--spacing-lg);
-}
-
-.filtersSection .card {
+.tabButton {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--spacing-sm);
+  padding: var(--spacing-md) var(--spacing-lg);
   background: white;
-  border-radius: var(--radius-xl);
   border: 2px solid var(--border-beige);
-  box-shadow: var(--shadow-md);
-  transition: var(--transition-normal);
-}
-
-.filtersSection .card:hover {
-  box-shadow: var(--shadow-lg);
-}
-
-.filtersSection .card-header {
-  padding: var(--spacing-lg);
-  border-bottom: 1px solid var(--border-beige);
-}
-
-.filtersSection .card-title {
-  font-family: var(--font-serif);
-  font-size: 1.25rem;
-  color: var(--primary-purple);
-  margin-bottom: var(--spacing-xs);
+  border-radius: var(--radius-md);
+  color: var(--gray-700);
   font-weight: 600;
+  font-size: 0.95rem;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  position: relative;
+}
+
+.tabButton:hover:not(:disabled) {
+  border-color: var(--primary-purple);
+  background: rgba(160, 32, 240, 0.05);
+  transform: translateY(-1px);
+}
+
+.tabButton.active {
+  background: var(--primary-purple);
+  border-color: var(--primary-purple);
+  color: white;
+  box-shadow: 0 4px 12px rgba(160, 32, 240, 0.2);
+}
+
+.tabButton:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.tabIcon {
+  font-size: 1.25rem;
+  line-height: 1;
+}
+
+.tabLabel {
+  font-size: 0.95rem;
+}
+
+/* ==================== TAB CONTENT ==================== */
+.tabContent {
+  padding: var(--spacing-xl);
+  background: white;
+}
+
+/* ==================== STICKY SEARCH BAR ==================== */
+.stickySearchBar {
+  position: sticky;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  background: white;
+  border-top: 2px solid var(--border-beige);
+  box-shadow: 0 -4px 20px rgba(0, 0, 0, 0.1);
+  z-index: 100;
+  padding: var(--spacing-md) var(--spacing-lg);
+  margin: 0 calc(-1 * var(--spacing-xl));
+  margin-top: 0;
+}
+
+.searchBarContent {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--spacing-lg);
+  max-width: 1400px;
+  margin: 0 auto;
+}
+
+.searchBarInfo {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-md);
+  flex: 1;
+}
+
+.searchBarIcon {
+  font-size: 1.5rem;
+  flex-shrink: 0;
+}
+
+.searchBarText {
+  color: var(--gray-700);
+  font-size: 0.95rem;
+}
+
+.searchBarText strong {
+  color: var(--primary-purple);
+  font-weight: 600;
+}
+
+.searchBarActions {
   display: flex;
   align-items: center;
   gap: var(--spacing-sm);
+  flex-shrink: 0;
 }
 
-.filtersSection .card-subtitle {
-  color: var(--gray-600);
-  font-size: 0.9rem;
-  line-height: 1.5;
-  margin: 0;
+.btnIcon {
+  font-size: 1rem;
+  line-height: 1;
+}
+
+/* ==================== RESULTS SECTION ==================== */
+.resultsSection {
+  margin-top: var(--spacing-xl);
 }
 
 /* ==================== SEARCH HELP SECTION ==================== */
@@ -146,29 +209,11 @@
   border-radius: var(--radius-lg);
   border: 1px solid var(--border-beige);
   transition: var(--transition-normal);
-  position: relative;
-  overflow: hidden;
 }
 
 .helpItem:hover {
   box-shadow: var(--shadow-md);
   transform: translateY(-2px);
-}
-
-.helpItem::before {
-  content: '';
-  position: absolute;
-  top: 0;
-  left: 0;
-  width: 4px;
-  height: 100%;
-  background: var(--primary-purple);
-  opacity: 0;
-  transition: opacity 0.3s ease;
-}
-
-.helpItem:hover::before {
-  opacity: 1;
 }
 
 .helpIcon {
@@ -189,133 +234,7 @@
   font-weight: 600;
 }
 
-/* ==================== FORM ELEMENTS STYLING ==================== */
-.filtersSection .input,
-.filtersSection .select {
-  border: 2px solid var(--border-beige);
-  border-radius: var(--radius-md);
-  padding: var(--spacing-sm) var(--spacing-md);
-  font-size: 0.95rem;
-  transition: var(--transition-normal);
-  background: white;
-}
-
-.filtersSection .input:focus,
-.filtersSection .select:focus {
-  outline: none;
-  border-color: var(--primary-purple);
-  box-shadow: 0 0 0 3px rgba(160, 32, 240, 0.1);
-}
-
-.filtersSection .input:hover,
-.filtersSection .select:hover {
-  border-color: var(--primary-purple);
-}
-
-.filtersSection .label {
-  color: var(--primary-purple);
-  font-weight: 600;
-  font-size: 0.9rem;
-  margin-bottom: var(--spacing-xs);
-  display: block;
-}
-
-/* ==================== BUTTON STYLING ==================== */
-.filtersSection .btn {
-  padding: var(--spacing-sm) var(--spacing-lg);
-  border-radius: var(--radius-md);
-  font-weight: 600;
-  font-size: 0.95rem;
-  transition: var(--transition-normal);
-  display: inline-flex;
-  align-items: center;
-  gap: var(--spacing-sm);
-  cursor: pointer;
-  border: 2px solid transparent;
-}
-
-.filtersSection .btn-primary {
-  background: var(--primary-purple);
-  color: white;
-  border-color: var(--primary-purple);
-}
-
-.filtersSection .btn-primary:hover {
-  background: rgba(160, 32, 240, 0.9);
-  transform: translateY(-1px);
-  box-shadow: 0 4px 12px rgba(160, 32, 240, 0.3);
-}
-
-.filtersSection .btn-outline {
-  background: white;
-  color: var(--primary-purple);
-  border-color: var(--primary-purple);
-}
-
-.filtersSection .btn-outline:hover {
-  background: var(--primary-purple);
-  color: white;
-  transform: translateY(-1px);
-}
-
-.filtersSection .btn:disabled {
-  opacity: 0.6;
-  cursor: not-allowed;
-  transform: none;
-}
-
-.filtersSection .btn:disabled:hover {
-  transform: none;
-  box-shadow: none;
-}
-
-/* ==================== CHECKBOX AND INTERACTIVE ELEMENTS ==================== */
-.filtersSection .checkbox-item {
-  display: flex;
-  align-items: center;
-  gap: var(--spacing-sm);
-  padding: var(--spacing-sm) var(--spacing-md);
-  border: 2px solid var(--border-beige);
-  border-radius: var(--radius-md);
-  cursor: pointer;
-  transition: var(--transition-normal);
-  background: white;
-  font-size: 0.9rem;
-}
-
-.filtersSection .checkbox-item:hover {
-  border-color: var(--primary-purple);
-  background: rgba(160, 32, 240, 0.05);
-}
-
-.filtersSection .checkbox-item.selected {
-  border-color: var(--primary-purple);
-  background: rgba(160, 32, 240, 0.1);
-  box-shadow: 0 2px 8px rgba(160, 32, 240, 0.15);
-}
-
-.filtersSection .checkbox-item input[type="checkbox"] {
-  margin: 0;
-  accent-color: var(--primary-purple);
-}
-
-.filtersSection .checkbox-text {
-  color: var(--text-primary);
-  font-weight: 500;
-}
-
-/* ==================== GRID LAYOUTS ==================== */
-.filtersSection .grid-auto {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-  gap: var(--spacing-md);
-}
-
-.filtersSection .form-group {
-  margin-bottom: var(--spacing-lg);
-}
-
-/* ==================== LOADING STATES ==================== */
+/* ==================== LOADING SPINNER ==================== */
 .loadingSpinner {
   display: inline-block;
   width: 16px;
@@ -330,12 +249,6 @@
   width: 12px;
   height: 12px;
   border-width: 1.5px;
-}
-
-.loadingSpinner.large {
-  width: 24px;
-  height: 24px;
-  border-width: 3px;
 }
 
 @keyframes spin {
@@ -354,17 +267,28 @@
     font-size: 1.125rem;
   }
 
-  .typeSelectionSection {
-    margin-bottom: var(--spacing-lg);
+  .searchBarContent {
+    flex-direction: column;
+    align-items: stretch;
+    gap: var(--spacing-md);
   }
 
-  .helpGrid {
-    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
-    gap: var(--spacing-md);
+  .searchBarInfo {
+    justify-content: center;
+    text-align: center;
+  }
+
+  .searchBarActions {
+    justify-content: center;
+    flex-wrap: wrap;
   }
 }
 
 @media (max-width: 768px) {
+  .searchContainer {
+    padding: var(--spacing-md);
+  }
+
   .headerSection {
     margin-bottom: var(--spacing-lg);
   }
@@ -377,40 +301,53 @@
     font-size: 1rem;
   }
 
-  .filtersSection {
-    margin-bottom: var(--spacing-md);
+  .tabsHeader {
+    padding: var(--spacing-sm);
   }
 
-  .filtersSection .card {
-    border-radius: var(--radius-lg);
+  .tabsNav {
+    gap: var(--spacing-xs);
   }
 
-  .filtersSection .card-header {
-    padding: var(--spacing-md);
+  .tabButton {
+    padding: var(--spacing-sm) var(--spacing-md);
+    font-size: 0.875rem;
+    flex-direction: column;
+    gap: var(--spacing-xs);
   }
 
-  .filtersSection .card-title {
+  .tabIcon {
     font-size: 1.125rem;
   }
 
-  .searchHelpSection {
-    margin-top: var(--spacing-lg);
+  .tabLabel {
+    font-size: 0.75rem;
   }
 
-  .helpContent {
+  .tabContent {
     padding: var(--spacing-lg);
+  }
+
+  .stickySearchBar {
+    padding: var(--spacing-sm);
+    margin: 0 calc(-1 * var(--spacing-md));
+  }
+
+  .searchBarIcon {
+    font-size: 1.25rem;
+  }
+
+  .searchBarText {
+    font-size: 0.875rem;
   }
 
   .helpGrid {
     grid-template-columns: 1fr;
+    gap: var(--spacing-md);
   }
 
   .helpItem {
     padding: var(--spacing-md);
-  }
-
-  .helpIcon {
-    font-size: 1.25rem;
   }
 }
 
@@ -424,10 +361,31 @@
     font-size: 0.9rem;
   }
 
-  .typeSelectionSection .card,
-  .filtersSection .card {
-    border-radius: var(--radius-md);
-    border-width: 1px;
+  .tabButton {
+    min-width: 0;
+    padding: var(--spacing-xs) var(--spacing-sm);
+  }
+
+  .tabIcon {
+    font-size: 1rem;
+  }
+
+  .tabLabel {
+    font-size: 0.7rem;
+  }
+
+  .tabContent {
+    padding: var(--spacing-md);
+  }
+
+  .searchBarActions {
+    flex-direction: column;
+    width: 100%;
+  }
+
+  .searchBarActions .btn {
+    width: 100%;
+    justify-content: center;
   }
 
   .helpContent {
@@ -438,99 +396,15 @@
     font-size: 1.125rem;
     margin-bottom: var(--spacing-md);
   }
-
-  .helpItem {
-    flex-direction: column;
-    text-align: center;
-    gap: var(--spacing-sm);
-  }
-
-  .helpIcon {
-    align-self: center;
-  }
-
-  .filtersSection .btn {
-    width: 100%;
-    justify-content: center;
-  }
-
-  .filtersSection .checkbox-item {
-    padding: var(--spacing-xs) var(--spacing-sm);
-    font-size: 0.85rem;
-  }
 }
 
-/* ==================== ACCESSIBILITY AND FOCUS STATES ==================== */
-.filtersSection *:focus-visible {
+/* ==================== ACCESSIBILITY ==================== */
+.tabButton:focus-visible {
   outline: 2px solid var(--primary-purple);
   outline-offset: 2px;
 }
 
-.filtersSection .btn:focus {
-  box-shadow: 0 0 0 3px rgba(160, 32, 240, 0.1);
-}
-
-.helpItem:focus-visible {
+.stickySearchBar .btn:focus-visible {
   outline: 2px solid var(--primary-purple);
   outline-offset: 2px;
-}
-
-/* ==================== ENHANCED VISUAL EFFECTS ==================== */
-.filtersSection .card {
-  position: relative;
-  overflow: hidden;
-}
-
-.filtersSection .card::before {
-  content: '';
-  position: absolute;
-  top: 0;
-  left: -100%;
-  width: 100%;
-  height: 100%;
-  background: linear-gradient(90deg, transparent, rgba(160, 32, 240, 0.02), transparent);
-  transition: left 0.6s ease;
-  z-index: 1;
-  pointer-events: none;
-}
-
-.filtersSection .card:hover::before {
-  left: 100%;
-}
-
-.filtersSection .card > * {
-  position: relative;
-  z-index: 2;
-}
-
-/* ==================== SPECIAL UTILITY CLASSES ==================== */
-.mb-4 { margin-bottom: var(--spacing-lg); }
-.mb-2 { margin-bottom: var(--spacing-sm); }
-.mt-2 { margin-top: var(--spacing-sm); }
-.text-center { text-align: center; }
-
-/* ==================== BADGE STYLES ==================== */
-.badge {
-  display: inline-block;
-  padding: 0.25rem 0.75rem;
-  border-radius: var(--radius-sm);
-  font-size: 0.75rem;
-  font-weight: 600;
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
-}
-
-.badge-success {
-  background: rgba(34, 197, 94, 0.1);
-  color: rgb(21, 128, 61);
-}
-
-.badge-warning {
-  background: rgba(245, 158, 11, 0.1);
-  color: rgb(146, 64, 14);
-}
-
-.badge-info {
-  background: rgba(59, 130, 246, 0.1);
-  color: rgb(29, 78, 216);
 }

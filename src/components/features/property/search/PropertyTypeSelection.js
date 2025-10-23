@@ -1,4 +1,4 @@
-// src/components/features/property/search/PropertyTypeSelection.js - Search Property Type Selector
+// src/components/features/property/search/PropertyTypeSelection.js - Compact Cards with Better Borders
 import React from 'react';
 import PropTypes from 'prop-types';
 
@@ -15,12 +15,11 @@ const PropertyTypeSelection = ({
       value: 'all_housing',
       icon: '🏠',
       title: 'All Housing Types',
-      description: 'Search both general rentals and recovery housing with recovery-friendly options prioritized in results.',
+      description: 'Search both general rentals and recovery housing with recovery-friendly options prioritized.',
       features: [
-        'General apartments, houses, condos',
-        'Recovery housing & sober living',
-        'Recovery-friendly properties prioritized',
-        'Largest selection of options'
+        'Largest selection available',
+        'Recovery housing prioritized',
+        'General rentals included'
       ],
       badgeText: 'Most Options',
       badgeClass: 'success'
@@ -29,12 +28,11 @@ const PropertyTypeSelection = ({
       value: 'general_only',
       icon: '🏢',
       title: 'General Rentals Only',
-      description: 'Standard rental properties including apartments, houses, and condos for the general market.',
+      description: 'Standard rental properties including apartments, houses, and condos.',
       features: [
-        'Apartments, houses, condos',
-        'Standard rental agreements',
         'Traditional lease terms',
-        'No recovery-specific requirements'
+        'Standard rental agreements',
+        'No recovery requirements'
       ],
       badgeText: 'Traditional',
       badgeClass: 'secondary'
@@ -43,12 +41,11 @@ const PropertyTypeSelection = ({
       value: 'recovery_only',
       icon: '🌱',
       title: 'Recovery Housing Only',
-      description: 'Specialized housing designed specifically for people in recovery with support services and structured environments.',
+      description: 'Specialized housing designed for people in recovery with support services.',
       features: [
         'Sober living homes',
         'Recovery residences',
-        'Support services available',
-        'Recovery-focused community'
+        'Support services available'
       ],
       badgeText: 'Specialized',
       badgeClass: 'primary'
@@ -87,6 +84,7 @@ const PropertyTypeSelection = ({
                 checked={selectedType === option.value}
                 onChange={() => {}} // Handled by onClick
                 disabled={loading}
+                tabIndex={-1}
               />
             </div>
 
@@ -116,27 +114,28 @@ const PropertyTypeSelection = ({
               </ul>
             </div>
 
-            {/* Selection Action */}
-            <div className={styles.optionAction}>
-              {selectedType === option.value ? (
-                <span className={styles.selectedText}>Selected</span>
-              ) : (
-                <span className={styles.selectText}>Select</span>
-              )}
-            </div>
+            {/* Selection Status */}
+            {selectedType === option.value && (
+              <div className={styles.selectedBanner}>
+                <span className={styles.selectedIcon}>✓</span>
+                Selected
+              </div>
+            )}
           </div>
         ))}
       </div>
 
-      {/* Selection Summary */}
+      {/* Selection Context Help */}
       {selectedType && (
-        <div className={styles.selectionSummary}>
-          <div className={styles.summaryContent}>
-            <span className={styles.summaryIcon}>
-              {propertyTypeOptions.find(opt => opt.value === selectedType)?.icon}
-            </span>
-            <div className={styles.summaryText}>
-              <strong>Searching:</strong> {propertyTypeOptions.find(opt => opt.value === selectedType)?.title}
+        <div className={styles.selectionContext}>
+          <div className={styles.contextContent}>
+            <span className={styles.contextIcon}>💡</span>
+            <div className={styles.contextText}>
+              <strong>Tip:</strong> {
+                selectedType === 'all_housing' ? 'You\'ll see the most options. Use the tabs below to filter by location, recovery features, and more.' :
+                selectedType === 'recovery_only' ? 'You\'ll see specialized recovery housing filters in the Recovery tab.' :
+                'You\'ll see streamlined filters focused on standard rental criteria.'
+              }
             </div>
             {selectedType !== 'all_housing' && (
               <button
@@ -144,41 +143,12 @@ const PropertyTypeSelection = ({
                 onClick={() => onTypeChange('all_housing')}
                 disabled={loading}
               >
-                <span className={styles.expandIcon}>🔍</span>
-                Search All Housing Types
+                🔍 View All Housing
               </button>
             )}
           </div>
         </div>
       )}
-
-      {/* Search Context Help */}
-      <div className={styles.searchContextHelp}>
-        <div className={styles.helpItem}>
-          <span className={styles.helpIcon}>💡</span>
-          <span className={styles.helpText}>
-            <strong>Tip:</strong> Start with "All Housing Types" to see the most options, then narrow down using filters below.
-          </span>
-        </div>
-        
-        {selectedType === 'recovery_only' && (
-          <div className={styles.helpItem}>
-            <span className={styles.helpIcon}>🌱</span>
-            <span className={styles.helpText}>
-              <strong>Recovery Focus:</strong> You'll see specialized filters for recovery programs, support services, and house rules.
-            </span>
-          </div>
-        )}
-        
-        {selectedType === 'general_only' && (
-          <div className={styles.helpItem}>
-            <span className={styles.helpIcon}>🏢</span>
-            <span className={styles.helpText}>
-              <strong>General Rentals:</strong> Streamlined filters focused on standard rental criteria and amenities.
-            </span>
-          </div>
-        )}
-      </div>
     </div>
   );
 };

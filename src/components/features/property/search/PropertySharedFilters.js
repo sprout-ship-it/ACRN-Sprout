@@ -1,4 +1,4 @@
-// src/components/features/property/search/PropertySharedFilters.js - Collapsible with Search at Bottom
+// src/components/features/property/search/PropertySharedFilters.js - Updated without Search Actions
 import React, { useState } from 'react';
 import PropTypes from 'prop-types';
 import { acceptedSubsidyPrograms } from '../constants/propertyConstants';
@@ -11,8 +11,6 @@ const PropertySharedFilters = ({
   onSharedFilterChange,
   onArrayFilterChange,
   onUseMyPreferences,
-  onManualSearch,
-  onClearAllFilters,
   userPreferences,
   loading,
   searchType
@@ -29,18 +27,6 @@ const PropertySharedFilters = ({
       ...prev,
       [section]: !prev[section]
     }));
-  };
-
-  // ✅ Scroll to results function
-  const handleSearchAndNavigate = () => {
-    onManualSearch();
-    // Scroll to results after a brief delay
-    setTimeout(() => {
-      const resultsElement = document.querySelector('[data-results-section]');
-      if (resultsElement) {
-        resultsElement.scrollIntoView({ behavior: 'smooth', block: 'start' });
-      }
-    }, 300);
   };
 
   // ✅ State options
@@ -358,53 +344,6 @@ const PropertySharedFilters = ({
           </div>
         )}
       </div>
-
-      {/* ✅ SECTION 4: Search Actions - MOVED TO BOTTOM */}
-      <div className="card mb-4">
-        <div className={styles.searchActionsSection}>
-          <div className={styles.searchSummary}>
-            <div className={styles.summaryContent}>
-              <span className={styles.summaryIcon}>🔍</span>
-              <div className={styles.summaryText}>
-                <strong>Searching:</strong> {
-                  searchType === 'all_housing' ? 'All Housing Types' :
-                  searchType === 'general_only' ? 'General Rentals Only' :
-                  'Recovery Housing Only'
-                }
-              </div>
-            </div>
-            
-            <div className={styles.actionButtons}>
-              <button
-                className="btn btn-primary"
-                onClick={handleSearchAndNavigate}
-                disabled={loading}
-              >
-                {loading ? (
-                  <>
-                    <span className={`${styles.loadingSpinner} ${styles.small}`}></span>
-                    Searching...
-                  </>
-                ) : (
-                  <>
-                    <span className={styles.btnIcon}>🔍</span>
-                    Search Properties
-                  </>
-                )}
-              </button>
-
-              <button
-                className="btn btn-outline"
-                onClick={onClearAllFilters}
-                disabled={loading}
-              >
-                <span className={styles.btnIcon}>🗑️</span>
-                Clear Filters
-              </button>
-            </div>
-          </div>
-        </div>
-      </div>
     </div>
   );
 };
@@ -426,8 +365,6 @@ PropertySharedFilters.propTypes = {
   onSharedFilterChange: PropTypes.func.isRequired,
   onArrayFilterChange: PropTypes.func.isRequired,
   onUseMyPreferences: PropTypes.func.isRequired,
-  onManualSearch: PropTypes.func.isRequired,
-  onClearAllFilters: PropTypes.func.isRequired,
   userPreferences: PropTypes.object,
   loading: PropTypes.bool.isRequired,
   searchType: PropTypes.oneOf(['all_housing', 'general_only', 'recovery_only']).isRequired

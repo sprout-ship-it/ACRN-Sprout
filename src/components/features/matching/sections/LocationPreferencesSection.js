@@ -84,6 +84,15 @@ const LocationPreferencesSection = ({
     }).format(numValue);
   }, []);
 
+  // Helper to format housing type labels from database format to readable text
+  const formatHousingTypeLabel = useCallback((type) => {
+    // Convert kebab-case or snake_case to Title Case with proper spacing
+    return type
+      .split(/[-_]/)
+      .map(word => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
+      .join(' ');
+  }, []);
+
   // Validate budget range
   const validateBudgetRange = useCallback(() => {
     const min = parseInt(formData.budget_min) || 0;
@@ -502,7 +511,7 @@ const LocationPreferencesSection = ({
         </div>
       </div>
 
-      {/* Housing Type Selection */}
+      {/* Housing Type Selection - NOW WITH FORMATTED LABELS */}
       <div className="form-group mb-4">
         <label className="label">
           Acceptable Housing Types <span className="text-red-500">*</span>
@@ -520,7 +529,7 @@ const LocationPreferencesSection = ({
                 onChange={(e) => onArrayChange('housing_types_accepted', type, e.target.checked)}
                 disabled={loading}
               />
-              <span className={styles.checkboxText || ''}>{type}</span>
+              <span className={styles.checkboxText || ''}>{formatHousingTypeLabel(type)}</span>
             </label>
           ))}
         </div>

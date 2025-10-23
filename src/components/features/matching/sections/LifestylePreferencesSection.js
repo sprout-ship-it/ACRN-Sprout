@@ -1,5 +1,5 @@
 // src/components/features/matching/sections/LifestylePreferencesSection.js - PRODUCTION READY
-import React, { useMemo, useCallback } from 'react';
+import React, { useMemo, useCallback, useEffect, useRef } from 'react';
 import PropTypes from 'prop-types';
 import {
   workScheduleOptions,
@@ -21,6 +21,23 @@ const LifestylePreferencesSection = ({
   isActive,
   validationMessage
 }) => {
+  // Ref for the work schedule field to enable auto-navigation
+  const workScheduleRef = useRef(null);
+
+  // Navigate to work schedule field on component mount
+  useEffect(() => {
+    if (workScheduleRef.current && isActive) {
+      // Small delay to ensure the component is fully rendered
+      setTimeout(() => {
+        workScheduleRef.current.scrollIntoView({ 
+          behavior: 'smooth', 
+          block: 'center' 
+        });
+        workScheduleRef.current.focus();
+      }, 300);
+    }
+  }, [isActive]);
+
   // Enhanced lifestyle level descriptions with recovery context
   const getLifestyleLevelDescription = useCallback((type, value) => {
     const descriptions = {
@@ -117,6 +134,7 @@ const LifestylePreferencesSection = ({
             Work Schedule <span className="text-red-500">*</span>
           </label>
           <select
+            ref={workScheduleRef}
             className={`input ${errors.work_schedule ? 'border-red-500 bg-red-50' : ''}`}
             value={formData.work_schedule || ''}
             onChange={(e) => onInputChange('work_schedule', e.target.value)}
@@ -213,10 +231,10 @@ const LifestylePreferencesSection = ({
                 disabled={loading}
                 required
               />
-              <div className={styles.rangeLabels || 'range-labels'}>
-                <span className="text-xs">Private (1)</span>
-                <span className="text-xs">Balanced (3)</span>
-                <span className="text-xs">Very Social (5)</span>
+              <div className={styles.rangeLabels || 'range-labels'} style={{ display: 'flex', justifyContent: 'space-between', marginTop: '8px' }}>
+                <span className="text-xs" style={{ flex: 1, textAlign: 'left' }}>Private (1)</span>
+                <span className="text-xs" style={{ flex: 1, textAlign: 'center' }}>Balanced (3)</span>
+                <span className="text-xs" style={{ flex: 1, textAlign: 'right' }}>Very Social (5)</span>
               </div>
             </div>
             <div className={styles.currentValueDisplay || 'current-value-display'}>
@@ -251,10 +269,10 @@ const LifestylePreferencesSection = ({
                 disabled={loading}
                 required
               />
-              <div className={styles.rangeLabels || 'range-labels'}>
-                <span className="text-xs">Relaxed (1)</span>
-                <span className="text-xs">Moderate (3)</span>
-                <span className="text-xs">Very Clean (5)</span>
+              <div className={styles.rangeLabels || 'range-labels'} style={{ display: 'flex', justifyContent: 'space-between', marginTop: '8px' }}>
+                <span className="text-xs" style={{ flex: 1, textAlign: 'left' }}>Relaxed (1)</span>
+                <span className="text-xs" style={{ flex: 1, textAlign: 'center' }}>Moderate (3)</span>
+                <span className="text-xs" style={{ flex: 1, textAlign: 'right' }}>Very Clean (5)</span>
               </div>
             </div>
             <div className={styles.currentValueDisplay || 'current-value-display'}>
@@ -289,10 +307,10 @@ const LifestylePreferencesSection = ({
                 disabled={loading}
                 required
               />
-              <div className={styles.rangeLabels || 'range-labels'}>
-                <span className="text-xs">Very Quiet (1)</span>
-                <span className="text-xs">Moderate (3)</span>
-                <span className="text-xs">Loud OK (5)</span>
+              <div className={styles.rangeLabels || 'range-labels'} style={{ display: 'flex', justifyContent: 'space-between', marginTop: '8px' }}>
+                <span className="text-xs" style={{ flex: 1, textAlign: 'left' }}>Very Quiet (1)</span>
+                <span className="text-xs" style={{ flex: 1, textAlign: 'center' }}>Moderate (3)</span>
+                <span className="text-xs" style={{ flex: 1, textAlign: 'right' }}>Loud OK (5)</span>
               </div>
             </div>
             <div className={styles.currentValueDisplay || 'current-value-display'}>
@@ -635,7 +653,7 @@ const LifestylePreferencesSection = ({
             <div className="alert alert-warning">
               <strong>Validation Note:</strong> {validationMessage}
             </div>
-          )}
+            )}
         </div>
       )}
     </>
