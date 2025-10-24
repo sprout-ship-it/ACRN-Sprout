@@ -57,6 +57,8 @@
 
 .tabsNav {
   display: flex;
+  flex-direction: row;
+  flex-wrap: nowrap;
   gap: var(--spacing-xs);
   align-items: center;
 }
