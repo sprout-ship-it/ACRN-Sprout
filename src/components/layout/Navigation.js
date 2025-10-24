@@ -1,4 +1,4 @@
-// src/components/layout/Navigation.js - ENHANCED: Status badges for multi-role support
+// src/components/layout/Navigation.js - ENHANCED: Multi-role support with balanced navigation
 import React from 'react'
 import { useLocation, useNavigate } from 'react-router-dom'
 import { useAuth } from '../../context/AuthContext'
@@ -10,18 +10,18 @@ const Navigation = ({ profileCompletionStatus = {} }) => {
   const location = useLocation()
   const navigate = useNavigate()
 
-  // ✅ ENHANCED: Get navigation items with status badges
+  // ✅ ENHANCED: Get navigation items with status badges and role-specific styling
   const getNavigationItems = () => {
     const baseItems = [
       { 
         id: 'dashboard', 
         label: 'Dashboard', 
-        icon: '🏠',
+        icon: '📊',
         path: '/app'
       }
     ]
 
-    // ✅ Role-specific profile management with STATUS BADGES
+    // ✅ Role-specific profile management with STATUS BADGES and ROLE COLORS
     if (hasRole('applicant')) {
       const percentage = profileCompletionStatus['applicant'] || 0;
       const status = getCompletionStatus(percentage);
@@ -34,7 +34,8 @@ const Navigation = ({ profileCompletionStatus = {} }) => {
         path: '/app/profile/matching',
         description: 'Manage your housing seeker profile and matching preferences',
         statusBadge,
-        statusPercentage: percentage
+        statusPercentage: percentage,
+        className: 'nav-applicant'
       })
     }
 
@@ -50,7 +51,8 @@ const Navigation = ({ profileCompletionStatus = {} }) => {
         path: '/app/profile/peer-support', 
         description: 'Manage your peer support specialist profile and services',
         statusBadge,
-        statusPercentage: percentage
+        statusPercentage: percentage,
+        className: 'nav-peer-support'
       })
     }
 
@@ -66,7 +68,8 @@ const Navigation = ({ profileCompletionStatus = {} }) => {
         path: '/app/profile/landlord',
         description: 'Manage your property owner profile and business information',
         statusBadge,
-        statusPercentage: percentage
+        statusPercentage: percentage,
+        className: 'nav-property-owner'
       })
     }
 
@@ -82,7 +85,8 @@ const Navigation = ({ profileCompletionStatus = {} }) => {
         path: '/app/employer-dashboard',
         description: 'Manage your company profiles and employer information',
         statusBadge,
-        statusPercentage: percentage
+        statusPercentage: percentage,
+        className: 'nav-employer'
       })
     }
 
@@ -92,7 +96,7 @@ const Navigation = ({ profileCompletionStatus = {} }) => {
         { 
           id: 'saved-properties', 
           label: 'Saved Properties', 
-          icon: '🏠',
+          icon: '⭐',
           path: '/app/saved-properties',
           description: 'View and manage your favorited housing properties',
           className: 'nav-property-owner'
@@ -100,7 +104,7 @@ const Navigation = ({ profileCompletionStatus = {} }) => {
         { 
           id: 'saved-employers', 
           label: 'Saved Employers', 
-          icon: '💖',
+          icon: '💼',
           path: '/app/saved-employers',
           description: 'View and manage your favorited recovery-friendly employers',
           className: 'nav-employer'
@@ -122,13 +126,13 @@ const Navigation = ({ profileCompletionStatus = {} }) => {
       )
     }
 
-    // ✅ PEER SUPPORT: Support hub
+    // ✅ PEER SUPPORT: Peer dashboard
     if (hasRole('peer-support')) {
       baseItems.push(
         { 
           id: 'peer-dashboard', 
-          label: 'Support Hub',
-          icon: '📊',
+          label: 'Peer Dashboard',
+          icon: '🤝',
           path: '/app/peer-dashboard',
           description: 'Comprehensive peer support client management dashboard',
           className: 'nav-peer-support'
@@ -142,7 +146,7 @@ const Navigation = ({ profileCompletionStatus = {} }) => {
         { 
           id: 'employer-management', 
           label: 'Manage Companies',
-          icon: '🏢',
+          icon: '🏪',
           path: '/app/employers',
           description: 'Manage your company profiles and job opportunities',
           className: 'nav-employer'
@@ -233,7 +237,7 @@ const Navigation = ({ profileCompletionStatus = {} }) => {
         </div>
       )}
 
-      {/* ✅ ENHANCED: Grid Navigation with Status Badges */}
+      {/* ✅ ENHANCED: Grid Navigation with Status Badges and Balanced Layout */}
       <nav className="dashboard-grid-nav">
         {navigationItems.map(item => {
           const isCurrentlyActive = isActive(item.path)
@@ -271,23 +275,37 @@ const Navigation = ({ profileCompletionStatus = {} }) => {
         })}
       </nav>
 
-      {/* ✅ ENHANCED: Grid Navigation Styles with Status Badge Support */}
+      {/* ✅ ENHANCED: Grid Navigation Styles with Status Badge Support and Balanced Layout */}
       <style jsx>{`
         .dashboard-grid-nav {
           display: grid;
-          grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
-          gap: 8px;
+          grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+          gap: 10px;
           background: white;
           border-radius: 12px;
-          padding: 12px;
+          padding: 16px;
           box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+          max-width: 100%;
+        }
+
+        /* Better symmetry for common configurations */
+        @media (min-width: 769px) {
+          .dashboard-grid-nav {
+            grid-template-columns: repeat(4, 1fr);
+          }
+        }
+
+        @media (min-width: 1200px) {
+          .dashboard-grid-nav {
+            grid-template-columns: repeat(5, 1fr);
+          }
         }
 
         .nav-grid-item {
           display: flex;
           flex-direction: column;
           align-items: center;
-          padding: 12px 8px;
+          padding: 14px 10px;
           border-radius: 8px;
           border: 2px solid transparent;
           background: #f9fafb;
@@ -296,6 +314,7 @@ const Navigation = ({ profileCompletionStatus = {} }) => {
           cursor: pointer;
           text-decoration: none;
           position: relative;
+          min-height: 90px;
         }
 
         .nav-grid-item:hover {
@@ -309,12 +328,12 @@ const Navigation = ({ profileCompletionStatus = {} }) => {
         }
 
         .nav-grid-item .nav-icon {
-          font-size: 1.5rem;
-          margin-bottom: 4px;
+          font-size: 1.8rem;
+          margin-bottom: 6px;
         }
 
         .nav-grid-item .nav-label {
-          font-size: 0.75rem;
+          font-size: 0.8rem;
           font-weight: 600;
           text-align: center;
           line-height: 1.2;
@@ -341,6 +360,11 @@ const Navigation = ({ profileCompletionStatus = {} }) => {
         }
 
         /* Role-specific navigation colors */
+        .nav-applicant:hover,
+        .nav-applicant.active {
+          background: #10b981;
+        }
+
         .nav-peer-support:hover,
         .nav-peer-support.active {
           background: #3b82f6;
@@ -357,21 +381,22 @@ const Navigation = ({ profileCompletionStatus = {} }) => {
         }
 
         /* Default hover for items without specific colors */
-        .nav-grid-item:not(.nav-peer-support):not(.nav-employer):not(.nav-property-owner):hover,
-        .nav-grid-item:not(.nav-peer-support):not(.nav-employer):not(.nav-property-owner).active {
+        .nav-grid-item:not(.nav-applicant):not(.nav-peer-support):not(.nav-employer):not(.nav-property-owner):hover,
+        .nav-grid-item:not(.nav-applicant):not(.nav-peer-support):not(.nav-employer):not(.nav-property-owner).active {
           background: #6366f1;
         }
 
         /* Mobile responsive grid adjustments */
         @media (max-width: 768px) {
           .dashboard-grid-nav {
-            grid-template-columns: repeat(3, 1fr);
-            gap: 6px;
-            padding: 8px;
+            grid-template-columns: repeat(3, 1fr) !important;
+            gap: 8px;
+            padding: 10px;
           }
           
           .nav-grid-item {
             padding: 10px 6px;
+            min-height: 80px;
           }
           
           .nav-grid-item .nav-label {
@@ -379,7 +404,7 @@ const Navigation = ({ profileCompletionStatus = {} }) => {
           }
           
           .nav-grid-item .nav-icon {
-            font-size: 1.3rem;
+            font-size: 1.5rem;
           }
 
           .nav-status-badge {
@@ -389,11 +414,15 @@ const Navigation = ({ profileCompletionStatus = {} }) => {
 
         @media (max-width: 480px) {
           .dashboard-grid-nav {
-            grid-template-columns: repeat(2, 1fr);
+            grid-template-columns: repeat(2, 1fr) !important;
           }
           
           .nav-grid-item .nav-label {
             font-size: 0.65rem;
+          }
+
+          .nav-grid-item .nav-icon {
+            font-size: 1.4rem;
           }
         }
       `}</style>
