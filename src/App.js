@@ -1,4 +1,4 @@
-// src/App.js - COMPLETE UPDATED VERSION
+// src/App.js - UPDATED: Sprout branding
 import React from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { useAuth, AuthProvider } from './context/AuthContext';
@@ -181,15 +181,15 @@ const AppContent = () => {
       )}
 
       <Routes>
-        {/* Public Routes */}
+        {/* ✅ UPDATED: Public Routes with Sprout branding */}
         <Route 
           path="/" 
           element={
             <PublicRoute>
               <div className="container">
                 <header className="app-header">
-                  <h1 className="header-title">Recovery Housing Connect</h1>
-                  <p className="header-subtitle">Building Supportive Communities Through Meaningful Connections</p>
+                  <h1 className="header-title">Sprout</h1>
+                  <p className="header-subtitle">Connect • Thrive • Grow</p>
                 </header>
                 <Landing />
               </div>
