@@ -186,36 +186,38 @@
   line-height: 1.2;
 }
 
-/* Role-specific navigation colors */
+/* ✅ FIXED: Role-specific navigation colors - matches role card colors */
+.nav-applicant:hover,
+.nav-applicant.active,
 .nav-housing-seeker:hover,
 .nav-housing-seeker.active {
-  background: #8b5cf6; /* Purple */
+  background: #a020f0; /* Purple */
 }
 
 .nav-peer-support:hover,
 .nav-peer-support.active {
-  background: #3b82f6; /* Blue */
+  background: #20b2aa; /* Teal - FIXED */
 }
 
 .nav-employer:hover,
 .nav-employer.active {
-  background: #ef4444; /* Red */
+  background: #ff6f61; /* Coral - FIXED */
 }
 
 .nav-property-owner:hover,
 .nav-property-owner.active {
-  background: #f59e0b; /* Yellow/Orange */
+  background: #f59e0b; /* Gold */
 }
 
 .nav-connections:hover,
 .nav-connections.active {
-  background: #374151; /* Dark gray/black */
+  background: #374151; /* Dark gray */
 }
 
 /* Default hover for items without specific colors */
-.nav-grid-item:not(.nav-housing-seeker):not(.nav-peer-support):not(.nav-employer):not(.nav-property-owner):not(.nav-connections):hover,
-.nav-grid-item:not(.nav-housing-seeker):not(.nav-peer-support):not(.nav-employer):not(.nav-property-owner):not(.nav-connections).active {
-  background: #6366f1; /* Default purple */
+.nav-grid-item:not(.nav-applicant):not(.nav-housing-seeker):not(.nav-peer-support):not(.nav-employer):not(.nav-property-owner):not(.nav-connections):hover,
+.nav-grid-item:not(.nav-applicant):not(.nav-housing-seeker):not(.nav-peer-support):not(.nav-employer):not(.nav-property-owner):not(.nav-connections).active {
+  background: #6366f1; /* Default indigo */
 }
 
 /* ==================== PROGRESS INDICATORS ==================== */
