@@ -1,4 +1,4 @@
-// src/components/layout/Navigation.js - ENHANCED: Multi-role support with balanced navigation
+// src/components/layout/Navigation.js - FIXED: Correct role colors
 import React from 'react'
 import { useLocation, useNavigate } from 'react-router-dom'
 import { useAuth } from '../../context/AuthContext'
@@ -229,7 +229,7 @@ const Navigation = ({ profileCompletionStatus = {} }) => {
         })}
       </nav>
 
-      {/* ✅ ENHANCED: Grid Navigation Styles with Status Badge Support and Balanced Layout */}
+      {/* ✅ FIXED: Grid Navigation Styles with Correct Role Colors */}
       <style jsx>{`
 .dashboard-grid-nav {
   display: grid;
@@ -308,7 +308,7 @@ const Navigation = ({ profileCompletionStatus = {} }) => {
           border-radius: 2px;
         }
 
-        /* Role-specific navigation colors */
+        /* ✅ FIXED: Role-specific navigation colors */
         .nav-applicant:hover,
         .nav-applicant.active {
           background: #a020f0;
@@ -316,12 +316,12 @@ const Navigation = ({ profileCompletionStatus = {} }) => {
 
         .nav-peer-support:hover,
         .nav-peer-support.active {
-          background: #3b82f6;
+          background: #20b2aa;
         }
 
         .nav-employer:hover,
         .nav-employer.active {
-          background: #ef4444;
+          background: #ff6f61;
         }
 
         .nav-property-owner:hover,
