@@ -168,55 +168,6 @@ const RoleSelector = ({
         </div>
       </div>
 
-      {/* Role Switcher Dropdown */}
-      <div className="role-switcher-section">
-        <div className="section-label">Currently viewing:</div>
-        <div className="dropdown-container">
-          <button 
-            className="dropdown-button"
-            onClick={toggleDropdown}
-            aria-expanded={dropdownOpen}
-            aria-haspopup="true"
-          >
-            <span className="dropdown-icon">{getRoleIcon(selectedRole)}</span>
-            <span className="dropdown-label">{getRoleLabel(selectedRole)}</span>
-            <span className="dropdown-status">
-              {getStatusIcon(completionStatus[selectedRole] || 'not-started')}
-            </span>
-            <span className="dropdown-arrow">{dropdownOpen ? '▲' : '▼'}</span>
-          </button>
-
-          {dropdownOpen && (
-            <div className="dropdown-menu">
-              {userRoles.map(role => {
-                const status = completionStatus[role] || 'not-started';
-                const isSelected = role === selectedRole;
-                const statusColor = getStatusColor(status);
-
-                return (
-                  <button
-                    key={role}
-                    className={`dropdown-item ${isSelected ? 'selected' : ''}`}
-                    onClick={() => handleRoleSelect(role)}
-                  >
-                    <span className="item-icon">{getRoleIcon(role)}</span>
-                    <span className="item-label">{getRoleLabel(role)}</span>
-                    <span 
-                      className="item-status" 
-                      style={{ color: statusColor }}
-                      title={getStatusLabel(status)}
-                    >
-                      {getStatusIcon(status)}
-                    </span>
-                    {isSelected && <span className="item-check">✓</span>}
-                  </button>
-                );
-              })}
-            </div>
-          )}
-        </div>
-      </div>
-
       <style jsx>{`
         .role-selector-container {
           padding: 20px 24px;
