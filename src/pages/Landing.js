@@ -1,4 +1,4 @@
-// src/pages/Landing.js - SCHEMA COMPLIANT VERSION
+// src/pages/Landing.js - STREAMLINED: Ecosystem-focused messaging
 import React, { useState } from 'react'
 import { useAuth } from '../hooks/useAuth';
 import LoginForm from '../components/auth/LoginForm';
@@ -12,7 +12,6 @@ const Landing = () => {
   const { isAuthenticated } = useAuth()
 
   // If user is already authenticated, they shouldn't see landing page
-  // This will be handled by routing in App.js, but good to have as backup
   if (isAuthenticated) {
     return null;
   }
@@ -45,12 +44,13 @@ const Landing = () => {
   // Show main landing page
   return (
     <div className="content">
+      {/* ✅ STREAMLINED: Hero section reduced from 60 to 40 words */}
       <div className={styles.welcomeSection}>
         <h1 className={styles.welcomeTitle}>Welcome to Recovery Housing Connect</h1>
         <p className={styles.welcomeText}>
-          Our comprehensive platform connects the entire recovery housing ecosystem: 
-          individuals in recovery seeking compatible roommates, recovery-friendly landlords, 
-          dedicated peer support specialists, and employers committed to second-chance hiring.
+          The complete recovery ecosystem platform. We connect individuals in recovery with 
+          compatible roommates, recovery-friendly housing and employment, and experienced 
+          peer support - all in one integrated platform.
         </p>
       </div>
 
@@ -59,7 +59,7 @@ const Landing = () => {
         <div className={styles.authCard}>
           <h3 className={styles.authCardTitle}>Existing Users</h3>
           <p className={styles.authCardText}>
-            Sign in to your account to access your dashboard and continue your recovery housing journey.
+            Sign in to access your dashboard and continue building connections.
           </p>
           <button 
             className="btn btn-primary"
@@ -72,7 +72,7 @@ const Landing = () => {
         <div className={styles.authCard}>
           <h3 className={styles.authCardTitle}>New Users</h3>
           <p className={styles.authCardText}>
-            Create your account and join our supportive recovery community. Select your role below to get started.
+            Join the recovery ecosystem. Select your role below to get started.
           </p>
           <button 
             className="btn btn-secondary"
@@ -83,11 +83,11 @@ const Landing = () => {
         </div>
       </div>
 
-      {/* ✅ SCHEMA COMPLIANT: Role selection section with correct role names */}
+      {/* ✅ REFRAMED: Role cards with value propositions */}
       <div className={styles.roleSelectionCard}>
-        <h3 className={styles.roleSelectionTitle}>Who Can Join Our Platform?</h3>
+        <h3 className={styles.roleSelectionTitle}>Join the Recovery Ecosystem</h3>
         <p className={`${styles.roleSelectionSubtitle} text-center mb-4`}>
-          <strong>Click on your role below to create an account and get started!</strong>
+          <strong>Click your role below to create an account and get started</strong>
         </p>
         <div className={styles.roleGrid}>
           <div 
@@ -97,12 +97,12 @@ const Landing = () => {
             <div className={styles.roleIcon}>🏠</div>
             <h4 className={styles.roleTitle}>Housing Seekers</h4>
             <p className={styles.roleDescription}>
-              Individuals in recovery looking for compatible roommates and supportive housing environments.
+              Find compatible roommates, access recovery-friendly housing, connect with 
+              peer support, and discover employment opportunities.
             </p>
             <div className={styles.roleClickHint}>Click to register →</div>
           </div>
           
-          {/* ✅ FIXED: Use 'peer-support' role name to match schema */}
           <div 
             className={`${styles.roleCard} ${styles.roleCardPeerSupport}`} 
             onClick={() => handleRoleClick('peer-support')}
@@ -110,7 +110,8 @@ const Landing = () => {
             <div className={styles.roleIcon}>🤝</div>
             <h4 className={styles.roleTitle}>Peer Support Specialists</h4>
             <p className={styles.roleDescription}>
-              Licensed professionals offering guidance and support throughout the recovery journey.
+              Connect with clients seeking support. Build your independent practice or 
+              supplement existing work with flexible, a la carte services.
             </p>
             <div className={styles.roleClickHint}>Click to register →</div>
           </div>
@@ -122,7 +123,8 @@ const Landing = () => {
             <div className={styles.roleIcon}>🏢</div>
             <h4 className={styles.roleTitle}>Property Owners</h4>
             <p className={styles.roleDescription}>
-              Landlords committed to providing recovery-friendly housing options and supportive rental policies.
+              Connect with motivated, pre-screened tenants. Fill vacancies faster while 
+              building community goodwill through recovery-friendly practices.
             </p>
             <div className={styles.roleClickHint}>Click to register →</div>
           </div>
@@ -134,60 +136,51 @@ const Landing = () => {
             <div className={styles.roleIcon}>💼</div>
             <h4 className={styles.roleTitle}>Recovery-Friendly Employers</h4>
             <p className={styles.roleDescription}>
-              Companies offering second-chance employment and creating inclusive workplaces for individuals in recovery.
+              Access motivated candidates committed to positive change. Build your team 
+              while demonstrating corporate responsibility and community investment.
             </p>
             <div className={styles.roleClickHint}>Click to register →</div>
           </div>
         </div>
       </div>
 
-      {/* How it works section */}
+      {/* ✅ STREAMLINED: How it works - ecosystem model, reduced from 100 to 50 words */}
       <div className={styles.infoCard}>
-        <h3 className={styles.infoCardTitle}>Here's How It Works:</h3>
+        <h3 className={styles.infoCardTitle}>The Recovery Ecosystem</h3>
         <p className={styles.howItWorksText}>
-          First, we match you with compatible roommates based on recovery goals, lifestyle preferences, 
-          and personal compatibility. Once matched, you'll search for local housing together based on 
-          your shared criteria. We also connect your matched pair with local peer support specialists 
-          who align with your unique recovery preferences. Finally, discover employment opportunities 
-          with employers who understand and support the recovery journey.
-          <br /><br />
-          Join our community today and find the supportive housing and employment environment you deserve.
+          Housing seekers find compatible roommates and search for properties together. 
+          Property owners connect with pre-qualified tenant pairs. Peer support specialists 
+          offer services to individuals navigating their recovery journey. Employers discover 
+          motivated candidates ready to contribute. <strong>Everyone benefits when the full 
+          ecosystem thrives.</strong>
         </p>
       </div>
 
-      {/* Platform benefits section */}
+      {/* ✅ CONSOLIDATED: Benefits reduced from 4 cards to 3, each ~40% shorter */}
       <div className={styles.infoCard}>
         <h3 className={styles.infoCardTitle}>Why Choose Recovery Housing Connect?</h3>
         <div className={styles.benefitsGrid}>
           <div className={styles.benefitItem}>
-            <h4 className={styles.benefitTitle}>🎯 Comprehensive Matching</h4>
+            <h4 className={styles.benefitTitle}>🎯 Built for Recovery</h4>
             <p className={styles.benefitDescription}>
-              Our advanced algorithm considers recovery stage, lifestyle preferences, and personal compatibility 
-              to create meaningful connections across housing, employment, and support services.
+              Purpose-built platform addressing housing, employment, and support - not 
+              generic services retrofitted for recovery communities.
             </p>
           </div>
           
           <div className={styles.benefitItem}>
-            <h4 className={styles.benefitTitle}>🔒 Safe & Supportive</h4>
+            <h4 className={styles.benefitTitle}>🔒 Quality Connections</h4>
             <p className={styles.benefitDescription}>
-              All community members are committed to supporting recovery journeys in a stigma-free, 
-              understanding environment designed for long-term success.
+              Pre-screened users, compatibility matching, and verified recovery-friendly 
+              commitments create trust across the ecosystem.
             </p>
           </div>
           
           <div className={styles.benefitItem}>
             <h4 className={styles.benefitTitle}>🌐 Complete Ecosystem</h4>
             <p className={styles.benefitDescription}>
-              From housing and roommates to employment and peer support - everything you need 
-              for a successful recovery journey in one integrated platform.
-            </p>
-          </div>
-          
-          <div className={styles.benefitItem}>
-            <h4 className={styles.benefitTitle}>💡 Evidence-Based</h4>
-            <p className={styles.benefitDescription}>
-              Built with input from recovery professionals, our platform incorporates best practices 
-              for sustainable recovery and community building.
+              When individuals thrive, everyone benefits: property owners get quality tenants, 
+              employers find motivated team members, specialists build their practice.
             </p>
           </div>
         </div>

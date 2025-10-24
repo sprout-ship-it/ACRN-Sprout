@@ -202,7 +202,7 @@ export const useRoleNavigation = () => {
   
   const getRoleLabel = (role) => {
     const labels = {
-      'applicant': 'Housing Seeker',
+      'applicant': 'Applicant',
       'landlord': 'Property Owner',
       'employer': 'Employer',
       'peer-support': 'Peer Support'

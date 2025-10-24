@@ -25,7 +25,7 @@ const RegisterForm = ({ onBackToLanding, preSelectedRole }) => {
   const roles = [
     { 
       id: 'applicant', 
-      label: 'Housing Seekers', 
+      label: 'Applicants', 
       description: 'Seeking housing and compatible roommates',
       className: 'role-card-housing-seeker'
     },

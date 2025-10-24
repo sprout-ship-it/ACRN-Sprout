@@ -476,7 +476,7 @@ else if (role === 'employer') {
                       type="text"
                       value={profile?.roles?.map(role => {
                         switch(role) {
-                          case 'applicant': return 'Housing Seeker'
+                          case 'applicant': return 'Applicant'
                           case 'peer-support': return 'Peer Specialist'
                           case 'landlord': return 'Property Owner'
                           case 'employer': return 'Recovery-Friendly Employer'

@@ -65,7 +65,7 @@ export const getStatusLabel = (status) => {
  */
 export const getRoleLabel = (role) => {
   const labels = {
-    'applicant': 'Housing Seeker',
+    'applicant': 'Applicant',
     'peer-support': 'Peer Support',
     'landlord': 'Property Owner',
     'employer': 'Employer'
