@@ -131,37 +131,37 @@ const Dashboard = ({ profileCompletionData = {} }) => {
       );
     }
     
-    // ✅ LANDLORD CARDS
-    if (selectedRole === 'landlord' && hasRole('landlord')) {
-      cards.push(
-        { 
-          id: 'manage-properties', 
-          label: 'My Properties',
-          description: 'Add, edit, and manage your rental properties', 
-          className: styles.roleCardPropertyOwner,
-          path: '/app/properties',
-          icon: '🏢',
-          requiresProfile: true,
-          status: roleStatus
-        }
-      );
+// ✅ LANDLORD CARDS
+if (selectedRole === 'landlord' && hasRole('landlord')) {
+  cards.push(
+    { 
+      id: 'manage-properties', 
+      label: 'My Properties',
+      description: 'Add, edit, and manage your rental properties', 
+      className: styles.roleCardPropertyOwner,
+      path: '/app/properties',
+      icon: '🏢',
+      requiresProfile: false,  // Changed: Profile is now optional (just contact info)
+      status: 'complete'        // Changed: Always accessible
     }
+  );
+}
 
-    // ✅ EMPLOYER CARDS
-    if (selectedRole === 'employer' && hasRole('employer')) {
-      cards.push(
-        { 
-          id: 'employer-dashboard', 
-          label: 'Employer Dashboard',
-          description: 'Manage your company profiles and hiring status', 
-          className: styles.roleCardEmployer,
-          path: '/app/employer-dashboard',
-          icon: '💼',
-          requiresProfile: true,
-          status: roleStatus
-        }
-      );
+// ✅ EMPLOYER CARDS
+if (selectedRole === 'employer' && hasRole('employer')) {
+  cards.push(
+    { 
+      id: 'employer-dashboard', 
+      label: 'Employer Dashboard',
+      description: 'Manage your company profiles and hiring status', 
+      className: styles.roleCardEmployer,
+      path: '/app/employer-dashboard',
+      icon: '💼',
+      requiresProfile: false,  // Changed: No separate profile, goes straight to companies
+      status: 'complete'        // Changed: Always accessible
     }
+  );
+}
     
     return cards;
   }, [user, hasRole, selectedRole, completionStatus]);
