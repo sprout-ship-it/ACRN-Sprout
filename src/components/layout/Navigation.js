@@ -32,7 +32,7 @@ const Navigation = ({ profileCompletionStatus = {} }) => {
         label: 'Applicant Profile',
         icon: '👤', 
         path: '/app/profile/matching',
-        description: 'Manage your housing seeker profile and matching preferences',
+        description: 'Manage your applicant profile and matching preferences',
         statusBadge,
         statusPercentage: percentage,
         className: 'nav-applicant'
@@ -188,54 +188,8 @@ const Navigation = ({ profileCompletionStatus = {} }) => {
     return location.pathname.startsWith(path)
   }
 
-  // ✅ ENHANCED: Helper to get user's role-specific greeting with multi-role support
-  const getRoleGreeting = () => {
-    if (!profile) return ''
-    
-    const roles = profile.roles || []
-    
-    if (roles.length === 0) return '👋 Community Member'
-    
-    if (roles.length === 1) {
-      if (roles.includes('applicant')) return '🏠 Housing Seeker'
-      if (roles.includes('landlord')) return '🏢 Property Owner' 
-      if (roles.includes('peer-support')) return '🤝 Peer Support Specialist'
-      if (roles.includes('employer')) return '💼 Recovery-Friendly Employer'
-    }
-    
-    // Multi-role user
-    const roleLabels = {
-      'applicant': '🏠',
-      'peer-support': '🤝',
-      'landlord': '🏢',
-      'employer': '💼'
-    };
-    
-    const icons = roles.map(r => roleLabels[r] || '').join(' ');
-    return `${icons} Multi-Role User`;
-  }
-
   return (
     <>
-      {/* ✅ ENHANCED: Role indicator with multi-role awareness */}
-      {profile && (
-        <div style={{ 
-          padding: '10px 20px', 
-          background: 'rgba(160, 32, 240, 0.05)',
-          borderBottom: '1px solid var(--border-beige)',
-          fontSize: '0.9rem',
-          color: 'var(--gray-700)',
-          textAlign: 'center',
-          marginBottom: '1rem'
-        }}>
-          {getRoleGreeting()}
-          {profile.roles && profile.roles.length > 1 && (
-            <span style={{ fontSize: '0.8rem', opacity: 0.7, marginLeft: '8px' }}>
-              ({profile.roles.length} roles - switch on dashboard)
-            </span>
-          )}
-        </div>
-      )}
 
       {/* ✅ ENHANCED: Grid Navigation with Status Badges and Balanced Layout */}
       <nav className="dashboard-grid-nav">
@@ -277,29 +231,24 @@ const Navigation = ({ profileCompletionStatus = {} }) => {
 
       {/* ✅ ENHANCED: Grid Navigation Styles with Status Badge Support and Balanced Layout */}
       <style jsx>{`
-        .dashboard-grid-nav {
-          display: grid;
-          grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
-          gap: 10px;
-          background: white;
-          border-radius: 12px;
-          padding: 16px;
-          box-shadow: 0 2px 10px rgba(0,0,0,0.1);
-          max-width: 100%;
-        }
+.dashboard-grid-nav {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(100px, 1fr));
+  gap: 8px;
+  background: white;
+  border-radius: 12px;
+  padding: 12px;
+  box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+  max-width: 100%;
+}
 
-        /* Better symmetry for common configurations */
-        @media (min-width: 769px) {
-          .dashboard-grid-nav {
-            grid-template-columns: repeat(4, 1fr);
-          }
-        }
-
-        @media (min-width: 1200px) {
-          .dashboard-grid-nav {
-            grid-template-columns: repeat(5, 1fr);
-          }
-        }
+/* Force single row for desktop - accommodates up to 11 items (max possible) */
+@media (min-width: 769px) {
+  .dashboard-grid-nav {
+    grid-template-columns: repeat(auto-fit, minmax(90px, 1fr));
+    gap: 6px;
+  }
+}
 
         .nav-grid-item {
           display: flex;
@@ -362,7 +311,7 @@ const Navigation = ({ profileCompletionStatus = {} }) => {
         /* Role-specific navigation colors */
         .nav-applicant:hover,
         .nav-applicant.active {
-          background: #10b981;
+          background: #a020f0;
         }
 
         .nav-peer-support:hover,

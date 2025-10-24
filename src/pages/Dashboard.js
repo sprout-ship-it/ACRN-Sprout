@@ -237,7 +237,7 @@ if (selectedRole === 'employer' && hasRole('employer')) {
       {/* ✅ ENHANCED: Dashboard Cards with Status Overlays */}
       <div className="card">
         <h3 className="card-title">
-          {selectedRole ? `Your ${selectedRole === 'applicant' ? 'Housing Seeker' : selectedRole === 'peer-support' ? 'Peer Support' : selectedRole === 'landlord' ? 'Property Owner' : 'Employer'} Dashboard` : 'Your Dashboard'}
+          {selectedRole ? `Your ${selectedRole === 'applicant' ? 'Applicant' : selectedRole === 'peer-support' ? 'Peer Support' : selectedRole === 'landlord' ? 'Property Owner' : 'Employer'} Dashboard` : 'Your Dashboard'}
         </h3>
         
         {dashboardCards.length === 0 ? (
@@ -351,7 +351,7 @@ if (selectedRole === 'employer' && hasRole('employer')) {
                 <div key={role} className={styles.roleAccessCard}>
                   <div className={styles.roleAccessHeader}>
                     <div className={styles.roleAccessTitle}>
-                      {role === 'applicant' && '🏠 Housing Seeker'}
+                      {role === 'applicant' && '🏠 Applicant'}
                       {role === 'peer-support' && '🤝 Peer Support'}
                       {role === 'landlord' && '🏢 Property Owner'}
                       {role === 'employer' && '💼 Employer'}
@@ -409,7 +409,7 @@ if (selectedRole === 'employer' && hasRole('employer')) {
       {selectedRole && completionStatus[selectedRole] !== 'complete' && (
         <div className="card">
           <div className={styles.alertInfo}>
-            <strong>💡 Tip:</strong> Complete your {selectedRole === 'applicant' ? 'Housing Seeker' : selectedRole === 'peer-support' ? 'Peer Support' : selectedRole === 'landlord' ? 'Property Owner' : 'Employer'} profile to unlock all features and improve your matches.
+            <strong>💡 Tip:</strong> Complete your {selectedRole === 'applicant' ? 'Applicant' : selectedRole === 'peer-support' ? 'Peer Support' : selectedRole === 'landlord' ? 'Property Owner' : 'Employer'} profile to unlock all features and improve your matches.
             <button
               className="btn btn-primary btn-sm ml-3"
               onClick={() => {
