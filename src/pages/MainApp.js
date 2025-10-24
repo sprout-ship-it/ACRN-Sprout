@@ -246,23 +246,14 @@ const MainApp = () => {
               percentage = result.data.profile_completed ? 100 : 50;
             }
           } 
-          else if (role === 'landlord') {
-            const { data, error } = await supabase
-              .from('landlord_profiles')
-              .select('profile_completed, primary_phone, business_type')
-              .eq('user_id', profile.id)
-              .single();
-
-            if (data && !error) {
-              percentage = data.profile_completed ? 100 : 50;
-            }
-          }
-          else if (role === 'employer') {
-            const result = await getEmployerProfilesByUserId(profile.id);
-            if (result.success && result.data && result.data.length > 0) {
-              percentage = 100; // Has at least one company profile
-            }
-          }
+else if (role === 'landlord') {
+  // Simplified landlord profile - just contact info, always accessible
+  percentage = 100;
+}
+else if (role === 'employer') {
+  // No separate employer profile - goes straight to company management
+  percentage = 100;
+}
 
           completionData[role] = percentage;
           console.log(`  ${role}: ${percentage}%`);
