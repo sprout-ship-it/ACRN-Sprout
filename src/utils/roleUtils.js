@@ -197,20 +197,17 @@ const estimatePeerSupportCompletion = (profile) => {
 
 /**
  * Estimate landlord profile completion
+ * UPDATED: Simplified to match minimal landlord profile (phone + email only)
  * @private
  */
 const estimateLandlordCompletion = (profile) => {
-  let completedFields = 0;
-  const totalFields = 6;
+  // Simplified landlord profile only requires primary_phone
+  // If profile exists and has phone, it's complete enough to use the platform
+  if (profile.primary_phone) {
+    return 100; // Has minimum required info
+  }
   
-  if (profile.primary_phone) completedFields++;
-  if (profile.business_type) completedFields++;
-  if (profile.primary_service_city && profile.primary_service_state) completedFields++;
-  if (profile.bio) completedFields++;
-  if (profile.years_in_business) completedFields++;
-  if (profile.recovery_friendly !== null) completedFields++;
-  
-  return Math.round((completedFields / totalFields) * 100);
+  return 0; // No phone = not started
 };
 
 /**
