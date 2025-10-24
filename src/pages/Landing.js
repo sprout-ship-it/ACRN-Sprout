@@ -44,9 +44,10 @@ const Landing = () => {
   // Show main landing page
   return (
     <div className="content">
-      {/* ✅ STREAMLINED: Hero section reduced from 60 to 40 words */}
+      {/* ✅ STREAMLINED: Hero section with three-pillar tagline */}
       <div className={styles.welcomeSection}>
         <h1 className={styles.welcomeTitle}>Welcome to Sprout</h1>
+        <p className={styles.welcomeTagline}>Housing • Jobs • Support</p>
         <p className={styles.welcomeText}>
           The complete recovery ecosystem platform. We connect individuals in recovery with 
           compatible roommates, recovery-friendly housing and employment, and experienced 

@@ -10,8 +10,16 @@
   font-family: var(--font-serif);
   font-size: 2.5rem;
   color: var(--primary-purple);
-  margin-bottom: var(--spacing-lg);
+  margin-bottom: var(--spacing-md);
   font-weight: 700;
+}
+
+.welcomeTagline {
+  font-size: 1.3rem;
+  font-weight: 600;
+  color: var(--secondary-teal);
+  margin: 0 auto var(--spacing-lg) auto;
+  letter-spacing: 0.5px;
 }
 
 .welcomeText {
@@ -273,6 +281,10 @@
     font-size: 2rem;
   }
   
+  .welcomeTagline {
+    font-size: 1.1rem;
+  }
+  
   .welcomeText {
     font-size: 1rem;
   }
@@ -301,6 +313,10 @@
 @media (max-width: 480px) {
   .welcomeTitle {
     font-size: 1.75rem;
+  }
+  
+  .welcomeTagline {
+    font-size: 1rem;
   }
   
   .roleCard {
