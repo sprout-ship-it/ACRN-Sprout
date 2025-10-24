@@ -374,28 +374,36 @@ const MainApp = () => {
                   </div>
                 } />
                 
-                <Route path="/peer-dashboard" element={
-                  <>
-                    <PeerSupportDashboard 
-                      onClientSelect={(client) => {
-                        setSelectedClient(client);
-                        setModalOpen(true);
-                      }}
-                    />
-                    {modalOpen && selectedClient && (
-                      <PeerSupportModal 
-                        client={selectedClient}
-                        onClose={() => {
-                          setModalOpen(false);
-                          setSelectedClient(null);
-                        }}
-                        onClientUpdate={() => {
-                          // Optional: trigger data refresh
-                        }}
-                      />
-                    )}
-                  </>
-                } />
+<Route path="/peer-dashboard" element={
+  <>
+    <PeerSupportDashboard 
+      onClientSelect={(client) => {
+        setSelectedClient(client);
+        setModalOpen(true);
+      }}
+    />
+    {modalOpen && selectedClient && (
+      <PeerSupportModal 
+        client={selectedClient}
+        onClose={() => {
+          setModalOpen(false);
+          setSelectedClient(null);
+        }}
+        onClientUpdate={() => {
+          // ✅ FIXED: Force component remount to refresh data
+          const currentClient = selectedClient;
+          setModalOpen(false);
+          setSelectedClient(null);
+          
+          setTimeout(() => {
+            setSelectedClient(currentClient);
+            setModalOpen(true);
+          }, 100);
+        }}
+      />
+    )}
+  </>
+} />
                 <Route path="/clients" element={<MatchRequests />} />
               </>
             )}

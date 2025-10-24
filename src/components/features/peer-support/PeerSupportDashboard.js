@@ -3,6 +3,7 @@ import React, { useState, useEffect } from 'react';
 import { useAuth } from '../../../hooks/useAuth';
 import { supabase } from '../../../utils/supabase';
 import LoadingSpinner from '../../ui/LoadingSpinner';
+import ClientProfileModal from './ClientProfileModal';
 import styles from './PeerSupportDashboard.module.css';
 
 const PeerSupportDashboard = ({ onBack, onClientSelect }) => {
@@ -14,6 +15,8 @@ const PeerSupportDashboard = ({ onBack, onClientSelect }) => {
   const [error, setError] = useState(null);
   const [activeTab, setActiveTab] = useState('active'); // 'active' or 'former'
   const [selectedClient, setSelectedClient] = useState(null);
+  const [profileModalOpen, setProfileModalOpen] = useState(false);
+  const [selectedProfileClient, setSelectedProfileClient] = useState(null);
 
   // Get peer support profile ID
   const [peerSupportProfileId, setPeerSupportProfileId] = useState(null);
@@ -343,13 +346,12 @@ const PeerSupportDashboard = ({ onBack, onClientSelect }) => {
   };
 
   /**
-   * ✅ NEW: View client's full profile
+   * ✅ UPDATED: View client's full profile in modal
    */
   const handleViewProfile = (client) => {
     console.log('Viewing profile for client:', client.displayName);
-    // TODO: Open profile modal with full applicant profile data
-    // For now, just show an alert with available info
-    alert(`Profile for ${client.displayName}\n\nRecovery Stage: ${client.recoveryStage}\nTime in Recovery: ${client.timeInRecovery}\nPhone: ${client.phone}\nEmail: ${client.email}`);
+    setSelectedProfileClient(client);
+    setProfileModalOpen(true);
   };
 
   /**
@@ -514,7 +516,6 @@ const PeerSupportDashboard = ({ onBack, onClientSelect }) => {
           <button
             className={`${styles.actionButton} ${styles.actionSecondary}`}
             onClick={() => handleViewProfile(client)}
-            style={{ marginTop: '0.5rem' }}
           >
             👁️ View Profile
           </button>
@@ -524,7 +525,6 @@ const PeerSupportDashboard = ({ onBack, onClientSelect }) => {
             <button
               className={`${styles.actionButton} ${styles.actionSuccess}`}
               onClick={() => handleReactivateClient(client)}
-              style={{ marginTop: '0.5rem', background: 'var(--success-bg)', color: 'var(--success-text)' }}
             >
               🔄 Reactivate Client
             </button>
@@ -570,12 +570,14 @@ const PeerSupportDashboard = ({ onBack, onClientSelect }) => {
 
   return (
     <div className="content">
-      {/* Header */}
-      <div className="text-center mb-5">
-        <h1 className="welcome-title">Peer Support Hub</h1>
-        <p className="welcome-text">
-          Manage your peer support clients, track recovery goals, and coordinate ongoing support
-        </p>
+      {/* ✅ NEW: Purple Header */}
+      <div className={styles.purpleHeader}>
+        <div className={styles.headerContent}>
+          <h1 className={styles.headerTitle}>Peer Support Hub</h1>
+          <p className={styles.headerSubtitle}>
+            Manage your peer support clients, track recovery goals, and coordinate ongoing support
+          </p>
+        </div>
       </div>
 
       {/* Error State */}
@@ -701,6 +703,17 @@ const PeerSupportDashboard = ({ onBack, onClientSelect }) => {
             ← Back to Dashboard
           </button>
         </div>
+      )}
+
+      {/* Client Profile Modal */}
+      {profileModalOpen && selectedProfileClient && (
+        <ClientProfileModal
+          client={selectedProfileClient}
+          onClose={() => {
+            setProfileModalOpen(false);
+            setSelectedProfileClient(null);
+          }}
+        />
       )}
     </div>
   );

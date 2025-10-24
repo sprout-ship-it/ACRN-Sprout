@@ -1,5 +1,5 @@
 // src/components/features/peer-support/PeerSupportModal.js
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useAuth } from '../../../hooks/useAuth';
 import { db } from '../../../utils/supabase';
 import styles from './PeerSupportModal.module.css';
@@ -8,6 +8,14 @@ const PeerSupportModal = ({ client, onClose, onClientUpdate }) => {
   const { profile } = useAuth();
   const [activeTab, setActiveTab] = useState('overview');
   const [saving, setSaving] = useState(false);
+
+  // Local state to track updates
+  const [localClient, setLocalClient] = useState(client);
+
+  // Update local client when prop changes
+  useEffect(() => {
+    setLocalClient(client);
+  }, [client]);
 
   // Session form state
   const [sessionType, setSessionType] = useState('');
@@ -39,6 +47,12 @@ const PeerSupportModal = ({ client, onClose, onClientUpdate }) => {
         if (result.error) {
           throw new Error(result.error.message || 'Failed to update client');
         }
+
+        // Update local state
+        setLocalClient(prev => ({
+          ...prev,
+          ...updates
+        }));
 
         // Notify parent component of the update
         if (onClientUpdate) {
@@ -82,13 +96,13 @@ const PeerSupportModal = ({ client, onClose, onClientUpdate }) => {
       };
 
       // Add to progress notes array
-      const existingNotes = client.progress_notes || [];
+      const existingNotes = localClient.progress_notes || [];
       const updatedNotes = [...existingNotes, sessionData];
 
       // Update both session and client management data
       const updates = {
         progress_notes: updatedNotes,
-        total_sessions: (client.totalSessions || 0) + 1,
+        total_sessions: (localClient.totalSessions || 0) + 1,
         last_session_date: new Date().toISOString().split('T')[0],
         last_contact_date: new Date().toISOString().split('T')[0],
         next_followup_date: nextFollowup || null,
@@ -96,7 +110,7 @@ const PeerSupportModal = ({ client, onClose, onClientUpdate }) => {
         status: clientStatus
       };
 
-      const success = await handleUpdateClient(client.id, updates);
+      const success = await handleUpdateClient(localClient.id, updates);
 
       if (success) {
         // Reset form
@@ -108,7 +122,7 @@ const PeerSupportModal = ({ client, onClose, onClientUpdate }) => {
         setFollowupFrequency('weekly');
         setClientStatus('active');
         
-        alert('Session logged and client info updated successfully!');
+        alert('Session logged successfully!');
         setActiveTab('history'); // Show the newly logged session
       }
     } catch (error) {
@@ -138,9 +152,9 @@ const PeerSupportModal = ({ client, onClose, onClientUpdate }) => {
         progress_notes: []
       };
 
-      const updatedGoals = [...(client.recoveryGoals || []), goalObject];
+      const updatedGoals = [...(localClient.recoveryGoals || []), goalObject];
 
-      const success = await handleUpdateClient(client.id, {
+      const success = await handleUpdateClient(localClient.id, {
         recovery_goals: updatedGoals
       });
 
@@ -162,13 +176,13 @@ const PeerSupportModal = ({ client, onClose, onClientUpdate }) => {
   const handleUpdateGoal = async (goalId, updates) => {
     setSaving(true);
     try {
-      const updatedGoals = client.recoveryGoals.map(goal =>
+      const updatedGoals = localClient.recoveryGoals.map(goal =>
         goal.id === goalId
           ? { ...goal, ...updates, updated_at: new Date().toISOString() }
           : goal
       );
 
-      const success = await handleUpdateClient(client.id, {
+      const success = await handleUpdateClient(localClient.id, {
         recovery_goals: updatedGoals
       });
 
@@ -205,76 +219,138 @@ const PeerSupportModal = ({ client, onClose, onClientUpdate }) => {
       case 'overview':
         return (
           <div className={styles.tabContent}>
-            <div className={styles.overviewSection}>
-              <h4>Client Information</h4>
-              <div className={styles.clientOverview}>
-                <div className={styles.overviewGrid}>
-                  <div className={styles.overviewCard}>
-                    <div className={styles.overviewLabel}>Contact</div>
-                    <div className={styles.overviewValue}>
-                      <div>📞 {client.phone || 'Not provided'}</div>
-                      <div>📧 {client.email || 'Not provided'}</div>
-                    </div>
+            {/* ✅ NEW: 2x2 Grid Layout */}
+            <div className={styles.overviewGrid}>
+              {/* Top-left: Contact Info */}
+              <div className={styles.overviewCard}>
+                <h4 className={styles.cardTitle}>📞 Contact Information</h4>
+                <div className={styles.cardContent}>
+                  <div className={styles.infoRow}>
+                    <span className={styles.infoLabel}>Phone:</span>
+                    <span className={styles.infoValue}>{localClient.phone || 'Not provided'}</span>
                   </div>
-                  
-                  <div className={styles.overviewCard}>
-                    <div className={styles.overviewLabel}>Recovery Info</div>
-                    <div className={styles.overviewValue}>
-                      <div>Stage: {client.recoveryStage}</div>
-                      <div>Time: {client.timeInRecovery}</div>
-                    </div>
-                  </div>
-                  
-                  <div className={styles.overviewCard}>
-                    <div className={styles.overviewLabel}>Sessions</div>
-                    <div className={styles.overviewValue}>
-                      <div>Total: {client.totalSessions || 0}</div>
-                      <div>Last: {client.lastContact ? new Date(client.lastContact).toLocaleDateString() : 'None'}</div>
-                    </div>
-                  </div>
-                  
-                  <div className={styles.overviewCard}>
-                    <div className={styles.overviewLabel}>Goals</div>
-                    <div className={styles.overviewValue}>
-                      <div>Active: {client.recoveryGoals?.filter(g => g.status === 'active').length || 0}</div>
-                      <div>Total: {client.recoveryGoals?.length || 0}</div>
-                    </div>
+                  <div className={styles.infoRow}>
+                    <span className={styles.infoLabel}>Email:</span>
+                    <span className={styles.infoValue}>{localClient.email || 'Not provided'}</span>
                   </div>
                 </div>
+              </div>
 
-                {/* Recovery preferences */}
-                {(client.wantRecoverySupport || client.comfortableDiscussing || client.attendMeetingsTogether) && (
-                  <div className={styles.preferencesSection}>
-                    <h5>Recovery Preferences</h5>
-                    <div className={styles.preferencesTags}>
-                      {client.wantRecoverySupport && (
-                        <span className={styles.preferenceTag}>Wants Recovery Support</span>
-                      )}
-                      {client.comfortableDiscussing && (
-                        <span className={styles.preferenceTag}>Comfortable Discussing Recovery</span>
-                      )}
-                      {client.attendMeetingsTogether && (
-                        <span className={styles.preferenceTag}>Attend Meetings Together</span>
-                      )}
-                      {client.recoveryAccountability && (
-                        <span className={styles.preferenceTag}>Recovery Accountability</span>
-                      )}
-                      {client.mentorshipInterest && (
-                        <span className={styles.preferenceTag}>Mentorship Interest</span>
-                      )}
+              {/* Top-right: Recovery Info */}
+              <div className={styles.overviewCard}>
+                <h4 className={styles.cardTitle}>🌱 Recovery Information</h4>
+                <div className={styles.cardContent}>
+                  <div className={styles.infoRow}>
+                    <span className={styles.infoLabel}>Stage:</span>
+                    <span className={styles.infoValue}>{localClient.recoveryStage}</span>
+                  </div>
+                  {localClient.sobrietyDate && (
+                    <div className={styles.infoRow}>
+                      <span className={styles.infoLabel}>Sobriety Date:</span>
+                      <span className={styles.infoValue}>
+                        {new Date(localClient.sobrietyDate).toLocaleDateString()}
+                      </span>
                     </div>
-                  </div>
-                )}
+                  )}
+                  {localClient.primarySubstances?.length > 0 && (
+                    <div className={styles.infoRow}>
+                      <span className={styles.infoLabel}>Primary Substances:</span>
+                      <div className={styles.substancesList}>
+                        {localClient.primarySubstances.map((substance, i) => (
+                          <span key={i} className={styles.substanceBadge}>
+                            {substance}
+                          </span>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </div>
 
-                {/* Recovery context */}
-                {client.recoveryContext && (
-                  <div className={styles.contextSection}>
-                    <h5>Recovery Context</h5>
-                    <p className={styles.contextText}>{client.recoveryContext}</p>
+              {/* Bottom-left: Session Stats */}
+              <div className={styles.overviewCard}>
+                <h4 className={styles.cardTitle}>📊 Session Statistics</h4>
+                <div className={styles.cardContent}>
+                  <div className={styles.infoRow}>
+                    <span className={styles.infoLabel}>Total Sessions:</span>
+                    <span className={styles.infoValue}>{localClient.totalSessions || 0}</span>
                   </div>
-                )}
+                  <div className={styles.infoRow}>
+                    <span className={styles.infoLabel}>Last Contact:</span>
+                    <span className={styles.infoValue}>
+                      {localClient.lastContact 
+                        ? new Date(localClient.lastContact).toLocaleDateString()
+                        : 'No recent contact'}
+                    </span>
+                  </div>
+                  {localClient.nextFollowup && (
+                    <div className={styles.infoRow}>
+                      <span className={styles.infoLabel}>Next Follow-up:</span>
+                      <span className={styles.infoValue}>
+                        {new Date(localClient.nextFollowup).toLocaleDateString()}
+                      </span>
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {/* Bottom-right: Goals Summary */}
+              <div className={styles.overviewCard}>
+                <h4 className={styles.cardTitle}>🎯 Goals Summary</h4>
+                <div className={styles.cardContent}>
+                  <div className={styles.infoRow}>
+                    <span className={styles.infoLabel}>Active Goals:</span>
+                    <span className={styles.infoValue}>
+                      {localClient.recoveryGoals?.filter(g => g.status === 'active').length || 0}
+                    </span>
+                  </div>
+                  <div className={styles.infoRow}>
+                    <span className={styles.infoLabel}>Completed Goals:</span>
+                    <span className={styles.infoValue}>
+                      {localClient.recoveryGoals?.filter(g => g.status === 'completed').length || 0}
+                    </span>
+                  </div>
+                  <div className={styles.infoRow}>
+                    <span className={styles.infoLabel}>Total Goals:</span>
+                    <span className={styles.infoValue}>
+                      {localClient.recoveryGoals?.length || 0}/5
+                    </span>
+                  </div>
+                </div>
               </div>
             </div>
+
+            {/* Recovery preferences - kept at bottom as requested */}
+            {(localClient.wantRecoverySupport || localClient.comfortableDiscussing || localClient.attendMeetingsTogether) && (
+              <div className={styles.preferencesSection}>
+                <h5 className={styles.preferencesTitle}>Recovery Preferences</h5>
+                <div className={styles.preferencesTags}>
+                  {localClient.wantRecoverySupport && (
+                    <span className={styles.preferenceTag}>Wants Recovery Support</span>
+                  )}
+                  {localClient.comfortableDiscussing && (
+                    <span className={styles.preferenceTag}>Comfortable Discussing Recovery</span>
+                  )}
+                  {localClient.attendMeetingsTogether && (
+                    <span className={styles.preferenceTag}>Attend Meetings Together</span>
+                  )}
+                  {localClient.recoveryAccountability && (
+                    <span className={styles.preferenceTag}>Recovery Accountability</span>
+                  )}
+                  {localClient.mentorshipInterest && (
+                    <span className={styles.preferenceTag}>Mentorship Interest</span>
+                  )}
+                </div>
+              </div>
+            )}
+
+            {/* Recovery context */}
+            {localClient.recoveryContext && (
+              <div className={styles.contextSection}>
+                <h5 className={styles.contextTitle}>Recovery Context</h5>
+                <p className={styles.contextText}>{localClient.recoveryContext}</p>
+              </div>
+            )}
           </div>
         );
 
@@ -282,11 +358,11 @@ const PeerSupportModal = ({ client, onClose, onClientUpdate }) => {
         return (
           <div className={styles.tabContent}>
             <div className={styles.goalsSection}>
-              <h4>Recovery Goals ({client.recoveryGoals?.length || 0}/5)</h4>
+              <h4>Recovery Goals ({localClient.recoveryGoals?.length || 0}/5)</h4>
               
-              {client.recoveryGoals?.length > 0 ? (
+              {localClient.recoveryGoals?.length > 0 ? (
                 <div className={styles.goalsList}>
-                  {client.recoveryGoals.map((goal) => (
+                  {localClient.recoveryGoals.map((goal) => (
                     <div key={goal.id} className={styles.goalCard}>
                       <div className={styles.goalCardHeader}>
                         <div className={styles.goalCardText}>
@@ -325,7 +401,7 @@ const PeerSupportModal = ({ client, onClose, onClientUpdate }) => {
               )}
 
               {/* Add New Goal */}
-              {(client.recoveryGoals?.length || 0) < 5 && (
+              {(localClient.recoveryGoals?.length || 0) < 5 && (
                 <div className={styles.addGoalSection}>
                   <h5>Add New Goal</h5>
                   <div className={styles.formGroup}>
@@ -348,7 +424,7 @@ const PeerSupportModal = ({ client, onClose, onClientUpdate }) => {
                 </div>
               )}
 
-              {(client.recoveryGoals?.length || 0) >= 5 && (
+              {(localClient.recoveryGoals?.length || 0) >= 5 && (
                 <div className={styles.maxGoalsWarning}>
                   <p>Maximum of 5 active goals reached. Complete or remove existing goals to add new ones.</p>
                 </div>
@@ -506,13 +582,13 @@ const PeerSupportModal = ({ client, onClose, onClientUpdate }) => {
               {/* Session Stats */}
               <div className={styles.historyStats}>
                 <div className={styles.statCard}>
-                  <div className={styles.statNumber}>{client.totalSessions || 0}</div>
+                  <div className={styles.statNumber}>{localClient.totalSessions || 0}</div>
                   <div className={styles.statLabel}>Total Sessions</div>
                 </div>
                 <div className={styles.statCard}>
                   <div className={styles.statNumber}>
-                    {client.last_session_date 
-                      ? new Date(client.last_session_date).toLocaleDateString()
+                    {localClient.last_session_date 
+                      ? new Date(localClient.last_session_date).toLocaleDateString()
                       : 'No sessions'
                     }
                   </div>
@@ -520,8 +596,8 @@ const PeerSupportModal = ({ client, onClose, onClientUpdate }) => {
                 </div>
                 <div className={styles.statCard}>
                   <div className={styles.statNumber}>
-                    {client.nextFollowup 
-                      ? new Date(client.nextFollowup).toLocaleDateString()
+                    {localClient.nextFollowup 
+                      ? new Date(localClient.nextFollowup).toLocaleDateString()
                       : 'Not scheduled'
                     }
                   </div>
@@ -530,9 +606,9 @@ const PeerSupportModal = ({ client, onClose, onClientUpdate }) => {
               </div>
 
               {/* Session Timeline */}
-              {client.progress_notes && client.progress_notes.length > 0 ? (
+              {localClient.progress_notes && localClient.progress_notes.length > 0 ? (
                 <div className={styles.sessionsTimeline}>
-                  {client.progress_notes
+                  {localClient.progress_notes
                     .sort((a, b) => new Date(b.created_at || b.session_time) - new Date(a.created_at || a.session_time))
                     .map((session, index) => {
                       const sessionDate = new Date(session.created_at || session.session_time);
@@ -612,12 +688,12 @@ const PeerSupportModal = ({ client, onClose, onClientUpdate }) => {
   return (
     <div className={styles.modalOverlay} onClick={onClose}>
       <div className={styles.modalContainer} onClick={(e) => e.stopPropagation()}>
-        {/* Fixed Header */}
+        {/* ✅ NEW: Purple Gradient Header */}
         <div className={styles.modalHeader}>
           <div className={styles.modalHeaderContent}>
-            <h3 className={styles.modalTitle}>{client.displayName}</h3>
+            <h3 className={styles.modalTitle}>{localClient.displayName}</h3>
             <div className={styles.modalSubtitle}>
-              {client.recoveryStage} • {client.totalSessions || 0} sessions
+              {localClient.recoveryStage} • {localClient.totalSessions || 0} sessions
             </div>
           </div>
           <button className={styles.modalClose} onClick={onClose}>×</button>
@@ -637,7 +713,7 @@ const PeerSupportModal = ({ client, onClose, onClientUpdate }) => {
             onClick={() => setActiveTab('goals')}
           >
             <span className={styles.tabIcon}>🎯</span>
-            Goals ({client.recoveryGoals?.length || 0})
+            Goals ({localClient.recoveryGoals?.length || 0})
           </button>
           <button 
             className={`${styles.tab} ${activeTab === 'session' ? styles.tabActive : ''}`}
@@ -651,7 +727,7 @@ const PeerSupportModal = ({ client, onClose, onClientUpdate }) => {
             onClick={() => setActiveTab('history')}
           >
             <span className={styles.tabIcon}>📋</span>
-            History ({(client.progress_notes || []).length})
+            History ({(localClient.progress_notes || []).length})
           </button>
         </div>
 

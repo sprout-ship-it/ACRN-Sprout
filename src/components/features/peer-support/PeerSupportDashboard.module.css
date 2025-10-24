@@ -62,6 +62,44 @@
   line-height: 1.4;
 }
 
+/* ==================== TABS FOR ACTIVE/FORMER CLIENTS ==================== */
+.tabsContainer {
+  display: flex;
+  gap: var(--spacing-sm);
+  margin-bottom: var(--spacing-lg);
+  background: white;
+  border-radius: var(--radius-xl);
+  padding: var(--spacing-sm);
+  border: 2px solid var(--border-beige);
+  box-shadow: var(--shadow-sm);
+}
+
+.tab {
+  flex: 1;
+  padding: 12px 24px;
+  border: 2px solid transparent;
+  border-radius: var(--radius-lg);
+  background: transparent;
+  color: var(--gray-600);
+  font-weight: 600;
+  font-size: 0.95rem;
+  cursor: pointer;
+  transition: var(--transition-normal);
+  white-space: nowrap;
+}
+
+.tab:hover:not(.tabActive) {
+  background: rgba(160, 32, 240, 0.05);
+  color: var(--primary-purple);
+}
+
+.tabActive {
+  background: linear-gradient(135deg, var(--primary-purple), var(--secondary-purple));
+  color: white;
+  border-color: var(--secondary-purple);
+  box-shadow: 0 4px 12px rgba(160, 32, 240, 0.3);
+}
+
 /* ==================== CLIENT MANAGEMENT SECTION ==================== */
 .clientsHeader {
   background: white;
@@ -303,8 +341,8 @@
 /* ==================== SIMPLIFIED ACTION BUTTONS ==================== */
 .clientActions {
   display: flex;
-  align-items: center;
-  gap: var(--spacing-md);
+  flex-direction: column;
+  gap: var(--spacing-sm);
   margin-top: var(--spacing-lg);
 }
 
@@ -322,7 +360,6 @@
   text-decoration: none;
   border: 2px solid transparent;
   white-space: nowrap;
-  flex: 1;
 }
 
 .actionPrimary {
@@ -336,9 +373,33 @@
   box-shadow: 0 4px 12px rgba(160, 32, 240, 0.3);
 }
 
+.actionSecondary {
+  background: white;
+  color: var(--primary-purple);
+  border-color: var(--primary-purple);
+}
+
+.actionSecondary:hover:not(:disabled) {
+  background: rgba(160, 32, 240, 0.05);
+  transform: translateY(-1px);
+}
+
+.actionSuccess {
+  background: var(--success-bg);
+  color: var(--success-text);
+  border-color: var(--success-border);
+}
+
+.actionSuccess:hover:not(:disabled) {
+  background: var(--success-text);
+  color: white;
+  transform: translateY(-1px);
+}
+
 .quickActions {
   display: flex;
   gap: var(--spacing-xs);
+  margin-top: var(--spacing-sm);
 }
 
 .quickActionButton {
@@ -491,6 +552,14 @@
 
   .emptyStateActions {
     grid-template-columns: 1fr;
+  }
+
+  .tabsContainer {
+    flex-direction: column;
+  }
+
+  .tab {
+    width: 100%;
   }
 }
 
