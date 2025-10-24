@@ -1,4 +1,4 @@
-// src/components/layout/Header.js - COMPLETE UPDATED VERSION
+// src/components/layout/Header.js - UPDATED: Sprout branding
 import React, { useState } from 'react'
 import { useAuth } from '../../context/AuthContext'
 import '../../styles/global.css';
@@ -63,9 +63,9 @@ const Header = () => {
         </div>
       )}
       
-      {/* Main header content */}
-      <h1 className="header-title">Recovery Housing Connect</h1>
-      <p className="header-subtitle">Building Supportive Communities Through Meaningful Connections</p>
+      {/* ✅ UPDATED: Main header content with Sprout branding */}
+      <h1 className="header-title">Sprout</h1>
+      <p className="header-subtitle">Connect • Thrive • Grow</p>
       
       {/* Logout button */}
       {isAuthenticated && (
