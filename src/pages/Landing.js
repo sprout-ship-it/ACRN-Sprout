@@ -46,7 +46,7 @@ const Landing = () => {
     <div className="content">
       {/* ✅ STREAMLINED: Hero section reduced from 60 to 40 words */}
       <div className={styles.welcomeSection}>
-        <h1 className={styles.welcomeTitle}>Welcome to Recovery Housing Connect</h1>
+        <h1 className={styles.welcomeTitle}>Welcome to Sprout</h1>
         <p className={styles.welcomeText}>
           The complete recovery ecosystem platform. We connect individuals in recovery with 
           compatible roommates, recovery-friendly housing and employment, and experienced 
@@ -158,7 +158,7 @@ const Landing = () => {
 
       {/* ✅ CONSOLIDATED: Benefits reduced from 4 cards to 3, each ~40% shorter */}
       <div className={styles.infoCard}>
-        <h3 className={styles.infoCardTitle}>Why Choose Recovery Housing Connect?</h3>
+        <h3 className={styles.infoCardTitle}>Why Choose Sprout?</h3>
         <div className={styles.benefitsGrid}>
           <div className={styles.benefitItem}>
             <h4 className={styles.benefitTitle}>🎯 Built for Recovery</h4>
@@ -184,6 +184,13 @@ const Landing = () => {
             </p>
           </div>
         </div>
+      </div>
+
+      {/* ✅ PARTNERSHIP: ACORN footer */}
+      <div className={styles.partnershipFooter}>
+        <p className={styles.partnershipText}>
+          In partnership with <strong>Allied Comprehensive Recovery Network (ACORN)</strong>
+        </p>
       </div>
     </div>
   )

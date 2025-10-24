@@ -248,6 +248,25 @@
   margin: 0;
 }
 
+/* ==================== PARTNERSHIP FOOTER ==================== */
+.partnershipFooter {
+  text-align: center;
+  padding: var(--spacing-xl) 0;
+  margin-top: var(--spacing-lg);
+  border-top: 1px solid var(--border-beige);
+}
+
+.partnershipText {
+  font-size: 0.95rem;
+  color: var(--gray-600);
+  margin: 0;
+}
+
+.partnershipText strong {
+  color: var(--gray-800);
+  font-weight: 600;
+}
+
 /* ==================== RESPONSIVE DESIGN ==================== */
 @media (max-width: 768px) {
   .welcomeTitle {
@@ -303,5 +322,9 @@
   .authCard,
   .infoCard {
     padding: 20px;
+  }
+  
+  .partnershipText {
+    font-size: 0.85rem;
   }
 }
