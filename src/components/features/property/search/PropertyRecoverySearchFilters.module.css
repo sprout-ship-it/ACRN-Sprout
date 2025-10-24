@@ -1,324 +1,280 @@
-/* PropertyRecoverySearchFilters.module.css */
+/* PropertyRecoverySearchFilters.module.css - Reorganized 2-Section Styling */
 
-.recoveryFiltersContainer {
-  margin-bottom: 2rem;
+/* ==================== MAIN CONTAINER ==================== */
+.recoveryFiltersForm {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-lg);
 }
 
-.sectionIcon {
-  margin-right: 0.5rem;
+/* ==================== FORM SECTIONS ==================== */
+.formSection {
+  padding: var(--spacing-lg);
+  background: white;
+  border-radius: var(--radius-lg);
+  border: 1px solid var(--border-beige);
 }
 
-.filterSection {
-  padding: 1.5rem;
+/* ==================== SECTION HEADERS ==================== */
+.sectionHeader {
+  font-size: 1.125rem;
+  font-weight: 600;
+  color: var(--primary-purple);
+  margin-bottom: var(--spacing-sm);
+  padding-bottom: var(--spacing-sm);
+  border-bottom: 2px solid var(--border-beige);
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-sm);
 }
 
-.inputHint {
+.sectionDescription {
+  color: var(--gray-600);
   font-size: 0.875rem;
-  color: var(--text-secondary);
-  margin-top: 0.25rem;
+  margin-bottom: var(--spacing-lg);
+  line-height: 1.5;
 }
 
-/* Housing Details Section */
+/* ==================== GRID LAYOUTS ==================== */
 .housingDetailsGrid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-  gap: 1rem;
+  grid-template-columns: repeat(3, 1fr);
+  gap: var(--spacing-md);
+  margin-bottom: var(--spacing-lg);
 }
 
-/* Services Grid */
-.servicesGrid {
+.quickCheckboxesGrid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-  gap: 1rem;
+  grid-template-columns: repeat(3, 1fr);
+  gap: var(--spacing-sm);
+  margin-bottom: var(--spacing-lg);
 }
 
-.serviceItem {
-  display: flex;
-  align-items: flex-start;
-  gap: 0.75rem;
-  padding: 1rem;
-  border: 1px solid var(--border-light);
-  border-radius: 8px;
-  cursor: pointer;
-  transition: all 0.2s ease;
-  background: white;
-}
-
-.serviceItem:hover {
-  border-color: var(--primary);
-  background: var(--primary-light);
-  box-shadow: 0 2px 8px rgba(var(--primary-rgb), 0.1);
-}
-
-.serviceItem.selected {
-  border-color: var(--primary);
-  background: var(--primary-light);
-  box-shadow: 0 4px 12px rgba(var(--primary-rgb), 0.15);
-}
-
-.serviceItem input[type="checkbox"] {
-  margin-top: 0.125rem;
-  accent-color: var(--primary);
-  flex-shrink: 0;
-}
-
-.serviceContent {
-  flex: 1;
-}
-
-.serviceName {
-  display: block;
-  font-weight: 600;
-  color: var(--text-primary);
-  margin-bottom: 0.25rem;
-}
-
-.serviceDescription {
-  display: block;
-  font-size: 0.875rem;
-  color: var(--text-secondary);
-  line-height: 1.4;
-}
-
-/* Program Requirements */
-.programRequirementsGrid {
+.entryRequirementsGrid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
-  gap: 1rem;
-  margin-bottom: 1.5rem;
+  grid-template-columns: repeat(3, 1fr);
+  gap: var(--spacing-md);
+  margin-bottom: var(--spacing-lg);
 }
 
+.demographicsGrid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: var(--spacing-md);
+}
+
+/* ==================== PROGRAMS GRID ==================== */
 .programsGrid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-  gap: 0.75rem;
-  margin-top: 1rem;
+  grid-template-columns: repeat(3, 1fr);
+  gap: var(--spacing-sm);
+  margin-top: var(--spacing-sm);
+  margin-bottom: var(--spacing-lg);
 }
 
 .programItem {
   display: flex;
   align-items: center;
-  gap: 0.75rem;
-  padding: 0.75rem;
-  border: 1px solid var(--border-light);
-  border-radius: 6px;
+  gap: var(--spacing-sm);
+  padding: var(--spacing-sm) var(--spacing-md);
+  border: 2px solid var(--border-beige);
+  border-radius: var(--radius-sm);
   cursor: pointer;
-  transition: all 0.2s ease;
+  transition: var(--transition-normal);
   background: white;
 }
 
 .programItem:hover {
-  border-color: var(--primary);
-  background: var(--primary-light);
+  border-color: var(--primary-purple);
+  background: rgba(160, 32, 240, 0.03);
 }
 
 .programItem.selected {
-  border-color: var(--primary);
-  background: var(--primary-light);
-  box-shadow: 0 2px 8px rgba(var(--primary-rgb), 0.15);
+  border-color: var(--primary-purple);
+  background: rgba(160, 32, 240, 0.08);
+  box-shadow: 0 2px 8px rgba(160, 32, 240, 0.15);
 }
 
 .programItem input[type="checkbox"] {
   margin: 0;
-  accent-color: var(--primary);
+  accent-color: var(--primary-purple);
+  flex-shrink: 0;
 }
 
 .programText {
   font-size: 0.875rem;
   color: var(--text-primary);
   font-weight: 500;
+  line-height: 1.3;
 }
 
-/* Demographics Section */
-.demographicsGrid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-  gap: 1rem;
-  margin-bottom: 1.5rem;
-}
-
-.backgroundGrid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-  gap: 1rem;
-}
-
-.backgroundItem {
-  display: flex;
-  align-items: flex-start;
-  gap: 0.75rem;
-  padding: 1rem;
-  border: 1px solid var(--border-light);
-  border-radius: 8px;
-  cursor: pointer;
-  transition: all 0.2s ease;
-  background: white;
-}
-
-.backgroundItem:hover {
-  border-color: var(--primary);
-  background: var(--primary-light);
-}
-
-.backgroundItem.selected {
-  border-color: var(--primary);
-  background: var(--primary-light);
-  box-shadow: 0 2px 8px rgba(var(--primary-rgb), 0.15);
-}
-
-.backgroundItem input[type="checkbox"] {
-  margin-top: 0.125rem;
-  accent-color: var(--primary);
-  flex-shrink: 0;
-}
-
-.backgroundContent {
-  flex: 1;
-}
-
-.backgroundName {
-  display: block;
-  font-weight: 600;
-  color: var(--text-primary);
-  margin-bottom: 0.25rem;
-}
-
-.backgroundDescription {
-  display: block;
-  font-size: 0.875rem;
-  color: var(--text-secondary);
-  line-height: 1.4;
-}
-
-/* Support Services Grid */
+/* ==================== SUPPORT SERVICES GRID ==================== */
 .supportServicesGrid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-  gap: 1rem;
+  grid-template-columns: repeat(3, 1fr);
+  gap: var(--spacing-sm);
+  margin-top: var(--spacing-sm);
+  margin-bottom: var(--spacing-lg);
 }
 
-/* Licensing Section */
-.licensingGrid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-  gap: 1rem;
-}
-
-.licensingItem {
+.serviceItem {
   display: flex;
-  align-items: flex-start;
-  gap: 0.75rem;
-  padding: 1rem;
-  border: 1px solid var(--border-light);
-  border-radius: 8px;
+  align-items: center;
+  gap: var(--spacing-sm);
+  padding: var(--spacing-sm) var(--spacing-md);
+  border: 2px solid var(--border-beige);
+  border-radius: var(--radius-sm);
   cursor: pointer;
-  transition: all 0.2s ease;
+  transition: var(--transition-normal);
   background: white;
 }
 
-.licensingItem:hover {
-  border-color: var(--primary);
-  background: var(--primary-light);
+.serviceItem:hover {
+  border-color: var(--primary-purple);
+  background: rgba(160, 32, 240, 0.03);
 }
 
-.licensingItem.selected {
-  border-color: var(--primary);
-  background: var(--primary-light);
-  box-shadow: 0 2px 8px rgba(var(--primary-rgb), 0.15);
+.serviceItem.selected {
+  border-color: var(--primary-purple);
+  background: rgba(160, 32, 240, 0.08);
+  box-shadow: 0 2px 8px rgba(160, 32, 240, 0.15);
 }
 
-.licensingItem input[type="checkbox"] {
-  margin-top: 0.125rem;
-  accent-color: var(--primary);
+.serviceItem input[type="checkbox"] {
+  margin: 0;
+  accent-color: var(--primary-purple);
   flex-shrink: 0;
 }
 
-.licensingContent {
-  flex: 1;
-}
-
-.licensingName {
-  display: block;
-  font-weight: 600;
-  color: var(--text-primary);
-  margin-bottom: 0.25rem;
-}
-
-.licensingDescription {
-  display: block;
+.serviceText {
   font-size: 0.875rem;
-  color: var(--text-secondary);
-  line-height: 1.4;
+  color: var(--text-primary);
+  font-weight: 500;
 }
 
-/* Responsive Design */
+/* ==================== CREDENTIALS GRID ==================== */
+.credentialsGrid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: var(--spacing-sm);
+  margin-top: var(--spacing-sm);
+}
+
+.credentialItem {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-sm);
+  padding: var(--spacing-sm) var(--spacing-md);
+  border: 2px solid var(--border-beige);
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  transition: var(--transition-normal);
+  background: white;
+}
+
+.credentialItem:hover {
+  border-color: var(--primary-purple);
+  background: rgba(160, 32, 240, 0.03);
+}
+
+.credentialItem.selected {
+  border-color: var(--primary-purple);
+  background: rgba(160, 32, 240, 0.08);
+  box-shadow: 0 2px 8px rgba(160, 32, 240, 0.15);
+}
+
+.credentialItem input[type="checkbox"] {
+  margin: 0;
+  accent-color: var(--primary-purple);
+  flex-shrink: 0;
+}
+
+.credentialText {
+  font-size: 0.875rem;
+  color: var(--text-primary);
+  font-weight: 500;
+}
+
+/* ==================== RESPONSIVE DESIGN ==================== */
 @media (max-width: 1024px) {
-  .housingDetailsGrid {
-    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-  }
-  
-  .servicesGrid {
-    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-  }
-  
+  .housingDetailsGrid,
+  .quickCheckboxesGrid,
+  .entryRequirementsGrid,
+  .programsGrid,
   .supportServicesGrid {
-    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+    grid-template-columns: repeat(2, 1fr);
   }
-  
-  .programRequirementsGrid {
-    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+
+  .demographicsGrid,
+  .credentialsGrid {
+    grid-template-columns: 1fr;
   }
 }
 
 @media (max-width: 768px) {
-  .filterSection {
-    padding: 1rem;
+  .recoveryFiltersForm {
+    gap: var(--spacing-md);
   }
-  
+
+  .formSection {
+    padding: var(--spacing-md);
+  }
+
   .housingDetailsGrid,
+  .quickCheckboxesGrid,
+  .entryRequirementsGrid,
   .demographicsGrid,
-  .programRequirementsGrid {
-    grid-template-columns: 1fr;
-  }
-  
-  .servicesGrid,
+  .programsGrid,
   .supportServicesGrid,
-  .backgroundGrid,
-  .licensingGrid {
+  .credentialsGrid {
     grid-template-columns: 1fr;
   }
-  
-  .programsGrid {
-    grid-template-columns: 1fr;
+
+  .sectionHeader {
+    font-size: 1rem;
   }
-  
-  .serviceItem,
-  .backgroundItem,
-  .licensingItem {
-    padding: 0.75rem;
-  }
-  
-  .programItem {
-    padding: 0.75rem;
+
+  .sectionDescription {
+    font-size: 0.8rem;
   }
 }
 
 @media (max-width: 480px) {
-  .serviceContent,
-  .backgroundContent,
-  .licensingContent {
-    margin-top: 0.25rem;
+  .formSection {
+    padding: var(--spacing-sm) var(--spacing-md);
   }
-  
-  .serviceName,
-  .backgroundName,
-  .licensingName {
-    font-size: 0.9rem;
+
+  .sectionHeader {
+    font-size: 0.95rem;
+    padding-bottom: var(--spacing-xs);
   }
-  
-  .serviceDescription,
-  .backgroundDescription,
-  .licensingDescription {
+
+  .programItem,
+  .serviceItem,
+  .credentialItem {
+    padding: var(--spacing-xs) var(--spacing-sm);
+  }
+
+  .programText,
+  .serviceText,
+  .credentialText {
     font-size: 0.8rem;
   }
+}
+
+/* ==================== ACCESSIBILITY ==================== */
+.programItem:focus-visible,
+.serviceItem:focus-visible,
+.credentialItem:focus-visible {
+  outline: 2px solid var(--primary-purple);
+  outline-offset: 2px;
+}
+
+/* ==================== LOADING STATES ==================== */
+.programItem:disabled,
+.serviceItem:disabled,
+.credentialItem:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+  pointer-events: none;
 }

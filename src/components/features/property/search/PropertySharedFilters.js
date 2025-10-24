@@ -1,5 +1,5 @@
-// src/components/features/property/search/PropertySharedFilters.js - Updated without Search Actions
-import React, { useState } from 'react';
+// src/components/features/property/search/PropertySharedFilters.js - Reorganized Single Form
+import React from 'react';
 import PropTypes from 'prop-types';
 import { acceptedSubsidyPrograms } from '../constants/propertyConstants';
 
@@ -12,23 +12,8 @@ const PropertySharedFilters = ({
   onArrayFilterChange,
   onUseMyPreferences,
   userPreferences,
-  loading,
-  searchType
+  loading
 }) => {
-  // ✅ Collapsible section state - only location open by default
-  const [expandedSections, setExpandedSections] = useState({
-    location: true,
-    financial: false,
-    features: false
-  });
-
-  const toggleSection = (section) => {
-    setExpandedSections(prev => ({
-      ...prev,
-      [section]: !prev[section]
-    }));
-  };
-
   // ✅ State options
   const stateOptions = [
     'AL', 'AK', 'AZ', 'AR', 'CA', 'CO', 'CT', 'DE', 'FL', 'GA',
@@ -63,7 +48,31 @@ const PropertySharedFilters = ({
     { value: '5', label: '5+' }
   ];
 
-  // ✅ Utility options
+  // ✅ NEW: Smoking policy options (from Advanced)
+  const smokingPolicyOptions = [
+    { value: '', label: 'Any Smoking Policy' },
+    { value: 'not_allowed', label: 'Non-Smoking Only' },
+    { value: 'allowed', label: 'Smoking Allowed OK' }
+  ];
+
+  // ✅ NEW: Lease length options (from Advanced)
+  const leaseLengthOptions = [
+    { value: '', label: 'Any Lease Length' },
+    { value: '1', label: '1+ months' },
+    { value: '3', label: '3+ months' },
+    { value: '6', label: '6+ months' },
+    { value: '12', label: '12+ months' }
+  ];
+
+  // ✅ NEW: Background check options (from Advanced)
+  const backgroundCheckOptions = [
+    { value: '', label: 'Any Background Policy' },
+    { value: 'not_required', label: 'No Background Check Preferred' },
+    { value: 'required', label: 'Background Check OK' },
+    { value: 'flexible', label: 'Flexible Policy' }
+  ];
+
+  // ✅ Utility options (exactly 6 for even grid)
   const utilityOptions = [
     { value: 'electricity', label: 'Electricity' },
     { value: 'water', label: 'Water' }, 
@@ -74,275 +83,267 @@ const PropertySharedFilters = ({
   ];
 
   return (
-    <div className={styles.sharedFiltersContainer}>
-      {/* ✅ SECTION 1: Location & Basic Search - Collapsible */}
-      <div className="card mb-4">
-        <div 
-          className={`card-header ${styles.collapsibleHeader}`}
-          onClick={() => toggleSection('location')}
-        >
-          <div className={styles.filterHeader}>
-            <h3 className="card-title">
-              <span className={styles.sectionIcon}>📍</span>
-              Location & Basic Criteria
-            </h3>
-            <div className={styles.headerActions}>
-              {userPreferences && (
-                <button
-                  className="btn btn-outline btn-sm"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    onUseMyPreferences();
-                  }}
-                  disabled={loading}
-                >
-                  <span className={styles.btnIcon}>⚙️</span>
-                  Use My Preferences
-                </button>
-              )}
-              <span className={`${styles.expandIcon} ${expandedSections.location ? styles.expanded : ''}`}>
-                ▼
-              </span>
-            </div>
+    <div className={styles.basicFiltersForm}>
+      {/* ✅ User Preferences Button */}
+      {userPreferences && (
+        <div className={styles.preferencesSection}>
+          <button
+            className="btn btn-outline"
+            onClick={onUseMyPreferences}
+            disabled={loading}
+          >
+            <span className={styles.btnIcon}>⚙️</span>
+            Use My Preferences
+          </button>
+          <span className={styles.preferencesHint}>
+            Auto-fill filters from your profile
+          </span>
+        </div>
+      )}
+
+      {/* ✅ SECTION 1: Location */}
+      <div className={styles.formSection}>
+        <h4 className={styles.sectionHeader}>📍 Location</h4>
+        <div className={styles.locationGrid}>
+          <div className="form-group">
+            <label className="label">City or Address</label>
+            <input
+              className="input"
+              type="text"
+              placeholder="City or street address"
+              value={sharedFilters.location}
+              onChange={(e) => onSharedFilterChange('location', e.target.value)}
+              disabled={loading}
+            />
+          </div>
+
+          <div className="form-group">
+            <label className="label">State</label>
+            <select
+              className="input"
+              value={sharedFilters.state}
+              onChange={(e) => onSharedFilterChange('state', e.target.value)}
+              disabled={loading}
+            >
+              <option value="">Any State</option>
+              {stateOptions.map(state => (
+                <option key={state} value={state}>{state}</option>
+              ))}
+            </select>
+          </div>
+
+          <div className="form-group">
+            <label className="label">ZIP Code</label>
+            <input
+              className="input"
+              type="text"
+              placeholder="ZIP code"
+              value={sharedFilters.zipCode || ''}
+              onChange={(e) => onSharedFilterChange('zipCode', e.target.value)}
+              disabled={loading}
+              maxLength="10"
+            />
           </div>
         </div>
-        
-        {expandedSections.location && (
-          <div className={styles.filterSection}>
-            <div className={styles.locationGrid}>
-              <div className="form-group">
-                <label className="label">City or Address</label>
-                <input
-                  className="input"
-                  type="text"
-                  placeholder="City or street address"
-                  value={sharedFilters.location}
-                  onChange={(e) => onSharedFilterChange('location', e.target.value)}
-                  disabled={loading}
-                />
-                <div className={styles.inputHint}>
-                  Search by city name or specific address
-                </div>
-              </div>
-
-              <div className="form-group">
-                <label className="label">State</label>
-                <select
-                  className="input"
-                  value={sharedFilters.state}
-                  onChange={(e) => onSharedFilterChange('state', e.target.value)}
-                  disabled={loading}
-                >
-                  <option value="">Any State</option>
-                  {stateOptions.map(state => (
-                    <option key={state} value={state}>{state}</option>
-                  ))}
-                </select>
-              </div>
-
-              <div className="form-group">
-                <label className="label">ZIP Code</label>
-                <input
-                  className="input"
-                  type="text"
-                  placeholder="ZIP code"
-                  value={sharedFilters.zipCode || ''}
-                  onChange={(e) => onSharedFilterChange('zipCode', e.target.value)}
-                  disabled={loading}
-                  maxLength="10"
-                />
-                <div className={styles.inputHint}>
-                  Search specific ZIP code area
-                </div>
-              </div>
-            </div>
-          </div>
-        )}
       </div>
 
-      {/* ✅ SECTION 2: Financial & Housing Details - Collapsible */}
-      <div className="card mb-4">
-        <div 
-          className={`card-header ${styles.collapsibleHeader}`}
-          onClick={() => toggleSection('financial')}
-        >
-          <h3 className="card-title">
-            <span className={styles.sectionIcon}>💰</span>
-            Financial & Housing Details
-            <span className={`${styles.expandIcon} ${expandedSections.financial ? styles.expanded : ''}`}>
-              ▼
-            </span>
-          </h3>
-        </div>
-        
-        {expandedSections.financial && (
-          <div className={styles.filterSection}>
-            <div className={styles.financialGrid}>
-              <div className="form-group">
-                <label className="label">Maximum Monthly Rent</label>
-                <select
-                  className="input"
-                  value={sharedFilters.maxRent}
-                  onChange={(e) => onSharedFilterChange('maxRent', e.target.value)}
-                  disabled={loading}
-                >
-                  {rentRangeOptions.map(option => (
-                    <option key={option.value} value={option.value}>
-                      {option.label}
-                    </option>
-                  ))}
-                </select>
-              </div>
-              
-              <div className="form-group">
-                <label className="label">Minimum Bedrooms</label>
-                <select
-                  className="input"
-                  value={sharedFilters.minBedrooms}
-                  onChange={(e) => onSharedFilterChange('minBedrooms', e.target.value)}
-                  disabled={loading}
-                >
-                  {bedroomOptions.map(option => (
-                    <option key={option.value} value={option.value}>
-                      {option.label}
-                    </option>
-                  ))}
-                </select>
-              </div>
-
-              <div className="form-group">
-                <label className="label">Available Date</label>
-                <input
-                  className="input"
-                  type="date"
-                  value={sharedFilters.availableDate}
-                  onChange={(e) => onSharedFilterChange('availableDate', e.target.value)}
-                  disabled={loading}
-                  min={new Date().toISOString().split('T')[0]}
-                />
-                <div className={styles.inputHint}>
-                  When do you need to move in?
-                </div>
-              </div>
-            </div>
-
-            {/* Housing Assistance Programs */}
-            <div className={styles.subsidiesSection}>
-              <div className="form-group">
-                <label className="label">Housing Assistance Programs</label>
-                <div className={styles.inputHint}>
-                  Select programs you qualify for (properties that accept these will be prioritized)
-                </div>
-                <div className={styles.subsidiesGrid}>
-                  {acceptedSubsidyPrograms.slice(0, 6).map(subsidy => (
-                    <div
-                      key={subsidy.value}
-                      className={`${styles.subsidyItem} ${sharedFilters.acceptedSubsidies?.includes(subsidy.value) ? styles.selected : ''}`}
-                      onClick={() => onArrayFilterChange('shared', 'acceptedSubsidies', subsidy.value, !sharedFilters.acceptedSubsidies?.includes(subsidy.value))}
-                    >
-                      <input
-                        type="checkbox"
-                        checked={sharedFilters.acceptedSubsidies?.includes(subsidy.value) || false}
-                        onChange={() => {}} // Handled by onClick
-                        disabled={loading}
-                      />
-                      <span className={styles.subsidyText}>{subsidy.label}</span>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            </div>
+      {/* ✅ SECTION 2: Financial & Housing Details */}
+      <div className={styles.formSection}>
+        <h4 className={styles.sectionHeader}>💰 Financial & Housing Details</h4>
+        <div className={styles.financialGrid}>
+          <div className="form-group">
+            <label className="label">Maximum Monthly Rent</label>
+            <select
+              className="input"
+              value={sharedFilters.maxRent}
+              onChange={(e) => onSharedFilterChange('maxRent', e.target.value)}
+              disabled={loading}
+            >
+              {rentRangeOptions.map(option => (
+                <option key={option.value} value={option.value}>
+                  {option.label}
+                </option>
+              ))}
+            </select>
           </div>
-        )}
+          
+          <div className="form-group">
+            <label className="label">Minimum Bedrooms</label>
+            <select
+              className="input"
+              value={sharedFilters.minBedrooms}
+              onChange={(e) => onSharedFilterChange('minBedrooms', e.target.value)}
+              disabled={loading}
+            >
+              {bedroomOptions.map(option => (
+                <option key={option.value} value={option.value}>
+                  {option.label}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          <div className="form-group">
+            <label className="label">Available Date</label>
+            <input
+              className="input"
+              type="date"
+              value={sharedFilters.availableDate}
+              onChange={(e) => onSharedFilterChange('availableDate', e.target.value)}
+              disabled={loading}
+              min={new Date().toISOString().split('T')[0]}
+            />
+          </div>
+        </div>
       </div>
 
-      {/* ✅ SECTION 3: Property Features & Amenities - Collapsible */}
-      <div className="card mb-4">
-        <div 
-          className={`card-header ${styles.collapsibleHeader}`}
-          onClick={() => toggleSection('features')}
-        >
-          <h3 className="card-title">
-            <span className={styles.sectionIcon}>⭐</span>
-            Property Features & Amenities
-            <span className={`${styles.expandIcon} ${expandedSections.features ? styles.expanded : ''}`}>
-              ▼
-            </span>
-          </h3>
-        </div>
-        
-        {expandedSections.features && (
-          <div className={styles.filterSection}>
-            {/* Basic Property Features */}
-            <div className={styles.basicFeaturesGrid}>
-              <div 
-                className={`checkbox-item ${sharedFilters.furnished ? 'selected' : ''}`}
-                onClick={() => onSharedFilterChange('furnished', !sharedFilters.furnished)}
-              >
-                <input
-                  type="checkbox"
-                  checked={sharedFilters.furnished}
-                  onChange={() => {}} // Handled by onClick
-                  disabled={loading}
-                />
-                <span className="checkbox-text">Furnished</span>
-              </div>
-              
-              <div 
-                className={`checkbox-item ${sharedFilters.petsAllowed ? 'selected' : ''}`}
-                onClick={() => onSharedFilterChange('petsAllowed', !sharedFilters.petsAllowed)}
-              >
-                <input
-                  type="checkbox"
-                  checked={sharedFilters.petsAllowed}
-                  onChange={() => {}} // Handled by onClick
-                  disabled={loading}
-                />
-                <span className="checkbox-text">Pet Friendly</span>
-              </div>
-
-              <div 
-                className={`checkbox-item ${sharedFilters.smokingAllowed ? 'selected' : ''}`}
-                onClick={() => onSharedFilterChange('smokingAllowed', !sharedFilters.smokingAllowed)}
-              >
-                <input
-                  type="checkbox"
-                  checked={sharedFilters.smokingAllowed}
-                  onChange={() => {}} // Handled by onClick
-                  disabled={loading}
-                />
-                <span className="checkbox-text">Smoking Allowed</span>
-              </div>
-            </div>
-
-            {/* Utilities Included */}
-            <div className={styles.utilitiesSection}>
-              <div className="form-group">
-                <label className="label">Utilities Included (Priority)</label>
-                <div className={styles.inputHint}>
-                  Select utilities you prefer to be included in rent
-                </div>
-                <div className={styles.utilitiesGrid}>
-                  {utilityOptions.map(utility => (
-                    <div
-                      key={utility.value}
-                      className={`${styles.utilityItem} ${sharedFilters.utilitiesIncluded?.includes(utility.value) ? styles.selected : ''}`}
-                      onClick={() => onArrayFilterChange('shared', 'utilitiesIncluded', utility.value, !sharedFilters.utilitiesIncluded?.includes(utility.value))}
-                    >
-                      <input
-                        type="checkbox"
-                        checked={sharedFilters.utilitiesIncluded?.includes(utility.value) || false}
-                        onChange={() => {}} // Handled by onClick
-                        disabled={loading}
-                      />
-                      <span className={styles.utilityText}>{utility.label}</span>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            </div>
+      {/* ✅ SECTION 3: Property Requirements (NEW - from Advanced) */}
+      <div className={styles.formSection}>
+        <h4 className={styles.sectionHeader}>📋 Property Requirements</h4>
+        <div className={styles.requirementsGrid}>
+          <div className="form-group">
+            <label className="label">Smoking Policy</label>
+            <select
+              className="input"
+              value={sharedFilters.smokingPolicy || ''}
+              onChange={(e) => onSharedFilterChange('smokingPolicy', e.target.value)}
+              disabled={loading}
+            >
+              {smokingPolicyOptions.map(option => (
+                <option key={option.value} value={option.value}>
+                  {option.label}
+                </option>
+              ))}
+            </select>
           </div>
-        )}
+
+          <div className="form-group">
+            <label className="label">Minimum Lease Length</label>
+            <select
+              className="input"
+              value={sharedFilters.leaseLength || ''}
+              onChange={(e) => onSharedFilterChange('leaseLength', e.target.value)}
+              disabled={loading}
+            >
+              {leaseLengthOptions.map(option => (
+                <option key={option.value} value={option.value}>
+                  {option.label}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          <div className="form-group">
+            <label className="label">Background Check Policy</label>
+            <select
+              className="input"
+              value={sharedFilters.backgroundCheck || ''}
+              onChange={(e) => onSharedFilterChange('backgroundCheck', e.target.value)}
+              disabled={loading}
+            >
+              {backgroundCheckOptions.map(option => (
+                <option key={option.value} value={option.value}>
+                  {option.label}
+                </option>
+              ))}
+            </select>
+          </div>
+        </div>
+      </div>
+
+      {/* ✅ SECTION 4: Property Features */}
+      <div className={styles.formSection}>
+        <h4 className={styles.sectionHeader}>⭐ Property Features</h4>
+        <div className={styles.featuresGrid}>
+          <div 
+            className={`checkbox-item ${sharedFilters.furnished ? 'selected' : ''}`}
+            onClick={() => onSharedFilterChange('furnished', !sharedFilters.furnished)}
+          >
+            <input
+              type="checkbox"
+              checked={sharedFilters.furnished}
+              onChange={() => {}} // Handled by onClick
+              disabled={loading}
+            />
+            <span className="checkbox-text">Furnished</span>
+          </div>
+          
+          <div 
+            className={`checkbox-item ${sharedFilters.petsAllowed ? 'selected' : ''}`}
+            onClick={() => onSharedFilterChange('petsAllowed', !sharedFilters.petsAllowed)}
+          >
+            <input
+              type="checkbox"
+              checked={sharedFilters.petsAllowed}
+              onChange={() => {}} // Handled by onClick
+              disabled={loading}
+            />
+            <span className="checkbox-text">Pet Friendly</span>
+          </div>
+
+          <div 
+            className={`checkbox-item ${sharedFilters.smokingAllowed ? 'selected' : ''}`}
+            onClick={() => onSharedFilterChange('smokingAllowed', !sharedFilters.smokingAllowed)}
+          >
+            <input
+              type="checkbox"
+              checked={sharedFilters.smokingAllowed}
+              onChange={() => {}} // Handled by onClick
+              disabled={loading}
+            />
+            <span className="checkbox-text">Smoking Allowed</span>
+          </div>
+        </div>
+      </div>
+
+      {/* ✅ SECTION 5: Housing Assistance Programs */}
+      <div className={styles.formSection}>
+        <h4 className={styles.sectionHeader}>🏛️ Housing Assistance Programs</h4>
+        <p className={styles.sectionDescription}>
+          Select programs you qualify for - properties accepting these will be prioritized
+        </p>
+        <div className={styles.subsidiesGrid}>
+          {acceptedSubsidyPrograms.slice(0, 6).map(subsidy => (
+            <div
+              key={subsidy.value}
+              className={`${styles.subsidyItem} ${sharedFilters.acceptedSubsidies?.includes(subsidy.value) ? styles.selected : ''}`}
+              onClick={() => onArrayFilterChange('shared', 'acceptedSubsidies', subsidy.value, !sharedFilters.acceptedSubsidies?.includes(subsidy.value))}
+            >
+              <input
+                type="checkbox"
+                checked={sharedFilters.acceptedSubsidies?.includes(subsidy.value) || false}
+                onChange={() => {}} // Handled by onClick
+                disabled={loading}
+              />
+              <span className={styles.subsidyText}>{subsidy.label}</span>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* ✅ SECTION 6: Utilities Included (3x2 even grid) */}
+      <div className={styles.formSection}>
+        <h4 className={styles.sectionHeader}>💡 Utilities Included in Rent</h4>
+        <p className={styles.sectionDescription}>
+          Select utilities you prefer to be included in monthly rent
+        </p>
+        <div className={styles.utilitiesGrid}>
+          {utilityOptions.map(utility => (
+            <div
+              key={utility.value}
+              className={`${styles.utilityItem} ${sharedFilters.utilitiesIncluded?.includes(utility.value) ? styles.selected : ''}`}
+              onClick={() => onArrayFilterChange('shared', 'utilitiesIncluded', utility.value, !sharedFilters.utilitiesIncluded?.includes(utility.value))}
+            >
+              <input
+                type="checkbox"
+                checked={sharedFilters.utilitiesIncluded?.includes(utility.value) || false}
+                onChange={() => {}} // Handled by onClick
+                disabled={loading}
+              />
+              <span className={styles.utilityText}>{utility.label}</span>
+            </div>
+          ))}
+        </div>
       </div>
     </div>
   );
@@ -356,6 +357,9 @@ PropertySharedFilters.propTypes = {
     maxRent: PropTypes.string.isRequired,
     minBedrooms: PropTypes.string.isRequired,
     availableDate: PropTypes.string.isRequired,
+    smokingPolicy: PropTypes.string,
+    leaseLength: PropTypes.string,
+    backgroundCheck: PropTypes.string,
     acceptedSubsidies: PropTypes.array.isRequired,
     furnished: PropTypes.bool.isRequired,
     petsAllowed: PropTypes.bool.isRequired,
@@ -366,8 +370,7 @@ PropertySharedFilters.propTypes = {
   onArrayFilterChange: PropTypes.func.isRequired,
   onUseMyPreferences: PropTypes.func.isRequired,
   userPreferences: PropTypes.object,
-  loading: PropTypes.bool.isRequired,
-  searchType: PropTypes.oneOf(['all_housing', 'general_only', 'recovery_only']).isRequired
+  loading: PropTypes.bool.isRequired
 };
 
 export default PropertySharedFilters;

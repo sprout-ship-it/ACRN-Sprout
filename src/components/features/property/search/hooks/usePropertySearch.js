@@ -1,4 +1,4 @@
-// src/components/features/property/search/hooks/usePropertySearch.js - UPDATED FOR NEW FIELDS
+// src/components/features/property/search/hooks/usePropertySearch.js - UPDATED with new sharedFilters fields
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { supabase } from '../../../../../utils/supabase';
 
@@ -12,14 +12,17 @@ const usePropertySearch = (user) => {
   const [userPreferences, setUserPreferences] = useState(null);
   const [savedProperties, setSavedProperties] = useState(new Set());
 
-  // ✅ UPDATED: Shared filter state with new zipCode field
+  // ✅ UPDATED: Shared filter state with new fields from Advanced tab
   const [sharedFilters, setSharedFilters] = useState({
     location: '',
     state: '',
-    zipCode: '', // NEW: Added zipCode field
+    zipCode: '',
     maxRent: '',
     minBedrooms: '',
     availableDate: '',
+    smokingPolicy: '', // NEW: Moved from Advanced
+    leaseLength: '', // NEW: Moved from Advanced
+    backgroundCheck: '', // NEW: Moved from Advanced
     acceptedSubsidies: [],
     furnished: false,
     petsAllowed: false,
@@ -27,11 +30,13 @@ const usePropertySearch = (user) => {
     utilitiesIncluded: []
   });
 
-  // ✅ UPDATED: Recovery filters with hasOpenBed instead of minAvailableBeds
+  // ✅ Recovery filters
   const [recoveryFilters, setRecoveryFilters] = useState({
     // Recovery Housing Details
-    hasOpenBed: false, // UPDATED: Changed from minAvailableBeds to hasOpenBed
+    hasOpenBed: false,
     maxWeeklyRate: '',
+    guestPolicy: '', // NEW: Moved from Advanced
+    moveInCost: '', // NEW: Moved from Advanced
     
     // Recovery Services & Features
     mealsIncluded: false,
@@ -65,14 +70,12 @@ const usePropertySearch = (user) => {
   const [advancedFilters, setAdvancedFilters] = useState({
     amenities: [],
     accessibilityFeatures: [],
-    neighborhoodFeatures: [],
-    backgroundCheck: '',
-    leaseLength: '',
-    moveInCost: ''
+    neighborhoodFeatures: []
   });
 
   // ✅ Debouncing ref for search optimization
   const searchTimeoutRef = useRef(null);
+  const isInitialMount = useRef(true);
 
   // ✅ Load user preferences from applicant_matching_profiles
   const loadUserPreferences = useCallback(async () => {
@@ -161,7 +164,7 @@ const usePropertySearch = (user) => {
     }
   }, [user?.id]);
 
-  // ✅ UPDATED: Property search with new fields and fixed syntax
+  // ✅ Property search
   const performSearch = useCallback(async (resetPage = true) => {
     if (resetPage) {
       setCurrentPage(1);
@@ -170,70 +173,7 @@ const usePropertySearch = (user) => {
     setLoading(true);
     try {
       console.log('🔍 Searching properties with type:', searchType, 'Page:', currentPage);
-     // Temporary debug helper - add this to your search hook to diagnose the issue
 
-// ✅ ADD THIS TEMPORARY DEBUG CODE to your performSearch function 
-// (right before the actual query execution)
-
-console.log('🔧 DEBUG: Search parameters:', {
-  searchType,
-  sharedFilters: {
-    location: sharedFilters.location,
-    state: sharedFilters.state,
-    zipCode: sharedFilters.zipCode,
-    maxRent: sharedFilters.maxRent,
-    minBedrooms: sharedFilters.minBedrooms
-  },
-  appliedFilters: {
-    statusFilter: 'available',
-    acceptingApplications: true,
-    isRecoveryHousingFilter: searchType === 'general_only' ? false : 
-                            searchType === 'recovery_only' ? true : 'no filter'
-  }
-});
-
-// ✅ ALSO ADD THIS: Check what's actually in your database
-const debugQuery = await supabase
-  .from('properties')
-  .select('id, title, state, status, accepting_applications, is_recovery_housing')
-  .limit(10);
-
-console.log('🔧 DEBUG: Sample properties in database:', debugQuery.data);
-
-// ✅ AND THIS: Test without any filters
-const noFiltersQuery = await supabase
-  .from('properties')
-  .select('*', { count: 'exact' });
-
-console.log('🔧 DEBUG: Total properties in database (no filters):', {
-  count: noFiltersQuery.count,
-  sample: noFiltersQuery.data?.slice(0, 3)
-});
-
-// ✅ AND THIS: Test with just the basic filters
-const basicFiltersQuery = await supabase
-  .from('properties')
-  .select('*', { count: 'exact' })
-  .eq('status', 'available')
-  .eq('accepting_applications', true);
-
-console.log('🔧 DEBUG: Properties with status=available and accepting_applications=true:', {
-  count: basicFiltersQuery.count,
-  sample: basicFiltersQuery.data?.slice(0, 3)
-});
-
-// ✅ AND THIS: Test state filtering specifically
-if (sharedFilters.state) {
-  const stateFilterQuery = await supabase
-    .from('properties')
-    .select('*', { count: 'exact' })
-    .eq('state', sharedFilters.state);
-
-  console.log(`🔧 DEBUG: Properties with state='${sharedFilters.state}':`, {
-    count: stateFilterQuery.count,
-    sample: stateFilterQuery.data?.slice(0, 3)
-  });
-} 
       let query = supabase
         .from('properties')
         .select('*', { count: 'exact' })
@@ -249,7 +189,7 @@ if (sharedFilters.state) {
 
       // ✅ SHARED FILTERS: Apply to all search types
       
-      // ✅ FIXED: Location filtering with proper Supabase syntax
+      // Location filtering
       if (sharedFilters.location.trim()) {
         const searchLocation = sharedFilters.location.trim();
         const locationParts = searchLocation.split(',').map(part => part.trim());
@@ -267,7 +207,6 @@ if (sharedFilters.state) {
         query = query.eq('state', sharedFilters.state);
       }
 
-      // ✅ NEW: ZIP code filtering
       if (sharedFilters.zipCode) {
         query = query.eq('zip_code', sharedFilters.zipCode);
       }
@@ -282,6 +221,27 @@ if (sharedFilters.state) {
 
       if (sharedFilters.availableDate) {
         query = query.lte('available_date', sharedFilters.availableDate);
+      }
+
+      // NEW: Property requirements filters
+      if (sharedFilters.smokingPolicy) {
+        if (sharedFilters.smokingPolicy === 'not_allowed') {
+          query = query.eq('smoking_allowed', false);
+        } else if (sharedFilters.smokingPolicy === 'allowed') {
+          query = query.eq('smoking_allowed', true);
+        }
+      }
+
+      if (sharedFilters.leaseLength) {
+        query = query.gte('min_lease_months', parseInt(sharedFilters.leaseLength));
+      }
+
+      if (sharedFilters.backgroundCheck) {
+        if (sharedFilters.backgroundCheck === 'not_required') {
+          query = query.eq('background_check_required', false);
+        } else if (sharedFilters.backgroundCheck === 'required') {
+          query = query.eq('background_check_required', true);
+        }
       }
 
       // Shared property features
@@ -310,13 +270,22 @@ if (sharedFilters.state) {
       // ✅ RECOVERY FILTERS: Only apply if searching recovery housing
       if (searchType === 'all_housing' || searchType === 'recovery_only') {
         
-        // ✅ UPDATED: Has open bed filtering (simplified from minAvailableBeds)
         if (recoveryFilters.hasOpenBed) {
           query = query.gt('available_beds', 0);
         }
 
         if (recoveryFilters.maxWeeklyRate) {
           query = query.lte('weekly_rate', parseInt(recoveryFilters.maxWeeklyRate));
+        }
+
+        // NEW: Guest policy and move-in cost
+        if (recoveryFilters.guestPolicy) {
+          query = query.ilike('guest_policy', `%${recoveryFilters.guestPolicy}%`);
+        }
+
+        if (recoveryFilters.moveInCost) {
+          const maxMoveInCost = parseInt(recoveryFilters.moveInCost);
+          query = query.lte('total_move_in_cost', maxMoveInCost);
         }
 
         // Recovery services & features
@@ -400,15 +369,6 @@ if (sharedFilters.state) {
 
       if (advancedFilters.neighborhoodFeatures.length > 0) {
         query = query.overlaps('neighborhood_features', advancedFilters.neighborhoodFeatures);
-      }
-
-      if (advancedFilters.leaseLength) {
-        query = query.ilike('lease_duration', `%${advancedFilters.leaseLength}%`);
-      }
-
-      if (advancedFilters.moveInCost) {
-        const maxMoveInCost = parseInt(advancedFilters.moveInCost);
-        query = query.lte('monthly_rent', Math.floor(maxMoveInCost / 2));
       }
 
       // ✅ Pagination
@@ -513,9 +473,20 @@ if (sharedFilters.state) {
 
   // ✅ Search type change handler
   const handleSearchTypeChange = useCallback((type) => {
+    console.log('🔄 Changing search type to:', type);
     setSearchType(type);
-    debouncedSearch(true);
-  }, [debouncedSearch]);
+  }, []);
+
+  // ✅ useEffect to trigger search when searchType changes
+  useEffect(() => {
+    // Skip on initial mount
+    if (isInitialMount.current) {
+      return;
+    }
+    
+    console.log('🔍 searchType changed, triggering search');
+    performSearch(true);
+  }, [searchType, performSearch]);
 
   // ✅ Apply user preferences to filters
   const applyUserPreferences = useCallback(() => {
@@ -557,10 +528,13 @@ if (sharedFilters.state) {
     setSharedFilters({
       location: '',
       state: '',
-      zipCode: '', // NEW: Clear zipCode
+      zipCode: '',
       maxRent: '',
       minBedrooms: '',
       availableDate: '',
+      smokingPolicy: '', // NEW
+      leaseLength: '', // NEW
+      backgroundCheck: '', // NEW
       acceptedSubsidies: [],
       furnished: false,
       petsAllowed: false,
@@ -569,8 +543,10 @@ if (sharedFilters.state) {
     });
     
     setRecoveryFilters({
-      hasOpenBed: false, // UPDATED: Reset hasOpenBed instead of minAvailableBeds
+      hasOpenBed: false,
       maxWeeklyRate: '',
+      guestPolicy: '', // NEW
+      moveInCost: '', // NEW
       mealsIncluded: false,
       linensProvided: false,
       immediateMovein: false,
@@ -594,10 +570,7 @@ if (sharedFilters.state) {
     setAdvancedFilters({
       amenities: [],
       accessibilityFeatures: [],
-      neighborhoodFeatures: [],
-      backgroundCheck: '',
-      leaseLength: '',
-      moveInCost: ''
+      neighborhoodFeatures: []
     });
 
     debouncedSearch(true);
@@ -648,6 +621,7 @@ if (sharedFilters.state) {
   // ✅ Perform initial search when component mounts
   useEffect(() => {
     performSearch(true);
+    isInitialMount.current = false;
   }, []); // Only run once on mount
 
   // ✅ Cleanup timeout on unmount

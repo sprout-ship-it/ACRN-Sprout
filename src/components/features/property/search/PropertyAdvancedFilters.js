@@ -1,58 +1,152 @@
-// src/components/features/property/search/PropertyAdvancedFilters.js - UPDATED (Removed Duplicates)
+// src/components/features/property/search/PropertyAdvancedFilters.js - Reorganized with Grouped Amenities & Accessibility
 import React from 'react';
 import PropTypes from 'prop-types';
-import { 
-  propertyAmenities,
-  accessibilityFeatures 
-} from '../constants/propertyConstants';
 
-// ✅ UPDATED: Import CSS module
 import styles from './PropertyAdvancedFilters.module.css';
 
 const PropertyAdvancedFilters = ({
   advancedFilters,
-  onAdvancedFilterChange,
   onArrayFilterChange,
   loading
 }) => {
-  // ✅ Smoking policy options
-  const smokingPolicyOptions = [
-    { value: '', label: 'Any Smoking Policy' },
-    { value: 'not_allowed', label: 'Non-Smoking Properties Only' },
-    { value: 'allowed', label: 'Smoking Allowed Properties OK' }
-  ];
+  // ✅ Amenities organized by category
+  const amenityGroups = {
+    livingSpace: [
+      'In-Unit WiFi',
+      'In-Unit Washer/Dryer',
+      'Full Kitchen',
+      'Air Conditioning',
+      'Heating',
+      'Dishwasher',
+      'Microwave',
+      'Refrigerator',
+      'Private Bathroom',
+      'Walk-in Closet',
+      'Balcony/Patio',
+      'Hardwood Floors',
+      'Carpet',
+      'Ceiling Fans'
+    ],
+    propertyFeatures: [
+      'Parking (Covered)',
+      'Parking (Garage)',
+      'Parking (Street)',
+      'Fitness Center',
+      'Swimming Pool',
+      'On-Site Laundry',
+      'Package Receiving',
+      'Bike Storage',
+      'Storage Units',
+      'Community Room',
+      'BBQ/Picnic Area',
+      'Playground',
+      'Pet Amenities',
+      'EV Charging'
+    ],
+    neighborhood: [
+      'Near Public Transit',
+      'Near Shopping',
+      'Near Parks',
+      'Near Schools',
+      'Near Healthcare',
+      'Quiet Area',
+      'Well-Lit Streets',
+      'Sidewalks',
+      'Bike Lanes',
+      'Walkable Area'
+    ]
+  };
 
-  // ✅ Lease length options
-  const leaseLengthOptions = [
-    { value: '', label: 'Any Lease Length' },
-    { value: '1', label: '1+ months minimum' },
-    { value: '3', label: '3+ months minimum' },
-    { value: '6', label: '6+ months minimum' },
-    { value: '12', label: '12+ months minimum' },
-    { value: '24', label: '24+ months minimum' }
-  ];
-
-  // ✅ Background check options
-  const backgroundCheckOptions = [
-    { value: '', label: 'Any Background Policy' },
-    { value: 'required', label: 'Background Check Required OK' },
-    { value: 'not_required', label: 'No Background Check Preferred' },
-    { value: 'flexible', label: 'Flexible Background Policy' }
-  ];
+  // ✅ Accessibility features organized by category
+  const accessibilityGroups = {
+    mobility: [
+      'Wheelchair Accessible Entrance',
+      'Wheelchair Accessible Bathroom',
+      'Wheelchair Accessible Kitchen',
+      'Ramps',
+      'Elevator',
+      'Wide Doorways (36")',
+      'Wide Hallways',
+      'Accessible Parking',
+      'No Steps Entry',
+      'Roll-in Shower'
+    ],
+    usability: [
+      'Grab Bars (Bathroom)',
+      'Grab Bars (Shower)',
+      'Lever Door Handles',
+      'Adjustable Countertops',
+      'Lower Light Switches',
+      'Lower Thermostat',
+      'Visual Alerts (Fire/Doorbell)',
+      'Audio Alerts',
+      'Braille Signage',
+      'Service Animal Friendly'
+    ]
+  };
 
   return (
     <div className={styles.advancedFiltersContainer}>
       
-      {/* ✅ UPDATED: Required Amenities */}
-      <div className={styles.filterSection}>
-        <h4 className={styles.sectionTitle}>Required Amenities</h4>
-        <div className="form-group">
-          <label className="label">Must-Have Amenities</label>
-          <div className={styles.inputHint}>
-            Select amenities that properties must have
-          </div>
+      {/* ✅ SECTION 1: AMENITIES */}
+      <div className={styles.mainSection}>
+        <h3 className={styles.mainSectionTitle}>🏠 Amenities</h3>
+        <p className={styles.mainSectionDescription}>
+          Select amenities that properties must have
+        </p>
+
+        {/* Living Space Subsection */}
+        <div className={styles.subSection}>
+          <h4 className={styles.subSectionTitle}>Living Space</h4>
+          <p className={styles.subSectionHint}>In-unit features and fixtures</p>
           <div className={styles.amenitiesGrid}>
-            {propertyAmenities.map(amenity => (
+            {amenityGroups.livingSpace.map(amenity => (
+              <div
+                key={amenity}
+                className={`${styles.amenityItem} ${advancedFilters.amenities?.includes(amenity) ? styles.selected : ''}`}
+                onClick={() => onArrayFilterChange('advanced', 'amenities', amenity, !advancedFilters.amenities?.includes(amenity))}
+              >
+                <input
+                  type="checkbox"
+                  checked={advancedFilters.amenities?.includes(amenity) || false}
+                  onChange={() => {}} // Handled by onClick
+                  disabled={loading}
+                />
+                <span className={styles.amenityText}>{amenity}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* Property Features Subsection */}
+        <div className={styles.subSection}>
+          <h4 className={styles.subSectionTitle}>Property Features</h4>
+          <p className={styles.subSectionHint}>Building-wide amenities and services</p>
+          <div className={styles.amenitiesGrid}>
+            {amenityGroups.propertyFeatures.map(amenity => (
+              <div
+                key={amenity}
+                className={`${styles.amenityItem} ${advancedFilters.amenities?.includes(amenity) ? styles.selected : ''}`}
+                onClick={() => onArrayFilterChange('advanced', 'amenities', amenity, !advancedFilters.amenities?.includes(amenity))}
+              >
+                <input
+                  type="checkbox"
+                  checked={advancedFilters.amenities?.includes(amenity) || false}
+                  onChange={() => {}} // Handled by onClick
+                  disabled={loading}
+                />
+                <span className={styles.amenityText}>{amenity}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* Neighborhood Subsection */}
+        <div className={styles.subSection}>
+          <h4 className={styles.subSectionTitle}>Neighborhood</h4>
+          <p className={styles.subSectionHint}>Location and area features</p>
+          <div className={styles.amenitiesGrid}>
+            {amenityGroups.neighborhood.map(amenity => (
               <div
                 key={amenity}
                 className={`${styles.amenityItem} ${advancedFilters.amenities?.includes(amenity) ? styles.selected : ''}`}
@@ -71,16 +165,42 @@ const PropertyAdvancedFilters = ({
         </div>
       </div>
 
-      {/* ✅ UPDATED: Accessibility Features */}
-      <div className={styles.filterSection}>
-        <h4 className={styles.sectionTitle}>Accessibility Features</h4>
-        <div className="form-group">
-          <label className="label">Required Accessibility Features</label>
-          <div className={styles.inputHint}>
-            Select accessibility features that properties must have
-          </div>
+      {/* ✅ SECTION 2: ACCESSIBILITY */}
+      <div className={styles.mainSection}>
+        <h3 className={styles.mainSectionTitle}>♿ Accessibility Features</h3>
+        <p className={styles.mainSectionDescription}>
+          Select accessibility features that properties must have
+        </p>
+
+        {/* Mobility Subsection */}
+        <div className={styles.subSection}>
+          <h4 className={styles.subSectionTitle}>Mobility</h4>
+          <p className={styles.subSectionHint}>Features for wheelchair users and mobility support</p>
           <div className={styles.accessibilityGrid}>
-            {accessibilityFeatures.map(feature => (
+            {accessibilityGroups.mobility.map(feature => (
+              <div
+                key={feature}
+                className={`${styles.accessibilityItem} ${advancedFilters.accessibilityFeatures?.includes(feature) ? styles.selected : ''}`}
+                onClick={() => onArrayFilterChange('advanced', 'accessibilityFeatures', feature, !advancedFilters.accessibilityFeatures?.includes(feature))}
+              >
+                <input
+                  type="checkbox"
+                  checked={advancedFilters.accessibilityFeatures?.includes(feature) || false}
+                  onChange={() => {}} // Handled by onClick
+                  disabled={loading}
+                />
+                <span className={styles.accessibilityText}>{feature}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* Usability Subsection */}
+        <div className={styles.subSection}>
+          <h4 className={styles.subSectionTitle}>Usability</h4>
+          <p className={styles.subSectionHint}>Features for visual, auditory, and general accessibility needs</p>
+          <div className={styles.accessibilityGrid}>
+            {accessibilityGroups.usability.map(feature => (
               <div
                 key={feature}
                 className={`${styles.accessibilityItem} ${advancedFilters.accessibilityFeatures?.includes(feature) ? styles.selected : ''}`}
@@ -98,113 +218,15 @@ const PropertyAdvancedFilters = ({
           </div>
         </div>
       </div>
-
-      {/* ✅ UPDATED: Property Policies & Requirements */}
-      <div className={styles.filterSection}>
-        <h4 className={styles.sectionTitle}>Property Policies & Requirements</h4>
-        <div className={styles.policiesGrid}>
-          <div className="form-group">
-            <label className="label">Smoking Policy</label>
-            <select
-              className="input"
-              value={advancedFilters.smokingPolicy}
-              onChange={(e) => onAdvancedFilterChange('smokingPolicy', e.target.value)}
-              disabled={loading}
-            >
-              {smokingPolicyOptions.map(option => (
-                <option key={option.value} value={option.value}>
-                  {option.label}
-                </option>
-              ))}
-            </select>
-          </div>
-
-          <div className="form-group">
-            <label className="label">Minimum Lease Length</label>
-            <select
-              className="input"
-              value={advancedFilters.leaseLength}
-              onChange={(e) => onAdvancedFilterChange('leaseLength', e.target.value)}
-              disabled={loading}
-            >
-              {leaseLengthOptions.map(option => (
-                <option key={option.value} value={option.value}>
-                  {option.label}
-                </option>
-              ))}
-            </select>
-          </div>
-
-          <div className="form-group">
-            <label className="label">Background Check Policy</label>
-            <select
-              className="input"
-              value={advancedFilters.backgroundCheck}
-              onChange={(e) => onAdvancedFilterChange('backgroundCheck', e.target.value)}
-              disabled={loading}
-            >
-              {backgroundCheckOptions.map(option => (
-                <option key={option.value} value={option.value}>
-                  {option.label}
-                </option>
-              ))}
-            </select>
-          </div>
-
-          <div className="form-group">
-            <label className="label">Guest Policy</label>
-            <input
-              className="input"
-              type="text"
-              placeholder="e.g., 'Overnight guests allowed', 'No guests'"
-              value={advancedFilters.guestPolicy}
-              onChange={(e) => onAdvancedFilterChange('guestPolicy', e.target.value)}
-              disabled={loading}
-            />
-            <div className={styles.inputHint}>
-              Describe your guest policy preferences
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {/* ✅ UPDATED: Move-in Costs */}
-      <div className={styles.filterSection}>
-        <h4 className={styles.sectionTitle}>Move-in Costs</h4>
-        <div className="form-group">
-          <label className="label">Maximum Move-in Cost</label>
-          <input
-            className="input"
-            type="number"
-            placeholder="e.g., 2000"
-            value={advancedFilters.moveInCost}
-            onChange={(e) => onAdvancedFilterChange('moveInCost', e.target.value)}
-            disabled={loading}
-            min="0"
-            step="100"
-          />
-          <div className={styles.inputHint}>
-            Total upfront costs including deposits, fees, and first month's rent
-          </div>
-        </div>
-      </div>
     </div>
   );
 };
 
 PropertyAdvancedFilters.propTypes = {
   advancedFilters: PropTypes.shape({
-    acceptedSubsidies: PropTypes.array.isRequired,
     amenities: PropTypes.array.isRequired,
-    utilitiesIncluded: PropTypes.array.isRequired,
-    accessibilityFeatures: PropTypes.array,
-    smokingPolicy: PropTypes.string.isRequired,
-    guestPolicy: PropTypes.string.isRequired,
-    backgroundCheck: PropTypes.string.isRequired,
-    leaseLength: PropTypes.string.isRequired,
-    moveInCost: PropTypes.string.isRequired
+    accessibilityFeatures: PropTypes.array
   }).isRequired,
-  onAdvancedFilterChange: PropTypes.func.isRequired,
   onArrayFilterChange: PropTypes.func.isRequired,
   loading: PropTypes.bool.isRequired
 };
