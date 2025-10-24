@@ -13,7 +13,8 @@ const PropertyCard = ({
   pendingPropertyRequests, // ✅ NEW: Track pending requests
   onContactLandlord,
   onSaveProperty,
-  onSendHousingInquiry
+  onSendHousingInquiry,
+  onViewDetails
 }) => {
   const { user, profile } = useAuth();
   const [saving, setSaving] = useState(false);
@@ -160,14 +161,22 @@ const handleSendHousingInquiry = async () => {
           </div>
         )}
 
-        {/* ✅ Action Buttons with fixed housing inquiry */}
+{/* ✅ Action Buttons with View Details */}
         <div className={styles.propertyActions}>
           <div className={styles.primaryActions}>
+            {/* ✅ NEW: View Details Button */}
             <button
               className="btn btn-primary btn-sm"
+              onClick={() => onViewDetails(property)}
+            >
+              👁️ View Details
+            </button>
+            
+            <button
+              className="btn btn-outline btn-sm"
               onClick={() => onContactLandlord(property)}
             >
-              Contact Owner
+              📞 Contact Owner
             </button>
             
             <button
@@ -188,13 +197,13 @@ const handleSendHousingInquiry = async () => {
               ) : (
                 <>
                   <span className={styles.saveIcon}>🤍</span>
-                  Save Property
+                  Save
                 </>
               )}
             </button>
           </div>
 
-          {/* ✅ UPDATED: Housing Inquiry with pending request handling */}
+          {/* ✅ Housing Inquiry with pending request handling */}
           {property.landlord_id && (
             <div className={styles.secondaryActions}>
               <button
@@ -211,7 +220,7 @@ const handleSendHousingInquiry = async () => {
                 ) : hasPendingRequest ? (
                   '⏳ Request Sent'
                 ) : (
-                  'Send Housing Inquiry'
+                  '📧 Send Housing Inquiry'
                 )}
               </button>
             </div>
@@ -271,13 +280,15 @@ PropertyCard.propTypes = {
   pendingPropertyRequests: PropTypes.instanceOf(Set), // ✅ NEW: Pending requests prop
   onContactLandlord: PropTypes.func.isRequired,
   onSaveProperty: PropTypes.func.isRequired,
-  onSendHousingInquiry: PropTypes.func
+  onSendHousingInquiry: PropTypes.func,
+  onViewDetails: PropTypes.func.isRequired
 };
 
 // ✅ UPDATED: Default props
 PropertyCard.defaultProps = {
   pendingPropertyRequests: new Set(),
-  onSendHousingInquiry: () => {}
+  onSendHousingInquiry: () => {},
+  onViewDetails: () => {}
 };
 
 export default PropertyCard;

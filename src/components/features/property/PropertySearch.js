@@ -397,10 +397,10 @@ I'd love to discuss availability and the application process. Thank you!`,
       </div>
 
       {/* ✅ NEW: Tabbed Filter Interface */}
-      <div className={styles.tabbedFiltersContainer}>
+      <div className={styles.filtersContainer}>
         {/* Tab Navigation */}
-        <div className={styles.tabNavigation}>
-          <div className={styles.tabsList}>
+        <div className={styles.tabsHeader}>
+          <div className={styles.tabsNav}>
             <button
               className={`${styles.tabButton} ${activeTab === 'basic' ? styles.active : ''}`}
               onClick={() => setActiveTab('basic')}

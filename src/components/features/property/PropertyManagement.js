@@ -9,6 +9,7 @@ import PropertyFinancialSection from './sections/PropertyFinancialSection';
 import PropertyRecoverySection from './sections/PropertyRecoverySection';
 import PropertyAmenitiesSection from './sections/PropertyAmenitiesSection';
 import PropertyAvailabilitySection from './sections/PropertyAvailabilitySection';
+import PropertyDetailsModal from '../connections/modals/PropertyDetailsModal';
 
 // ✅ Import the finalized form components
 import PropertyTypeSelector from './PropertyTypeSelector';
@@ -34,6 +35,8 @@ const PropertyManagement = () => {
   const [currentSection, setCurrentSection] = useState(0);
   const [errors, setErrors] = useState({});
   const [landlordProfileId, setLandlordProfileId] = useState(null);
+  const [selectedProperty, setSelectedProperty] = useState(null);
+  const [showPropertyModal, setShowPropertyModal] = useState(false);
 
   // ✅ Enhanced bifurcation state
   const [propertyFormType, setPropertyFormType] = useState(null);
@@ -718,7 +721,36 @@ const PropertyManagement = () => {
     setShowForm(true);
     setCurrentSection(0);
   };
+  /**
+   * Handle viewing property details in modal
+   */
+  const handleViewPropertyDetails = (property) => {
+    setSelectedProperty(property);
+    setShowPropertyModal(true);
+  };
 
+  /**
+   * Handle closing property details modal
+   */
+  const handleClosePropertyModal = () => {
+    setSelectedProperty(null);
+    setShowPropertyModal(false);
+  };
+
+  /**
+   * Handle contact from modal (opens mailto)
+   */
+  const handleContactFromModal = (property) => {
+    const subject = `Property Inquiry: ${property.title}`;
+    const body = `Property Details:\n${property.address}\n${property.city}, ${property.state}\n\nContact: ${property.phone || 'N/A'}`;
+    
+    if (property.contact_email) {
+      window.location.href = `mailto:${property.contact_email}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
+    } else {
+      alert(`Contact Phone: ${property.phone || 'Not available'}`);
+    }
+  };
+  
   const deleteProperty = async (propertyId) => {
     if (!window.confirm('Are you sure you want to delete this property?')) {
       return;
@@ -885,21 +917,28 @@ const PropertyManagement = () => {
                 )}
               </div>
               
-              <div className={styles.propertyActions}>
-                <button
-                  className="btn btn-primary btn-sm"
-                  onClick={() => editProperty(property)}
-                >
-                  Edit
-                </button>
-                
-                <button
-                  className="btn btn-danger btn-sm"
-                  onClick={() => deleteProperty(property.id)}
-                >
-                  Delete
-                </button>
-              </div>
+<div className={styles.propertyActions}>
+  <button
+    className="btn btn-secondary btn-sm"
+    onClick={() => handleViewPropertyDetails(property)}
+  >
+    👁️ View Details
+  </button>
+  
+  <button
+    className="btn btn-primary btn-sm"
+    onClick={() => editProperty(property)}
+  >
+    ✏️ Edit
+  </button>
+  
+  <button
+    className="btn btn-danger btn-sm"
+    onClick={() => deleteProperty(property.id)}
+  >
+    🗑️ Delete
+  </button>
+</div>
             </div>
           ))}
         </div>
@@ -1030,7 +1069,7 @@ const PropertyManagement = () => {
                   </>
                 )}
                 
-                {propertyFormType === 'general_rental' && (
+{propertyFormType === 'general_rental' && (
                   <button
                     type="submit"
                     className={`${styles.actionButton} ${styles.actionPrimary}`}
@@ -1044,8 +1083,22 @@ const PropertyManagement = () => {
           </div>
         </div>
       )}
+
+      {/* Property Details Modal */}
+      {showPropertyModal && selectedProperty && (
+        <PropertyDetailsModal
+          isOpen={showPropertyModal}
+          property={selectedProperty}
+          connectionStatus={null}
+          onClose={handleClosePropertyModal}
+          onContact={handleContactFromModal}
+          showContactInfo={true}
+          showActions={false}
+          isLandlordView={true}
+        />
+      )}
+
     </div>
   );
 };
-
 export default PropertyManagement;

@@ -35,25 +35,6 @@ const CompatibilitySection = ({
     return null;
   }, []);
 
-  // Calculate profile completion metrics
-  const calculateCompletionMetrics = useCallback(() => {
-    let completedSections = 0;
-    let totalSections = 6;
-    
-    if (aboutMeLength >= 50) completedSections++;
-    if (lookingForLength >= 50) completedSections++;
-    if ((formData.interests || []).length >= 3) completedSections++;
-    if ((formData.housing_assistance || []).length > 0) completedSections++;
-    if (shortTermGoalsLength >= 20 || longTermVisionLength >= 20) completedSections++;
-    if (formData.profile_visibility) completedSections++;
-    
-    return {
-      completedSections,
-      totalSections,
-      percentage: Math.round((completedSections / totalSections) * 100)
-    };
-  }, [aboutMeLength, lookingForLength, formData.interests, formData.housing_assistance, shortTermGoalsLength, longTermVisionLength, formData.profile_visibility]);
-
   // Get readiness indicators
   const getReadinessIndicators = useCallback(() => {
     const indicators = [];
@@ -86,7 +67,6 @@ const CompatibilitySection = ({
     return indicators;
   }, [aboutMeLength, lookingForLength, formData.interests]);
 
-  const completionMetrics = calculateCompletionMetrics();
   const readinessIndicators = getReadinessIndicators();
   
   const aboutMeError = validateTextLength(formData.about_me, 50, 'About Me');
@@ -508,42 +488,25 @@ const CompatibilitySection = ({
         </div>
       </div>
 
-      {/* Profile Completion Status */}
+      {/* Profile Readiness Status */}
       {sectionId && isActive && (
         <div className="section-status mt-6">
           <div className="card-header">
-            <h4 className="card-title">Profile Completion & Readiness</h4>
+            <h4 className="card-title">Profile Readiness</h4>
           </div>
           
-          <div className="grid-2 mb-4">
-            <div>
-              <strong>Completion Metrics:</strong>
-              <div className="mt-2">
-                <div className="progress-bar">
-                  <div 
-                    className="progress-fill" 
-                    style={{ width: `${completionMetrics.percentage}%` }}
-                  />
-                </div>
-                <span className="text-sm text-gray-600">
-                  {completionMetrics.completedSections}/{completionMetrics.totalSections} sections complete ({completionMetrics.percentage}%)
-                </span>
-              </div>
-            </div>
-            
-            <div>
-              <strong>Profile Readiness:</strong>
-              <ul className="mt-2 text-sm">
-                {readinessIndicators.map((indicator, index) => (
-                  <li key={index} className={
-                    indicator.type === 'success' ? 'text-green-600' : 
-                    indicator.type === 'warning' ? 'text-yellow-600' : 'text-red-600'
-                  }>
-                    {indicator.type === 'success' ? '✓' : indicator.type === 'warning' ? '⚠' : '✗'} {indicator.text}
-                  </li>
-                ))}
-              </ul>
-            </div>
+          <div className="mb-4">
+            <strong>Profile Quality Indicators:</strong>
+            <ul className="mt-2 text-sm">
+              {readinessIndicators.map((indicator, index) => (
+                <li key={index} className={
+                  indicator.type === 'success' ? 'text-green-600' : 
+                  indicator.type === 'warning' ? 'text-yellow-600' : 'text-red-600'
+                }>
+                  {indicator.type === 'success' ? '✓' : indicator.type === 'warning' ? '⚠' : '✗'} {indicator.text}
+                </li>
+              ))}
+            </ul>
           </div>
 
           {validationMessage && (

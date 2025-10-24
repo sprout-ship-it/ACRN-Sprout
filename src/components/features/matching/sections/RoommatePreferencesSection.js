@@ -60,19 +60,7 @@ const RoommatePreferencesSection = ({
     return null;
   }, [formData.age_range_min, formData.age_range_max]);
 
-  // Count selected preferences for completion tracking
-  const countSelectedPreferences = useCallback(() => {
-    let count = 0;
-    if (formData.preferred_roommate_gender) count++;
-    if (formData.smoking_status) count++;
-    if (formData.age_range_min && formData.age_range_max) count++;
-    if (formData.pet_preference) count++;
-    if (formData.smoking_preference) count++;
-    return count;
-  }, [formData]);
-
   const ageRangeError = validateAgeRange();
-  const preferencesCount = countSelectedPreferences();
 
   return (
     <>
@@ -544,33 +532,16 @@ const RoommatePreferencesSection = ({
             <h4 className="card-title">Section Validation Status</h4>
           </div>
           
-          <div className="grid-2 mb-4">
-            <div>
-              <strong>Required Fields:</strong>
-              <ul className="mt-2 text-sm">
-                <li className={formData.preferred_roommate_gender ? 'text-green-600' : 'text-red-600'}>
-                  {formData.preferred_roommate_gender ? '✓' : '✗'} Gender Preference
-                </li>
-                <li className={formData.smoking_status ? 'text-green-600' : 'text-red-600'}>
-                  {formData.smoking_status ? '✓' : '✗'} Smoking Status
-                </li>
-              </ul>
-            </div>
-            
-            <div>
-              <strong>Preference Completeness:</strong>
-              <div className="mt-2">
-                <div className="progress-bar">
-                  <div 
-                    className="progress-fill" 
-                    style={{ width: `${Math.round((preferencesCount / 5) * 100)}%` }}
-                  />
-                </div>
-                <span className="text-sm text-gray-600">
-                  {preferencesCount}/5 key preferences specified
-                </span>
-              </div>
-            </div>
+          <div className="mb-4">
+            <strong>Required Fields:</strong>
+            <ul className="mt-2 text-sm">
+              <li className={formData.preferred_roommate_gender ? 'text-green-600' : 'text-red-600'}>
+                {formData.preferred_roommate_gender ? '✓' : '✗'} Gender Preference
+              </li>
+              <li className={formData.smoking_status ? 'text-green-600' : 'text-red-600'}>
+                {formData.smoking_status ? '✓' : '✗'} Smoking Status
+              </li>
+            </ul>
           </div>
 
           {validationMessage && (

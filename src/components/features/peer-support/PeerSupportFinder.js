@@ -1,10 +1,10 @@
-// src/components/features/peer-support/PeerSupportFinder.js - UPDATED FOR PROFILEMODAL
+// src/components/features/peer-support/PeerSupportFinder.js - UPDATED WITH TABBED FILTERS
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../../../hooks/useAuth';
 import { supabase } from '../../../utils/supabase';
 import { db } from '../../../utils/supabase';
 import LoadingSpinner from '../../ui/LoadingSpinner';
-import ProfileModal from '../connections/ProfileModal'; // ✅ UPDATED: Use consolidated ProfileModal
+import ProfileModal from '../connections/ProfileModal';
 import styles from './PeerSupportFinder.module.css';
 
 import { 
@@ -23,12 +23,10 @@ const PeerSupportFinder = ({ onBack }) => {
   const [showDetails, setShowDetails] = useState(false);
   const [connectionRequests, setConnectionRequests] = useState(new Set());
   const [activeConnections, setActiveConnections] = useState(new Set());
+  const [hasSearched, setHasSearched] = useState(false);
   
-  const [expandedFilters, setExpandedFilters] = useState({
-    specialties: false,
-    recoveryMethods: false,
-    serviceAreas: false
-  });
+  // ✅ NEW: Active tab state - always start on 'basic'
+  const [activeTab, setActiveTab] = useState('basic');
   
   const [filters, setFilters] = useState({
     specialties: [],
@@ -57,13 +55,6 @@ const PeerSupportFinder = ({ onBack }) => {
 
     return () => clearTimeout(timeoutId);
   }, [filters, profile?.id]);
-
-  const toggleFilterExpansion = (filterType) => {
-    setExpandedFilters(prev => ({
-      ...prev,
-      [filterType]: !prev[filterType]
-    }));
-  };
 
   const loadConnectionRequests = async () => {
     if (!profile?.id) return;
@@ -359,11 +350,7 @@ const PeerSupportFinder = ({ onBack }) => {
     }
   };
 
-  /**
-   * ✅ UPDATED: Handle showing specialist details with ProfileModal format
-   */
   const handleShowDetails = (specialist) => {
-    // Transform specialist data to profile format expected by ProfileModal
     const profileData = {
       ...specialist,
       profile_type: 'peer_support',
@@ -377,7 +364,6 @@ const PeerSupportFinder = ({ onBack }) => {
   const handleRequestConnection = async (specialist) => {
     if (!profile?.id) return;
 
-    // Use the original specialist ID (peer_support_profiles.id)
     const specialistPeerProfileId = specialist.id;
     
     if (connectionRequests.has(specialistPeerProfileId)) {
@@ -461,7 +447,6 @@ I would appreciate the opportunity to discuss how your support could help me in 
       
       alert(`Peer support request sent to ${specialist.first_name || 'the specialist'}! They will be notified and can respond through their dashboard.`);
       
-      // Close modal if open
       setShowDetails(false);
       setSelectedSpecialist(null);
       
@@ -482,6 +467,31 @@ I would appreciate the opportunity to discuss how your support could help me in 
       spiritualAffiliation: '',
       serviceAreas: []
     });
+  };
+
+  /**
+   * ✅ NEW: Handle search with scroll to results
+   */
+  const handleSearchWithScroll = () => {
+    loadSpecialists();
+    setHasSearched(true);
+    
+    setTimeout(() => {
+      const resultsElement = document.querySelector('[data-results-section]');
+      if (resultsElement) {
+        resultsElement.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      }
+    }, 300);
+  };
+
+  /**
+   * ✅ NEW: Jump to results function
+   */
+  const handleJumpToResults = () => {
+    const resultsElement = document.querySelector('[data-results-section]');
+    if (resultsElement) {
+      resultsElement.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
   };
 
   const getConnectionStatus = (specialist) => {
@@ -544,244 +554,277 @@ I would appreciate the opportunity to discuss how your support could help me in 
           </p>
         </div>
 
-        {/* Basic Filters - keeping all existing filter code */}
-        <div className={styles.filtersSection}>
-          <div className={styles.card}>
-            <div className={styles.cardHeader}>
-              <h3 className={styles.cardTitle}>
-                🔍 Search Filters
-              </h3>
-              <p className={styles.cardSubtitle}>
-                Use these filters to find peer support specialists that match your needs
-              </p>
+        {/* ✅ NEW: Tabbed Filter Interface */}
+        <div className={styles.tabbedFiltersContainer}>
+          {/* Tab Navigation */}
+          <div className={styles.tabNavigation}>
+            <div className={styles.tabsList}>
+              <button
+                className={`${styles.tabButton} ${activeTab === 'basic' ? styles.active : ''}`}
+                onClick={() => setActiveTab('basic')}
+                disabled={loading}
+              >
+                <span className={styles.tabIcon}>📍</span>
+                <span className={styles.tabLabel}>Basic</span>
+              </button>
+              
+              <button
+                className={`${styles.tabButton} ${activeTab === 'specialties' ? styles.active : ''}`}
+                onClick={() => setActiveTab('specialties')}
+                disabled={loading}
+              >
+                <span className={styles.tabIcon}>🎯</span>
+                <span className={styles.tabLabel}>Specialties</span>
+                {getFilterCount('specialties') > 0 && (
+                  <span className={styles.filterBadge}>{getFilterCount('specialties')}</span>
+                )}
+              </button>
+              
+              <button
+                className={`${styles.tabButton} ${activeTab === 'recoveryMethods' ? styles.active : ''}`}
+                onClick={() => setActiveTab('recoveryMethods')}
+                disabled={loading}
+              >
+                <span className={styles.tabIcon}>🛠️</span>
+                <span className={styles.tabLabel}>Methods</span>
+                {getFilterCount('recoveryMethods') > 0 && (
+                  <span className={styles.filterBadge}>{getFilterCount('recoveryMethods')}</span>
+                )}
+              </button>
+              
+              <button
+                className={`${styles.tabButton} ${activeTab === 'serviceAreas' ? styles.active : ''}`}
+                onClick={() => setActiveTab('serviceAreas')}
+                disabled={loading}
+              >
+                <span className={styles.tabIcon}>📍</span>
+                <span className={styles.tabLabel}>Service Areas</span>
+                {getFilterCount('serviceAreas') > 0 && (
+                  <span className={styles.filterBadge}>{getFilterCount('serviceAreas')}</span>
+                )}
+              </button>
             </div>
-            
-            <div className={styles.cardContent}>
-              <div className={styles.filterGrid}>
-                <div className="form-group">
-                  <label className="label">Location (City, State)</label>
-                  <input
-                    className="input"
-                    type="text"
-                    placeholder="Austin, TX or Texas"
-                    value={filters.location}
-                    onChange={(e) => handleFilterChange('location', e.target.value)}
-                  />
-                </div>
+          </div>
 
-                <div className="form-group">
-                  <label className="label">Zip Code (optional)</label>
-                  <input
-                    className="input"
-                    type="text"
-                    placeholder="78701"
-                    value={filters.zipCode}
-                    onChange={(e) => handleFilterChange('zipCode', e.target.value)}
-                    maxLength="5"
-                  />
-                  <small className="text-gray-600">For local area matching</small>
+          {/* Tab Content */}
+          <div className={styles.tabContent}>
+            {/* BASIC FILTERS TAB */}
+            {activeTab === 'basic' && (
+              <div className={styles.card}>
+                <div className={styles.cardHeader}>
+                  <h3 className={styles.cardTitle}>🔍 Basic Search Filters</h3>
+                  <p className={styles.cardSubtitle}>
+                    Use these filters to find peer support specialists that match your needs
+                  </p>
                 </div>
                 
-                <div className="form-group">
-                  <label className="label">Minimum Experience</label>
-                  <select
-                    className="input"
-                    value={filters.minExperience}
-                    onChange={(e) => handleFilterChange('minExperience', e.target.value)}
-                  >
-                    <option value="">Any experience level</option>
-                    <option value="1">1+ years</option>
-                    <option value="2">2+ years</option>
-                    <option value="3">3+ years</option>
-                    <option value="5">5+ years</option>
-                    <option value="10">10+ years</option>
-                  </select>
-                </div>
+                <div className={styles.cardContent}>
+                  <div className={styles.filterGrid}>
+                    <div className="form-group">
+                      <label className="label">Location (City, State)</label>
+                      <input
+                        className="input"
+                        type="text"
+                        placeholder="Austin, TX or Texas"
+                        value={filters.location}
+                        onChange={(e) => handleFilterChange('location', e.target.value)}
+                      />
+                    </div>
 
-                <div className="form-group">
-                  <label className="label">Spiritual Affiliation (optional)</label>
-                  <select
-                    className="input"
-                    value={filters.spiritualAffiliation}
-                    onChange={(e) => handleFilterChange('spiritualAffiliation', e.target.value)}
-                  >
-                    <option value="">Any affiliation</option>
-                    {spiritualAffiliationOptions.map(option => (
-                      <option key={option.value} value={option.value}>{option.label}</option>
-                    ))}
-                  </select>
+                    <div className="form-group">
+                      <label className="label">Zip Code (optional)</label>
+                      <input
+                        className="input"
+                        type="text"
+                        placeholder="78701"
+                        value={filters.zipCode}
+                        onChange={(e) => handleFilterChange('zipCode', e.target.value)}
+                        maxLength="5"
+                      />
+                      <small className="text-gray-600">For local area matching</small>
+                    </div>
+                    
+                    <div className="form-group">
+                      <label className="label">Minimum Experience</label>
+                      <select
+                        className="input"
+                        value={filters.minExperience}
+                        onChange={(e) => handleFilterChange('minExperience', e.target.value)}
+                      >
+                        <option value="">Any experience level</option>
+                        <option value="1">1+ years</option>
+                        <option value="2">2+ years</option>
+                        <option value="3">3+ years</option>
+                        <option value="5">5+ years</option>
+                        <option value="10">10+ years</option>
+                      </select>
+                    </div>
+
+                    <div className="form-group">
+                      <label className="label">Spiritual Affiliation (optional)</label>
+                      <select
+                        className="input"
+                        value={filters.spiritualAffiliation}
+                        onChange={(e) => handleFilterChange('spiritualAffiliation', e.target.value)}
+                      >
+                        <option value="">Any affiliation</option>
+                        {spiritualAffiliationOptions.map(option => (
+                          <option key={option.value} value={option.value}>{option.label}</option>
+                        ))}
+                      </select>
+                    </div>
+                  </div>
+
+                  <div className={styles.quickActions}>
+                    <button
+                      className="btn btn-outline"
+                      onClick={handleShowNearby}
+                      disabled={loading}
+                    >
+                      🗺️ Find Nearby Specialists
+                    </button>
+
+                    <div className="checkbox-item">
+                      <input
+                        type="checkbox"
+                        id="accepting-clients"
+                        checked={filters.acceptingClients}
+                        onChange={(e) => handleFilterChange('acceptingClients', e.target.checked)}
+                      />
+                      <label htmlFor="accepting-clients">
+                        Only show specialists accepting new clients
+                      </label>
+                    </div>
+                  </div>
                 </div>
               </div>
+            )}
 
-              <div className={styles.quickActions}>
+            {/* SPECIALTIES TAB */}
+            {activeTab === 'specialties' && (
+              <div className={styles.card}>
+                <div className={styles.cardHeader}>
+                  <h3 className={styles.cardTitle}>🎯 Specialties</h3>
+                  <p className={styles.cardSubtitle}>
+                    Select specialties that are important to you in your recovery journey
+                  </p>
+                </div>
+                
+                <div className={styles.cardContent}>
+                  <div className={styles.gridAuto}>
+                    {specialtyOptions.map(specialty => (
+                      <div key={specialty} className="checkbox-item">
+                        <input
+                          type="checkbox"
+                          id={`specialty-${specialty}`}
+                          checked={filters.specialties.includes(specialty)}
+                          onChange={(e) => handleSpecialtyChange(specialty, e.target.checked)}
+                        />
+                        <label htmlFor={`specialty-${specialty}`}>
+                          {specialty}
+                        </label>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* RECOVERY METHODS TAB */}
+            {activeTab === 'recoveryMethods' && (
+              <div className={styles.card}>
+                <div className={styles.cardHeader}>
+                  <h3 className={styles.cardTitle}>🛠️ Recovery Methods</h3>
+                  <p className={styles.cardSubtitle}>
+                    Choose recovery methods you're interested in or currently using
+                  </p>
+                </div>
+                
+                <div className={styles.cardContent}>
+                  <div className={styles.gridAuto}>
+                    {recoveryMethodOptions.map(method => (
+                      <div key={method} className="checkbox-item">
+                        <input
+                          type="checkbox"
+                          id={`method-${method}`}
+                          checked={filters.recoveryMethods.includes(method)}
+                          onChange={(e) => handleRecoveryMethodChange(method, e.target.checked)}
+                        />
+                        <label htmlFor={`method-${method}`}>
+                          {method}
+                        </label>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* SERVICE AREAS TAB */}
+            {activeTab === 'serviceAreas' && (
+              <div className={styles.card}>
+                <div className={styles.cardHeader}>
+                  <h3 className={styles.cardTitle}>📍 Service Areas</h3>
+                  <p className={styles.cardSubtitle}>
+                    Select the types of service areas you prefer
+                  </p>
+                </div>
+                
+                <div className={styles.cardContent}>
+                  <div className={styles.gridAuto}>
+                    {serviceAreaOptions.map(area => (
+                      <div key={area} className="checkbox-item">
+                        <input
+                          type="checkbox"
+                          id={`area-${area}`}
+                          checked={filters.serviceAreas.includes(area)}
+                          onChange={(e) => handleServiceAreaChange(area, e.target.checked)}
+                        />
+                        <label htmlFor={`area-${area}`}>
+                          {area}
+                        </label>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            )}
+          </div>
+
+          {/* ✅ NEW: Sticky Search Actions Bar */}
+          <div className={styles.stickySearchBar}>
+            <div className={styles.searchBarContent}>
+              <div className={styles.searchBarInfo}>
+                <span className={styles.searchBarIcon}>🔍</span>
+                <span className={styles.searchBarText}>
+                  {filters.location && <><strong>Location:</strong> {filters.location}</>}
+                  {!filters.location && <><strong>Ready to search</strong> peer support specialists</>}
+                </span>
+              </div>
+
+              <div className={styles.searchBarActions}>
                 <button
-                  className="btn btn-outline"
-                  onClick={handleShowNearby}
+                  className="btn btn-outline btn-sm"
+                  onClick={clearFilters}
                   disabled={loading}
                 >
-                  🗺️ Find Nearby Specialists
+                  <span className={styles.btnIcon}>🗑️</span>
+                  Clear Filters
                 </button>
 
-                <div className="checkbox-item">
-                  <input
-                    type="checkbox"
-                    id="accepting-clients"
-                    checked={filters.acceptingClients}
-                    onChange={(e) => handleFilterChange('acceptingClients', e.target.checked)}
-                  />
-                  <label htmlFor="accepting-clients">
-                    Only show specialists accepting new clients
-                  </label>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        {/* Expandable Filters - keeping all existing code */}
-        <div className={styles.filtersSection}>
-          <div className={styles.card}>
-            <div 
-              className={styles.cardHeader}
-              onClick={() => toggleFilterExpansion('specialties')}
-              style={{ cursor: 'pointer' }}
-            >
-              <h3 className={styles.cardTitle}>
-                🎯 Specialties
-                {getFilterCount('specialties') > 0 && (
-                  <span className={styles.filterCount}>
-                    {getFilterCount('specialties')} selected
-                  </span>
+                {hasSearched && specialists.length > 0 && (
+                  <button
+                    className="btn btn-secondary btn-sm"
+                    onClick={handleJumpToResults}
+                  >
+                    <span className={styles.btnIcon}>⬇️</span>
+                    Jump to Results
+                  </button>
                 )}
-              </h3>
-              <div className={styles.expandIcon}>
-                {expandedFilters.specialties ? '−' : '+'}
-              </div>
-            </div>
-            
-            {expandedFilters.specialties && (
-              <div className={styles.cardContent}>
-                <p className={styles.cardSubtitle}>
-                  Select specialties that are important to you in your recovery journey
-                </p>
-                <div className={styles.gridAuto}>
-                  {specialtyOptions.map(specialty => (
-                    <div key={specialty} className="checkbox-item">
-                      <input
-                        type="checkbox"
-                        id={`specialty-${specialty}`}
-                        checked={filters.specialties.includes(specialty)}
-                        onChange={(e) => handleSpecialtyChange(specialty, e.target.checked)}
-                      />
-                      <label htmlFor={`specialty-${specialty}`}>
-                        {specialty}
-                      </label>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
-          </div>
-        </div>
 
-        <div className={styles.filtersSection}>
-          <div className={styles.card}>
-            <div 
-              className={styles.cardHeader}
-              onClick={() => toggleFilterExpansion('recoveryMethods')}
-              style={{ cursor: 'pointer' }}
-            >
-              <h3 className={styles.cardTitle}>
-                🛠️ Recovery Methods
-                {getFilterCount('recoveryMethods') > 0 && (
-                  <span className={styles.filterCount}>
-                    {getFilterCount('recoveryMethods')} selected
-                  </span>
-                )}
-              </h3>
-              <div className={styles.expandIcon}>
-                {expandedFilters.recoveryMethods ? '−' : '+'}
-              </div>
-            </div>
-            
-            {expandedFilters.recoveryMethods && (
-              <div className={styles.cardContent}>
-                <p className={styles.cardSubtitle}>
-                  Choose recovery methods you're interested in or currently using
-                </p>
-                <div className={styles.gridAuto}>
-                  {recoveryMethodOptions.map(method => (
-                    <div key={method} className="checkbox-item">
-                      <input
-                        type="checkbox"
-                        id={`method-${method}`}
-                        checked={filters.recoveryMethods.includes(method)}
-                        onChange={(e) => handleRecoveryMethodChange(method, e.target.checked)}
-                      />
-                      <label htmlFor={`method-${method}`}>
-                        {method}
-                      </label>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
-          </div>
-        </div>
-
-        <div className={styles.filtersSection}>
-          <div className={styles.card}>
-            <div 
-              className={styles.cardHeader}
-              onClick={() => toggleFilterExpansion('serviceAreas')}
-              style={{ cursor: 'pointer' }}
-            >
-              <h3 className={styles.cardTitle}>
-                📍 Service Areas
-                {getFilterCount('serviceAreas') > 0 && (
-                  <span className={styles.filterCount}>
-                    {getFilterCount('serviceAreas')} selected
-                  </span>
-                )}
-              </h3>
-              <div className={styles.expandIcon}>
-                {expandedFilters.serviceAreas ? '−' : '+'}
-              </div>
-            </div>
-            
-            {expandedFilters.serviceAreas && (
-              <div className={styles.cardContent}>
-                <p className={styles.cardSubtitle}>
-                  Select the types of service areas you prefer
-                </p>
-                <div className={styles.gridAuto}>
-                  {serviceAreaOptions.map(area => (
-                    <div key={area} className="checkbox-item">
-                      <input
-                        type="checkbox"
-                        id={`area-${area}`}
-                        checked={filters.serviceAreas.includes(area)}
-                        onChange={(e) => handleServiceAreaChange(area, e.target.checked)}
-                      />
-                      <label htmlFor={`area-${area}`}>
-                        {area}
-                      </label>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
-          </div>
-        </div>
-
-        {/* Search Actions and Results - keeping all existing code */}
-        <div className={styles.searchActionsSection}>
-          <div className={styles.card}>
-            <div className={styles.cardContent}>
-              <div className={styles.searchActions}>
                 <button
                   className="btn btn-primary"
-                  onClick={loadSpecialists}
+                  onClick={handleSearchWithScroll}
                   disabled={loading}
                 >
                   {loading ? (
@@ -790,36 +833,32 @@ I would appreciate the opportunity to discuss how your support could help me in 
                       Searching...
                     </>
                   ) : (
-                    '🔍 Search Specialists'
+                    <>
+                      <span className={styles.btnIcon}>🔍</span>
+                      Search Specialists
+                    </>
                   )}
                 </button>
-                
-                <button
-                  className="btn btn-outline"
-                  onClick={clearFilters}
-                  disabled={loading}
-                >
-                  Clear All Filters
-                </button>
               </div>
-
-              {(filters.specialties.length > 0 || filters.location || filters.zipCode || filters.minExperience || 
-                filters.recoveryMethods.length > 0 || filters.spiritualAffiliation || filters.serviceAreas.length > 0) && (
-                <div className={styles.activeFiltersDisplay}>
-                  <div className={styles.activeFiltersTitle}>Active Filters:</div>
-                  <div className={styles.activeFiltersList}>
-                    {filters.location && <span className={styles.activeFilter}>📍 {filters.location}</span>}
-                    {filters.zipCode && <span className={styles.activeFilter}>📮 {filters.zipCode}</span>}
-                    {filters.minExperience && <span className={styles.activeFilter}>⭐ {filters.minExperience}+ years</span>}
-                    {filters.specialties.length > 0 && <span className={styles.activeFilter}>🎯 {filters.specialties.length} specialties</span>}
-                    {filters.recoveryMethods.length > 0 && <span className={styles.activeFilter}>🛠️ {filters.recoveryMethods.length} methods</span>}
-                    {filters.spiritualAffiliation && <span className={styles.activeFilter}>🙏 {formatSpiritualAffiliation(filters.spiritualAffiliation)}</span>}
-                    {filters.serviceAreas.length > 0 && <span className={styles.activeFilter}>📍 {filters.serviceAreas.length} areas</span>}
-                    {filters.acceptingClients && <span className={styles.activeFilter}>✅ Accepting clients</span>}
-                  </div>
-                </div>
-              )}
             </div>
+
+            {/* Active Filters Display */}
+            {(filters.specialties.length > 0 || filters.location || filters.zipCode || filters.minExperience || 
+              filters.recoveryMethods.length > 0 || filters.spiritualAffiliation || filters.serviceAreas.length > 0) && (
+              <div className={styles.activeFiltersDisplay}>
+                <div className={styles.activeFiltersTitle}>Active Filters:</div>
+                <div className={styles.activeFiltersList}>
+                  {filters.location && <span className={styles.activeFilter}>📍 {filters.location}</span>}
+                  {filters.zipCode && <span className={styles.activeFilter}>📮 {filters.zipCode}</span>}
+                  {filters.minExperience && <span className={styles.activeFilter}>⭐ {filters.minExperience}+ years</span>}
+                  {filters.specialties.length > 0 && <span className={styles.activeFilter}>🎯 {filters.specialties.length} specialties</span>}
+                  {filters.recoveryMethods.length > 0 && <span className={styles.activeFilter}>🛠️ {filters.recoveryMethods.length} methods</span>}
+                  {filters.spiritualAffiliation && <span className={styles.activeFilter}>🙏 {formatSpiritualAffiliation(filters.spiritualAffiliation)}</span>}
+                  {filters.serviceAreas.length > 0 && <span className={styles.activeFilter}>📍 {filters.serviceAreas.length} areas</span>}
+                  {filters.acceptingClients && <span className={styles.activeFilter}>✅ Accepting clients</span>}
+                </div>
+              </div>
+            )}
           </div>
         </div>
 
@@ -847,171 +886,174 @@ I would appreciate the opportunity to discuss how your support could help me in 
           </div>
         )}
 
-        {!loading && !error && specialists.length === 0 && (
-          <div className={styles.emptyState}>
-            <div className={styles.emptyStateIcon}>🔍</div>
-            <h3 className={styles.emptyStateTitle}>No specialists found</h3>
-            <p className={styles.emptyStateMessage}>Try adjusting your filters or expanding your search area.</p>
-            <div className={styles.emptyStateActions}>
-              <button
-                className="btn btn-primary"
-                onClick={handleShowNearby}
-              >
-                Find Nearby Specialists
-              </button>
-              <button
-                className="btn btn-outline"
-                onClick={clearFilters}
-              >
-                Clear All Filters
-              </button>
-            </div>
-          </div>
-        )}
-
-        {!loading && !error && specialists.length > 0 && (
-          <div className={styles.specialistsContainer}>
-            <div className={styles.specialistsHeader}>
-              <h3 className="card-title">
-                {specialists.length} Specialist{specialists.length !== 1 ? 's' : ''} Found
-              </h3>
-              <div className={styles.specialistsStats}>
-                {specialists.filter(s => s.accepting_clients).length} accepting new clients •{' '}
-                {activeConnections.size} active connections •{' '}
-                {connectionRequests.size} pending requests
+        {/* ✅ Results Section with data attribute for scrolling */}
+        <div data-results-section>
+          {!loading && !error && specialists.length === 0 && (
+            <div className={styles.emptyState}>
+              <div className={styles.emptyStateIcon}>🔍</div>
+              <h3 className={styles.emptyStateTitle}>No specialists found</h3>
+              <p className={styles.emptyStateMessage}>Try adjusting your filters or expanding your search area.</p>
+              <div className={styles.emptyStateActions}>
+                <button
+                  className="btn btn-primary"
+                  onClick={handleShowNearby}
+                >
+                  Find Nearby Specialists
+                </button>
+                <button
+                  className="btn btn-outline"
+                  onClick={clearFilters}
+                >
+                  Clear All Filters
+                </button>
               </div>
             </div>
+          )}
 
-            <div className={styles.specialistsGrid}>
-              {specialists.map((specialist) => {
-                const connectionStatus = getConnectionStatus(specialist);
-                
-                return (
-                  <div key={specialist.user_id} className={styles.specialistCard}>
-                    <div className={styles.specialistCardHeader}>
-                      <div>
-                        <div className={styles.specialistName}>
-                          {specialist.first_name || 'Anonymous'}
-                        </div>
-                        <div className={styles.specialistTitle}>
-                          {specialist.professional_title || 'Peer Support Specialist'}
-                        </div>
-                      </div>
-                      <div className={styles.badgeGroup}>
-                        {specialist.is_licensed && (
-                          <span className="badge badge-success">Licensed</span>
-                        )}
-                        {specialist.accepting_clients ? (
-                          <span className="badge badge-success">Accepting Clients</span>
-                        ) : (
-                          <span className="badge badge-warning">Not Accepting</span>
-                        )}
-                        {activeConnections.has(specialist.id) && (
-                          <span className="badge badge-info">Connected</span>
-                        )}
-                        {connectionRequests.has(specialist.id) && !activeConnections.has(specialist.id) && (
-                          <span className="badge badge-warning">Request Sent</span>
-                        )}
-                      </div>
-                    </div>
+          {!loading && !error && specialists.length > 0 && (
+            <div className={styles.specialistsContainer}>
+              <div className={styles.specialistsHeader}>
+                <h3 className="card-title">
+                  {specialists.length} Specialist{specialists.length !== 1 ? 's' : ''} Found
+                </h3>
+                <div className={styles.specialistsStats}>
+                  {specialists.filter(s => s.accepting_clients).length} accepting new clients •{' '}
+                  {activeConnections.size} active connections •{' '}
+                  {connectionRequests.size} pending requests
+                </div>
+              </div>
 
-                    <div className="mb-4">
-                      <div className={styles.experienceInfo}>
+              <div className={styles.specialistsGrid}>
+                {specialists.map((specialist) => {
+                  const connectionStatus = getConnectionStatus(specialist);
+                  
+                  return (
+                    <div key={specialist.user_id} className={styles.specialistCard}>
+                      <div className={styles.specialistCardHeader}>
                         <div>
-                          <span className={styles.experienceLabel}>Experience:</span>
-                          <span className={styles.experienceValue}>
-                            {formatExperienceText(specialist.years_experience)}
-                          </span>
+                          <div className={styles.specialistName}>
+                            {specialist.first_name || 'Anonymous'}
+                          </div>
+                          <div className={styles.specialistTitle}>
+                            {specialist.professional_title || 'Peer Support Specialist'}
+                          </div>
                         </div>
-                        <div>
-                          <span className={styles.experienceLabel}>Service Area:</span>
-                          <span className={styles.experienceValue}>
-                            {formatLocationText(specialist)}
-                          </span>
+                        <div className={styles.badgeGroup}>
+                          {specialist.is_licensed && (
+                            <span className="badge badge-success">Licensed</span>
+                          )}
+                          {specialist.accepting_clients ? (
+                            <span className="badge badge-success">Accepting Clients</span>
+                          ) : (
+                            <span className="badge badge-warning">Not Accepting</span>
+                          )}
+                          {activeConnections.has(specialist.id) && (
+                            <span className="badge badge-info">Connected</span>
+                          )}
+                          {connectionRequests.has(specialist.id) && !activeConnections.has(specialist.id) && (
+                            <span className="badge badge-warning">Request Sent</span>
+                          )}
                         </div>
                       </div>
 
-                      {specialist.spiritual_affiliation && (
+                      <div className="mb-4">
                         <div className={styles.experienceInfo}>
                           <div>
-                            <span className={styles.experienceLabel}>Spiritual Background:</span>
+                            <span className={styles.experienceLabel}>Experience:</span>
                             <span className={styles.experienceValue}>
-                              {formatSpiritualAffiliation(specialist.spiritual_affiliation)}
+                              {formatExperienceText(specialist.years_experience)}
+                            </span>
+                          </div>
+                          <div>
+                            <span className={styles.experienceLabel}>Service Area:</span>
+                            <span className={styles.experienceValue}>
+                              {formatLocationText(specialist)}
                             </span>
                           </div>
                         </div>
-                      )}
 
-                      {specialist.specialties?.length > 0 && (
-                        <div className={styles.specialtiesSection}>
-                          <div className="label mb-2">Specialties</div>
-                          <div className={styles.specialtiesList}>
-                            {specialist.specialties.slice(0, 4).map((specialty, i) => (
-                              <span key={i} className={styles.specialtyBadge}>
-                                {specialty}
+                        {specialist.spiritual_affiliation && (
+                          <div className={styles.experienceInfo}>
+                            <div>
+                              <span className={styles.experienceLabel}>Spiritual Background:</span>
+                              <span className={styles.experienceValue}>
+                                {formatSpiritualAffiliation(specialist.spiritual_affiliation)}
                               </span>
-                            ))}
-                          </div>
-                          {specialist.specialties.length > 4 && (
-                            <div className={styles.moreSpecialties}>
-                              +{specialist.specialties.length - 4} more
                             </div>
-                          )}
-                        </div>
-                      )}
-
-                      {specialist.supported_recovery_methods?.length > 0 && (
-                        <div className={styles.specialtiesSection}>
-                          <div className="label mb-2">Recovery Methods</div>
-                          <div className={styles.specialtiesList}>
-                            {specialist.supported_recovery_methods.slice(0, 3).map((method, i) => (
-                              <span key={i} className={styles.recoveryMethodBadge}>
-                                {method}
-                              </span>
-                            ))}
                           </div>
-                          {specialist.supported_recovery_methods.length > 3 && (
-                            <div className={styles.moreSpecialities}>
-                              +{specialist.supported_recovery_methods.length - 3} more
+                        )}
+
+                        {specialist.specialties?.length > 0 && (
+                          <div className={styles.specialtiesSection}>
+                            <div className="label mb-2">Specialties</div>
+                            <div className={styles.specialtiesList}>
+                              {specialist.specialties.slice(0, 4).map((specialty, i) => (
+                                <span key={i} className={styles.specialtyBadge}>
+                                  {specialty}
+                                </span>
+                              ))}
                             </div>
-                          )}
-                        </div>
-                      )}
+                            {specialist.specialties.length > 4 && (
+                              <div className={styles.moreSpecialties}>
+                                +{specialist.specialties.length - 4} more
+                              </div>
+                            )}
+                          </div>
+                        )}
 
-                      {specialist.bio && (
-                        <div className={styles.bioSection}>
-                          <p className={styles.bioText}>
-                            {specialist.bio.length > 150 
-                              ? `${specialist.bio.substring(0, 150)}...` 
-                              : specialist.bio
-                            }
-                          </p>
-                        </div>
-                      )}
-                    </div>
+                        {specialist.supported_recovery_methods?.length > 0 && (
+                          <div className={styles.specialtiesSection}>
+                            <div className="label mb-2">Recovery Methods</div>
+                            <div className={styles.specialtiesList}>
+                              {specialist.supported_recovery_methods.slice(0, 3).map((method, i) => (
+                                <span key={i} className={styles.recoveryMethodBadge}>
+                                  {method}
+                                </span>
+                              ))}
+                            </div>
+                            {specialist.supported_recovery_methods.length > 3 && (
+                              <div className={styles.moreSpecialities}>
+                                +{specialist.supported_recovery_methods.length - 3} more
+                              </div>
+                            )}
+                          </div>
+                        )}
 
-                    <div className={styles.cardActions}>
-                      <button
-                        className="btn btn-outline"
-                        onClick={() => handleShowDetails(specialist)}
-                      >
-                        View Details
-                      </button>
-                      
-                      <button
-                        className={`btn ${connectionStatus.className || 'btn-primary'}`}
-                        onClick={() => handleRequestConnection(specialist)}
-                        disabled={connectionStatus.disabled}
-                      >
-                        {connectionStatus.text}
-                      </button>
+                        {specialist.bio && (
+                          <div className={styles.bioSection}>
+                            <p className={styles.bioText}>
+                              {specialist.bio.length > 150 
+                                ? `${specialist.bio.substring(0, 150)}...` 
+                                : specialist.bio
+                              }
+                            </p>
+                          </div>
+                        )}
+                      </div>
+
+                      <div className={styles.cardActions}>
+                        <button
+                          className="btn btn-outline"
+                          onClick={() => handleShowDetails(specialist)}
+                        >
+                          View Details
+                        </button>
+                        
+                        <button
+                          className={`btn ${connectionStatus.className || 'btn-primary'}`}
+                          onClick={() => handleRequestConnection(specialist)}
+                          disabled={connectionStatus.disabled}
+                        >
+                          {connectionStatus.text}
+                        </button>
+                      </div>
                     </div>
-                  </div>
-                );
-              })}
+                  );
+                })}
+              </div>
             </div>
-          </div>
-        )}
+          )}
+        </div>
 
         {onBack && (
           <div className="text-center">
@@ -1025,7 +1067,6 @@ I would appreciate the opportunity to discuss how your support could help me in 
         )}
       </div>
 
-      {/* ✅ UPDATED: Use consolidated ProfileModal */}
       {showDetails && selectedSpecialist && (
         <ProfileModal
           isOpen={showDetails}

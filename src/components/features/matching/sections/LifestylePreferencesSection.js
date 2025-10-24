@@ -31,7 +31,7 @@ const LifestylePreferencesSection = ({
       setTimeout(() => {
         workScheduleRef.current.scrollIntoView({ 
           behavior: 'smooth', 
-          block: 'center' 
+          block: 'start' 
         });
         workScheduleRef.current.focus();
       }, 300);
@@ -87,22 +87,7 @@ const LifestylePreferencesSection = ({
     return warnings;
   }, [formData.social_level, formData.cleanliness_level, formData.noise_tolerance]);
 
-  // Calculate lifestyle compatibility score
-  const calculateLifestyleScore = useCallback(() => {
-    let score = 0;
-    let factors = 0;
-    
-    if (formData.work_schedule) { score += 20; factors++; }
-    if (formData.social_level) { score += 20; factors++; }
-    if (formData.cleanliness_level) { score += 20; factors++; }
-    if (formData.noise_tolerance) { score += 20; factors++; }
-    if (formData.guests_policy) { score += 20; factors++; }
-    
-    return factors > 0 ? Math.round(score / factors) : 0;
-  }, [formData]);
-
   const lifestyleWarnings = validateLifestyleBalance();
-  const lifestyleCompletionScore = calculateLifestyleScore();
 
   return (
     <>
@@ -232,9 +217,18 @@ const LifestylePreferencesSection = ({
                 required
               />
               <div className={styles.rangeLabels || 'range-labels'} style={{ display: 'flex', justifyContent: 'space-between', marginTop: '8px' }}>
-                <span className="text-xs" style={{ flex: 1, textAlign: 'left' }}>Private (1)</span>
-                <span className="text-xs" style={{ flex: 1, textAlign: 'center' }}>Balanced (3)</span>
-                <span className="text-xs" style={{ flex: 1, textAlign: 'right' }}>Very Social (5)</span>
+                <div style={{ flex: 1, textAlign: 'center' }}>
+                  <div className="text-xs">Private</div>
+                  <div className="text-xs">(1)</div>
+                </div>
+                <div style={{ flex: 1, textAlign: 'center' }}>
+                  <div className="text-xs">Balanced</div>
+                  <div className="text-xs">(3)</div>
+                </div>
+                <div style={{ flex: 1, textAlign: 'center' }}>
+                  <div className="text-xs">Very Social</div>
+                  <div className="text-xs">(5)</div>
+                </div>
               </div>
             </div>
             <div className={styles.currentValueDisplay || 'current-value-display'}>
@@ -270,9 +264,18 @@ const LifestylePreferencesSection = ({
                 required
               />
               <div className={styles.rangeLabels || 'range-labels'} style={{ display: 'flex', justifyContent: 'space-between', marginTop: '8px' }}>
-                <span className="text-xs" style={{ flex: 1, textAlign: 'left' }}>Relaxed (1)</span>
-                <span className="text-xs" style={{ flex: 1, textAlign: 'center' }}>Moderate (3)</span>
-                <span className="text-xs" style={{ flex: 1, textAlign: 'right' }}>Very Clean (5)</span>
+                <div style={{ flex: 1, textAlign: 'center' }}>
+                  <div className="text-xs">Relaxed</div>
+                  <div className="text-xs">(1)</div>
+                </div>
+                <div style={{ flex: 1, textAlign: 'center' }}>
+                  <div className="text-xs">Moderate</div>
+                  <div className="text-xs">(3)</div>
+                </div>
+                <div style={{ flex: 1, textAlign: 'center' }}>
+                  <div className="text-xs">Very Clean</div>
+                  <div className="text-xs">(5)</div>
+                </div>
               </div>
             </div>
             <div className={styles.currentValueDisplay || 'current-value-display'}>
@@ -308,9 +311,18 @@ const LifestylePreferencesSection = ({
                 required
               />
               <div className={styles.rangeLabels || 'range-labels'} style={{ display: 'flex', justifyContent: 'space-between', marginTop: '8px' }}>
-                <span className="text-xs" style={{ flex: 1, textAlign: 'left' }}>Very Quiet (1)</span>
-                <span className="text-xs" style={{ flex: 1, textAlign: 'center' }}>Moderate (3)</span>
-                <span className="text-xs" style={{ flex: 1, textAlign: 'right' }}>Loud OK (5)</span>
+                <div style={{ flex: 1, textAlign: 'center' }}>
+                  <div className="text-xs">Very Quiet</div>
+                  <div className="text-xs">(1)</div>
+                </div>
+                <div style={{ flex: 1, textAlign: 'center' }}>
+                  <div className="text-xs">Moderate</div>
+                  <div className="text-xs">(3)</div>
+                </div>
+                <div style={{ flex: 1, textAlign: 'center' }}>
+                  <div className="text-xs">Loud OK</div>
+                  <div className="text-xs">(5)</div>
+                </div>
               </div>
             </div>
             <div className={styles.currentValueDisplay || 'current-value-display'}>
@@ -614,46 +626,29 @@ const LifestylePreferencesSection = ({
             <h4 className="card-title">Lifestyle Compatibility Status</h4>
           </div>
           
-          <div className="grid-2 mb-4">
-            <div>
-              <strong>Core Compatibility Factors:</strong>
-              <ul className="mt-2 text-sm">
-                <li className={formData.work_schedule ? 'text-green-600' : 'text-red-600'}>
-                  {formData.work_schedule ? '✓' : '✗'} Work Schedule
-                </li>
-                <li className={formData.social_level ? 'text-green-600' : 'text-red-600'}>
-                  {formData.social_level ? '✓' : '✗'} Social Level ({formData.social_level || 'not set'})
-                </li>
-                <li className={formData.cleanliness_level ? 'text-green-600' : 'text-red-600'}>
-                  {formData.cleanliness_level ? '✓' : '✗'} Cleanliness Level ({formData.cleanliness_level || 'not set'})
-                </li>
-                <li className={formData.noise_tolerance ? 'text-green-600' : 'text-red-600'}>
-                  {formData.noise_tolerance ? '✓' : '✗'} Noise Tolerance ({formData.noise_tolerance || 'not set'})
-                </li>
-              </ul>
-            </div>
-            
-            <div>
-              <strong>Lifestyle Completion Score:</strong>
-              <div className="mt-2">
-                <div className="progress-bar">
-                  <div 
-                    className="progress-fill" 
-                    style={{ width: `${lifestyleCompletionScore}%` }}
-                  />
-                </div>
-                <span className="text-sm text-gray-600">
-                  {lifestyleCompletionScore}% complete
-                </span>
-              </div>
-            </div>
+          <div className="mb-4">
+            <strong>Core Compatibility Factors:</strong>
+            <ul className="mt-2 text-sm">
+              <li className={formData.work_schedule ? 'text-green-600' : 'text-red-600'}>
+                {formData.work_schedule ? '✓' : '✗'} Work Schedule
+              </li>
+              <li className={formData.social_level ? 'text-green-600' : 'text-red-600'}>
+                {formData.social_level ? '✓' : '✗'} Social Level ({formData.social_level || 'not set'})
+              </li>
+              <li className={formData.cleanliness_level ? 'text-green-600' : 'text-red-600'}>
+                {formData.cleanliness_level ? '✓' : '✗'} Cleanliness Level ({formData.cleanliness_level || 'not set'})
+              </li>
+              <li className={formData.noise_tolerance ? 'text-green-600' : 'text-red-600'}>
+                {formData.noise_tolerance ? '✓' : '✗'} Noise Tolerance ({formData.noise_tolerance || 'not set'})
+              </li>
+            </ul>
           </div>
 
           {validationMessage && (
             <div className="alert alert-warning">
               <strong>Validation Note:</strong> {validationMessage}
             </div>
-            )}
+          )}
         </div>
       )}
     </>
