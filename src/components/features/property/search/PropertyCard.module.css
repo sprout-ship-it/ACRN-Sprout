@@ -128,9 +128,36 @@
   line-height: 1.4;
 }
 
-/* ==================== PROPERTY ACTIONS ==================== */
+/* ==================== PROPERTY ACTIONS - UPDATED LAYOUT ==================== */
 .propertyActions {
-  margin-top: var(--spacing-md);
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-sm);
+  margin-top: var(--spacing-lg);
+}
+
+.actionButtonsRow {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(80px, 1fr));
+  gap: var(--spacing-sm);
+}
+
+.fullWidth {
+  width: 100%;
+}
+
+/* Ensure buttons don't overflow */
+.actionButtonsRow .btn {
+  font-size: 0.875rem;
+  padding: var(--spacing-sm);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* Keep secondary actions for housing inquiry */
+.secondaryActions {
+  margin-top: var(--spacing-sm);
 }
 
 .primaryActions {
@@ -138,14 +165,6 @@
   grid-template-columns: 1fr 1fr;
   gap: var(--spacing-sm);
   margin-bottom: var(--spacing-sm);
-}
-
-.secondaryActions {
-  margin-top: var(--spacing-sm);
-}
-
-.fullWidth {
-  width: 100%;
 }
 
 /* ==================== ENHANCED SAVE BUTTON STATES ==================== */
@@ -272,9 +291,17 @@
     font-size: 1.1rem;
   }
 
-  .primaryActions {
+.primaryActions {
     grid-template-columns: 1fr;
     gap: var(--spacing-xs);
+  }
+
+  .actionButtonsRow {
+    grid-template-columns: 1fr;
+  }
+  
+  .actionButtonsRow .btn {
+    width: 100%;
   }
 
   .propertyActions .btn-sm {

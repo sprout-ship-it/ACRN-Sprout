@@ -26,6 +26,262 @@
   margin-right: auto;
 }
 
+/* ==================== NEW: TABBED FILTERS INTERFACE ==================== */
+.tabbedFiltersContainer {
+  background: white;
+  border-radius: var(--radius-xl);
+  border: 2px solid var(--border-beige);
+  box-shadow: var(--shadow-md);
+  overflow: hidden;
+  margin-bottom: var(--spacing-xl);
+}
+
+/* Tab Navigation */
+.tabNavigation {
+  background: var(--bg-light-cream);
+  border-bottom: 2px solid var(--border-beige);
+  padding: var(--spacing-sm) var(--spacing-lg);
+}
+
+.tabsList {
+  display: flex;
+  flex-direction: row;
+  flex-wrap: nowrap;
+  gap: var(--spacing-xs);
+  align-items: center;
+}
+
+.tabButton {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--spacing-sm);
+  padding: var(--spacing-md) var(--spacing-lg);
+  background: white;
+  border: 2px solid var(--border-beige);
+  border-radius: var(--radius-md);
+  color: var(--gray-700);
+  font-weight: 600;
+  font-size: 0.95rem;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  position: relative;
+}
+
+.tabButton:hover:not(:disabled) {
+  border-color: var(--primary-purple);
+  background: rgba(160, 32, 240, 0.05);
+  transform: translateY(-1px);
+}
+
+.tabButton.active {
+  background: var(--primary-purple);
+  border-color: var(--primary-purple);
+  color: white;
+  box-shadow: 0 4px 12px rgba(160, 32, 240, 0.2);
+}
+
+.tabButton:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.tabIcon {
+  font-size: 1.25rem;
+  line-height: 1;
+}
+
+.tabLabel {
+  font-size: 0.95rem;
+}
+
+.filterBadge {
+  position: absolute;
+  top: -8px;
+  right: -8px;
+  background: var(--error-bg);
+  color: var(--error-text);
+  border: 2px solid white;
+  border-radius: 50%;
+  min-width: 24px;
+  height: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.75rem;
+  font-weight: 700;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.tabButton.active .filterBadge {
+  border-color: var(--primary-purple);
+}
+
+/* Tab Content */
+.tabContent {
+  padding: var(--spacing-xl);
+  background: white;
+}
+
+/* ==================== NEW: STICKY SEARCH BAR ==================== */
+.stickySearchBar {
+  position: sticky;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  background: white;
+  border-top: 2px solid var(--border-beige);
+  box-shadow: 0 -4px 20px rgba(0, 0, 0, 0.1);
+  z-index: 100;
+  padding: var(--spacing-md) var(--spacing-lg);
+  margin: 0 calc(-1 * var(--spacing-xl));
+  margin-top: 0;
+}
+
+.searchBarContent {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--spacing-lg);
+  max-width: 1400px;
+  margin: 0 auto;
+}
+
+.searchBarInfo {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-md);
+  flex: 1;
+}
+
+.searchBarIcon {
+  font-size: 1.5rem;
+  flex-shrink: 0;
+}
+
+.searchBarText {
+  color: var(--gray-700);
+  font-size: 0.95rem;
+}
+
+.searchBarText strong {
+  color: var(--primary-purple);
+  font-weight: 600;
+}
+
+.searchBarActions {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-sm);
+  flex-shrink: 0;
+  justify-content: flex-end;
+}
+
+.btnIcon {
+  font-size: 1rem;
+  line-height: 1;
+  margin-right: 0.25rem;
+}
+
+/* ==================== RESPONSIVE: TABBED INTERFACE ==================== */
+@media (max-width: 1024px) {
+  .searchBarContent {
+    flex-direction: column;
+    align-items: stretch;
+    gap: var(--spacing-md);
+  }
+
+  .searchBarInfo {
+    justify-content: center;
+    text-align: center;
+  }
+
+  .searchBarActions {
+    justify-content: center;
+    flex-wrap: wrap;
+  }
+}
+
+@media (max-width: 768px) {
+  .tabNavigation {
+    padding: var(--spacing-sm);
+  }
+
+  .tabsList {
+    gap: var(--spacing-xs);
+  }
+
+  .tabButton {
+    padding: var(--spacing-sm) var(--spacing-md);
+    font-size: 0.875rem;
+    flex-direction: column;
+    gap: var(--spacing-xs);
+  }
+
+  .tabIcon {
+    font-size: 1.125rem;
+  }
+
+  .tabLabel {
+    font-size: 0.75rem;
+  }
+
+  .tabContent {
+    padding: var(--spacing-lg);
+  }
+
+  .stickySearchBar {
+    padding: var(--spacing-sm);
+    margin: 0 calc(-1 * var(--spacing-lg));
+  }
+
+  .searchBarIcon {
+    font-size: 1.25rem;
+  }
+
+  .searchBarText {
+    font-size: 0.875rem;
+  }
+}
+
+@media (max-width: 480px) {
+  .tabButton {
+    min-width: 0;
+    padding: var(--spacing-xs) var(--spacing-sm);
+  }
+
+  .tabIcon {
+    font-size: 1rem;
+  }
+
+  .tabLabel {
+    font-size: 0.7rem;
+  }
+
+  .tabContent {
+    padding: var(--spacing-md);
+  }
+
+  .searchBarActions {
+    flex-direction: column;
+    width: 100%;
+  }
+
+  .searchBarActions .btn {
+    width: 100%;
+    justify-content: center;
+  }
+
+  .filterBadge {
+    min-width: 20px;
+    height: 20px;
+    font-size: 0.65rem;
+    top: -6px;
+    right: -6px;
+  }
+}
+
 /* ==================== NEW: FILTERS SECTIONS (Expandable Cards) ==================== */
 .filtersSection {
   margin-bottom: var(--spacing-lg);

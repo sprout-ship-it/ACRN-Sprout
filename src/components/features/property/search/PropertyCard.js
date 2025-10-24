@@ -161,24 +161,18 @@ const handleSendHousingInquiry = async () => {
           </div>
         )}
 
-{/* ✅ Action Buttons with View Details */}
+{/* ✅ UPDATED: Action Buttons - View Details on top, others below */}
         <div className={styles.propertyActions}>
-          <div className={styles.primaryActions}>
-            {/* ✅ NEW: View Details Button */}
-            <button
-              className="btn btn-primary btn-sm"
-              onClick={() => onViewDetails(property)}
-            >
-              👁️ View Details
-            </button>
-            
-            <button
-              className="btn btn-outline btn-sm"
-              onClick={() => onContactLandlord(property)}
-            >
-              📞 Contact Owner
-            </button>
-            
+          {/* Row 1: View Details (Full Width) */}
+          <button
+            className={`btn btn-primary btn-sm ${styles.fullWidth}`}
+            onClick={() => onViewDetails(property)}
+          >
+            👁️ View Full Details
+          </button>
+
+          {/* Row 2: Save, Contact, Send Inquiry */}
+          <div className={styles.actionButtonsRow}>
             <button
               className={`btn btn-sm ${isSaved ? styles.btnSaved : 'btn-outline'} ${saving ? styles.btnLoading : ''}`}
               onClick={handleSaveClick}
@@ -201,13 +195,18 @@ const handleSendHousingInquiry = async () => {
                 </>
               )}
             </button>
-          </div>
+            
+            <button
+              className="btn btn-outline btn-sm"
+              onClick={() => onContactLandlord(property)}
+            >
+              📞 Contact
+            </button>
 
-          {/* ✅ Housing Inquiry with pending request handling */}
-          {property.landlord_id && (
-            <div className={styles.secondaryActions}>
+            {/* Send Housing Inquiry - only show if landlord_id exists */}
+            {property.landlord_id && (
               <button
-                className={`btn btn-sm ${styles.fullWidth} ${hasPendingRequest ? styles.btnRequestSent : 'btn-secondary'} ${sendingInquiry ? styles.btnLoading : ''}`}
+                className={`btn btn-sm ${hasPendingRequest ? styles.btnRequestSent : 'btn-secondary'} ${sendingInquiry ? styles.btnLoading : ''}`}
                 onClick={handleSendHousingInquiry}
                 disabled={sendingInquiry || hasPendingRequest}
                 title={hasPendingRequest ? 'Request already sent - check Connection Hub for status' : 'Send housing inquiry to landlord'}
@@ -215,16 +214,16 @@ const handleSendHousingInquiry = async () => {
                 {sendingInquiry ? (
                   <>
                     <span className={styles.loadingSpinner}></span>
-                    Sending Inquiry...
+                    Sending...
                   </>
                 ) : hasPendingRequest ? (
-                  '⏳ Request Sent'
+                  '⏳ Sent'
                 ) : (
-                  '📧 Send Housing Inquiry'
+                  '📧 Inquire'
                 )}
               </button>
-            </div>
-          )}
+            )}
+          </div>
         </div>
 
         {/* ✅ Favorited Footer Message */}
