@@ -1,17 +1,24 @@
-// src/components/features/employer/components/EmployerFilterPanel.js
+// src/components/features/employer/components/EmployerFilterPanel.js - TABBED VERSION
 import React, { useState } from 'react';
 import { 
   industryOptions,
-  businessTypeOptions, 
+  businessTypeOptions,
+  companySizeOptions,
+  remoteWorkOptions,
+  drugTestingPolicyOptions,
+  backgroundCheckPolicyOptions,
   recoveryFeatureOptions,
   jobTypeOptions,
-  remoteWorkOptions,
+  benefitsOptions,
   stateOptions,
   formatFeature,
   formatBusinessType,
+  formatCompanySize,
   formatRemoteWork,
+  formatDrugTestingPolicy,
+  formatBackgroundCheckPolicy,
   getFilterSummary,
-  hasActiveFilters
+  getActiveFilterCount
 } from '../utils/employerUtils';
 import styles from './EmployerFilterPanel.module.css';
 
@@ -24,7 +31,7 @@ const EmployerFilterPanel = ({
   onFindNearby,
   onSearch
 }) => {
-  const [showMoreFilters, setShowMoreFilters] = useState(false);
+  const [activeTab, setActiveTab] = useState('basic');
   const [isCollapsed, setIsCollapsed] = useState(false);
 
   // Handle input changes for simple filters
@@ -37,32 +44,19 @@ const EmployerFilterPanel = ({
     onArrayFilterChange(field, value, isChecked);
   };
 
-  // Toggle more filters visibility
-  const toggleMoreFilters = () => {
-    setShowMoreFilters(!showMoreFilters);
-  };
-
   // Toggle panel collapse (mobile)
   const toggleCollapse = () => {
     setIsCollapsed(!isCollapsed);
   };
 
-  // Get count of active filters for display
-  const activeFilterCount = () => {
-    let count = 0;
-    if (filters.industry) count++;
-    if (filters.location) count++;
-    if (filters.state) count++;
-    if (filters.businessType) count++;
-    if (filters.remoteWork) count++;
-    if (filters.recoveryFeatures?.length > 0) count++;
-    if (filters.jobTypes?.length > 0) count++;
-    if (filters.hasOpenings) count++;
-    if (!filters.isActivelyHiring) count++; // Only count if different from default
-    return count;
-  };
+  const activeCount = getActiveFilterCount(filters);
 
-  const activeCount = activeFilterCount();
+  // Tab configuration
+  const tabs = [
+    { id: 'basic', label: 'Basic Search', icon: '🔍' },
+    { id: 'work', label: 'Work & Benefits', icon: '💼' },
+    { id: 'policies', label: 'Policies & Culture', icon: '🤝' }
+  ];
 
   return (
     <div className={`filter-panel card ${styles.filterPanel}`}>
@@ -81,192 +75,273 @@ const EmployerFilterPanel = ({
 
       {/* Filter Content */}
       <div className={`${styles.filterContent} ${isCollapsed ? styles.collapsed : ''}`}>
-        {/* Basic Filters - Always Visible */}
-        <div className={styles.basicFilters}>
-          <div className={styles.filterRow}>
-            <div className="form-group">
-              <label className="label">Industry</label>
-              <select
-                className="input"
-                value={filters.industry}
-                onChange={(e) => handleFilterChange('industry', e.target.value)}
-                disabled={loading}
-              >
-                <option value="">All Industries</option>
-                {industryOptions.map(industry => (
-                  <option key={industry} value={industry}>{industry}</option>
-                ))}
-              </select>
-            </div>
-            
-            <div className="form-group">
-              <label className="label">Location (City, State)</label>
-              <div className={styles.locationInputGroup}>
-                <input
-                  className={`input ${styles.locationInput}`}
-                  type="text"
-                  placeholder="e.g. Austin, TX or Texas"
-                  value={filters.location}
-                  onChange={(e) => handleFilterChange('location', e.target.value)}
-                  disabled={loading}
-                />
-                <button
-                  className={`btn btn-outline ${styles.locationNearbyBtn}`}
-                  onClick={onFindNearby}
-                  disabled={loading}
-                  title="Find employers near your location"
-                >
-                  📍
-                </button>
-              </div>
-            </div>
-
-            <div className="form-group">
-              <label className="label">State</label>
-              <select
-                className="input"
-                value={filters.state}
-                onChange={(e) => handleFilterChange('state', e.target.value)}
-                disabled={loading}
-              >
-                <option value="">All States</option>
-                {stateOptions.map(state => (
-                  <option key={state} value={state}>{state}</option>
-                ))}
-              </select>
-            </div>
-          </div>
-
-          {/* Quick Toggle Filters */}
-          <div className={styles.quickToggles}>
-            <div className={styles.toggleGroup}>
-              <div className="checkbox-item">
-                <input
-                  type="checkbox"
-                  id="actively-hiring"
-                  checked={filters.isActivelyHiring}
-                  onChange={(e) => handleFilterChange('isActivelyHiring', e.target.checked)}
-                  disabled={loading}
-                />
-                <label htmlFor="actively-hiring">
-                  🟢 Only actively hiring employers
-                </label>
-              </div>
-
-              <div className="checkbox-item">
-                <input
-                  type="checkbox"
-                  id="has-openings"
-                  checked={filters.hasOpenings}
-                  onChange={(e) => handleFilterChange('hasOpenings', e.target.checked)}
-                  disabled={loading}
-                />
-                <label htmlFor="has-openings">
-                  💼 Must have specific job openings
-                </label>
-              </div>
-            </div>
-          </div>
+        
+        {/* Tab Navigation */}
+        <div className={styles.tabNavigation}>
+          {tabs.map(tab => (
+            <button
+              key={tab.id}
+              className={`${styles.tabButton} ${activeTab === tab.id ? styles.active : ''}`}
+              onClick={() => setActiveTab(tab.id)}
+              type="button"
+            >
+              <span className={styles.tabIcon}>{tab.icon}</span>
+              <span className={styles.tabLabel}>{tab.label}</span>
+            </button>
+          ))}
         </div>
 
-        {/* More Filters Toggle */}
-        <div className={styles.moreFiltersToggle}>
-          <button
-            className={`btn btn-outline ${styles.toggleBtn}`}
-            onClick={toggleMoreFilters}
-            type="button"
-          >
-            {showMoreFilters ? '▲ Fewer Filters' : '▼ More Filters'}
-            {!showMoreFilters && activeCount > 3 && (
-              <span className={styles.hiddenFilterHint}>
-                +{activeCount - 3} more active
-              </span>
-            )}
-          </button>
-        </div>
+        {/* Tab Content */}
+        <div className={styles.tabContent}>
+          
+          {/* TAB 1: BASIC SEARCH */}
+          {activeTab === 'basic' && (
+            <div className={styles.tabPanel}>
+              <div className={styles.filterSection}>
+                <h4 className={styles.sectionTitle}>Location & Industry</h4>
+                
+                <div className={styles.filterRow}>
+                  <div className="form-group">
+                    <label className="label">Industry</label>
+                    <select
+                      className="input"
+                      value={filters.industry}
+                      onChange={(e) => handleFilterChange('industry', e.target.value)}
+                      disabled={loading}
+                    >
+                      <option value="">All Industries</option>
+                      {industryOptions.map(industry => (
+                        <option key={industry} value={industry}>{industry}</option>
+                      ))}
+                    </select>
+                  </div>
+                  
+                  <div className="form-group">
+                    <label className="label">Location (City, State)</label>
+                    <div className={styles.locationInputGroup}>
+                      <input
+                        className={`input ${styles.locationInput}`}
+                        type="text"
+                        placeholder="e.g. Austin, TX or Texas"
+                        value={filters.location}
+                        onChange={(e) => handleFilterChange('location', e.target.value)}
+                        disabled={loading}
+                      />
+                      <button
+                        className={`btn btn-outline ${styles.locationNearbyBtn}`}
+                        onClick={onFindNearby}
+                        disabled={loading}
+                        title="Find employers near your location"
+                      >
+                        📍
+                      </button>
+                    </div>
+                  </div>
 
-        {/* Advanced Filters - Collapsible */}
-        <div className={`${styles.moreFilters} ${showMoreFilters ? styles.expanded : ''}`}>
-          {/* Business Details */}
-          <div className={styles.filterSection}>
-            <h4 className={styles.sectionTitle}>Company Details</h4>
-            <div className={styles.filterRow}>
-              <div className="form-group">
-                <label className="label">Business Type</label>
-                <select
-                  className="input"
-                  value={filters.businessType}
-                  onChange={(e) => handleFilterChange('businessType', e.target.value)}
-                  disabled={loading}
-                >
-                  <option value="">All Business Types</option>
-                  {businessTypeOptions.map(type => (
-                    <option key={type.value} value={type.value}>{type.label}</option>
-                  ))}
-                </select>
+                  <div className="form-group">
+                    <label className="label">State</label>
+                    <select
+                      className="input"
+                      value={filters.state}
+                      onChange={(e) => handleFilterChange('state', e.target.value)}
+                      disabled={loading}
+                    >
+                      <option value="">All States</option>
+                      {stateOptions.map(state => (
+                        <option key={state} value={state}>{state}</option>
+                      ))}
+                    </select>
+                  </div>
+                </div>
               </div>
 
-              <div className="form-group">
-                <label className="label">Remote Work Options</label>
-                <select
-                  className="input"
-                  value={filters.remoteWork}
-                  onChange={(e) => handleFilterChange('remoteWork', e.target.value)}
-                  disabled={loading}
-                >
-                  <option value="">Any Work Arrangement</option>
-                  {remoteWorkOptions.map(option => (
-                    <option key={option.value} value={option.value}>{option.label}</option>
-                  ))}
-                </select>
+              <div className={styles.filterSection}>
+                <h4 className={styles.sectionTitle}>Company Details</h4>
+                
+                <div className={styles.filterRow}>
+                  <div className="form-group">
+                    <label className="label">Business Type</label>
+                    <select
+                      className="input"
+                      value={filters.businessType}
+                      onChange={(e) => handleFilterChange('businessType', e.target.value)}
+                      disabled={loading}
+                    >
+                      <option value="">All Business Types</option>
+                      {businessTypeOptions.map(type => (
+                        <option key={type.value} value={type.value}>{type.label}</option>
+                      ))}
+                    </select>
+                  </div>
+
+                  <div className="form-group">
+                    <label className="label">Company Size</label>
+                    <select
+                      className="input"
+                      value={filters.companySize}
+                      onChange={(e) => handleFilterChange('companySize', e.target.value)}
+                      disabled={loading}
+                    >
+                      <option value="">Any Size</option>
+                      {companySizeOptions.map(size => (
+                        <option key={size.value} value={size.value}>{size.label}</option>
+                      ))}
+                    </select>
+                  </div>
+                </div>
+
+                {/* Hiring Status Toggle */}
+                <div className={styles.toggleSection}>
+                  <div className="checkbox-item">
+                    <input
+                      type="checkbox"
+                      id="actively-hiring"
+                      checked={filters.isActivelyHiring}
+                      onChange={(e) => handleFilterChange('isActivelyHiring', e.target.checked)}
+                      disabled={loading}
+                    />
+                    <label htmlFor="actively-hiring">
+                      🟢 Only show actively hiring employers
+                    </label>
+                  </div>
+                </div>
               </div>
             </div>
-          </div>
+          )}
 
-          {/* Recovery Features */}
-          <div className={styles.filterSection}>
-            <h4 className={styles.sectionTitle}>Recovery-Friendly Features</h4>
-            <p className={styles.sectionDescription}>
-              Select features that are important to you in a workplace
-            </p>
-            <div className={styles.checkboxGrid}>
-              {recoveryFeatureOptions.map(feature => (
-                <div key={feature} className={`checkbox-item ${styles.checkboxItemCompact}`}>
-                  <input
-                    type="checkbox"
-                    id={`feature-${feature}`}
-                    checked={filters.recoveryFeatures.includes(feature)}
-                    onChange={(e) => handleArrayChange('recoveryFeatures', feature, e.target.checked)}
+          {/* TAB 2: WORK & BENEFITS */}
+          {activeTab === 'work' && (
+            <div className={styles.tabPanel}>
+              <div className={styles.filterSection}>
+                <h4 className={styles.sectionTitle}>Work Arrangements</h4>
+                
+                <div className="form-group">
+                  <label className="label">Remote Work Options</label>
+                  <select
+                    className="input"
+                    value={filters.remoteWork}
+                    onChange={(e) => handleFilterChange('remoteWork', e.target.value)}
                     disabled={loading}
-                  />
-                  <label htmlFor={`feature-${feature}`}>
-                    {formatFeature(feature)}
-                  </label>
+                  >
+                    <option value="">Any Work Arrangement</option>
+                    {remoteWorkOptions.map(option => (
+                      <option key={option.value} value={option.value}>{option.label}</option>
+                    ))}
+                  </select>
                 </div>
-              ))}
-            </div>
-          </div>
+              </div>
 
-          {/* Job Types */}
-          <div className={styles.filterSection}>
-            <h4 className={styles.sectionTitle}>Job Types</h4>
-            <div className={styles.checkboxGrid}>
-              {jobTypeOptions.map(jobType => (
-                <div key={jobType} className={`checkbox-item ${styles.checkboxItemCompact}`}>
-                  <input
-                    type="checkbox"
-                    id={`job-${jobType}`}
-                    checked={filters.jobTypes.includes(jobType)}
-                    onChange={(e) => handleArrayChange('jobTypes', jobType, e.target.checked)}
-                    disabled={loading}
-                  />
-                  <label htmlFor={`job-${jobType}`}>
-                    {formatFeature(jobType)}
-                  </label>
+              <div className={styles.filterSection}>
+                <h4 className={styles.sectionTitle}>Job Types</h4>
+                <p className={styles.sectionDescription}>
+                  Select the types of positions you're interested in
+                </p>
+                <div className={styles.checkboxGrid}>
+                  {jobTypeOptions.map(jobType => (
+                    <div key={jobType} className={`checkbox-item ${styles.checkboxItemCompact}`}>
+                      <input
+                        type="checkbox"
+                        id={`job-${jobType}`}
+                        checked={filters.jobTypes.includes(jobType)}
+                        onChange={(e) => handleArrayChange('jobTypes', jobType, e.target.checked)}
+                        disabled={loading}
+                      />
+                      <label htmlFor={`job-${jobType}`}>
+                        {formatFeature(jobType)}
+                      </label>
+                    </div>
+                  ))}
                 </div>
-              ))}
+              </div>
+
+              <div className={styles.filterSection}>
+                <h4 className={styles.sectionTitle}>Benefits Offered</h4>
+                <p className={styles.sectionDescription}>
+                  Select benefits that are important to you
+                </p>
+                <div className={styles.checkboxGrid}>
+                  {benefitsOptions.map(benefit => (
+                    <div key={benefit} className={`checkbox-item ${styles.checkboxItemCompact}`}>
+                      <input
+                        type="checkbox"
+                        id={`benefit-${benefit}`}
+                        checked={filters.benefits.includes(benefit)}
+                        onChange={(e) => handleArrayChange('benefits', benefit, e.target.checked)}
+                        disabled={loading}
+                      />
+                      <label htmlFor={`benefit-${benefit}`}>
+                        {benefit}
+                      </label>
+                    </div>
+                  ))}
+                </div>
+              </div>
             </div>
-          </div>
+          )}
+
+          {/* TAB 3: POLICIES & CULTURE */}
+          {activeTab === 'policies' && (
+            <div className={styles.tabPanel}>
+              <div className={styles.filterSection}>
+                <h4 className={styles.sectionTitle}>Employment Policies</h4>
+                
+                <div className={styles.filterRow}>
+                  <div className="form-group">
+                    <label className="label">Drug Testing Policy</label>
+                    <select
+                      className="input"
+                      value={filters.drugTestingPolicy}
+                      onChange={(e) => handleFilterChange('drugTestingPolicy', e.target.value)}
+                      disabled={loading}
+                    >
+                      <option value="">Any Policy</option>
+                      {drugTestingPolicyOptions.map(option => (
+                        <option key={option.value} value={option.value}>{option.label}</option>
+                      ))}
+                    </select>
+                  </div>
+
+                  <div className="form-group">
+                    <label className="label">Background Check Policy</label>
+                    <select
+                      className="input"
+                      value={filters.backgroundCheckPolicy}
+                      onChange={(e) => handleFilterChange('backgroundCheckPolicy', e.target.value)}
+                      disabled={loading}
+                    >
+                      <option value="">Any Policy</option>
+                      {backgroundCheckPolicyOptions.map(option => (
+                        <option key={option.value} value={option.value}>{option.label}</option>
+                      ))}
+                    </select>
+                  </div>
+                </div>
+              </div>
+
+              <div className={styles.filterSection}>
+                <h4 className={styles.sectionTitle}>Recovery-Friendly Features</h4>
+                <p className={styles.sectionDescription}>
+                  Select features that are important to you in a workplace
+                </p>
+                <div className={styles.checkboxGrid}>
+                  {recoveryFeatureOptions.map(feature => (
+                    <div key={feature} className={`checkbox-item ${styles.checkboxItemCompact}`}>
+                      <input
+                        type="checkbox"
+                        id={`feature-${feature}`}
+                        checked={filters.recoveryFeatures.includes(feature)}
+                        onChange={(e) => handleArrayChange('recoveryFeatures', feature, e.target.checked)}
+                        disabled={loading}
+                      />
+                      <label htmlFor={`feature-${feature}`}>
+                        {feature}
+                      </label>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+          )}
         </div>
 
         {/* Filter Actions */}
@@ -295,7 +370,7 @@ const EmployerFilterPanel = ({
         </div>
 
         {/* Active Filters Summary */}
-        {hasActiveFilters(filters) && (
+        {activeCount > 0 && (
           <div className={styles.activeFiltersSummary}>
             <div className={styles.summaryLabel}>Active Filters:</div>
             <div className={styles.summaryText}>{getFilterSummary(filters)}</div>

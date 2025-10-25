@@ -42,7 +42,7 @@ const EmployerCard = ({
   return (
     <div className={`card ${styles.employerCard}`}>
       {/* Card Header */}
-      <div className="card-header">
+      <div className={styles.cardHeader}>
         <div className={styles.employerCardHeader}>
           <div className={styles.employerInfo}>
             <div className="card-title">{cardData.companyName}</div>

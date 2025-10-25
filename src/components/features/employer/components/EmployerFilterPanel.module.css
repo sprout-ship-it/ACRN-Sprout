@@ -1,4 +1,4 @@
-/* EmployerFilterPanel.module.css - Employer Search Filter Panel Styles */
+/* EmployerFilterPanel.module.css - Employer Search Filter Panel Styles with TABS */
 
 /* ==================== FILTER PANEL CONTAINER ==================== */
 .filterPanel {
@@ -53,92 +53,86 @@
 
 /* ==================== FILTER CONTENT ==================== */
 .filterContent {
-  padding: 1.5rem;
   transition: all 0.3s ease;
   overflow: hidden;
 }
 
 .filterContent.collapsed {
   max-height: 0;
-  padding: 0 1.5rem;
+  padding: 0;
   opacity: 0;
 }
 
-.basicFilters {
-  margin-bottom: 1.5rem;
-}
-
-.filterRow {
-  display: grid;
-  grid-template-columns: 1fr 1fr 1fr;
-  gap: 1rem;
-  margin-bottom: 1rem;
-}
-
-/* ==================== LOCATION INPUT GROUP ==================== */
-.locationInputGroup {
+/* ==================== TAB NAVIGATION (NEW) ==================== */
+.tabNavigation {
   display: flex;
   gap: 0.5rem;
+  padding: 1rem 1.5rem 0;
+  border-bottom: 2px solid var(--border-beige);
+  background: var(--gray-50);
 }
 
-.locationInput {
-  flex: 1;
-}
-
-.locationNearbyBtn {
-  padding: 12px;
-  min-width: 48px;
-  flex-shrink: 0;
-}
-
-/* ==================== QUICK TOGGLES ==================== */
-.quickToggles {
-  background: var(--bg-light-cream);
-  padding: 1rem;
-  border-radius: var(--radius-md);
-  margin-top: 1rem;
-}
-
-.toggleGroup {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 1rem;
-}
-
-/* ==================== MORE FILTERS SECTION ==================== */
-.moreFiltersToggle {
-  text-align: center;
-  margin: 1.5rem 0;
-  padding-top: 1.5rem;
-  border-top: 1px solid var(--border-beige);
-}
-
-.toggleBtn {
+.tabButton {
   display: flex;
   align-items: center;
   gap: 0.5rem;
-  margin: 0 auto;
+  padding: 0.75rem 1.25rem;
+  background: transparent;
+  border: none;
+  border-bottom: 3px solid transparent;
+  color: var(--gray-600);
+  font-size: 0.95rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  position: relative;
+  top: 2px;
 }
 
-.hiddenFilterHint {
-  background: var(--warning-bg);
-  color: var(--warning-text);
-  padding: 2px 6px;
-  border-radius: 10px;
-  font-size: 0.7rem;
-  margin-left: 0.5rem;
+.tabButton:hover {
+  color: var(--primary-purple);
+  background: rgba(160, 32, 240, 0.05);
+  border-radius: var(--radius-md) var(--radius-md) 0 0;
 }
 
-.moreFilters {
-  max-height: 0;
-  opacity: 0;
-  overflow: hidden;
-  transition: all 0.4s ease;
+.tabButton.active {
+  color: var(--primary-purple);
+  border-bottom-color: var(--primary-purple);
+  background: white;
+  border-radius: var(--radius-md) var(--radius-md) 0 0;
+  font-weight: 600;
 }
 
-.moreFilters.expanded {
-  max-height: 2000px;
-  opacity: 1;
+.tabIcon {
+  font-size: 1.1rem;
+  display: flex;
+  align-items: center;
+}
+
+.tabLabel {
+  white-space: nowrap;
+}
+
+/* ==================== TAB CONTENT (NEW) ==================== */
+.tabContent {
+  padding: 1.5rem;
+  background: white;
+  min-height: 300px;
+}
+
+.tabPanel {
+  animation: fadeIn 0.3s ease;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
 /* ==================== FILTER SECTIONS ==================== */
@@ -166,6 +160,44 @@
   margin-bottom: 1rem;
 }
 
+.filterRow {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  gap: 1rem;
+  margin-bottom: 1rem;
+}
+
+/* ==================== LOCATION INPUT GROUP ==================== */
+.locationInputGroup {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.locationInput {
+  flex: 1;
+}
+
+.locationNearbyBtn {
+  padding: 12px;
+  min-width: 48px;
+  flex-shrink: 0;
+}
+
+/* ==================== TOGGLE SECTION ==================== */
+.toggleSection {
+  background: var(--bg-light-cream);
+  padding: 1rem;
+  border-radius: var(--radius-md);
+  margin-top: 1rem;
+}
+
+.toggleGroup {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1rem;
+}
+
+/* ==================== CHECKBOX GRIDS ==================== */
 .checkboxGrid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
@@ -175,6 +207,12 @@
 .checkboxItemCompact {
   padding: 0.5rem;
   background: white;
+  border-radius: var(--radius-sm);
+  transition: background 0.2s ease;
+}
+
+.checkboxItemCompact:hover {
+  background: var(--gray-50);
 }
 
 /* ==================== FILTER ACTIONS ==================== */
@@ -232,6 +270,26 @@
     opacity: 1;
   }
 
+  .tabNavigation {
+    padding: 0.75rem 1rem 0;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .tabButton {
+    padding: 0.6rem 1rem;
+    font-size: 0.875rem;
+    white-space: nowrap;
+  }
+
+  .tabIcon {
+    font-size: 1rem;
+  }
+
+  .tabContent {
+    padding: 1rem;
+  }
+
   .filterRow {
     grid-template-columns: 1fr;
     gap: 0.75rem;
@@ -260,10 +318,14 @@
   .searchBtn {
     min-width: auto;
   }
+
+  .filterSection {
+    padding: 0.75rem;
+  }
 }
 
 @media (max-width: 480px) {
-  .filterContent {
+  .tabContent {
     padding: 1rem;
   }
 
@@ -271,8 +333,16 @@
     padding: 1rem;
   }
 
-  .filterSection {
-    padding: 0.75rem;
+  .tabLabel {
+    display: none;
+  }
+
+  .tabButton {
+    padding: 0.6rem;
+  }
+
+  .tabIcon {
+    font-size: 1.25rem;
   }
 
   .btn {
@@ -289,7 +359,6 @@
   
   .filterContent.collapsed {
     max-height: none;
-    padding: 1.5rem;
     opacity: 1;
   }
   

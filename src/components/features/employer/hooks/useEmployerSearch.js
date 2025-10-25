@@ -1,4 +1,4 @@
-// src/components/features/employer/hooks/useEmployerSearch.js - FIXED ID HANDLING
+// src/components/features/employer/hooks/useEmployerSearch.js - UPDATED FOR NEW FILTERS
 import { useState, useEffect, useCallback } from 'react';
 import { useAuth } from '../../../../context/AuthContext';
 import { db } from '../../../../utils/supabase';
@@ -16,24 +16,28 @@ const useEmployerSearch = () => {
   const [favoritesLoading, setFavoritesLoading] = useState(false);
   const [error, setError] = useState(null);
   
-  // Filter state - consolidated into single object
+  // ✅ UPDATED: Filter state with new schema-aligned fields, removed hasOpenings
   const [filters, setFilters] = useState({
     industry: '',
     location: '',
     state: '',
     businessType: '',
+    companySize: '', // ✅ NEW
     recoveryFeatures: [],
     jobTypes: [],
+    benefits: [], // ✅ NEW
     remoteWork: '',
-    isActivelyHiring: true,
-    hasOpenings: false
+    drugTestingPolicy: '', // ✅ NEW
+    backgroundCheckPolicy: '', // ✅ NEW
+    isActivelyHiring: true
+    // ✅ REMOVED: hasOpenings
   });
 
   // Search debounce
   const [searchTimeout, setSearchTimeout] = useState(null);
 
   /**
-   * ✅ FIXED: Load existing connections using correct applicant profile ID
+   * Load existing connections using correct applicant profile ID
    */
   const loadConnections = useCallback(async () => {
     if (!user?.id || !profile?.id) return;
@@ -41,7 +45,7 @@ const useEmployerSearch = () => {
     try {
       console.log('📊 Loading existing employer connections...');
       
-      // ✅ CRITICAL FIX: Get the applicant profile ID first
+      // Get the applicant profile ID first
       let applicantProfileId = null;
       try {
         const { data: applicantProfile } = await db.supabase
@@ -64,14 +68,14 @@ const useEmployerSearch = () => {
         return;
       }
       
-      // ✅ FIXED: Check if service exists and handle gracefully
+      // Check if service exists and handle gracefully
       if (!db.matchRequests || typeof db.matchRequests.getByUserId !== 'function') {
         console.warn('⚠️ Match requests service not available, skipping connection status');
         setConnections(new Set());
         return;
       }
       
-      // ✅ FIXED: Use applicant profile ID for match requests
+      // Use applicant profile ID for match requests
       const result = await db.matchRequests.getByUserId('applicant', applicantProfileId);
       
       if (result.success !== false && result.data) {
@@ -98,7 +102,7 @@ const useEmployerSearch = () => {
   }, [user?.id, profile?.id]);
 
   /**
-   * ✅ FIXED: Load user's favorite employers using correct profile ID
+   * Load user's favorite employers using correct profile ID
    */
   const loadFavorites = useCallback(async () => {
     if (!user?.id || !profile?.id) return;
@@ -107,14 +111,14 @@ const useEmployerSearch = () => {
     try {
       console.log('⭐ Loading favorite employers...');
       
-      // ✅ FIXED: Check multiple possible service paths
+      // Check multiple possible service paths
       if (!db.employerProfiles?.favorites) {
         console.warn('⚠️ Employer favorites service not available');
         setFavorites(new Set());
         return;
       }
 
-      // ✅ FIXED: Use registrant profile ID for favorites (matches employer_favorites table)
+      // Use registrant profile ID for favorites (matches employer_favorites table)
       const result = await db.employerProfiles.favorites.getByUserId(profile.id);
       
       if (result.error && !result.data) {
@@ -136,7 +140,7 @@ const useEmployerSearch = () => {
   }, [user?.id, profile?.id]);
 
   /**
-   * ✅ FIXED: Debounced employer search function with correct ID filtering
+   * ✅ UPDATED: Debounced employer search with new filters
    */
   const loadEmployers = useCallback(async () => {
     setLoading(true);
@@ -179,6 +183,11 @@ const useEmployerSearch = () => {
         dbFilters.businessType = filters.businessType;
       }
 
+      // ✅ NEW: Company size filter
+      if (filters.companySize) {
+        dbFilters.companySize = filters.companySize;
+      }
+
       if (filters.recoveryFeatures.length > 0) {
         dbFilters.recoveryFeatures = filters.recoveryFeatures;
       }
@@ -187,8 +196,23 @@ const useEmployerSearch = () => {
         dbFilters.jobTypes = filters.jobTypes;
       }
 
+      // ✅ NEW: Benefits filter
+      if (filters.benefits.length > 0) {
+        dbFilters.benefits = filters.benefits;
+      }
+
       if (filters.remoteWork) {
         dbFilters.remoteWork = filters.remoteWork;
+      }
+
+      // ✅ NEW: Drug testing policy filter
+      if (filters.drugTestingPolicy) {
+        dbFilters.drugTestingPolicy = filters.drugTestingPolicy;
+      }
+
+      // ✅ NEW: Background check policy filter
+      if (filters.backgroundCheckPolicy) {
+        dbFilters.backgroundCheckPolicy = filters.backgroundCheckPolicy;
       }
 
       // Get available employers from database
@@ -205,17 +229,9 @@ const useEmployerSearch = () => {
       let availableEmployers = result.data || [];
       console.log(`📊 Found ${availableEmployers.length} employers from database`);
 
-      // Apply additional client-side filters
-      if (filters.hasOpenings) {
-        // ✅ FIXED: Use job_types_available instead of current_openings for new schema
-        availableEmployers = availableEmployers.filter(employer => 
-          employer.job_types_available && 
-          Array.isArray(employer.job_types_available) && 
-          employer.job_types_available.length > 0
-        );
-      }
+      // ✅ REMOVED: hasOpenings client-side filter (no longer needed)
 
-      // ✅ CRITICAL FIX: Exclude current user properly using registrant profile ID comparison
+      // Exclude current user properly using registrant profile ID comparison
       if (profile?.id) {
         const beforeFilter = availableEmployers.length;
         availableEmployers = availableEmployers.filter(employer => {
@@ -275,11 +291,11 @@ const useEmployerSearch = () => {
   }, [filters, profile?.id, favorites]);
 
   /**
-   * ✅ FIXED: Smart location search using correct profile ID
+   * Smart location search using correct profile ID
    */
   const findNearbyEmployers = useCallback(async () => {
     try {
-      // ✅ FIXED: Use profile.id (registrant_profiles.id) for applicant profile lookup
+      // Use profile.id (registrant_profiles.id) for applicant profile lookup
       if (profile?.id) {
         const { data: applicantProfile } = await db.supabase
           .from('applicant_matching_profiles')
@@ -298,7 +314,10 @@ const useEmployerSearch = () => {
             location: location,
             industry: '', // Clear other filters for broader search
             businessType: '',
-            recoveryFeatures: []
+            companySize: '',
+            recoveryFeatures: [],
+            jobTypes: [],
+            benefits: []
           }));
           return;
         }
@@ -318,7 +337,10 @@ const useEmployerSearch = () => {
         location: userLocation,
         industry: '', // Clear other filters for broader search
         businessType: '',
-        recoveryFeatures: []
+        companySize: '',
+        recoveryFeatures: [],
+        jobTypes: [],
+        benefits: []
       }));
     } else {
       setError('Please set your location in filters to find nearby employers.');
@@ -326,13 +348,13 @@ const useEmployerSearch = () => {
   }, [profile?.id, profile]);
 
   /**
-   * ✅ FIXED: Toggle favorite using correct profile ID
+   * Toggle favorite using correct profile ID
    */
   const toggleFavorite = useCallback(async (employerId) => {
     if (!user?.id || !profile?.id) return;
 
     try {
-      // ✅ FIXED: Check for service availability
+      // Check for service availability
       if (!db.employerProfiles?.favorites) {
         setError('Favorites feature is not available at this time.');
         return;
@@ -341,7 +363,7 @@ const useEmployerSearch = () => {
       const isFavorited = favorites.has(employerId);
 
       if (isFavorited) {
-        // ✅ FIXED: Use registrant profile ID for favorites
+        // Use registrant profile ID for favorites
         const result = await db.employerProfiles.favorites.remove(profile.id, employerId);
         
         if (result.error) {
@@ -356,7 +378,7 @@ const useEmployerSearch = () => {
         
         console.log('⭐ Removed employer from favorites:', employerId);
       } else {
-        // ✅ FIXED: Use registrant profile ID for favorites
+        // Use registrant profile ID for favorites
         const result = await db.employerProfiles.favorites.add(profile.id, employerId);
         
         if (result.error) {
@@ -373,7 +395,7 @@ const useEmployerSearch = () => {
   }, [user?.id, profile?.id, favorites]);
 
   /**
-   * ✅ FIXED: Create connection with employer using correct applicant profile ID
+   * Create connection with employer using correct applicant profile ID
    */
   const connectWithEmployer = useCallback(async (employer) => {
     if (!user?.id || !profile?.id) return false;
@@ -381,7 +403,7 @@ const useEmployerSearch = () => {
     try {
       console.log('💼 Connecting with employer:', employer.company_name);
       
-      // ✅ CRITICAL FIX: Get the applicant profile ID first
+      // Get the applicant profile ID first
       let applicantProfileId = null;
       try {
         const { data: applicantProfile } = await db.supabase
@@ -416,13 +438,13 @@ const useEmployerSearch = () => {
         if (!confirmed) return false;
       }
       
-      // ✅ FIXED: Check if service exists
+      // Check if service exists
       if (!db.matchRequests || typeof db.matchRequests.create !== 'function') {
         setError('Connection feature is not available at this time. Please contact the employer directly.');
         return false;
       }
       
-      // ✅ FIXED: Use correct role-specific IDs for employment connection
+      // Use correct role-specific IDs for employment connection
       const connectionData = {
         requester_type: 'applicant',
         requester_id: applicantProfileId,        // applicant_matching_profiles.id
@@ -460,7 +482,7 @@ const useEmployerSearch = () => {
   }, [user?.id, profile?.id, connections]);
 
   /**
-   * ✅ FIXED: Get connection status using correct ID comparison
+   * Get connection status using correct ID comparison
    */
   const getConnectionStatus = useCallback((employer) => {
     const isConnected = connections.has(employer.user_id); // employer.user_id is registrant_profiles.id
@@ -511,7 +533,7 @@ const useEmployerSearch = () => {
     };
   }, [loadEmployers]);
 
-  // ✅ FIXED: Handle remaining methods with correct ID handling
+  // Filter update methods
   const updateFilter = useCallback((field, value) => {
     setFilters(prev => ({ ...prev, [field]: value }));
   }, []);
@@ -525,17 +547,22 @@ const useEmployerSearch = () => {
     }));
   }, []);
 
+  // ✅ UPDATED: Clear filters with new fields, removed hasOpenings
   const clearFilters = useCallback(() => {
     setFilters({
       industry: '',
       location: '',
       state: '',
       businessType: '',
+      companySize: '', // ✅ NEW
       recoveryFeatures: [],
       jobTypes: [],
+      benefits: [], // ✅ NEW
       remoteWork: '',
-      isActivelyHiring: true,
-      hasOpenings: false
+      drugTestingPolicy: '', // ✅ NEW
+      backgroundCheckPolicy: '', // ✅ NEW
+      isActivelyHiring: true
+      // ✅ REMOVED: hasOpenings
     });
   }, []);
 

@@ -25,6 +25,17 @@ export const businessTypeOptions = [
 ];
 
 /**
+ * ✅ NEW: Company size options (for filtering by employee count)
+ */
+export const companySizeOptions = [
+  { value: '1-10', label: '1-10 employees' },
+  { value: '11-50', label: '11-50 employees' },
+  { value: '51-200', label: '51-200 employees' },
+  { value: '201-1000', label: '201-1,000 employees' },
+  { value: '1000+', label: '1,000+ employees' }
+];
+
+/**
  * Recovery-friendly feature options
  */
 export const recoveryFeatureOptions = [
@@ -67,6 +78,53 @@ export const remoteWorkOptions = [
   { value: 'fully_remote', label: 'Fully Remote' },
   { value: 'hybrid', label: 'Hybrid (Remote + On-Site)' },
   { value: 'flexible', label: 'Flexible Options Available' }
+];
+
+/**
+ * ✅ NEW: Benefits offered options (for filtering)
+ */
+export const benefitsOptions = [
+  'Health Insurance',
+  'Dental Insurance',
+  'Vision Insurance',
+  'Mental Health Coverage',
+  'Substance Abuse Treatment Coverage',
+  'Life Insurance',
+  'Disability Insurance',
+  'Retirement Plan (401k/403b)',
+  'Paid Time Off',
+  'Sick Leave',
+  'Parental Leave',
+  'Flexible Spending Account',
+  'Employee Assistance Program',
+  'Tuition Reimbursement',
+  'Professional Development',
+  'Transportation Subsidy',
+  'Childcare Assistance',
+  'Wellness Programs',
+  'Gym Membership',
+  'Flexible Schedule'
+];
+
+/**
+ * ✅ NEW: Drug testing policy options
+ */
+export const drugTestingPolicyOptions = [
+  { value: 'none', label: 'No Drug Testing' },
+  { value: 'pre_employment_only', label: 'Pre-Employment Only' },
+  { value: 'random', label: 'Random Testing' },
+  { value: 'reasonable_suspicion', label: 'Reasonable Suspicion' },
+  { value: 'post_incident', label: 'Post-Incident Only' }
+];
+
+/**
+ * ✅ NEW: Background check policy options
+ */
+export const backgroundCheckPolicyOptions = [
+  { value: 'none', label: 'No Background Check' },
+  { value: 'case_by_case', label: 'Case-by-Case Review' },
+  { value: 'flexible', label: 'Flexible/Second Chance' },
+  { value: 'standard', label: 'Standard Background Check' }
 ];
 
 /**
@@ -159,6 +217,28 @@ export const formatCompanySize = (size) => {
 };
 
 /**
+ * ✅ NEW: Format drug testing policy for display
+ * @param {string} policy - The drug testing policy value
+ * @returns {string} - Formatted policy label
+ */
+export const formatDrugTestingPolicy = (policy) => {
+  if (!policy) return 'Not specified';
+  const option = drugTestingPolicyOptions.find(opt => opt.value === policy);
+  return option ? option.label : formatFeature(policy);
+};
+
+/**
+ * ✅ NEW: Format background check policy for display
+ * @param {string} policy - The background check policy value
+ * @returns {string} - Formatted policy label
+ */
+export const formatBackgroundCheckPolicy = (policy) => {
+  if (!policy) return 'Not specified';
+  const option = backgroundCheckPolicyOptions.find(opt => opt.value === policy);
+  return option ? option.label : formatFeature(policy);
+};
+
+/**
  * Check if an employer has specific recovery features
  * @param {object} employer - The employer object
  * @param {string[]} requiredFeatures - Array of required features to check
@@ -174,7 +254,7 @@ export const hasRequiredFeatures = (employer, requiredFeatures) => {
 };
 
 /**
- * Get filter summary text for active filters
+ * ✅ UPDATED: Get filter summary text for active filters (removed hasOpenings, added new filters)
  * @param {object} filters - The current filter state
  * @returns {string} - Summary text of active filters
  */
@@ -185,21 +265,26 @@ export const getFilterSummary = (filters) => {
   if (filters.location) activeParts.push(`Location: ${filters.location}`);
   if (filters.state) activeParts.push(`State: ${filters.state}`);
   if (filters.businessType) activeParts.push(`Type: ${formatBusinessType(filters.businessType)}`);
+  if (filters.companySize) activeParts.push(`Size: ${formatCompanySize(filters.companySize)}`);
   if (filters.remoteWork) activeParts.push(`Remote: ${formatRemoteWork(filters.remoteWork)}`);
+  if (filters.drugTestingPolicy) activeParts.push(`Drug Testing: ${formatDrugTestingPolicy(filters.drugTestingPolicy)}`);
+  if (filters.backgroundCheckPolicy) activeParts.push(`Background Check: ${formatBackgroundCheckPolicy(filters.backgroundCheckPolicy)}`);
   if (filters.recoveryFeatures?.length > 0) {
     activeParts.push(`Recovery Features: ${filters.recoveryFeatures.length} selected`);
   }
   if (filters.jobTypes?.length > 0) {
     activeParts.push(`Job Types: ${filters.jobTypes.length} selected`);
   }
+  if (filters.benefits?.length > 0) {
+    activeParts.push(`Benefits: ${filters.benefits.length} selected`);
+  }
   if (filters.isActivelyHiring) activeParts.push('Actively hiring only');
-  if (filters.hasOpenings) activeParts.push('Has specific openings');
   
   return activeParts.join(' • ');
 };
 
 /**
- * Check if any filters are active (excluding default values)
+ * ✅ UPDATED: Check if any filters are active (removed hasOpenings, added new filters)
  * @param {object} filters - The current filter state
  * @returns {boolean} - True if any filters are active beyond defaults
  */
@@ -209,12 +294,41 @@ export const hasActiveFilters = (filters) => {
     filters.location ||
     filters.state ||
     filters.businessType ||
+    filters.companySize ||
+    filters.remoteWork ||
+    filters.drugTestingPolicy ||
+    filters.backgroundCheckPolicy ||
     filters.recoveryFeatures?.length > 0 ||
     filters.jobTypes?.length > 0 ||
-    filters.remoteWork ||
-    filters.hasOpenings ||
+    filters.benefits?.length > 0 ||
     !filters.isActivelyHiring // Only count as active if NOT the default value
   );
+};
+
+/**
+ * ✅ NEW: Get count of active filters (for badge display)
+ * @param {object} filters - The current filter state
+ * @returns {number} - Count of active filters
+ */
+export const getActiveFilterCount = (filters) => {
+  if (!filters) return 0;
+  
+  let count = 0;
+  
+  if (filters.industry) count++;
+  if (filters.location) count++;
+  if (filters.state && !filters.location) count++; // Don't double-count if location includes state
+  if (filters.businessType) count++;
+  if (filters.companySize) count++;
+  if (filters.remoteWork) count++;
+  if (filters.drugTestingPolicy) count++;
+  if (filters.backgroundCheckPolicy) count++;
+  if (filters.recoveryFeatures?.length > 0) count++;
+  if (filters.jobTypes?.length > 0) count++;
+  if (filters.benefits?.length > 0) count++;
+  if (!filters.isActivelyHiring) count++; // Only count if different from default
+  
+  return count;
 };
 
 /**
@@ -237,13 +351,6 @@ export const validateFilters = (filters) => {
   
   return errors;
 };
-
-/**
- * Generate employer card display data
- * @param {object} employer - The employer object
- * @returns {object} - Formatted employer data for display
- */
-// Replace the getEmployerCardData function in src/components/features/employer/utils/employerUtils.js
 
 /**
  * Generate employer card display data
@@ -280,14 +387,6 @@ export const getEmployerCardData = (employer) => {
     raw: employer
   };
 };
-
-/**
- * Sort employers by priority criteria
- * @param {object[]} employers - Array of employer objects
- * @param {Set} favorites - Set of favorite employer IDs
- * @returns {object[]} - Sorted array of employers
- */
-// Replace the sortEmployers function in src/components/features/employer/utils/employerUtils.js
 
 /**
  * Sort employers by priority criteria
