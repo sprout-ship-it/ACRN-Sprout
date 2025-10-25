@@ -175,7 +175,7 @@ const loadMatchGroupConnections = async (categories) => {
       if (allMemberIds.length === 0) continue;
       
 const { data: memberData } = await supabase
-  .from('applicant_matching_profiles')  // ← Changed
+  .from('applicant_matching_profiles')
   .select(`
     id, 
     user_id, 
@@ -186,17 +186,25 @@ const { data: memberData } = await supabase
     budget_min, 
     budget_max, 
     primary_location,
-    is_confirmed_groupmate,
-    is_pending_groupmate,
     registrant_profiles(first_name, last_name, email)
   `)
   .in('id', allMemberIds);
       
       const members = memberData || [];
       
-      // Split into confirmed and pending for display purposes
+// Split into confirmed and pending for display purposes
       const confirmedMembers = members.filter(m => roommateIds.includes(m.id));
       const pendingMembers = members.filter(m => pendingIds.includes(m.id));
+      
+      // Add status flags for privacy/contact info logic
+      confirmedMembers.forEach(m => {
+        m.is_confirmed_groupmate = true;
+        m.is_pending_groupmate = false;
+      });
+      pendingMembers.forEach(m => {
+        m.is_confirmed_groupmate = false;
+        m.is_pending_groupmate = true;
+      });
 
       // ✅ CASE 0: Initial 2-person request (no member_confirmations yet)
       // This handles the very first request where A sends to B
