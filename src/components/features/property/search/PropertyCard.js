@@ -7,6 +7,15 @@ import { supabase } from '../../../../utils/supabase';
 // ✅ Import CSS module
 import styles from './PropertyCard.module.css';
 
+import {
+  formatPropertyType,
+  formatBedrooms,
+  formatBathrooms,
+  formatCurrency,
+  formatAmenities,
+  formatRecoveryServices
+} from '../../../../utils/property/propertyDataTransform';
+
 const PropertyCard = ({
   property,
   savedProperties,
@@ -122,44 +131,51 @@ const handleSendHousingInquiry = async () => {
         
         {/* ✅ Property Price */}
         <p className={styles.propertyPrice}>
-          ${property.monthly_rent}/month
+          {formatCurrency(property.monthly_rent)}/month
           {property.is_recovery_housing && property.weekly_rate && (
-            <span className={styles.weeklyRate}> • ${property.weekly_rate}/week</span>
+            <span className={styles.weeklyRate}> • {formatCurrency(property.weekly_rate)}/week</span>
           )}
         </p>
         
         {/* ✅ Property Specs */}
         <div className={styles.propertySpecs}>
-          {property.bedrooms || 'Studio'} bed • {property.bathrooms} bath
+          {formatBedrooms(property.bedrooms)} • {formatBathrooms(property.bathrooms)}
           {property.property_type && (
-            <span> • {property.property_type.replace(/_/g, ' ')}</span>
+            <span> • {formatPropertyType(property.property_type)}</span>
           )}
         </div>
 
         {/* ✅ Amenities Preview */}
-        {property.amenities && property.amenities.length > 0 && (
-          <div className={styles.propertyAmenities}>
-            <small>{property.amenities.slice(0, 3).join(' • ')}</small>
-            {property.amenities.length > 3 && (
-              <small> • +{property.amenities.length - 3} more</small>
-            )}
-          </div>
-        )}
+{property.amenities && property.amenities.length > 0 && (
+  <div className={styles.propertyAmenities}>
+    {(() => {
+      const formatted = formatAmenities(property.amenities, 3);
+      return (
+        <>
+          <small>{formatted.preview.join(' • ')}</small>
+          {formatted.remaining > 0 && (
+            <small> • +{formatted.remaining} more</small>
+          )}
+        </>
+      );
+    })()}
+  </div>
+)}
 
         {/* ✅ Recovery Housing Details */}
-        {property.is_recovery_housing && (
-          <div className={styles.recoveryDetails}>
-            <small>
-              <strong>Recovery Support:</strong>
-              {property.case_management && ' Case Management'}
-              {property.counseling_services && ' • Counseling'}
-              {property.job_training && ' • Job Training'}
-              {property.medical_services && ' • Medical Services'}
-              {property.meals_included && ' • Meals Included'}
-              {property.required_programs && property.required_programs.length > 0 && ' • Program Requirements'}
-            </small>
-          </div>
-        )}
+{property.is_recovery_housing && (
+  <div className={styles.recoveryDetails}>
+    <small>
+      <strong>Recovery Support:</strong>
+      {(() => {
+        const services = formatRecoveryServices(property);
+        return services.length > 0 
+          ? ' ' + services.join(' • ')
+          : ' Contact for details';
+      })()}
+    </small>
+  </div>
+)}
 
 {/* ✅ UPDATED: Action Buttons - View Details on top, others below */}
         <div className={styles.propertyActions}>
