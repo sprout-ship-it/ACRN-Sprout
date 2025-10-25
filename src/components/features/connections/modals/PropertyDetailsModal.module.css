@@ -492,6 +492,715 @@
   flex-wrap: wrap;
 }
 
+/* ==================== TAB NAVIGATION ==================== */
+.tabNavigation {
+  display: flex;
+  background: white;
+  border-bottom: 2px solid var(--border-beige);
+  padding: 0 var(--spacing-xxl);
+  gap: var(--spacing-xs);
+  overflow-x: auto;
+  scrollbar-width: thin;
+}
+
+.tabButton {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-sm);
+  padding: var(--spacing-md) var(--spacing-lg);
+  background: transparent;
+  border: none;
+  border-bottom: 3px solid transparent;
+  color: var(--gray-600);
+  font-size: 0.95rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: var(--transition-fast);
+  white-space: nowrap;
+  position: relative;
+}
+
+.tabButton:hover {
+  color: var(--gold-dark);
+  background: var(--bg-light-cream);
+}
+
+.tabActive {
+  color: var(--gold-dark);
+  border-bottom-color: var(--gold);
+  font-weight: 600;
+}
+
+.tabIcon {
+  font-size: 1.1rem;
+}
+
+.tabLabel {
+  font-family: var(--font-serif);
+}
+
+/* ==================== TAB CONTENT ==================== */
+.tabContent {
+  padding: var(--spacing-xl) var(--spacing-xxl);
+  animation: fadeIn 0.3s ease-in;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* ==================== BED AVAILABILITY CARD (RECOVERY HOUSING) ==================== */
+.bedAvailabilityCard {
+  background: linear-gradient(135deg, var(--bg-light-cream) 0%, white 100%);
+  border: 2px solid var(--border-beige);
+  border-radius: var(--radius-lg);
+  padding: var(--spacing-xl);
+  margin-bottom: var(--spacing-xl);
+  box-shadow: var(--shadow-md);
+}
+
+.bedAvailabilityContent {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-lg);
+}
+
+.bedAvailabilityIcon {
+  font-size: 3rem;
+  width: 70px;
+  height: 70px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: white;
+  border-radius: var(--radius-lg);
+  flex-shrink: 0;
+  box-shadow: var(--shadow-sm);
+}
+
+.bedAvailabilityInfo {
+  flex: 1;
+}
+
+.bedAvailabilityNumbers {
+  display: flex;
+  align-items: baseline;
+  gap: var(--spacing-xs);
+  margin-bottom: var(--spacing-xs);
+}
+
+.bedsAvailable {
+  font-size: 2.5rem;
+  font-weight: 700;
+  font-family: var(--font-serif);
+  line-height: 1;
+}
+
+.bedsSeparator {
+  font-size: 1.5rem;
+  color: var(--gray-400);
+  margin: 0 var(--spacing-xs);
+}
+
+.bedsTotal {
+  font-size: 1.5rem;
+  font-weight: 600;
+  color: var(--gray-600);
+}
+
+.bedAvailabilityLabel {
+  font-size: 0.95rem;
+  color: var(--gray-600);
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.bedAvailabilityBar {
+  width: 100%;
+  height: 12px;
+  background: var(--gray-200);
+  border-radius: var(--radius-full);
+  overflow: hidden;
+  margin-top: var(--spacing-md);
+}
+
+.bedAvailabilityFill {
+  height: 100%;
+  transition: width 0.5s ease-out;
+  border-radius: var(--radius-full);
+}
+
+/* Bed Availability Status Colors */
+.availability-high {
+  border-color: var(--success-border);
+}
+
+.availability-high .bedAvailabilityCard {
+  background: linear-gradient(135deg, #f0fdf4 0%, white 100%);
+}
+
+.availability-high .bedsAvailable {
+  color: var(--success-text);
+}
+
+.availability-high .bedAvailabilityFill {
+  background: linear-gradient(90deg, var(--success-text) 0%, #10b981 100%);
+}
+
+.availability-medium {
+  border-color: var(--warning-border);
+}
+
+.availability-medium .bedAvailabilityCard {
+  background: linear-gradient(135deg, #fffbeb 0%, white 100%);
+}
+
+.availability-medium .bedsAvailable {
+  color: var(--warning-text);
+}
+
+.availability-medium .bedAvailabilityFill {
+  background: linear-gradient(90deg, var(--warning-text) 0%, #f59e0b 100%);
+}
+
+.availability-low {
+  border-color: #fb923c;
+}
+
+.availability-low .bedAvailabilityCard {
+  background: linear-gradient(135deg, #fff7ed 0%, white 100%);
+}
+
+.availability-low .bedsAvailable {
+  color: #ea580c;
+}
+
+.availability-low .bedAvailabilityFill {
+  background: linear-gradient(90deg, #ea580c 0%, #fb923c 100%);
+}
+
+.availability-none {
+  border-color: var(--error-border);
+}
+
+.availability-none .bedAvailabilityCard {
+  background: linear-gradient(135deg, #fef2f2 0%, white 100%);
+}
+
+.availability-none .bedsAvailable {
+  color: var(--error-text);
+}
+
+.availability-none .bedAvailabilityFill {
+  background: var(--error-text);
+  width: 0 !important;
+}
+
+/* ==================== STATS GRID (OVERVIEW TAB) ==================== */
+.statsGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: var(--spacing-md);
+  margin-bottom: var(--spacing-xl);
+}
+
+.statCard {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--spacing-md);
+  padding: var(--spacing-lg);
+  background: white;
+  border: 2px solid var(--border-beige);
+  border-radius: var(--radius-lg);
+  transition: var(--transition-fast);
+}
+
+.statCard:hover {
+  border-color: var(--gold);
+  box-shadow: var(--shadow-md);
+  transform: translateY(-2px);
+}
+
+.statIcon {
+  font-size: 2rem;
+  flex-shrink: 0;
+  margin-top: 2px;
+}
+
+.statContent {
+  flex: 1;
+  min-width: 0;
+}
+
+.statLabel {
+  font-size: 0.85rem;
+  color: var(--gray-600);
+  font-weight: 500;
+  margin-bottom: 4px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.statValue {
+  font-size: 1.25rem;
+  color: var(--gray-900);
+  font-weight: 700;
+  font-family: var(--font-serif);
+  line-height: 1.2;
+}
+
+.statSubtext {
+  font-size: 0.875rem;
+  color: var(--gray-600);
+  margin-top: 4px;
+}
+
+/* ==================== DESCRIPTION SECTION ==================== */
+.descriptionSection {
+  margin-bottom: var(--spacing-xl);
+}
+
+.sectionSubtitle {
+  font-size: 1.125rem;
+  font-weight: 600;
+  color: var(--gray-900);
+  margin-bottom: var(--spacing-md);
+  font-family: var(--font-serif);
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-sm);
+}
+
+.description {
+  font-size: 1rem;
+  line-height: 1.7;
+  color: var(--gray-700);
+  background: var(--bg-light-cream);
+  padding: var(--spacing-lg);
+  border-radius: var(--radius-md);
+  border-left: 4px solid var(--gold);
+  margin: 0;
+}
+
+/* ==================== LOCATION SECTION ==================== */
+.locationSection {
+  margin-bottom: var(--spacing-xl);
+}
+
+/* ==================== QUICK FEATURES (FEATURES TAB) ==================== */
+.quickFeatures {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--spacing-sm);
+  margin-bottom: var(--spacing-xl);
+}
+
+.featureChip {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--spacing-xs);
+  padding: var(--spacing-sm) var(--spacing-md);
+  background: linear-gradient(135deg, var(--gold) 0%, var(--gold-dark) 100%);
+  color: white;
+  border-radius: var(--radius-full);
+  font-size: 0.9rem;
+  font-weight: 600;
+  box-shadow: var(--shadow-sm);
+  transition: var(--transition-fast);
+}
+
+.featureChip:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-md);
+}
+
+.featureIcon {
+  font-size: 1.1rem;
+}
+
+/* ==================== FEATURE SECTIONS ==================== */
+.featureSection {
+  margin-bottom: var(--spacing-xl);
+}
+
+.featureSection:last-child {
+  margin-bottom: 0;
+}
+
+.tagGrid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--spacing-sm);
+}
+
+.tagImportant {
+  display: inline-block;
+  padding: 8px 14px;
+  background: var(--bg-light-purple);
+  color: var(--primary-purple);
+  border-radius: var(--radius-md);
+  font-size: 0.875rem;
+  font-weight: 600;
+  border: 2px solid var(--primary-purple);
+  transition: var(--transition-fast);
+}
+
+.tagImportant:hover {
+  background: var(--primary-purple);
+  color: white;
+  transform: translateY(-1px);
+  box-shadow: var(--shadow-sm);
+}
+
+.tagSuccess {
+  display: inline-block;
+  padding: 6px 12px;
+  background: #f0fdf4;
+  color: var(--success-text);
+  border-radius: var(--radius-md);
+  font-size: 0.875rem;
+  font-weight: 600;
+  border: 1px solid var(--success-border);
+  transition: var(--transition-fast);
+}
+
+.tagSuccess:hover {
+  background: var(--success-text);
+  color: white;
+  transform: translateY(-1px);
+}
+
+.additionalNotes {
+  font-size: 0.95rem;
+  line-height: 1.6;
+  color: var(--gray-700);
+  background: var(--gray-100);
+  padding: var(--spacing-md);
+  border-radius: var(--radius-md);
+  margin: 0;
+}
+
+/* ==================== RECOVERY SECTIONS ==================== */
+.recoverySection {
+  margin-bottom: var(--spacing-xl);
+  padding-bottom: var(--spacing-xl);
+  border-bottom: 1px solid var(--border-beige);
+}
+
+.recoverySection:last-child {
+  border-bottom: none;
+  padding-bottom: 0;
+  margin-bottom: 0;
+}
+
+.requirementsList {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-md);
+}
+
+.requirementItem {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--spacing-md);
+  padding: var(--spacing-md);
+  background: var(--bg-light-cream);
+  border-radius: var(--radius-md);
+  border-left: 3px solid var(--gold);
+}
+
+.requirementIcon {
+  font-size: 1.5rem;
+  flex-shrink: 0;
+}
+
+.requirementValue {
+  display: block;
+  margin-top: 4px;
+  color: var(--gray-900);
+  font-weight: 600;
+}
+
+/* ==================== SUPPORT SERVICES GRID ==================== */
+.servicesGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  gap: var(--spacing-md);
+}
+
+.serviceCard {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--spacing-sm);
+  padding: var(--spacing-lg);
+  background: white;
+  border: 2px solid var(--border-beige);
+  border-radius: var(--radius-lg);
+  text-align: center;
+  transition: var(--transition-fast);
+}
+
+.serviceCard:hover {
+  border-color: var(--gold);
+  box-shadow: var(--shadow-md);
+  transform: translateY(-2px);
+}
+
+.serviceIcon {
+  font-size: 2rem;
+}
+
+.serviceName {
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: var(--gray-900);
+}
+
+.noServices {
+  color: var(--gray-500);
+  font-style: italic;
+  text-align: center;
+  padding: var(--spacing-lg);
+}
+
+.additionalRules {
+  font-size: 0.95rem;
+  line-height: 1.6;
+  color: var(--gray-700);
+  background: var(--bg-light-cream);
+  padding: var(--spacing-md);
+  border-radius: var(--radius-md);
+  margin: 0;
+}
+
+.licensingInfo {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-sm);
+  background: var(--bg-light-cream);
+  padding: var(--spacing-lg);
+  border-radius: var(--radius-md);
+}
+
+.licensingItem {
+  font-size: 0.95rem;
+  color: var(--gray-700);
+}
+
+.licensingItem strong {
+  color: var(--gray-900);
+  margin-right: var(--spacing-xs);
+}
+
+/* ==================== REQUIREMENTS SECTIONS ==================== */
+.requirementsSection {
+  margin-bottom: var(--spacing-xl);
+  padding-bottom: var(--spacing-xl);
+  border-bottom: 1px solid var(--border-beige);
+}
+
+.requirementsSection:last-child {
+  border-bottom: none;
+  padding-bottom: 0;
+  margin-bottom: 0;
+}
+
+.financialGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  gap: var(--spacing-md);
+}
+
+.financialItem {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: var(--spacing-md);
+  background: white;
+  border: 2px solid var(--border-beige);
+  border-radius: var(--radius-md);
+}
+
+.financialLabel {
+  font-size: 0.9rem;
+  color: var(--gray-600);
+  font-weight: 500;
+}
+
+.financialValue {
+  font-size: 1.1rem;
+  color: var(--gray-900);
+  font-weight: 700;
+  font-family: var(--font-serif);
+}
+
+.restrictionsList {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-md);
+}
+
+.restrictionItem {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--spacing-md);
+  padding: var(--spacing-md);
+  background: var(--bg-light-cream);
+  border-radius: var(--radius-md);
+  border-left: 3px solid var(--gold);
+}
+
+.restrictionIcon {
+  font-size: 1.5rem;
+  flex-shrink: 0;
+}
+
+.restrictionValue {
+  display: block;
+  margin-top: 4px;
+  color: var(--gray-900);
+  font-weight: 600;
+}
+
+.applicationStatus {
+  display: flex;
+  justify-content: center;
+  padding: var(--spacing-lg);
+}
+
+.statusActive,
+.statusInactive {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-md);
+  padding: var(--spacing-lg) var(--spacing-xl);
+  border-radius: var(--radius-lg);
+  font-weight: 600;
+  font-size: 1.05rem;
+}
+
+.statusActive {
+  background: #f0fdf4;
+  color: var(--success-text);
+  border: 2px solid var(--success-border);
+}
+
+.statusInactive {
+  background: var(--gray-100);
+  color: var(--gray-600);
+  border: 2px solid var(--gray-300);
+}
+
+.statusIcon {
+  font-size: 1.5rem;
+}
+
+.statusText {
+  font-family: var(--font-serif);
+}
+
+/* ==================== CONTACT SECTIONS ==================== */
+.contactSection {
+  margin-bottom: var(--spacing-xl);
+}
+
+.contactGrid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: var(--spacing-md);
+}
+
+.contactCard {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-md);
+  padding: var(--spacing-lg);
+  background: white;
+  border: 2px solid var(--border-beige);
+  border-radius: var(--radius-lg);
+  transition: var(--transition-fast);
+}
+
+.contactCard:hover {
+  border-color: var(--gold);
+  box-shadow: var(--shadow-md);
+}
+
+.contactButton {
+  font-size: 1.25rem;
+  width: 40px;
+  height: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--bg-light-purple);
+  border-radius: var(--radius-md);
+  text-decoration: none;
+  transition: var(--transition-fast);
+  cursor: pointer;
+  flex-shrink: 0;
+  border: 2px solid transparent;
+}
+
+.contactButton:hover {
+  background: var(--gold);
+  border-color: var(--gold);
+  transform: scale(1.1);
+}
+
+.contactActions {
+  display: flex;
+  justify-content: center;
+  padding-top: var(--spacing-lg);
+}
+
+.contactLocked {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  padding: var(--spacing-xxl);
+  background: var(--warning-bg);
+  border: 2px solid var(--warning-border);
+  border-radius: var(--radius-lg);
+  min-height: 300px;
+}
+
+.lockContent {
+  max-width: 500px;
+}
+
+.lockTitle {
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: var(--gray-900);
+  margin-bottom: var(--spacing-md);
+  font-family: var(--font-serif);
+}
+
+.lockMessage {
+  font-size: 1rem;
+  color: var(--gray-700);
+  line-height: 1.6;
+  margin-bottom: var(--spacing-sm);
+}
+
+.lockSubmessage {
+  font-size: 0.9rem;
+  color: var(--gray-600);
+  line-height: 1.5;
+}
+
 /* ==================== RESPONSIVE DESIGN ==================== */
 @media (max-width: 768px) {
   .modalOverlay {
@@ -581,6 +1290,74 @@
   .applicantName {
     font-size: 1.125rem;
   }
+
+  .tabNavigation {
+    padding: 0 var(--spacing-lg);
+  }
+
+  .tabContent {
+    padding: var(--spacing-lg);
+  }
+
+  .tabButton {
+    padding: var(--spacing-md);
+    font-size: 0.875rem;
+  }
+
+  .tabLabel {
+    display: none;
+  }
+
+  .tabIcon {
+    font-size: 1.25rem;
+  }
+
+  .statsGrid {
+    grid-template-columns: 1fr;
+  }
+
+  .bedAvailabilityCard {
+    padding: var(--spacing-lg);
+  }
+
+  .bedAvailabilityContent {
+    flex-direction: column;
+    text-align: center;
+  }
+
+  .bedAvailabilityIcon {
+    width: 60px;
+    height: 60px;
+    font-size: 2.5rem;
+  }
+
+  .bedAvailabilityNumbers {
+    justify-content: center;
+  }
+
+  .bedsAvailable {
+    font-size: 2rem;
+  }
+
+  .bedsTotal {
+    font-size: 1.25rem;
+  }
+
+  .servicesGrid {
+    grid-template-columns: 1fr;
+  }
+
+  .financialGrid {
+    grid-template-columns: 1fr;
+  }
+
+  .quickFeatures {
+    justify-content: center;
+  }
+
+  .contactGrid {
+    grid-template-columns: 1fr;
+  }
 }
 
 @media (max-width: 480px) {
@@ -628,6 +1405,55 @@
     height: 32px;
     font-size: 1.1rem;
   }
+
+  .statCard {
+    padding: var(--spacing-md);
+  }
+
+  .statIcon {
+    font-size: 1.5rem;
+  }
+
+  .statValue {
+    font-size: 1.1rem;
+  }
+
+  .sectionSubtitle {
+    font-size: 1rem;
+  }
+
+  .featureChip {
+    padding: 6px 10px;
+    font-size: 0.85rem;
+  }
+
+  .serviceCard {
+    padding: var(--spacing-md);
+  }
+
+  .requirementItem,
+  .restrictionItem {
+    padding: var(--spacing-sm);
+    flex-direction: column;
+    text-align: center;
+  }
+
+  .requirementIcon,
+  .restrictionIcon {
+    font-size: 2rem;
+  }
+
+  .contactLocked {
+    padding: var(--spacing-xl) var(--spacing-lg);
+  }
+
+  .lockTitle {
+    font-size: 1.25rem;
+  }
+
+  .lockMessage {
+    font-size: 0.9rem;
+  }
 }
 
 /* ==================== SCROLLBAR STYLING ==================== */
@@ -647,4 +1473,21 @@
 
 .modalContent::-webkit-scrollbar-thumb:hover {
   background: var(--gray-500);
+}
+
+.tabNavigation::-webkit-scrollbar {
+  height: 4px;
+}
+
+.tabNavigation::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.tabNavigation::-webkit-scrollbar-thumb {
+  background: var(--gray-300);
+  border-radius: var(--radius-md);
+}
+
+.tabNavigation::-webkit-scrollbar-thumb:hover {
+  background: var(--gray-400);
 }

@@ -623,7 +623,7 @@ I'd love to discuss availability and the application process. Thank you!`,
           connectionStatus={getPropertyConnectionStatus(selectedProperty)}
           onClose={handleClosePropertyModal}
           onContact={handleContactLandlord}
-          showContactInfo={getPropertyConnectionStatus(selectedProperty) === 'approved'}
+          showContactInfo={true}
           showActions={!hasPropertyRequest(selectedProperty.id)}
           isLandlordView={false}
         />

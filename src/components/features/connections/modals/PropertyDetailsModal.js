@@ -1,5 +1,5 @@
 // src/components/features/connections/modals/PropertyDetailsModal.js
-import React from 'react';
+import React, { useState } from 'react';
 import PropTypes from 'prop-types';
 import styles from './PropertyDetailsModal.module.css';
 
@@ -8,7 +8,7 @@ const PropertyDetailsModal = ({
   property,
   connectionStatus,
   requestingApplicant,
-  matchGroupMembers, // For roommate scenarios
+  matchGroupMembers,
   onClose,
   onApprove,
   onDecline,
@@ -17,6 +17,8 @@ const PropertyDetailsModal = ({
   showActions = false,
   isLandlordView = false
 }) => {
+  const [activeTab, setActiveTab] = useState('overview');
+
   if (!isOpen || !property) return null;
 
   /**
@@ -52,7 +54,13 @@ const PropertyDetailsModal = ({
       'shared_room': 'Shared Room',
       'recovery_residence': 'Recovery Residence',
       'sober_living': 'Sober Living Home',
-      'halfway_house': 'Halfway House'
+      'sober_living_level_1': 'Sober Living (Level 1)',
+      'sober_living_level_2': 'Sober Living (Level 2)',
+      'sober_living_level_3': 'Sober Living (Level 3)',
+      'sober_living_level_4': 'Sober Living (Level 4)',
+      'halfway_house': 'Halfway House',
+      'transitional_housing': 'Transitional Housing',
+      'therapeutic_community': 'Therapeutic Community'
     };
     return typeMap[type] || type;
   };
@@ -64,9 +72,10 @@ const PropertyDetailsModal = ({
     if (!term) return 'Flexible';
     const termMap = {
       'month_to_month': 'Month-to-Month',
-      '3_month': '3 Months',
-      '6_month': '6 Months',
-      '1_year': '1 Year',
+      '3_months': '3 Months',
+      '6_months': '6 Months',
+      '12_months': '1 Year',
+      '24_months': '2 Years',
       'flexible': 'Flexible'
     };
     return termMap[term] || term;
@@ -98,8 +107,67 @@ const PropertyDetailsModal = ({
   };
 
   /**
+   * Calculate bed availability percentage
+   */
+  const calculateBedAvailability = () => {
+    if (!property.is_recovery_housing || !property.total_beds) return null;
+    const available = property.available_beds || 0;
+    const total = property.total_beds;
+    const percentage = (available / total) * 100;
+    return {
+      available,
+      total,
+      occupied: total - available,
+      percentage: Math.round(percentage)
+    };
+  };
+
+  /**
+   * Render prominent bed availability indicator (for recovery housing)
+   */
+  const renderBedAvailability = () => {
+    if (!property.is_recovery_housing) return null;
+    const bedInfo = calculateBedAvailability();
+    if (!bedInfo) return null;
+
+    const getAvailabilityStatus = () => {
+      if (bedInfo.percentage >= 50) return 'high';
+      if (bedInfo.percentage >= 25) return 'medium';
+      if (bedInfo.percentage > 0) return 'low';
+      return 'none';
+    };
+
+    const status = getAvailabilityStatus();
+
+    return (
+      <div className={`${styles.bedAvailabilityCard} ${styles[`availability-${status}`]}`}>
+        <div className={styles.bedAvailabilityContent}>
+          <div className={styles.bedAvailabilityIcon}>🛏️</div>
+          <div className={styles.bedAvailabilityInfo}>
+            <div className={styles.bedAvailabilityNumbers}>
+              <span className={styles.bedsAvailable}>{bedInfo.available}</span>
+              <span className={styles.bedsSeparator}>/</span>
+              <span className={styles.bedsTotal}>{bedInfo.total}</span>
+            </div>
+            <div className={styles.bedAvailabilityLabel}>
+              {bedInfo.available === 0 ? 'No Beds Available' : 
+               bedInfo.available === 1 ? 'Bed Available' : 
+               'Beds Available'}
+            </div>
+          </div>
+          <div className={styles.bedAvailabilityBar}>
+            <div 
+              className={styles.bedAvailabilityFill}
+              style={{ width: `${bedInfo.percentage}%` }}
+            />
+          </div>
+        </div>
+      </div>
+    );
+  };
+
+  /**
    * Render requesting applicant section (for landlord view)
-   * PRIVACY FIX: Always use formatName
    */
   const renderRequestingApplicant = () => {
     if (!isLandlordView || !requestingApplicant) return null;
@@ -113,7 +181,6 @@ const PropertyDetailsModal = ({
         <div className={styles.applicantCard}>
           <div className={styles.applicantHeader}>
             <div className={styles.applicantName}>
-              {/* PRIVACY FIX: Use formatName */}
               {formatName(profile.first_name, profile.last_name)}
             </div>
             {applicant.recovery_stage && (
@@ -162,7 +229,6 @@ const PropertyDetailsModal = ({
 
   /**
    * Render match group members (for roommate scenarios)
-   * PRIVACY FIX: Always use formatName
    */
   const renderMatchGroupMembers = () => {
     if (!matchGroupMembers || matchGroupMembers.length === 0) return null;
@@ -178,7 +244,6 @@ const PropertyDetailsModal = ({
             return (
               <div key={member.id || index} className={styles.memberCard}>
                 <div className={styles.memberName}>
-                  {/* PRIVACY FIX: Use formatName */}
                   {formatName(profile.first_name, profile.last_name)}
                 </div>
                 {member.recovery_stage && (
@@ -200,71 +265,561 @@ const PropertyDetailsModal = ({
   };
 
   /**
-   * Render landlord contact information
-   * PRIVACY FIX: Use formatName for landlord name if no business name
+   * TAB 1: Overview - Key information at a glance
    */
-  const renderLandlordContact = () => {
-    if (!showContactInfo || !property.landlord_profiles) return null;
+  const renderOverviewTab = () => (
+    <div className={styles.tabContent}>
+      {/* Bed Availability Card (Recovery Housing Only) */}
+      {property.is_recovery_housing && renderBedAvailability()}
 
-    const landlord = property.landlord_profiles;
-    const landlordProfile = landlord.registrant_profiles || {};
+      {/* Key Stats Grid */}
+      <div className={styles.statsGrid}>
+        <div className={styles.statCard}>
+          <div className={styles.statIcon}>💰</div>
+          <div className={styles.statContent}>
+            <div className={styles.statLabel}>Monthly Rent</div>
+            <div className={styles.statValue}>{formatCurrency(property.monthly_rent)}</div>
+            {property.weekly_rate && (
+              <div className={styles.statSubtext}>or {formatCurrency(property.weekly_rate)}/week</div>
+            )}
+          </div>
+        </div>
 
-    return (
-      <div className={styles.infoSection}>
-        <h4 className={styles.sectionTitle}>📞 Landlord Contact</h4>
-        <div className={styles.contactInfo}>
-          <div className={styles.contactItem}>
-            <span className={styles.contactIcon}>👤</span>
-            <div>
-              <div className={styles.contactLabel}>Name</div>
-              <div className={styles.contactValue}>
-                {/* PRIVACY FIX: Use formatName if no business name */}
-                {landlord.business_name || formatName(landlordProfile.first_name, landlordProfile.last_name)}
+        <div className={styles.statCard}>
+          <div className={styles.statIcon}>🏢</div>
+          <div className={styles.statContent}>
+            <div className={styles.statLabel}>Property Type</div>
+            <div className={styles.statValue}>{formatPropertyType(property.property_type)}</div>
+          </div>
+        </div>
+
+        <div className={styles.statCard}>
+          <div className={styles.statIcon}>🛏️</div>
+          <div className={styles.statContent}>
+            <div className={styles.statLabel}>Bedrooms</div>
+            <div className={styles.statValue}>
+              {property.bedrooms === 0 ? 'Studio' : property.bedrooms || 'Not specified'}
+            </div>
+            {property.is_recovery_housing && property.total_beds && (
+              <div className={styles.statSubtext}>{property.total_beds} total beds</div>
+            )}
+          </div>
+        </div>
+
+        <div className={styles.statCard}>
+          <div className={styles.statIcon}>🚿</div>
+          <div className={styles.statContent}>
+            <div className={styles.statLabel}>Bathrooms</div>
+            <div className={styles.statValue}>{property.bathrooms || 'Not specified'}</div>
+          </div>
+        </div>
+
+        {property.square_footage && !property.is_recovery_housing && (
+          <div className={styles.statCard}>
+            <div className={styles.statIcon}>📐</div>
+            <div className={styles.statContent}>
+              <div className={styles.statLabel}>Square Footage</div>
+              <div className={styles.statValue}>{property.square_footage.toLocaleString()} sq ft</div>
+            </div>
+          </div>
+        )}
+
+        {property.available_date && (
+          <div className={styles.statCard}>
+            <div className={styles.statIcon}>📅</div>
+            <div className={styles.statContent}>
+              <div className={styles.statLabel}>Available Date</div>
+              <div className={styles.statValue}>
+                {new Date(property.available_date).toLocaleDateString()}
               </div>
             </div>
           </div>
+        )}
 
-          {landlord.primary_phone && (
-            <div className={styles.contactItem}>
-              <span className={styles.contactIcon}>📱</span>
-              <div>
-                <div className={styles.contactLabel}>Phone</div>
-                <a href={`tel:${landlord.primary_phone}`} className={styles.contactValue}>
-                  {landlord.primary_phone}
-                </a>
+        {property.lease_duration && (
+          <div className={styles.statCard}>
+            <div className={styles.statIcon}>📋</div>
+            <div className={styles.statContent}>
+              <div className={styles.statLabel}>Lease Term</div>
+              <div className={styles.statValue}>{formatLeaseTerm(property.lease_duration)}</div>
+            </div>
+          </div>
+        )}
+
+        {property.security_deposit && (
+          <div className={styles.statCard}>
+            <div className={styles.statIcon}>🔒</div>
+            <div className={styles.statContent}>
+              <div className={styles.statLabel}>Security Deposit</div>
+              <div className={styles.statValue}>{formatCurrency(property.security_deposit)}</div>
+            </div>
+          </div>
+        )}
+      </div>
+
+      {/* Property Description */}
+      {property.description && (
+        <div className={styles.descriptionSection}>
+          <h4 className={styles.sectionSubtitle}>About This Property</h4>
+          <p className={styles.description}>{property.description}</p>
+        </div>
+      )}
+
+      {/* Location */}
+      <div className={styles.locationSection}>
+        <h4 className={styles.sectionSubtitle}>📍 Location</h4>
+        <div className={styles.addressBox}>
+          <div className={styles.addressLine}>{property.address}</div>
+          <div className={styles.addressLine}>
+            {property.city}, {property.state} {property.zip_code}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+
+  /**
+   * TAB 2: Property Features - Amenities, utilities, accessibility
+   */
+  const renderFeaturesTab = () => (
+    <div className={styles.tabContent}>
+      {/* Quick Features */}
+      <div className={styles.quickFeatures}>
+        {property.furnished && (
+          <div className={styles.featureChip}>
+            <span className={styles.featureIcon}>🛋️</span> Furnished
+          </div>
+        )}
+        {property.pets_allowed && (
+          <div className={styles.featureChip}>
+            <span className={styles.featureIcon}>🐾</span> Pets Allowed
+          </div>
+        )}
+        {property.smoking_allowed && (
+          <div className={styles.featureChip}>
+            <span className={styles.featureIcon}>🚬</span> Smoking Areas
+          </div>
+        )}
+        {property.meals_included && (
+          <div className={styles.featureChip}>
+            <span className={styles.featureIcon}>🍽️</span> Meals Included
+          </div>
+        )}
+        {property.linens_provided && (
+          <div className={styles.featureChip}>
+            <span className={styles.featureIcon}>🛏️</span> Linens Provided
+          </div>
+        )}
+      </div>
+
+      {/* Utilities Included */}
+      {property.utilities_included && property.utilities_included.length > 0 && (
+        <div className={styles.featureSection}>
+          <h4 className={styles.sectionSubtitle}>💡 Utilities Included</h4>
+          <div className={styles.tagGrid}>
+            {property.utilities_included.map((utility, i) => (
+              <span key={i} className={styles.tag}>
+                {utility.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase())}
+              </span>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Amenities */}
+      {property.amenities && property.amenities.length > 0 && (
+        <div className={styles.featureSection}>
+          <h4 className={styles.sectionSubtitle}>✨ Property Amenities</h4>
+          <div className={styles.tagGrid}>
+            {property.amenities.map((amenity, i) => (
+              <span key={i} className={styles.tag}>{amenity}</span>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Accessibility Features */}
+      {property.accessibility_features && property.accessibility_features.length > 0 && (
+        <div className={styles.featureSection}>
+          <h4 className={styles.sectionSubtitle}>♿ Accessibility Features</h4>
+          <div className={styles.tagGrid}>
+            {property.accessibility_features.map((feature, i) => (
+              <span key={i} className={styles.tag}>{feature}</span>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Neighborhood Features */}
+      {property.neighborhood_features && property.neighborhood_features.length > 0 && (
+        <div className={styles.featureSection}>
+          <h4 className={styles.sectionSubtitle}>🏘️ Neighborhood</h4>
+          <div className={styles.tagGrid}>
+            {property.neighborhood_features.map((feature, i) => (
+              <span key={i} className={styles.tag}>{feature}</span>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Additional Notes */}
+      {property.additional_notes && (
+        <div className={styles.featureSection}>
+          <h4 className={styles.sectionSubtitle}>📝 Additional Information</h4>
+          <p className={styles.additionalNotes}>{property.additional_notes}</p>
+        </div>
+      )}
+    </div>
+  );
+
+  /**
+   * TAB 3: Recovery Program - Recovery housing specific info
+   */
+  const renderRecoveryTab = () => {
+    if (!property.is_recovery_housing) return null;
+
+    return (
+      <div className={styles.tabContent}>
+        {/* Program Requirements */}
+        {property.required_programs && property.required_programs.length > 0 && (
+          <div className={styles.recoverySection}>
+            <h4 className={styles.sectionSubtitle}>📋 Required Programs</h4>
+            <div className={styles.tagGrid}>
+              {property.required_programs.map((program, i) => (
+                <span key={i} className={styles.tagImportant}>
+                  {program.replace(/_/g, ' ').toUpperCase()}
+                </span>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* Sobriety & Treatment Requirements */}
+        <div className={styles.recoverySection}>
+          <h4 className={styles.sectionSubtitle}>🌱 Sobriety Requirements</h4>
+          <div className={styles.requirementsList}>
+            {property.min_sobriety_time && (
+              <div className={styles.requirementItem}>
+                <span className={styles.requirementIcon}>⏱️</span>
+                <div>
+                  <strong>Minimum Sobriety:</strong>
+                  <span className={styles.requirementValue}>
+                    {property.min_sobriety_time.replace(/_/g, ' ')}
+                  </span>
+                </div>
               </div>
-              <a 
-                href={`tel:${landlord.primary_phone}`}
-                className={styles.contactIconButton}
-                title="Call"
-              >
-                📱
-              </a>
+            )}
+            {property.treatment_completion_required && (
+              <div className={styles.requirementItem}>
+                <span className={styles.requirementIcon}>✅</span>
+                <div>
+                  <strong>Treatment Requirement:</strong>
+                  <span className={styles.requirementValue}>
+                    {property.treatment_completion_required.replace(/_/g, ' ')}
+                  </span>
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* Support Services */}
+        <div className={styles.recoverySection}>
+          <h4 className={styles.sectionSubtitle}>🤝 Support Services Available</h4>
+          <div className={styles.servicesGrid}>
+            {property.case_management && (
+              <div className={styles.serviceCard}>
+                <span className={styles.serviceIcon}>💼</span>
+                <span className={styles.serviceName}>Case Management</span>
+              </div>
+            )}
+            {property.counseling_services && (
+              <div className={styles.serviceCard}>
+                <span className={styles.serviceIcon}>🗣️</span>
+                <span className={styles.serviceName}>Counseling Services</span>
+              </div>
+            )}
+            {property.job_training && (
+              <div className={styles.serviceCard}>
+                <span className={styles.serviceIcon}>💼</span>
+                <span className={styles.serviceName}>Job Training</span>
+              </div>
+            )}
+            {property.medical_services && (
+              <div className={styles.serviceCard}>
+                <span className={styles.serviceIcon}>🏥</span>
+                <span className={styles.serviceName}>Medical Services</span>
+              </div>
+            )}
+            {property.transportation_services && (
+              <div className={styles.serviceCard}>
+                <span className={styles.serviceIcon}>🚗</span>
+                <span className={styles.serviceName}>Transportation</span>
+              </div>
+            )}
+            {property.life_skills_training && (
+              <div className={styles.serviceCard}>
+                <span className={styles.serviceIcon}>🎓</span>
+                <span className={styles.serviceName}>Life Skills Training</span>
+              </div>
+            )}
+          </div>
+          {!property.case_management && !property.counseling_services && 
+           !property.job_training && !property.medical_services && 
+           !property.transportation_services && !property.life_skills_training && (
+            <p className={styles.noServices}>No additional support services listed</p>
+          )}
+        </div>
+
+        {/* House Rules */}
+        {property.house_rules && property.house_rules.length > 0 && (
+          <div className={styles.recoverySection}>
+            <h4 className={styles.sectionSubtitle}>📜 House Rules</h4>
+            <ul className={styles.rulesList}>
+              {property.house_rules.map((rule, i) => (
+                <li key={i}>{rule}</li>
+              ))}
+            </ul>
+          </div>
+        )}
+
+        {property.additional_house_rules && (
+          <div className={styles.recoverySection}>
+            <h4 className={styles.sectionSubtitle}>Additional Rules & Expectations</h4>
+            <p className={styles.additionalRules}>{property.additional_house_rules}</p>
+          </div>
+        )}
+
+        {/* Licensing */}
+        {(property.license_number || property.accreditation) && (
+          <div className={styles.recoverySection}>
+            <h4 className={styles.sectionSubtitle}>🏛️ Licensing & Accreditation</h4>
+            <div className={styles.licensingInfo}>
+              {property.license_number && (
+                <div className={styles.licensingItem}>
+                  <strong>License Number:</strong> {property.license_number}
+                </div>
+              )}
+              {property.accreditation && (
+                <div className={styles.licensingItem}>
+                  <strong>Accreditation:</strong> {property.accreditation}
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+      </div>
+    );
+  };
+
+  /**
+   * TAB 4: Requirements & Policies
+   */
+  const renderRequirementsTab = () => (
+    <div className={styles.tabContent}>
+      {/* Financial Requirements */}
+      <div className={styles.requirementsSection}>
+        <h4 className={styles.sectionSubtitle}>💵 Financial Requirements</h4>
+        <div className={styles.financialGrid}>
+          <div className={styles.financialItem}>
+            <span className={styles.financialLabel}>Monthly Rent:</span>
+            <span className={styles.financialValue}>{formatCurrency(property.monthly_rent)}</span>
+          </div>
+          {property.security_deposit && (
+            <div className={styles.financialItem}>
+              <span className={styles.financialLabel}>Security Deposit:</span>
+              <span className={styles.financialValue}>{formatCurrency(property.security_deposit)}</span>
             </div>
           )}
-
-          {(landlord.contact_email || landlordProfile.email) && (
-            <div className={styles.contactItem}>
-              <span className={styles.contactIcon}>📧</span>
-              <div>
-                <div className={styles.contactLabel}>Email</div>
-                <a 
-                  href={`mailto:${landlord.contact_email || landlordProfile.email}`} 
-                  className={styles.contactValue}
-                >
-                  {landlord.contact_email || landlordProfile.email}
-                </a>
-              </div>
-              <a 
-                href={`mailto:${landlord.contact_email || landlordProfile.email}`}
-                className={styles.contactIconButton}
-                title="Email"
-              >
-                📧
-              </a>
+          {property.application_fee && (
+            <div className={styles.financialItem}>
+              <span className={styles.financialLabel}>Application Fee:</span>
+              <span className={styles.financialValue}>{formatCurrency(property.application_fee)}</span>
+            </div>
+          )}
+          {property.weekly_rate && (
+            <div className={styles.financialItem}>
+              <span className={styles.financialLabel}>Weekly Rate:</span>
+              <span className={styles.financialValue}>{formatCurrency(property.weekly_rate)}</span>
             </div>
           )}
         </div>
+      </div>
+
+      {/* Accepted Subsidies */}
+      {property.accepted_subsidies && property.accepted_subsidies.length > 0 && (
+        <div className={styles.requirementsSection}>
+          <h4 className={styles.sectionSubtitle}>💰 Accepted Housing Assistance</h4>
+          <div className={styles.tagGrid}>
+            {property.accepted_subsidies.map((subsidy, i) => (
+              <span key={i} className={styles.tagSuccess}>
+                {subsidy.replace(/_/g, ' ').toUpperCase()}
+              </span>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Resident Restrictions (Recovery Housing) */}
+      {property.is_recovery_housing && (
+        <div className={styles.requirementsSection}>
+          <h4 className={styles.sectionSubtitle}>👥 Resident Requirements</h4>
+          <div className={styles.restrictionsList}>
+            {property.gender_restrictions && property.gender_restrictions !== 'any' && (
+              <div className={styles.restrictionItem}>
+                <span className={styles.restrictionIcon}>⚧️</span>
+                <div>
+                  <strong>Gender:</strong>
+                  <span className={styles.restrictionValue}>
+                    {property.gender_restrictions.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase())}
+                  </span>
+                </div>
+              </div>
+            )}
+            {property.age_restrictions && (
+              <div className={styles.restrictionItem}>
+                <span className={styles.restrictionIcon}>🎂</span>
+                <div>
+                  <strong>Age Restrictions:</strong>
+                  <span className={styles.restrictionValue}>{property.age_restrictions}</span>
+                </div>
+              </div>
+            )}
+            {property.criminal_background_ok !== undefined && (
+              <div className={styles.restrictionItem}>
+                <span className={styles.restrictionIcon}>
+                  {property.criminal_background_ok ? '✅' : '❌'}
+                </span>
+                <div>
+                  <strong>Criminal Background:</strong>
+                  <span className={styles.restrictionValue}>
+                    {property.criminal_background_ok ? 'Will Consider' : 'Not Accepted'}
+                  </span>
+                </div>
+              </div>
+            )}
+            {property.sex_offender_restrictions && (
+              <div className={styles.restrictionItem}>
+                <span className={styles.restrictionIcon}>⚠️</span>
+                <div>
+                  <strong>Sex Offender Restrictions:</strong>
+                  <span className={styles.restrictionValue}>Cannot Accept</span>
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* Application Status */}
+      <div className={styles.requirementsSection}>
+        <h4 className={styles.sectionSubtitle}>📋 Application Status</h4>
+        <div className={styles.applicationStatus}>
+          {property.accepting_applications !== false ? (
+            <div className={styles.statusActive}>
+              <span className={styles.statusIcon}>✅</span>
+              <span className={styles.statusText}>Currently Accepting Applications</span>
+            </div>
+          ) : (
+            <div className={styles.statusInactive}>
+              <span className={styles.statusIcon}>⏸️</span>
+              <span className={styles.statusText}>Not Currently Accepting Applications</span>
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+
+  /**
+   * TAB 5: Contact - Landlord contact information
+   */
+  const renderContactTab = () => {
+    const landlord = property.landlord_profiles;
+    const landlordProfile = landlord?.registrant_profiles || {};
+
+    return (
+      <div className={styles.tabContent}>
+        {showContactInfo ? (
+          <>
+            <div className={styles.contactSection}>
+              <h4 className={styles.sectionSubtitle}>📞 Landlord Contact Information</h4>
+              
+              <div className={styles.contactGrid}>
+                <div className={styles.contactCard}>
+                  <span className={styles.contactIcon}>👤</span>
+                  <div className={styles.contactInfo}>
+                    <div className={styles.contactLabel}>Name</div>
+                    <div className={styles.contactValue}>
+                      {landlord?.business_name || formatName(landlordProfile.first_name, landlordProfile.last_name)}
+                    </div>
+                  </div>
+                </div>
+
+                {landlord?.primary_phone && (
+                  <div className={styles.contactCard}>
+                    <span className={styles.contactIcon}>📱</span>
+                    <div className={styles.contactInfo}>
+                      <div className={styles.contactLabel}>Phone</div>
+                      <a href={`tel:${landlord.primary_phone}`} className={styles.contactValue}>
+                        {landlord.primary_phone}
+                      </a>
+                    </div>
+                    <a 
+                      href={`tel:${landlord.primary_phone}`}
+                      className={styles.contactButton}
+                      title="Call"
+                    >
+                      📱
+                    </a>
+                  </div>
+                )}
+
+                {(landlord?.contact_email || landlordProfile.email) && (
+                  <div className={styles.contactCard}>
+                    <span className={styles.contactIcon}>📧</span>
+                    <div className={styles.contactInfo}>
+                      <div className={styles.contactLabel}>Email</div>
+                      <a 
+                        href={`mailto:${landlord.contact_email || landlordProfile.email}`} 
+                        className={styles.contactValue}>
+                        {landlord.contact_email || landlordProfile.email}
+                      </a>
+                    </div>
+                    <a 
+                      href={`mailto:${landlord.contact_email || landlordProfile.email}`}
+                      className={styles.contactButton}
+                      title="Email"
+                    >
+                      📧
+                    </a>
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {onContact && (
+              <div className={styles.contactActions}>
+                <button className="btn btn-primary btn-lg" onClick={() => onContact(property)}>
+                  📞 Contact About This Property
+                </button>
+              </div>
+            )}
+          </>
+        ) : (
+          <div className={styles.contactLocked}>
+            <div className={styles.lockIcon}>🔒</div>
+            <div className={styles.lockContent}>
+              <h4 className={styles.lockTitle}>Contact Information Locked</h4>
+              <p className={styles.lockMessage}>
+                Contact information will be available once your connection request is approved by the landlord.
+              </p>
+              <p className={styles.lockSubmessage}>
+                After approval, you'll be able to contact the landlord directly to discuss the property and schedule viewings.
+              </p>
+            </div>
+          </div>
+        )}
       </div>
     );
   };
@@ -327,227 +882,94 @@ const PropertyDetailsModal = ({
     );
   };
 
+  // Define tabs dynamically based on property type
+  const tabs = [
+    { id: 'overview', label: 'Overview', icon: '🏠' },
+    { id: 'features', label: 'Features', icon: '✨' },
+  ];
+
+  if (property.is_recovery_housing) {
+    tabs.push({ id: 'recovery', label: 'Recovery Program', icon: '🌱' });
+  }
+
+  tabs.push({ id: 'requirements', label: 'Requirements', icon: '📋' });
+  tabs.push({ id: 'contact', label: 'Contact', icon: '📞' });
+
   return (
     <div className={styles.modalOverlay} onClick={onClose}>
       <div className={styles.modalContent} onClick={(e) => e.stopPropagation()}>
         <button className={styles.modalClose} onClick={onClose}>×</button>
         
-        <div className={styles.modalBody}>
-          {/* Property Header */}
-          <div className={styles.propertyHeader} style={{ background: getHeaderGradient() }}>
-            <div className={styles.propertyHeaderContent}>
-              <div className={styles.propertyIcon}>
-                {property.is_recovery_housing ? '🌱' : '🏠'}
-              </div>
-              <div className={styles.propertyHeaderInfo}>
-                <h2 className={styles.propertyTitle}>
-                  {property.title || property.street_address || 'Property Listing'}
-                </h2>
-                <div className={styles.propertyLocation}>
-                  📍 {property.city}{property.state && `, ${property.state}`}
-                  {property.zip_code && ` ${property.zip_code}`}
-                </div>
+        {/* Property Header */}
+        <div className={styles.propertyHeader} style={{ background: getHeaderGradient() }}>
+          <div className={styles.propertyHeaderContent}>
+            <div className={styles.propertyIcon}>
+              {property.is_recovery_housing ? '🌱' : '🏠'}
+            </div>
+            <div className={styles.propertyHeaderInfo}>
+              <h2 className={styles.propertyTitle}>
+                {property.title || property.street_address || 'Property Listing'}
+              </h2>
+              <div className={styles.propertyLocation}>
+                📍 {property.city}{property.state && `, ${property.state}`}
+                {property.zip_code && ` ${property.zip_code}`}
               </div>
             </div>
           </div>
-
-          {/* Status Badges */}
-          <div className={styles.badgeSection}>
-            {connectionStatus && (
-              <span className={`badge ${connectionStatus === 'approved' || connectionStatus === 'confirmed' || connectionStatus === 'active' ? 'badge-success' : 'badge-warning'}`}>
-                {connectionStatus}
-              </span>
-            )}
-            {property.is_recovery_housing && (
-              <span className="badge badge-success">🌱 Recovery Housing</span>
-            )}
-            {property.utilities_included && property.utilities_included.length > 0 && (
-              <span className="badge badge-info">💡 Utilities Included</span>
-            )}
-            {property.furnished && (
-              <span className="badge badge-info">🛋️ Furnished</span>
-            )}
-            {property.pets_allowed && (
-              <span className="badge badge-info">🐾 Pets Allowed</span>
-            )}
-          </div>
-
-          {/* Requesting Applicant (for landlord) */}
-          {renderRequestingApplicant()}
-
-          {/* Match Group Members (for roommate scenarios) */}
-          {renderMatchGroupMembers()}
-
-          {/* Key Information Grid */}
-          <div className={styles.infoSection}>
-            <h4 className={styles.sectionTitle}>Property Overview</h4>
-            <div className={styles.infoGrid}>
-              <div className={styles.infoItem}>
-                <span className={styles.infoIcon}>💰</span>
-                <div>
-                  <div className={styles.infoLabel}>Monthly Rent</div>
-                  <div className={styles.infoValue}>
-                    {formatCurrency(property.monthly_rent)}
-                  </div>
-                </div>
-              </div>
-
-              <div className={styles.infoItem}>
-                <span className={styles.infoIcon}>🏢</span>
-                <div>
-                  <div className={styles.infoLabel}>Property Type</div>
-                  <div className={styles.infoValue}>{formatPropertyType(property.property_type)}</div>
-                </div>
-              </div>
-
-              <div className={styles.infoItem}>
-                <span className={styles.infoIcon}>🛏️</span>
-                <div>
-                  <div className={styles.infoLabel}>Bedrooms</div>
-                  <div className={styles.infoValue}>
-                    {property.bedrooms === 0 ? 'Studio' : property.bedrooms || 'Not specified'}
-                  </div>
-                </div>
-              </div>
-
-              <div className={styles.infoItem}>
-                <span className={styles.infoIcon}>🚿</span>
-                <div>
-                  <div className={styles.infoLabel}>Bathrooms</div>
-                  <div className={styles.infoValue}>{property.bathrooms || 'Not specified'}</div>
-                </div>
-              </div>
-
-              {property.square_footage && (
-                <div className={styles.infoItem}>
-                  <span className={styles.infoIcon}>📐</span>
-                  <div>
-                    <div className={styles.infoLabel}>Square Footage</div>
-                    <div className={styles.infoValue}>{property.square_footage.toLocaleString()} sq ft</div>
-                  </div>
-                </div>
-              )}
-
-              {property.lease_duration && (
-                <div className={styles.infoItem}>
-                  <span className={styles.infoIcon}>📋</span>
-                  <div>
-                    <div className={styles.infoLabel}>Lease Term</div>
-                    <div className={styles.infoValue}>{formatLeaseTerm(property.lease_duration)}</div>
-                  </div>
-                </div>
-              )}
-
-              {property.available_date && (
-                <div className={styles.infoItem}>
-                  <span className={styles.infoIcon}>📅</span>
-                  <div>
-                    <div className={styles.infoLabel}>Available Date</div>
-                    <div className={styles.infoValue}>
-                      {new Date(property.available_date).toLocaleDateString()}
-                    </div>
-                  </div>
-                </div>
-              )}
-
-              {property.security_deposit && (
-                <div className={styles.infoItem}>
-                  <span className={styles.infoIcon}>🔒</span>
-                  <div>
-                    <div className={styles.infoLabel}>Security Deposit</div>
-                    <div className={styles.infoValue}>{formatCurrency(property.security_deposit)}</div>
-                  </div>
-                </div>
-              )}
-            </div>
-          </div>
-
-          {/* Full Address */}
-          {property.address && (
-            <div className={styles.infoSection}>
-              <h4 className={styles.sectionTitle}>📍 Location</h4>
-              <div className={styles.addressBox}>
-                <div className={styles.addressLine}>{property.address}</div>
-                <div className={styles.addressLine}>
-                  {property.city}, {property.state} {property.zip_code}
-                </div>
-              </div>
-            </div>
-          )}
-
-          {/* Recovery Housing Features */}
-          {property.is_recovery_housing && (property.required_programs || property.house_rules || property.min_sobriety_time) && (
-            <div className={styles.infoSection}>
-              <h4 className={styles.sectionTitle}>🌱 Recovery Housing Details</h4>
-              <div className={styles.detailsList}>
-                {property.min_sobriety_time && (
-                  <div className={styles.detailItem}>
-                    <strong>Minimum Sobriety:</strong> {property.min_sobriety_time}
-                  </div>
-                )}
-                
-                {property.required_programs && property.required_programs.length > 0 && (
-                  <div className={styles.detailItem}>
-                    <strong>Required Programs:</strong>
-                    <div className={styles.tagList}>
-                      {property.required_programs.map((program, i) => (
-                        <span key={i} className={styles.tag}>{program}</span>
-                      ))}
-                    </div>
-                  </div>
-                )}
-
-                {property.house_rules && property.house_rules.length > 0 && (
-                  <div className={styles.detailItem}>
-                    <strong>House Rules:</strong>
-                    <ul className={styles.rulesList}>
-                      {property.house_rules.map((rule, i) => (
-                        <li key={i}>{rule}</li>
-                      ))}
-                    </ul>
-                  </div>
-                )}
-              </div>
-            </div>
-          )}
-
-          {/* Amenities */}
-          {property.amenities && property.amenities.length > 0 && (
-            <div className={styles.infoSection}>
-              <h4 className={styles.sectionTitle}>✨ Amenities</h4>
-              <div className={styles.tagList}>
-                {property.amenities.map((amenity, i) => (
-                  <span key={i} className={styles.tag}>{amenity}</span>
-                ))}
-              </div>
-            </div>
-          )}
-
-          {/* Property Description */}
-          {property.description && (
-            <div className={styles.infoSection}>
-              <h4 className={styles.sectionTitle}>📝 Property Description</h4>
-              <p className={styles.bioText}>{property.description}</p>
-            </div>
-          )}
-
-          {/* Landlord Contact Info */}
-          {renderLandlordContact()}
-
-          {/* Contact Info Locked Message */}
-          {!showContactInfo && (
-            <div className={styles.contactInfoLocked}>
-              <div className={styles.lockIcon}>🔒</div>
-              <div className={styles.lockMessage}>
-                <strong>Contact information available after connection is approved</strong>
-                <p>Once the landlord approves your request, you'll be able to contact them directly to discuss the property and application process.</p>
-              </div>
-            </div>
-          )}
-
-          {/* Action Buttons */}
-          {renderActionButtons()}
         </div>
+
+        {/* Status Badges */}
+        <div className={styles.badgeSection}>
+          {connectionStatus && (
+            <span className={`badge ${connectionStatus === 'approved' || connectionStatus === 'confirmed' || connectionStatus === 'active' ? 'badge-success' : 'badge-warning'}`}>
+              {connectionStatus}
+            </span>
+          )}
+          {property.is_recovery_housing && (
+            <span className="badge badge-success">🌱 Recovery Housing</span>
+          )}
+          {property.utilities_included && property.utilities_included.length > 0 && (
+            <span className="badge badge-info">💡 Utilities Included</span>
+          )}
+          {property.furnished && (
+            <span className="badge badge-info">🛋️ Furnished</span>
+          )}
+          {property.pets_allowed && (
+            <span className="badge badge-info">🐾 Pets Allowed</span>
+          )}
+        </div>
+
+        {/* Requesting Applicant (for landlord) */}
+        {renderRequestingApplicant()}
+
+        {/* Match Group Members (for roommate scenarios) */}
+        {renderMatchGroupMembers()}
+
+        {/* Tabbed Navigation */}
+        <div className={styles.tabNavigation}>
+          {tabs.map(tab => (
+            <button
+              key={tab.id}
+              className={`${styles.tabButton} ${activeTab === tab.id ? styles.tabActive : ''}`}
+              onClick={() => setActiveTab(tab.id)}
+            >
+              <span className={styles.tabIcon}>{tab.icon}</span>
+              <span className={styles.tabLabel}>{tab.label}</span>
+            </button>
+          ))}
+        </div>
+
+        {/* Tab Content */}
+        <div className={styles.modalBody}>
+          {activeTab === 'overview' && renderOverviewTab()}
+          {activeTab === 'features' && renderFeaturesTab()}
+          {activeTab === 'recovery' && renderRecoveryTab()}
+          {activeTab === 'requirements' && renderRequirementsTab()}
+          {activeTab === 'contact' && renderContactTab()}
+        </div>
+
+        {/* Action Buttons */}
+        {renderActionButtons()}
       </div>
     </div>
   );
