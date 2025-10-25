@@ -20,6 +20,7 @@ const PropertySearchResults = ({
   onContactLandlord,
   onSaveProperty,
   onSendHousingInquiry,
+  onViewDetails,
   onClearAllFilters,
   onSearchModeChange
 }) => {
@@ -141,17 +142,18 @@ const PropertySearchResults = ({
       {/* ✅ UPDATED: Results Grid - Pass pendingPropertyRequests to PropertyCard */}
       <div className={styles.resultsGrid}>
         <div className="grid-auto">
-          {properties.map(property => (
-            <PropertyCard
-              key={property.id}
-              property={property}
-              savedProperties={savedProperties}
-              pendingPropertyRequests={pendingPropertyRequests}
-              onContactLandlord={onContactLandlord}
-              onSaveProperty={onSaveProperty}
-              onSendHousingInquiry={onSendHousingInquiry}
-            />
-          ))}
+{properties.map(property => (
+  <PropertyCard
+    key={property.id}
+    property={property}
+    savedProperties={savedProperties}
+    pendingPropertyRequests={pendingPropertyRequests}
+    onContactLandlord={onContactLandlord}
+    onSaveProperty={onSaveProperty}
+    onSendHousingInquiry={onSendHousingInquiry}
+    onViewDetails={onViewDetails} // ✅ ADD THIS LINE
+  />
+))}
         </div>
       </div>
 
@@ -206,6 +208,7 @@ PropertySearchResults.propTypes = {
   onContactLandlord: PropTypes.func.isRequired,
   onSaveProperty: PropTypes.func.isRequired,
   onSendHousingInquiry: PropTypes.func.isRequired,
+  onViewDetails: PropTypes.func.isRequired,
   onClearAllFilters: PropTypes.func.isRequired,
   onSearchModeChange: PropTypes.func.isRequired
 };
