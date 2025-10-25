@@ -1,4 +1,4 @@
-// src/components/features/matching/components/MatchDetailsModal.js - SCHEMA ALIGNED
+// src/components/features/matching/components/MatchDetailsModal.js - ENHANCED WITH ALL PROFILE DATA
 import React, { useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import PropTypes from 'prop-types';
@@ -12,8 +12,13 @@ const MODAL_SECTIONS = [
   },
   {
     id: 'recovery',
-    title: 'Recovery Info',
+    title: 'Recovery',
     icon: '🌱'
+  },
+  {
+    id: 'roommate',
+    title: 'Roommate Preferences',
+    icon: '👥'
   },
   {
     id: 'lifestyle',
@@ -26,45 +31,16 @@ const MODAL_SECTIONS = [
     icon: '🏠'
   },
   {
+    id: 'personal',
+    title: 'Personal Story',
+    icon: '✨'
+  },
+  {
     id: 'compatibility',
     title: 'Compatibility',
     icon: '💫'
-  },
-  {
-    id: 'about',
-    title: 'About',
-    icon: '✨'
   }
 ];
-
-// Debug stacking context detection utility
-const debugStackingContext = (element, label) => {
-  if (!element) return;
-  
-  const computedStyles = window.getComputedStyle(element);
-  const stackingProps = {
-    position: computedStyles.position,
-    zIndex: computedStyles.zIndex,
-    transform: computedStyles.transform,
-    opacity: computedStyles.opacity,
-    isolation: computedStyles.isolation,
-    filter: computedStyles.filter
-  };
-  
-  console.log(`🔍 ${label} stacking context:`, stackingProps);
-  
-  // Check if creates stacking context
-  const createsContext = (
-    (computedStyles.position !== 'static' && computedStyles.zIndex !== 'auto') ||
-    computedStyles.transform !== 'none' ||
-    computedStyles.opacity !== '1' ||
-    computedStyles.isolation === 'isolate' ||
-    computedStyles.filter !== 'none'
-  );
-  
-  console.log(`📊 ${label} creates stacking context:`, createsContext);
-  return createsContext;
-};
 
 // Portal Container Management
 const getModalRoot = () => {
@@ -83,7 +59,6 @@ const getModalRoot = () => {
       pointer-events: none;
     `;
     document.body.appendChild(modalRoot);
-    console.log('✅ Created modal-root portal container');
   }
   
   return modalRoot;
@@ -96,28 +71,15 @@ const MatchDetailsModal = ({
   customActions,
   isRequestSent,
   isAlreadyMatched,
+  showContactInfo = false,
   usePortal = true,
   debugMode = false
 }) => {
   const [activeSection, setActiveSection] = useState('overview');
   const [modalContainer, setModalContainer] = useState(null);
 
-  // Setup modal container and debugging
+  // Setup modal container
   useEffect(() => {
-    console.log('🎭 MatchDetailsModal: Setting up modal...');
-    
-    // Debug mode: analyze stacking contexts
-    if (debugMode) {
-      setTimeout(() => {
-        debugStackingContext(document.querySelector('.app-header'), 'Header');
-        debugStackingContext(document.querySelector('.container'), 'Container');
-        debugStackingContext(document.querySelector('.content'), 'Content');
-        debugStackingContext(document.querySelector('.dashboard-grid-nav'), 'Navigation');
-        debugStackingContext(document.body, 'Body');
-      }, 500);
-    }
-    
-    // Setup modal container
     if (usePortal) {
       const container = getModalRoot();
       setModalContainer(container);
@@ -130,32 +92,19 @@ const MatchDetailsModal = ({
     document.body.style.overflow = 'hidden';
     document.body.style.position = 'relative';
     
-    // Add debug class if enabled
-    if (debugMode) {
-      document.body.classList.add('debug-stacking');
-    }
-    
-    // Cleanup
     return () => {
-      console.log('🧹 MatchDetailsModal: Cleaning up...');
       document.body.style.overflow = originalOverflow;
       document.body.style.position = originalPosition;
-      
-      if (debugMode) {
-        document.body.classList.remove('debug-stacking');
-      }
     };
-  }, [usePortal, debugMode]);
+  }, [usePortal]);
 
   // Enhanced close handler
   const handleClose = () => {
-    console.log('🚪 MatchDetailsModal: Closing...');
     onClose();
   };
 
   // Enhanced section change with scroll reset
   const handleSectionChange = (sectionId) => {
-    console.log(`🔄 MatchDetailsModal: Switching to ${sectionId}`);
     setActiveSection(sectionId);
     
     // Reset scroll position
@@ -167,38 +116,124 @@ const MatchDetailsModal = ({
 
   if (!match) return null;
 
-  // ✅ SCHEMA ALIGNED: Extract data using correct field names
+  // Extract data from match object
   const {
-    // Schema fields
+    // Basic info
     first_name,
     date_of_birth,
     primary_city,
     primary_state,
-    primary_location, // Generated column
+    primary_location,
+    gender_identity,
+    biological_sex,
+    
+    // Contact info (gated)
+    primary_phone,
+    registrant_profiles,
+    
+    // Recovery fields
     recovery_stage,
     calculated_recovery_stage,
     sobriety_date,
     recovery_methods,
-    program_types, // ✅ FIXED: Array field name
+    program_types,
     primary_issues,
-    work_schedule,
-    cleanliness_level,
-    noise_tolerance, // ✅ FIXED: Was noise_level
-    social_level,
-    bedtime_preference,
-    smoking_status,
     spiritual_affiliation,
+    primary_substance,
+    recovery_goal_timeframe,
+    support_meetings,
+    sponsor_mentor,
+    want_recovery_support,
+    comfortable_discussing_recovery,
+    attend_meetings_together,
+    substance_free_home_required,
+    recovery_context,
+    
+    // Roommate preferences
+    preferred_roommate_gender,
+    smoking_status,
+    gender_inclusive,
+    age_range_min,
+    age_range_max,
+    age_flexibility,
+    pet_preference,
+    smoking_preference,
+    prefer_recovery_experience,
+    supportive_of_recovery,
+    respect_privacy,
+    similar_schedules,
+    shared_chores,
+    financially_stable,
+    respectful_guests,
+    lgbtq_friendly,
+    culturally_sensitive,
+    deal_breaker_substance_use,
+    deal_breaker_loudness,
+    deal_breaker_uncleanliness,
+    deal_breaker_financial_issues,
+    deal_breaker_pets,
+    deal_breaker_smoking,
+    
+    // Lifestyle fields
+    work_schedule,
+    work_from_home_frequency,
+    bedtime_preference,
+    cleanliness_level,
+    noise_tolerance,
+    social_level,
+    guests_policy,
+    social_activities_at_home,
+    early_riser,
+    night_owl,
+    cooking_enthusiast,
+    cooking_frequency,
+    exercise_at_home,
+    plays_instruments,
+    tv_streaming_regular,
+    chore_sharing_style,
+    communication_style,
+    conflict_resolution_style,
+    preferred_support_structure,
+    
+    // Housing fields
+    budget_min,
+    budget_max,
+    housing_types_accepted,
+    housing_assistance,
+    move_in_date,
+    move_in_flexibility,
+    max_commute_minutes,
+    preferred_bedrooms,
+    transportation_method,
+    lease_duration,
+    location_flexibility,
+    furnished_preference,
+    utilities_included_preference,
+    accessibility_needed,
+    parking_required,
+    public_transit_access,
+    
+    // Personal story
+    about_me,
+    looking_for,
+    interests,
+    short_term_goals,
+    long_term_vision,
+    additional_interests,
+    
+    // Pets & preferences
     pets_owned,
     pets_comfortable,
     overnight_guests_ok,
     shared_groceries,
-    housing_types_accepted, // ✅ FIXED: Was housing_type
-    housing_assistance, // ✅ FIXED: Was housing_subsidy
-    interests,
-    about_me,
-    looking_for,
+    shared_transportation,
+    shared_activities_interest,
+    recovery_accountability,
+    shared_recovery_activities,
+    mentorship_interest,
+    recovery_community,
     
-    // Algorithm-computed fields (not in schema)
+    // Algorithm fields
     matchScore,
     compatibility_score,
     greenFlags = [],
@@ -206,16 +241,18 @@ const MatchDetailsModal = ({
     breakdown = {},
     match_factors,
     
-    // Legacy field support
-    age, // Calculated from date_of_birth
-    location, // Constructed from primary_city/primary_state
-    program_type, // Legacy name for program_types
-    housing_type, // Legacy name for housing_types_accepted
-    housing_subsidy, // Legacy name for housing_assistance
-    noise_level // Legacy name for noise_tolerance
+    // Legacy support
+    age,
+    location
   } = match;
 
-  // ✅ SCHEMA ALIGNED: Helper functions for data transformation
+  // ========================================
+  // HELPER FUNCTIONS
+  // ========================================
+
+  /**
+   * Calculate age from date_of_birth
+   */
   const calculateAge = (dateOfBirth) => {
     if (!dateOfBirth) return null;
     
@@ -231,36 +268,96 @@ const MatchDetailsModal = ({
     return calculatedAge;
   };
 
-      /**
-       * Calculate recovery stage from sobriety date
-       */
-      const calculateRecoveryStage = (sobrietyDate) => {
-        if (!sobrietyDate) return null;
-        
-        const daysSober = Math.floor(
-          (new Date() - new Date(sobrietyDate)) / (1000 * 60 * 60 * 24)
-        );
-        
-        if (daysSober < 90) return 'early';
-        if (daysSober < 365) return 'stabilizing';
-        if (daysSober < 1095) return 'stable';
-        if (daysSober < 1825) return 'long-term';
-        return 'maintenance';
-      };
+  /**
+   * Calculate recovery stage from sobriety date
+   */
+  const calculateRecoveryStage = (sobrietyDate) => {
+    if (!sobrietyDate) return null;
+    
+    const daysSober = Math.floor(
+      (new Date() - new Date(sobrietyDate)) / (1000 * 60 * 60 * 24)
+    );
+    
+    if (daysSober < 90) return 'early';
+    if (daysSober < 365) return 'stabilizing';
+    if (daysSober < 1095) return 'stable';
+    if (daysSober < 1825) return 'long-term';
+    return 'maintenance';
+  };
 
+  /**
+   * Calculate time in recovery display
+   */
+  const calculateTimeInRecovery = (sobrietyDate) => {
+    if (!sobrietyDate) return null;
+    
+    const recovery = new Date(sobrietyDate);
+    const today = new Date();
+    const diffTime = today - recovery;
+    const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
+    
+    if (diffDays < 30) {
+      return `${diffDays} days`;
+    } else if (diffDays < 365) {
+      const months = Math.floor(diffDays / 30);
+      return `${months} month${months > 1 ? 's' : ''}`;
+    } else {
+      const years = Math.floor(diffDays / 365);
+      const remainingMonths = Math.floor((diffDays % 365) / 30);
+      let result = `${years} year${years > 1 ? 's' : ''}`;
+      if (remainingMonths > 0) {
+        result += `, ${remainingMonths} month${remainingMonths > 1 ? 's' : ''}`;
+      }
+      return result;
+    }
+  };
+
+  /**
+   * Format currency
+   */
+  const formatCurrency = (value) => {
+    if (!value) return '';
+    const numValue = parseInt(value);
+    return new Intl.NumberFormat('en-US', {
+      style: 'currency',
+      currency: 'USD',
+      minimumFractionDigits: 0,
+      maximumFractionDigits: 0
+    }).format(numValue);
+  };
+
+  /**
+   * Format phone number
+   */
+  const formatPhoneNumber = (phone) => {
+    if (!phone) return '';
+    const digits = phone.replace(/\D/g, '');
+    if (digits.length === 10) {
+      return `(${digits.slice(0,3)}) ${digits.slice(3,6)}-${digits.slice(6)}`;
+    }
+    return phone;
+  };
+
+  /**
+   * Get location display (city, state only)
+   */
   const getLocation = () => {
-    // Use generated primary_location if available, otherwise construct
     if (primary_location) return primary_location;
-    if (location) return location; // Legacy support
+    if (location) return location;
     if (primary_city && primary_state) return `${primary_city}, ${primary_state}`;
     return primary_city || primary_state || null;
   };
 
+  /**
+   * Get match score
+   */
   const getMatchScore = () => {
     return matchScore || compatibility_score || 0;
   };
 
-  // ✅ SCHEMA ALIGNED: Get compatibility flags from various sources
+  /**
+   * Get compatibility flags
+   */
   const getCompatibilityFlags = () => {
     if (greenFlags && redFlags) {
       return { greenFlags, redFlags };
@@ -276,37 +373,12 @@ const MatchDetailsModal = ({
     return { greenFlags: [], redFlags: [] };
   };
 
-  // ✅ SCHEMA ALIGNED: Array field normalization
-  const getProgramTypes = () => {
-    return program_types || program_type || [];
-  };
+  // ========================================
+  // FORMAT DISPLAY FUNCTIONS
+  // ========================================
 
-  const getHousingTypes = () => {
-    return housing_types_accepted || housing_type || [];
-  };
-
-  const getHousingAssistance = () => {
-    return housing_assistance || housing_subsidy || [];
-  };
-
-  const getNoiseLevel = () => {
-    return noise_tolerance || noise_level || null;
-  };
-
-  // Calculate derived values
-  const displayAge = calculateAge(date_of_birth) || age;
-  const displayLocation = getLocation();
-  const displayScore = getMatchScore();
-  const { greenFlags: compGreenFlags, redFlags: compRedFlags } = getCompatibilityFlags();
-  const displayProgramTypes = getProgramTypes();
-  const displayHousingTypes = getHousingTypes();
-  const displayHousingAssistance = getHousingAssistance();
-  const displayNoiseLevel = getNoiseLevel();
-
-  // ✅ SCHEMA ALIGNED: Format display values for database enums
   const formatRecoveryStage = (stage) => {
     if (!stage) return 'Not specified';
-    
     const stageMap = {
       'early': 'Early Recovery',
       'stabilizing': 'Stabilizing Recovery',
@@ -314,13 +386,11 @@ const MatchDetailsModal = ({
       'long-term': 'Long-term Recovery',
       'maintenance': 'Maintenance Phase'
     };
-    
     return stageMap[stage] || stage.charAt(0).toUpperCase() + stage.slice(1);
   };
 
   const formatWorkSchedule = (schedule) => {
     if (!schedule) return 'Not specified';
-    
     const scheduleMap = {
       'traditional_9_5': 'Traditional 9-5',
       'flexible': 'Flexible Hours',
@@ -332,13 +402,11 @@ const MatchDetailsModal = ({
       'part_time': 'Part-time',
       'remote': 'Work from Home'
     };
-    
     return scheduleMap[schedule] || schedule.replace(/_/g, ' ');
   };
 
   const formatSmokingStatus = (status) => {
     if (!status) return 'Not specified';
-    
     const statusMap = {
       'non_smoker': 'Non-smoker',
       'outdoor_only': 'Outdoor Only',
@@ -346,26 +414,22 @@ const MatchDetailsModal = ({
       'regular': 'Regular Smoker',
       'former_smoker': 'Former Smoker'
     };
-    
     return statusMap[status] || status.replace(/_/g, ' ');
   };
 
   const formatBedtimePreference = (preference) => {
     if (!preference) return 'Not specified';
-    
     const preferenceMap = {
       'early': 'Early (before 10 PM)',
       'moderate': 'Moderate (10 PM - 12 AM)',
       'late': 'Late (after 12 AM)',
       'varies': 'Varies/Flexible'
     };
-    
     return preferenceMap[preference] || preference;
   };
 
   const formatSpiritualAffiliation = (affiliation) => {
     if (!affiliation) return 'Not specified';
-    
     const affiliationMap = {
       'christian-protestant': 'Christian (Protestant)',
       'christian-catholic': 'Christian (Catholic)',
@@ -380,9 +444,57 @@ const MatchDetailsModal = ({
       'other': 'Other',
       'prefer-not-to-say': 'Prefer not to say'
     };
-    
     return affiliationMap[affiliation] || affiliation;
   };
+
+  const formatGenderPreference = (pref) => {
+    if (!pref) return 'Not specified';
+    const prefMap = {
+      'male': 'Male roommates',
+      'female': 'Female roommates',
+      'non-binary': 'Non-binary roommates',
+      'no-preference': 'No preference'
+    };
+    return prefMap[pref] || pref;
+  };
+
+  const formatPetPreference = (pref) => {
+    if (!pref) return 'Not specified';
+    const prefMap = {
+      'no_pets': 'No pets preferred',
+      'ok_with_pets': 'OK with pets',
+      'prefer_pets': 'Prefer roommates with pets',
+      'cat_friendly': 'Cat-friendly only',
+      'dog_friendly': 'Dog-friendly only',
+      'small_pets_only': 'Small pets only'
+    };
+    return prefMap[pref] || pref;
+  };
+
+  const formatSmokingPreference = (pref) => {
+    if (!pref) return 'Not specified';
+    const prefMap = {
+      'non_smokers_only': 'Non-smokers only',
+      'outdoor_smokers_ok': 'Outdoor smokers acceptable',
+      'designated_area_ok': 'Designated smoking area OK',
+      'any_smoking_ok': 'Any smoking status acceptable'
+    };
+    return prefMap[pref] || pref;
+  };
+
+  const formatHousingType = (type) => {
+    return type.split(/[-_]/).map(word => 
+      word.charAt(0).toUpperCase() + word.slice(1).toLowerCase()
+    ).join(' ');
+  };
+
+  // Calculate derived values
+  const displayAge = calculateAge(date_of_birth) || age;
+  const displayLocation = getLocation();
+  const displayScore = getMatchScore();
+  const timeInRecovery = sobriety_date ? calculateTimeInRecovery(sobriety_date) : null;
+  const { greenFlags: compGreenFlags, redFlags: compRedFlags } = getCompatibilityFlags();
+  const email = registrant_profiles?.email;
 
   // Helper function to get match score color class
   const getScoreColorClass = (score) => {
@@ -424,7 +536,10 @@ const MatchDetailsModal = ({
     );
   };
 
-  // Section rendering functions
+  // ========================================
+  // SECTION RENDERING FUNCTIONS
+  // ========================================
+
   const renderOverviewSection = () => (
     <div className={styles.section}>
       <div className={styles.profileHeader}>
@@ -433,16 +548,27 @@ const MatchDetailsModal = ({
           <div className={styles.profileBasics}>
             {displayAge && <span className={styles.basicItem}>{displayAge} years old</span>}
             {displayLocation && <span className={styles.basicItem}>{displayLocation}</span>}
-        {(calculated_recovery_stage || recovery_stage || sobriety_date) && (
-          <span className={`${styles.basicItem} ${styles.recoveryHighlight}`}>
-            {formatRecoveryStage(
-              calculated_recovery_stage || 
-              recovery_stage || 
-              calculateRecoveryStage(sobriety_date)
+            {gender_identity && (
+              <span className={styles.basicItem}>
+                {gender_identity.charAt(0).toUpperCase() + gender_identity.slice(1)}
+              </span>
             )}
-          </span>
-        )}
+            {(calculated_recovery_stage || recovery_stage || sobriety_date) && (
+              <span className={`${styles.basicItem} ${styles.recoveryHighlight}`}>
+                {formatRecoveryStage(
+                  calculated_recovery_stage || 
+                  recovery_stage || 
+                  calculateRecoveryStage(sobriety_date)
+                )}
+              </span>
+            )}
           </div>
+          {timeInRecovery && (
+            <div className={styles.timeInRecovery}>
+              <span className={styles.recoveryIcon}>🌱</span>
+              <span>{timeInRecovery} in recovery</span>
+            </div>
+          )}
         </div>
         
         {displayScore > 0 && (
@@ -452,6 +578,37 @@ const MatchDetailsModal = ({
           </div>
         )}
       </div>
+
+      {/* Contact Information Section (GATED) */}
+      {showContactInfo && (primary_phone || email) && (
+        <div className={styles.contactSection}>
+          <div className={styles.contactHeader}>
+            <h4 className={styles.contactTitle}>
+              <span className={styles.contactIcon}>📞</span>
+              Contact Information
+            </h4>
+            <span className={styles.contactBadge}>Connection Approved</span>
+          </div>
+          <div className={styles.contactDetails}>
+            {primary_phone && (
+              <div className={styles.contactItem}>
+                <span className={styles.contactLabel}>Phone:</span>
+                <a href={`tel:${primary_phone}`} className={styles.contactValue}>
+                  {formatPhoneNumber(primary_phone)}
+                </a>
+              </div>
+            )}
+            {email && (
+              <div className={styles.contactItem}>
+                <span className={styles.contactLabel}>Email:</span>
+                <a href={`mailto:${email}`} className={styles.contactValue}>
+                  {email}
+                </a>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
 
       {(isAlreadyMatched || isRequestSent) && (
         <div className={styles.statusSection}>
@@ -518,7 +675,28 @@ const MatchDetailsModal = ({
               calculateRecoveryStage(sobriety_date)
             )}
           </p>
+          {timeInRecovery && (
+            <p className={styles.timeInRecoveryDetail}>
+              Time in recovery: {timeInRecovery}
+            </p>
+          )}
         </div>
+
+        <div className={`${styles.infoCard} ${styles.fullWidth}`}>
+          <h4 className={styles.infoTitle}>Spiritual Approach</h4>
+          <p className={styles.infoContent}>
+            {formatSpiritualAffiliation(spiritual_affiliation)}
+          </p>
+        </div>
+
+        {primary_substance && (
+          <div className={`${styles.infoCard} ${styles.fullWidth}`}>
+            <h4 className={styles.infoTitle}>Primary Focus Area</h4>
+            <p className={styles.infoContent}>
+              {primary_substance.replace(/-/g, ' ').replace(/\b\w/g, l => l.toUpperCase())}
+            </p>
+          </div>
+        )}
 
         {recovery_methods && recovery_methods.length > 0 && (
           <div className={`${styles.infoCard} ${styles.fullWidth}`}>
@@ -533,11 +711,11 @@ const MatchDetailsModal = ({
           </div>
         )}
 
-        {displayProgramTypes.length > 0 && (
+        {program_types && program_types.length > 0 && (
           <div className={`${styles.infoCard} ${styles.fullWidth}`}>
             <h4 className={styles.infoTitle}>Recovery Programs</h4>
             <div className={styles.tagsContainer}>
-              {displayProgramTypes.map((program, i) => (
+              {program_types.map((program, i) => (
                 <span key={i} className={`${styles.tag} ${styles.programTag}`}>{program}</span>
               ))}
             </div>
@@ -556,6 +734,162 @@ const MatchDetailsModal = ({
             </div>
           </div>
         )}
+
+        {(support_meetings || sponsor_mentor || recovery_goal_timeframe) && (
+          <div className={`${styles.infoCard} ${styles.fullWidth}`}>
+            <h4 className={styles.infoTitle}>Support Structure</h4>
+            <div className={styles.supportDetails}>
+              {support_meetings && (
+                <div className={styles.supportItem}>
+                  <span className={styles.supportIcon}>📅</span>
+                  <span>{support_meetings.replace(/-/g, ' ').replace(/\b\w/g, l => l.toUpperCase())}</span>
+                </div>
+              )}
+              {sponsor_mentor && (
+                <div className={styles.supportItem}>
+                  <span className={styles.supportIcon}>🤝</span>
+                  <span>Has sponsor/mentor</span>
+                </div>
+              )}
+              {recovery_goal_timeframe && (
+                <div className={styles.supportItem}>
+                  <span className={styles.supportIcon}>🎯</span>
+                  <span>{recovery_goal_timeframe.replace(/-/g, ' ').replace(/\b\w/g, l => l.toUpperCase())}</span>
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+
+        {(want_recovery_support || comfortable_discussing_recovery || attend_meetings_together || substance_free_home_required) && (
+          <div className={`${styles.infoCard} ${styles.fullWidth}`}>
+            <h4 className={styles.infoTitle}>Recovery Living Preferences</h4>
+            <div className={styles.yesNoGrid}>
+              {renderYesNo(want_recovery_support, 'Wants recovery support')}
+              {renderYesNo(comfortable_discussing_recovery, 'Comfortable discussing recovery')}
+              {renderYesNo(attend_meetings_together, 'Open to attending meetings together')}
+              {renderYesNo(substance_free_home_required, 'Requires substance-free home')}
+            </div>
+          </div>
+        )}
+
+        {recovery_context && (
+          <div className={`${styles.infoCard} ${styles.fullWidth}`}>
+            <h4 className={styles.infoTitle}>Additional Recovery Context</h4>
+            <p className={styles.infoContent}>{recovery_context}</p>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+
+  const renderRoommatePreferencesSection = () => (
+    <div className={styles.section}>
+      <div className={styles.sectionGrid}>
+        <div className={styles.infoCard}>
+          <h4 className={styles.infoTitle}>Gender Preference</h4>
+          <p className={styles.infoContent}>{formatGenderPreference(preferred_roommate_gender)}</p>
+          {gender_inclusive && (
+            <p className={styles.infoNote}>Open to gender-inclusive housing</p>
+          )}
+        </div>
+
+        {(age_range_min || age_range_max) && (
+          <div className={styles.infoCard}>
+            <h4 className={styles.infoTitle}>Age Range</h4>
+            <p className={styles.infoContent}>
+              {age_range_min || 18} - {age_range_max || 65} years old
+            </p>
+            {age_flexibility && (
+              <p className={styles.infoNote}>
+                {age_flexibility.replace(/-/g, ' ').replace(/\b\w/g, l => l.toUpperCase())}
+              </p>
+            )}
+          </div>
+        )}
+
+        <div className={styles.infoCard}>
+          <h4 className={styles.infoTitle}>Smoking Preference</h4>
+          <p className={styles.infoContent}>{formatSmokingPreference(smoking_preference)}</p>
+        </div>
+
+        <div className={styles.infoCard}>
+          <h4 className={styles.infoTitle}>Pet Preference</h4>
+          <p className={styles.infoContent}>{formatPetPreference(pet_preference)}</p>
+        </div>
+
+        {(prefer_recovery_experience || supportive_of_recovery || respect_privacy) && (
+          <div className={`${styles.infoCard} ${styles.fullWidth}`}>
+            <h4 className={styles.infoTitle}>Recovery Compatibility Preferences</h4>
+            <div className={styles.yesNoGrid}>
+              {renderYesNo(prefer_recovery_experience, 'Prefers roommates with recovery experience')}
+              {renderYesNo(supportive_of_recovery, 'Must be supportive of recovery')}
+              {renderYesNo(respect_privacy, 'Must respect recovery privacy')}
+            </div>
+          </div>
+        )}
+
+        {(similar_schedules || shared_chores || financially_stable || respectful_guests || lgbtq_friendly || culturally_sensitive) && (
+          <div className={`${styles.infoCard} ${styles.fullWidth}`}>
+            <h4 className={styles.infoTitle}>Living Compatibility Preferences</h4>
+            <div className={styles.yesNoGrid}>
+              {renderYesNo(similar_schedules, 'Prefers similar schedules')}
+              {renderYesNo(shared_chores, 'Willing to share chores')}
+              {renderYesNo(financially_stable, 'Requires financial stability')}
+              {renderYesNo(respectful_guests, 'Requires respectful guest policy')}
+              {renderYesNo(lgbtq_friendly, 'LGBTQ+ friendly required')}
+              {renderYesNo(culturally_sensitive, 'Cultural sensitivity required')}
+            </div>
+          </div>
+        )}
+
+        {(deal_breaker_substance_use || deal_breaker_loudness || deal_breaker_uncleanliness || 
+          deal_breaker_financial_issues || deal_breaker_pets || deal_breaker_smoking) && (
+          <div className={`${styles.infoCard} ${styles.fullWidth} ${styles.dealBreakersCard}`}>
+            <h4 className={styles.infoTitle}>
+              <span className={styles.warningIcon}>⚠️</span>
+              Deal Breakers
+            </h4>
+            <div className={styles.dealBreakersList}>
+              {deal_breaker_substance_use && (
+                <div className={styles.dealBreakerItem}>
+                  <span className={styles.dealBreakerIcon}>❌</span>
+                  <span>Any substance use in home</span>
+                </div>
+              )}
+              {deal_breaker_loudness && (
+                <div className={styles.dealBreakerItem}>
+                  <span className={styles.dealBreakerIcon}>❌</span>
+                  <span>Excessive noise or disruptive behavior</span>
+                </div>
+              )}
+              {deal_breaker_uncleanliness && (
+                <div className={styles.dealBreakerItem}>
+                  <span className={styles.dealBreakerIcon}>❌</span>
+                  <span>Poor hygiene or extreme messiness</span>
+                </div>
+              )}
+              {deal_breaker_financial_issues && (
+                <div className={styles.dealBreakerItem}>
+                  <span className={styles.dealBreakerIcon}>❌</span>
+                  <span>Unreliable with rent or bills</span>
+                </div>
+              )}
+              {deal_breaker_pets && (
+                <div className={styles.dealBreakerItem}>
+                  <span className={styles.dealBreakerIcon}>❌</span>
+                  <span>Any pets in home</span>
+                </div>
+              )}
+              {deal_breaker_smoking && (
+                <div className={styles.dealBreakerItem}>
+                  <span className={styles.dealBreakerIcon}>❌</span>
+                  <span>Any smoking</span>
+                </div>
+              )}
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );
@@ -563,55 +897,310 @@ const MatchDetailsModal = ({
   const renderLifestyleSection = () => (
     <div className={styles.section}>
       <div className={styles.lifestylePreferences}>
-        <h4 className={styles.subsectionTitle}>Living Preferences</h4>
+        <h4 className={styles.subsectionTitle}>Core Lifestyle Factors</h4>
         <div className={styles.lifestyleScales}>
           {renderLifestyleScale(cleanliness_level, 'Cleanliness Level')}
-          {renderLifestyleScale(displayNoiseLevel, 'Noise Tolerance')}
+          {renderLifestyleScale(noise_tolerance, 'Noise Tolerance')}
           {renderLifestyleScale(social_level, 'Social Level')}
         </div>
       </div>
-      
-      <div className={styles.lifestyleChoices}>
-        <h4 className={styles.subsectionTitle}>Lifestyle Choices</h4>
-        <div className={styles.yesNoGrid}>
-          {renderYesNo(pets_owned, 'Owns Pets')}
-          {renderYesNo(pets_comfortable, 'Comfortable with Pets')}
-          {renderYesNo(overnight_guests_ok, 'Overnight Guests OK')}
-          {renderYesNo(shared_groceries, 'Open to Sharing Groceries')}
-        </div>
+
+      <div className={styles.sectionGrid}>
+        {work_from_home_frequency && (
+          <div className={styles.infoCard}>
+            <h4 className={styles.infoTitle}>Work from Home</h4>
+            <p className={styles.infoContent}>
+              {work_from_home_frequency.replace(/-/g, ' ').replace(/\b\w/g, l => l.toUpperCase())}
+            </p>
+          </div>
+        )}
+
+        {guests_policy && (
+          <div className={styles.infoCard}>
+            <h4 className={styles.infoTitle}>Guest Policy</h4>
+            <p className={styles.infoContent}>
+              {guests_policy.replace(/-/g, ' ').replace(/\b\w/g, l => l.toUpperCase())}
+            </p>
+          </div>
+        )}
+
+        {social_activities_at_home && (
+          <div className={styles.infoCard}>
+            <h4 className={styles.infoTitle}>Social Activities at Home</h4>
+            <p className={styles.infoContent}>
+              {social_activities_at_home.replace(/-/g, ' ').replace(/\b\w/g, l => l.toUpperCase())}
+            </p>
+          </div>
+        )}
+
+        {cooking_frequency && (
+          <div className={styles.infoCard}>
+            <h4 className={styles.infoTitle}>Cooking Frequency</h4>
+            <p className={styles.infoContent}>
+              {cooking_frequency.replace(/-/g, ' ').replace(/\b\w/g, l => l.toUpperCase())}
+            </p>
+          </div>
+        )}
       </div>
+
+      {(early_riser || night_owl || cooking_enthusiast || exercise_at_home || plays_instruments || tv_streaming_regular) && (
+        <div className={styles.lifestyleChoices}>
+          <h4 className={styles.subsectionTitle}>Daily Habits</h4>
+          <div className={styles.yesNoGrid}>
+            {renderYesNo(early_riser, 'Early riser')}
+            {renderYesNo(night_owl, 'Night owl')}
+            {renderYesNo(cooking_enthusiast, 'Cooking enthusiast')}
+            {renderYesNo(exercise_at_home, 'Exercises at home')}
+            {renderYesNo(plays_instruments, 'Plays instruments')}
+            {renderYesNo(tv_streaming_regular, 'Regular TV/streaming')}
+          </div>
+        </div>
+      )}
+
+      <div className={styles.sectionGrid}>
+        {chore_sharing_style && (
+          <div className={styles.infoCard}>
+            <h4 className={styles.infoTitle}>Chore Sharing Style</h4>
+            <p className={styles.infoContent}>
+              {chore_sharing_style.replace(/-/g, ' ').replace(/\b\w/g, l => l.toUpperCase())}
+            </p>
+          </div>
+        )}
+
+        {communication_style && (
+          <div className={styles.infoCard}>
+            <h4 className={styles.infoTitle}>Communication Style</h4>
+            <p className={styles.infoContent}>
+              {communication_style.replace(/-/g, ' ').replace(/\b\w/g, l => l.toUpperCase())}
+            </p>
+          </div>
+        )}
+
+        {conflict_resolution_style && (
+          <div className={styles.infoCard}>
+            <h4 className={styles.infoTitle}>Conflict Resolution</h4>
+            <p className={styles.infoContent}>
+              {conflict_resolution_style.replace(/-/g, ' ').replace(/\b\w/g, l => l.toUpperCase())}
+            </p>
+          </div>
+        )}
+
+        {preferred_support_structure && (
+          <div className={styles.infoCard}>
+            <h4 className={styles.infoTitle}>Preferred Support Structure</h4>
+            <p className={styles.infoContent}>
+              {preferred_support_structure.replace(/-/g, ' ').replace(/\b\w/g, l => l.toUpperCase())}
+            </p>
+          </div>
+        )}
+      </div>
+
+      {(pets_owned || pets_comfortable || overnight_guests_ok || shared_groceries || 
+        shared_transportation || shared_activities_interest) && (
+        <div className={styles.lifestyleChoices}>
+          <h4 className={styles.subsectionTitle}>Living Preferences</h4>
+          <div className={styles.yesNoGrid}>
+            {renderYesNo(pets_owned, 'Owns pets')}
+            {renderYesNo(pets_comfortable, 'Comfortable with pets')}
+            {renderYesNo(overnight_guests_ok, 'Overnight guests OK')}
+            {renderYesNo(shared_groceries, 'Open to sharing groceries')}
+            {renderYesNo(shared_transportation, 'Open to sharing transportation')}
+            {renderYesNo(shared_activities_interest, 'Interested in shared activities')}
+          </div>
+        </div>
+      )}
+
+      {(recovery_accountability || shared_recovery_activities || mentorship_interest || recovery_community) && (
+        <div className={styles.lifestyleChoices}>
+          <h4 className={styles.subsectionTitle}>Recovery Support Preferences</h4>
+          <div className={styles.yesNoGrid}>
+            {renderYesNo(recovery_accountability, 'Values recovery accountability')}
+            {renderYesNo(shared_recovery_activities, 'Open to shared recovery activities')}
+            {renderYesNo(mentorship_interest, 'Interested in mentorship')}
+            {renderYesNo(recovery_community, 'Wants recovery-focused community')}
+          </div>
+        </div>
+      )}
     </div>
   );
 
   const renderHousingSection = () => (
     <div className={styles.section}>
       <div className={styles.sectionGrid}>
-        {displayHousingTypes.length > 0 && (
-          <div className={styles.infoCard}>
-            <h4 className={styles.infoTitle}>Preferred Housing Types</h4>
-            <div className={styles.tagsContainer}>
-              {displayHousingTypes.map((type, i) => (
-                <span key={i} className={`${styles.tag} ${styles.housingTag}`}>
-                  {type.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase())}
-                </span>
-              ))}
+        {(budget_min || budget_max) && (
+          <div className={`${styles.infoCard} ${styles.fullWidth} ${styles.budgetCard}`}>
+            <h4 className={styles.infoTitle}>Monthly Budget</h4>
+            <div className={styles.budgetRange}>
+              <span className={styles.budgetAmount}>{formatCurrency(budget_min)}</span>
+              <span className={styles.budgetSeparator}>to</span>
+              <span className={styles.budgetAmount}>{formatCurrency(budget_max)}</span>
             </div>
           </div>
         )}
 
-        {displayHousingAssistance.length > 0 && (
+        {move_in_date && (
           <div className={styles.infoCard}>
-            <h4 className={styles.infoTitle}>Housing Assistance</h4>
-            <div className={styles.tagsContainer}>
-              {displayHousingAssistance.map((assistance, i) => (
-                <span key={i} className={`${styles.tag} ${styles.subsidyTag}`}>
-                  {typeof assistance === 'object' ? assistance.label || assistance.value : assistance}
-                </span>
-              ))}
-            </div>
+            <h4 className={styles.infoTitle}>Move-in Date</h4>
+            <p className={styles.infoContent}>
+              {new Date(move_in_date).toLocaleDateString('en-US', { 
+                year: 'numeric', 
+                month: 'long', 
+                day: 'numeric' 
+              })}
+            </p>
+            {move_in_flexibility && (
+              <p className={styles.infoNote}>
+                {move_in_flexibility.replace(/-/g, ' ').replace(/\b\w/g, l => l.toUpperCase())}
+              </p>
+            )}
+          </div>
+        )}
+
+        {max_commute_minutes && (
+          <div className={styles.infoCard}>
+            <h4 className={styles.infoTitle}>Max Commute</h4>
+            <p className={styles.infoContent}>
+              {max_commute_minutes === 'unlimited' ? 'No limit' : `${max_commute_minutes} minutes`}
+            </p>
+          </div>
+        )}
+
+        {preferred_bedrooms && (
+          <div className={styles.infoCard}>
+            <h4 className={styles.infoTitle}>Preferred Bedrooms</h4>
+            <p className={styles.infoContent}>
+              {preferred_bedrooms === '1' ? 'Studio/1 bedroom' : `${preferred_bedrooms} bedrooms`}
+            </p>
+          </div>
+        )}
+
+        {transportation_method && (
+          <div className={styles.infoCard}>
+            <h4 className={styles.infoTitle}>Transportation</h4>
+            <p className={styles.infoContent}>
+              {transportation_method.replace(/-/g, ' ').replace(/\b\w/g, l => l.toUpperCase())}
+            </p>
+          </div>
+        )}
+
+        {lease_duration && (
+          <div className={styles.infoCard}>
+            <h4 className={styles.infoTitle}>Lease Duration</h4>
+            <p className={styles.infoContent}>
+              {lease_duration.replace(/-/g, ' ').replace(/\b\w/g, l => l.toUpperCase())}
+            </p>
+          </div>
+        )}
+
+        {location_flexibility && (
+          <div className={styles.infoCard}>
+            <h4 className={styles.infoTitle}>Location Flexibility</h4>
+            <p className={styles.infoContent}>
+              {location_flexibility.replace(/-/g, ' ').replace(/\b\w/g, l => l.toUpperCase())}
+            </p>
           </div>
         )}
       </div>
+
+      {housing_types_accepted && housing_types_accepted.length > 0 && (
+        <div className={styles.infoCard}>
+          <h4 className={styles.infoTitle}>Acceptable Housing Types</h4>
+          <div className={styles.tagsContainer}>
+            {housing_types_accepted.map((type, i) => (
+              <span key={i} className={`${styles.tag} ${styles.housingTag}`}>
+                {formatHousingType(type)}
+              </span>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {housing_assistance && housing_assistance.length > 0 && (
+        <div className={styles.infoCard}>
+          <h4 className={styles.infoTitle}>Housing Assistance Programs</h4>
+          <div className={styles.tagsContainer}>
+            {housing_assistance.map((assistance, i) => (
+              <span key={i} className={`${styles.tag} ${styles.subsidyTag}`}>
+                {typeof assistance === 'object' ? assistance.label || assistance.value : assistance}
+              </span>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {(furnished_preference || utilities_included_preference || accessibility_needed || 
+        parking_required || public_transit_access) && (
+        <div className={styles.infoCard}>
+          <h4 className={styles.infoTitle}>Additional Housing Preferences</h4>
+          <div className={styles.yesNoGrid}>
+            {renderYesNo(furnished_preference, 'Prefers furnished')}
+            {renderYesNo(utilities_included_preference, 'Prefers utilities included')}
+            {renderYesNo(accessibility_needed, 'Needs accessibility features')}
+            {renderYesNo(parking_required, 'Parking required')}
+            {renderYesNo(public_transit_access, 'Needs public transit access')}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+
+  const renderPersonalStorySection = () => (
+    <div className={styles.section}>
+      {about_me && (
+        <div className={styles.aboutCard}>
+          <h4 className={styles.aboutTitle}>About {first_name}</h4>
+          <div className={styles.aboutContent}>
+            <p>{about_me}</p>
+          </div>
+        </div>
+      )}
+
+      {looking_for && (
+        <div className={styles.aboutCard}>
+          <h4 className={styles.aboutTitle}>What {first_name} is Looking For</h4>
+          <div className={styles.aboutContent}>
+            <p>{looking_for}</p>
+          </div>
+        </div>
+      )}
+
+      {short_term_goals && (
+        <div className={styles.aboutCard}>
+          <h4 className={styles.aboutTitle}>Short-term Goals</h4>
+          <div className={styles.aboutContent}>
+            <p>{short_term_goals}</p>
+          </div>
+        </div>
+      )}
+
+      {long_term_vision && (
+        <div className={styles.aboutCard}>
+          <h4 className={styles.aboutTitle}>Long-term Vision</h4>
+          <div className={styles.aboutContent}>
+            <p>{long_term_vision}</p>
+          </div>
+        </div>
+      )}
+
+      {interests && Array.isArray(interests) && interests.length > 0 && (
+        <div className={styles.interestsCard}>
+          <h4 className={styles.interestsTitle}>Interests & Hobbies</h4>
+          <div className={styles.interestsGrid}>
+            {interests.map((interest, i) => (
+              <span key={i} className={styles.interestItem}>{interest}</span>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {additional_interests && (
+        <div className={styles.aboutCard}>
+          <h4 className={styles.aboutTitle}>Additional Interests</h4>
+          <div className={styles.aboutContent}>
+            <p>{additional_interests}</p>
+          </div>
+        </div>
+      )}
     </div>
   );
 
@@ -677,37 +1266,10 @@ const MatchDetailsModal = ({
           </div>
         </div>
       )}
-    </div>
-  );
 
-  const renderAboutSection = () => (
-    <div className={styles.section}>
-      {about_me && (
-        <div className={styles.aboutCard}>
-          <h4 className={styles.aboutTitle}>About {first_name}</h4>
-          <div className={styles.aboutContent}>
-            <p>{about_me}</p>
-          </div>
-        </div>
-      )}
-
-      {looking_for && (
-        <div className={styles.aboutCard}>
-          <h4 className={styles.aboutTitle}>What {first_name} is Looking For</h4>
-          <div className={styles.aboutContent}>
-            <p>{looking_for}</p>
-          </div>
-        </div>
-      )}
-
-      {interests && Array.isArray(interests) && interests.length > 0 && (
-        <div className={styles.interestsCard}>
-          <h4 className={styles.interestsTitle}>Interests & Hobbies</h4>
-          <div className={styles.interestsGrid}>
-            {interests.map((interest, i) => (
-              <span key={i} className={styles.interestItem}>{interest}</span>
-            ))}
-          </div>
+      {compGreenFlags.length === 0 && compRedFlags.length === 0 && Object.keys(breakdown).length === 0 && (
+        <div className={styles.noCompatibilityData}>
+          <p>Detailed compatibility analysis not available for this profile.</p>
         </div>
       )}
     </div>
@@ -717,18 +1279,27 @@ const MatchDetailsModal = ({
     switch (activeSection) {
       case 'overview': return renderOverviewSection();
       case 'recovery': return renderRecoverySection();
+      case 'roommate': return renderRoommatePreferencesSection();
       case 'lifestyle': return renderLifestyleSection();
       case 'housing': return renderHousingSection();
+      case 'personal': return renderPersonalStorySection();
       case 'compatibility': return renderCompatibilitySection();
-      case 'about': return renderAboutSection();
       default: return renderOverviewSection();
     }
   };
 
+  // Filter sections - only show compatibility if data exists
+  const visibleSections = MODAL_SECTIONS.filter(section => {
+    if (section.id === 'compatibility') {
+      return compGreenFlags.length > 0 || compRedFlags.length > 0 || Object.keys(breakdown).length > 0;
+    }
+    return true;
+  });
+
   // Modal JSX
   const modalJSX = (
     <div 
-      className={`${styles.overlay} ${debugMode ? styles.debugStackingContext : ''} ${!usePortal ? styles.emergencyOverride : ''}`}
+      className={`${styles.overlay} ${!usePortal ? styles.emergencyOverride : ''}`}
       onClick={handleClose}
       style={{
         pointerEvents: 'auto'
@@ -753,7 +1324,7 @@ const MatchDetailsModal = ({
 
         {/* Section Navigation */}
         <div className={styles.navigation}>
-          {MODAL_SECTIONS.map((section) => (
+          {visibleSections.map((section) => (
             <button
               key={section.id}
               className={`${styles.navTab} ${activeSection === section.id ? styles.active : ''}`}
@@ -773,7 +1344,6 @@ const MatchDetailsModal = ({
         {/* Modal Footer */}
         <div className={styles.footer}>
           {customActions ? (
-            // Custom actions for special cases (like incoming requests)
             <>
               <button
                 className="btn btn-outline"
@@ -802,7 +1372,6 @@ const MatchDetailsModal = ({
               </button>
             </>
           ) : (
-            // Default actions for normal match discovery
             <>
               <button className="btn btn-outline" onClick={handleClose}>
                 Close
@@ -831,63 +1400,17 @@ const MatchDetailsModal = ({
 
   // Render with or without portal
   if (usePortal && modalContainer) {
-    console.log('🎯 Rendering modal via React Portal');
     return createPortal(modalJSX, modalContainer);
   } else {
-    console.log('🎯 Rendering modal inline');
     return modalJSX;
   }
 };
 
-// ✅ SCHEMA ALIGNED: Updated PropTypes to reflect schema fields
 MatchDetailsModal.propTypes = {
-  match: PropTypes.shape({
-    // Schema fields
-    first_name: PropTypes.string.isRequired,
-    date_of_birth: PropTypes.string,
-    primary_city: PropTypes.string,
-    primary_state: PropTypes.string,
-    primary_location: PropTypes.string,
-    recovery_stage: PropTypes.string,
-    recovery_methods: PropTypes.arrayOf(PropTypes.string),
-    program_types: PropTypes.arrayOf(PropTypes.string),
-    primary_issues: PropTypes.arrayOf(PropTypes.string),
-    work_schedule: PropTypes.string,
-    cleanliness_level: PropTypes.number,
-    noise_tolerance: PropTypes.number,
-    social_level: PropTypes.number,
-    bedtime_preference: PropTypes.string,
-    smoking_status: PropTypes.string,
-    spiritual_affiliation: PropTypes.string,
-    pets_owned: PropTypes.bool,
-    pets_comfortable: PropTypes.bool,
-    overnight_guests_ok: PropTypes.bool,
-    shared_groceries: PropTypes.bool,
-    housing_types_accepted: PropTypes.arrayOf(PropTypes.string),
-    housing_assistance: PropTypes.array,
-    interests: PropTypes.arrayOf(PropTypes.string),
-    about_me: PropTypes.string,
-    looking_for: PropTypes.string,
-    
-    // Algorithm fields
-    matchScore: PropTypes.number,
-    compatibility_score: PropTypes.number,
-    greenFlags: PropTypes.arrayOf(PropTypes.string),
-    redFlags: PropTypes.arrayOf(PropTypes.string),
-    breakdown: PropTypes.object,
-    match_factors: PropTypes.object,
-    
-    // Legacy support
-    age: PropTypes.number,
-    location: PropTypes.string,
-    program_type: PropTypes.array,
-    housing_type: PropTypes.array,
-    housing_subsidy: PropTypes.array,
-    noise_level: PropTypes.number
-  }),
+  match: PropTypes.object.isRequired,
   onClose: PropTypes.func.isRequired,
   onRequestMatch: PropTypes.func.isRequired,
-  customActions: PropTypes.shape({  // ✅ ADD THIS
+  customActions: PropTypes.shape({
     acceptLabel: PropTypes.string,
     declineLabel: PropTypes.string,
     onAccept: PropTypes.func,
@@ -895,6 +1418,7 @@ MatchDetailsModal.propTypes = {
   }),
   isRequestSent: PropTypes.bool,
   isAlreadyMatched: PropTypes.bool,
+  showContactInfo: PropTypes.bool,
   usePortal: PropTypes.bool,
   debugMode: PropTypes.bool
 };
@@ -902,6 +1426,7 @@ MatchDetailsModal.propTypes = {
 MatchDetailsModal.defaultProps = {
   isRequestSent: false,
   isAlreadyMatched: false,
+  showContactInfo: false,
   usePortal: true,
   debugMode: false
 };

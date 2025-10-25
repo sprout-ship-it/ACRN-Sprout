@@ -3,7 +3,7 @@ import React, { useState, useEffect } from 'react';
 import { useAuth } from '../../../hooks/useAuth';
 import { supabase } from '../../../utils/supabase';
 import LoadingSpinner from '../../ui/LoadingSpinner';
-import ProfileModal from './ProfileModal';
+import MatchDetailsModal from '../matching/components/MatchDetailsModal';
 import PropertyDetailsModal from './modals/PropertyDetailsModal';
 import GroupDetailsModal from './modals/GroupDetailsModal';
 import styles from './ConnectionHub.module.css';
@@ -601,7 +601,6 @@ const handleViewProfile = async (connection, specificRoommate = null) => {
     // Close group modal first to prevent z-index issues
     if (showGroupModal) {
       setShowGroupModal(false);
-      // Small delay to allow modal close animation
       await new Promise(resolve => setTimeout(resolve, 150));
     }
     
@@ -621,11 +620,11 @@ const handleViewProfile = async (connection, specificRoommate = null) => {
     // If viewing first roommate from connection card
     else if (connection.type === 'roommate' && connection.roommates?.length > 0) {
       const roommate = connection.roommates[0];
-const { data } = await supabase
-  .from('applicant_matching_profiles')  // ← Changed
-  .select('*, registrant_profiles(*)')
-  .eq('id', roommate.id)
-  .single();
+      const { data } = await supabase
+        .from('applicant_matching_profiles')
+        .select('*, registrant_profiles(*)')
+        .eq('id', roommate.id)
+        .single();
       
       if (data) {
         profileData = {
@@ -634,7 +633,9 @@ const { data } = await supabase
           name: formatName(
             data.registrant_profiles?.first_name,
             data.registrant_profiles?.last_name
-          )
+          ),
+          // Add first_name for modal display
+          first_name: data.registrant_profiles?.first_name
         };
       }
     } else if (connection.type === 'landlord' && connection.requesting_applicant) {
@@ -644,7 +645,8 @@ const { data } = await supabase
         name: formatName(
           connection.requesting_applicant.registrant_profiles?.first_name,
           connection.requesting_applicant.registrant_profiles?.last_name
-        )
+        ),
+        first_name: connection.requesting_applicant.registrant_profiles?.first_name
       };
     } else if (connection.other_person) {
       const isPeerSupportProfile = connection.other_person.professional_title || connection.other_person.specialties;
@@ -663,7 +665,10 @@ const { data } = await supabase
           : formatName(
               connection.other_person.registrant_profiles?.first_name,
               connection.other_person.registrant_profiles?.last_name
-            )
+            ),
+        first_name: connection.other_person.registrant_profiles?.first_name || 
+                    connection.other_person.company_name ||
+                    connection.other_person.professional_title
       };
     }
     
@@ -1449,49 +1454,36 @@ const handleApproveRequest = async (connection) => {
         </div>
       )}
 
-{/* Profile Modal */}
+{/* Enhanced Match Details Modal */}
 {showProfileModal && selectedProfile && (
-  <>
-    {(() => {
-      const debugInfo = {
-        connectionType: selectedConnection?.type,
-        connectionStatus: selectedConnection?.status,
-        pending_member_ids: selectedConnection?.pending_member_ids,
-        roommate_ids: selectedConnection?.roommates?.map(r => r.id),
-        selectedProfileId: selectedProfile?.id,
-        selectedProfileUserId: selectedProfile?.user_id,
-        currentUserApplicantId: profileIds.applicant,
-        viewerIsPending: selectedConnection?.pending_member_ids?.includes(profileIds.applicant),
-        profileIdIsPending: selectedConnection?.pending_member_ids?.includes(selectedProfile?.id),
-        profileUserIdIsPending: selectedConnection?.pending_member_ids?.includes(selectedProfile?.user_id)
-      };
-      console.log('🔍 ProfileModal Debug:', debugInfo);
-      return null;
-    })()}
-    <ProfileModal
-      isOpen={showProfileModal}
-      profile={selectedProfile}
-      connectionStatus={selectedConnection?.status}
-      onClose={() => {
-        setShowProfileModal(false);
-        setSelectedProfile(null);
-        setSelectedConnection(null);
-      }}
-      onApprove={handleApproveRequest}
-      onDecline={handleDeclineRequest}
-      showContactInfo={
-        (selectedConnection?.status === 'confirmed' || 
-         selectedConnection?.status === 'active' || 
-         selectedConnection?.status === 'approved') &&
-        !selectedConnection?.pending_member_ids?.includes(profileIds.applicant) &&
-        (selectedConnection?.type !== 'roommate' || 
-         !(selectedConnection?.pending_member_ids || []).includes(selectedProfile?.id || selectedProfile?.user_id))
-      }
-      showActions={activeTab === 'awaiting'}
-      isAwaitingApproval={activeTab === 'awaiting'}
-    />
-  </>
+  <MatchDetailsModal
+    match={selectedProfile}
+    onClose={() => {
+      setShowProfileModal(false);
+      setSelectedProfile(null);
+      setSelectedConnection(null);
+    }}
+    onRequestMatch={(match) => {
+      // Optional: Add request match handler if needed
+      console.log('Request match:', match);
+    }}
+    // Contact info visibility based on connection status
+    showContactInfo={
+      (selectedConnection?.status === 'confirmed' || 
+       selectedConnection?.status === 'active' || 
+       selectedConnection?.status === 'approved') &&
+      !selectedConnection?.pending_member_ids?.includes(profileIds.applicant) &&
+      (selectedConnection?.type !== 'roommate' || 
+       !(selectedConnection?.pending_member_ids || []).includes(selectedProfile?.id || selectedProfile?.user_id))
+    }
+    // Don't show request match button in ConnectionHub context
+    isAlreadyMatched={true}
+    isRequestSent={false}
+    usePortal={true}
+  />
 )}
+
+
 
       {/* Property Details Modal */}
       {showPropertyModal && selectedProperty && (
