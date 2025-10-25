@@ -1,4 +1,4 @@
-// src/components/features/matching/RoommateDiscovery.js - UPDATED: Group-aware requests
+// src/components/features/matching/RoommateDiscovery.js - UPDATED: Using MatchDetailsModal
 import React, { useState, useEffect, useCallback } from 'react';
 import { useAuth } from '../../../context/AuthContext';
 import matchingService from '../../../utils/matching/matchingService';
@@ -8,7 +8,7 @@ import { DEFAULT_FILTERS } from '../../../utils/matching/config';
 
 // Import new components
 import MatchCard from './components/MatchCard';
-import ProfileModal from '../connections/ProfileModal';
+import MatchDetailsModal from './components/MatchDetailsModal';
 import LoadingSpinner from '../../ui/LoadingSpinner';
 
 // Import CSS foundation and component module
@@ -99,17 +99,10 @@ const RoommateDiscovery = ({ onRequestMatch, onBack }) => {
   }, []);
 
   /**
-   * Handle showing match details with ProfileModal format
+   * Handle showing match details with MatchDetailsModal
    */
   const handleShowDetails = useCallback((match) => {
-    // Transform match data to profile format expected by ProfileModal
-    const profileData = {
-      ...match,
-      profile_type: 'applicant',
-      name: `${match.first_name || ''} ${match.last_name || ''}`.trim()
-    };
-    
-    setSelectedMatch(profileData);
+    setSelectedMatch(match);
     setShowDetails(true);
   }, []);
 
@@ -123,10 +116,10 @@ const RoommateDiscovery = ({ onRequestMatch, onBack }) => {
    */
   const handleRequestMatch = useCallback(async (match) => {
     try {
-          console.log('🔍 DEBUG: user object:', user);
-    console.log('🔍 DEBUG: user.id:', user.id);
-    console.log('🔍 DEBUG: profile object:', profile);
-    console.log('🔍 DEBUG: profile.id:', profile.id);
+      console.log('🔍 DEBUG: user object:', user);
+      console.log('🔍 DEBUG: user.id:', user.id);
+      console.log('🔍 DEBUG: profile object:', profile);
+      console.log('🔍 DEBUG: profile.id:', profile.id);
       console.log('🤝 Sending roommate match request to:', match.first_name);
       
       const matchUserId = match.user_id || match.id;
@@ -549,17 +542,16 @@ const RoommateDiscovery = ({ onRequestMatch, onBack }) => {
         )}
       </div>
       
-      {/* Use consolidated ProfileModal */}
+      {/* Use MatchDetailsModal instead of ProfileModal */}
       {showDetails && selectedMatch && (
-        <ProfileModal
-          isOpen={showDetails}
-          profile={selectedMatch}
-          connectionStatus={selectedMatch.isAlreadyMatched ? 'active' : selectedMatch.isRequestSent ? 'requested' : null}
+        <MatchDetailsModal
+          match={selectedMatch}
           onClose={handleCloseDetails}
-          onConnect={handleRequestMatch}
-          showContactInfo={false}
-          showActions={!selectedMatch.isAlreadyMatched && !selectedMatch.isRequestSent}
-          isAwaitingApproval={false}
+          onRequestMatch={handleRequestMatch}
+          isRequestSent={selectedMatch.isRequestSent}
+          isAlreadyMatched={selectedMatch.isAlreadyMatched}
+          showContactInfo={selectedMatch.isAlreadyMatched}
+          usePortal={true}
         />
       )}
     </>
