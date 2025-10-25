@@ -737,6 +737,10 @@ const PropertyDetailsModal = ({
   const renderContactTab = () => {
     const landlord = property.landlord_profiles;
     const landlordProfile = landlord?.registrant_profiles || {};
+    
+    // Contact info is stored directly on property object
+    const displayPhone = property.phone;
+    const displayEmail = property.contact_email;
 
     return (
       <div className={styles.tabContent}>
@@ -746,6 +750,7 @@ const PropertyDetailsModal = ({
               <h4 className={styles.sectionSubtitle}>📞 Landlord Contact Information</h4>
               
               <div className={styles.contactGrid}>
+                {/* Landlord Name */}
                 <div className={styles.contactCard}>
                   <span className={styles.contactIcon}>👤</span>
                   <div className={styles.contactInfo}>
@@ -756,17 +761,18 @@ const PropertyDetailsModal = ({
                   </div>
                 </div>
 
-                {landlord?.primary_phone && (
+                {/* Phone Number */}
+                {displayPhone && (
                   <div className={styles.contactCard}>
                     <span className={styles.contactIcon}>📱</span>
                     <div className={styles.contactInfo}>
                       <div className={styles.contactLabel}>Phone</div>
-                      <a href={`tel:${landlord.primary_phone}`} className={styles.contactValue}>
-                        {landlord.primary_phone}
+                      <a href={`tel:${displayPhone}`} className={styles.contactValue}>
+                        {displayPhone}
                       </a>
                     </div>
                     <a 
-                      href={`tel:${landlord.primary_phone}`}
+                      href={`tel:${displayPhone}`}
                       className={styles.contactButton}
                       title="Call"
                     >
@@ -775,19 +781,20 @@ const PropertyDetailsModal = ({
                   </div>
                 )}
 
-                {(landlord?.contact_email || landlordProfile.email) && (
+                {/* Email Address */}
+                {displayEmail && (
                   <div className={styles.contactCard}>
                     <span className={styles.contactIcon}>📧</span>
                     <div className={styles.contactInfo}>
                       <div className={styles.contactLabel}>Email</div>
                       <a 
-                        href={`mailto:${landlord.contact_email || landlordProfile.email}`} 
+                        href={`mailto:${displayEmail}`} 
                         className={styles.contactValue}>
-                        {landlord.contact_email || landlordProfile.email}
+                        {displayEmail}
                       </a>
                     </div>
                     <a 
-                      href={`mailto:${landlord.contact_email || landlordProfile.email}`}
+                      href={`mailto:${displayEmail}`}
                       className={styles.contactButton}
                       title="Email"
                     >
