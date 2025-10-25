@@ -735,9 +735,6 @@ const PropertyDetailsModal = ({
    * TAB 5: Contact - Landlord contact information
    */
   const renderContactTab = () => {
-    const landlord = property.landlord_profiles;
-    const landlordProfile = landlord?.registrant_profiles || {};
-    
     // Contact info is stored directly on property object
     const displayPhone = property.phone;
     const displayEmail = property.contact_email;
@@ -750,17 +747,6 @@ const PropertyDetailsModal = ({
               <h4 className={styles.sectionSubtitle}>📞 Landlord Contact Information</h4>
               
               <div className={styles.contactGrid}>
-                {/* Landlord Name */}
-                <div className={styles.contactCard}>
-                  <span className={styles.contactIcon}>👤</span>
-                  <div className={styles.contactInfo}>
-                    <div className={styles.contactLabel}>Name</div>
-                    <div className={styles.contactValue}>
-                      {landlord?.business_name || formatName(landlordProfile.first_name, landlordProfile.last_name)}
-                    </div>
-                  </div>
-                </div>
-
                 {/* Phone Number */}
                 {displayPhone && (
                   <div className={styles.contactCard}>
