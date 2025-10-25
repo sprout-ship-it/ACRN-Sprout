@@ -1,11 +1,13 @@
-// src/components/features/employer/components/EmployerModal.js - FAVORITES AS MAIN ACTION
-import React, { useEffect } from 'react';
+// src/components/features/employer/components/EmployerModal.js - TABBED WITH ALL SCHEMA FIELDS
+import React, { useEffect, useState } from 'react';
 import { 
   formatFeature, 
   formatBusinessType, 
   formatRemoteWork, 
   formatIndustry,
-  getContactInfo
+  formatDrugTestingPolicy,
+  formatBackgroundCheckPolicy,
+  formatCompanySize
 } from '../utils/employerUtils';
 import styles from './EmployerModal.module.css';
 
@@ -18,6 +20,8 @@ const EmployerModal = ({
   onConnect, // Keep for future use
   onToggleFavorite 
 }) => {
+  const [activeTab, setActiveTab] = useState('overview');
+
   // Handle escape key press
   useEffect(() => {
     const handleEscape = (e) => {
@@ -47,7 +51,7 @@ const EmployerModal = ({
     }
   };
 
-  // ✅ CHANGED: Main action is now favorites instead of connect
+  // Main action is favorites
   const handleMainAction = () => {
     console.log('🎯 Main action - toggling favorite for employer:', {
       employer_id: employer.id,
@@ -70,6 +74,14 @@ const EmployerModal = ({
   const isConnected = connectionStatus?.type === 'connected';
   const isNotHiring = !employer.is_actively_hiring;
 
+  // Tab configuration
+  const tabs = [
+    { id: 'overview', label: 'Overview', icon: '🏢' },
+    { id: 'employment', label: 'Employment', icon: '💼' },
+    { id: 'culture', label: 'Culture & Values', icon: '🤝' },
+    { id: 'contact', label: 'Contact & Apply', icon: '📞' }
+  ];
+
   return (
     <div className={styles.modalOverlay} onClick={handleBackdropClick}>
       <div className={`modal-content ${styles.employerModal}`} onClick={(e) => e.stopPropagation()}>
@@ -84,7 +96,7 @@ const EmployerModal = ({
             </div>
             
             <div className={styles.headerActions}>
-              {/* Header Favorite Button (Keep as secondary action) */}
+              {/* Header Favorite Button */}
               <button
                 className={`${styles.favoriteBtn} ${isFavorited ? styles.favorited : ''}`}
                 onClick={handleHeaderFavoriteToggle}
@@ -116,6 +128,21 @@ const EmployerModal = ({
               <span className={`badge ${styles.badgeFavorited}`}>❤️ Favorited</span>
             )}
           </div>
+
+          {/* Tab Navigation */}
+          <div className={styles.tabNavigation}>
+            {tabs.map(tab => (
+              <button
+                key={tab.id}
+                className={`${styles.tabButton} ${activeTab === tab.id ? styles.active : ''}`}
+                onClick={() => setActiveTab(tab.id)}
+                type="button"
+              >
+                <span className={styles.tabIcon}>{tab.icon}</span>
+                <span className={styles.tabLabel}>{tab.label}</span>
+              </button>
+            ))}
+          </div>
         </div>
 
         {/* Modal Body */}
@@ -128,163 +155,284 @@ const EmployerModal = ({
             </div>
           )}
 
-          {/* Company Overview */}
-          <div className={styles.infoSection}>
-            <h4 className={styles.sectionTitle}>🏢 Company Information</h4>
-            <div className={styles.infoGrid}>
-              <div className={styles.infoItem}>
-                <span className={styles.infoLabel}>Industry:</span>
-                <span className={styles.infoValue}>{formatIndustry(employer.industry)}</span>
-              </div>
-              <div className={styles.infoItem}>
-                <span className={styles.infoLabel}>Business Type:</span>
-                <span className={styles.infoValue}>{formatBusinessType(employer.business_type)}</span>
-              </div>
-              <div className={styles.infoItem}>
-                <span className={styles.infoLabel}>Company Size:</span>
-                <span className={styles.infoValue}>{employer.company_size || 'Not specified'}</span>
-              </div>
-              <div className={styles.infoItem}>
-                <span className={styles.infoLabel}>Founded:</span>
-                <span className={styles.infoValue}>{employer.founded_year || 'Not specified'}</span>
-              </div>
-              <div className={styles.infoItem}>
-                <span className={styles.infoLabel}>Location:</span>
-                <span className={styles.infoValue}>{employer.city}, {employer.state}</span>
-              </div>
-              <div className={styles.infoItem}>
-                <span className={styles.infoLabel}>Remote Work:</span>
-                <span className={styles.infoValue}>
-                  {employer.remote_work_options ? formatRemoteWork(employer.remote_work_options) : 'Not specified'}
-                </span>
-              </div>
-            </div>
-          </div>
-
-          {/* Company Description */}
-          {employer.description && (
-            <div className={styles.infoSection}>
-              <h4 className={styles.sectionTitle}>📝 About the Company</h4>
-              <div className={styles.descriptionContent}>
-                <p>{employer.description}</p>
-              </div>
-            </div>
-          )}
-
-          {/* Job Types Available */}
-          {employer.job_types_available?.length > 0 && (
-            <div className={styles.infoSection}>
-              <h4 className={styles.sectionTitle}>
-                💼 Job Types Available ({employer.job_types_available.length})
-              </h4>
-              <div className={styles.featureTags}>
-                {employer.job_types_available.map((jobType, index) => (
-                  <span key={index} className={`badge badge-success ${styles.jobOpening}`}>
-                    {formatFeature(jobType)}
-                  </span>
-                ))}
-              </div>
-            </div>
-          )}
-
-          {/* Recovery-Friendly Features */}
-          {employer.recovery_friendly_features?.length > 0 && (
-            <div className={styles.infoSection}>
-              <h4 className={styles.sectionTitle}>
-                🤝 Recovery-Friendly Features ({employer.recovery_friendly_features.length})
-              </h4>
-              <div className={styles.featureTags}>
-                {employer.recovery_friendly_features.map((feature, index) => (
-                  <span key={index} className={`badge badge-info ${styles.recoveryFeature}`}>
-                    {formatFeature(feature)}
-                  </span>
-                ))}
-              </div>
-            </div>
-          )}
-
-          {/* Benefits Offered */}
-          {employer.benefits_offered?.length > 0 && (
-            <div className={styles.infoSection}>
-              <h4 className={styles.sectionTitle}>
-                💰 Benefits Offered ({employer.benefits_offered.length})
-              </h4>
-              <div className={styles.featureTags}>
-                {employer.benefits_offered.map((benefit, index) => (
-                  <span key={index} className={`badge badge-warning ${styles.benefit}`}>
-                    {formatFeature(benefit)}
-                  </span>
-                ))}
-              </div>
-            </div>
-          )}
-
-          {/* Application Process */}
-          {employer.application_process && (
-            <div className={styles.infoSection}>
-              <h4 className={styles.sectionTitle}>📋 How to Apply</h4>
-              <div className={styles.descriptionContent}>
-                <p>{employer.application_process}</p>
-              </div>
-            </div>
-          )}
-
-          {/* ✅ CHANGED: Contact/Next Steps Section - Simplified for Favorites Flow */}
-          <div className={styles.infoSection}>
-            <h4 className={styles.sectionTitle}>📞 Contact Information</h4>
-            <div className={styles.nextStepsContent}>
-              <div className="alert alert-info">
-                <strong>💼 How to Contact This Employer:</strong>
-                <div className={styles.contactMethodsList}>
-                  {employer.contact_email && (
-                    <div className={styles.contactMethod}>
-                      <span className={styles.contactLabel}>📧 Email:</span>
-                      <a href={`mailto:${employer.contact_email}`} className={styles.contactLink}>
-                        {employer.contact_email}
-                      </a>
+          {/* Tab Content */}
+          <div className={styles.tabContent}>
+            
+            {/* TAB 1: OVERVIEW */}
+            {activeTab === 'overview' && (
+              <div className={styles.tabPanel}>
+                {/* Company Information */}
+                <div className={styles.infoSection}>
+                  <h4 className={styles.sectionTitle}>🏢 Company Information</h4>
+                  <div className={styles.infoGrid}>
+                    <div className={styles.infoItem}>
+                      <span className={styles.infoLabel}>Industry:</span>
+                      <span className={styles.infoValue}>{formatIndustry(employer.industry)}</span>
                     </div>
-                  )}
-                  {employer.phone && (
-                    <div className={styles.contactMethod}>
-                      <span className={styles.contactLabel}>📞 Phone:</span>
-                      <a href={`tel:${employer.phone}`} className={styles.contactLink}>
-                        {employer.phone}
-                      </a>
+                    <div className={styles.infoItem}>
+                      <span className={styles.infoLabel}>Business Type:</span>
+                      <span className={styles.infoValue}>{formatBusinessType(employer.business_type)}</span>
                     </div>
-                  )}
-                  {employer.website && (
-                    <div className={styles.contactMethod}>
-                      <span className={styles.contactLabel}>🌐 Website:</span>
-                      <a href={employer.website} target="_blank" rel="noopener noreferrer" className={styles.contactLink}>
-                        {employer.website}
-                      </a>
+                    <div className={styles.infoItem}>
+                      <span className={styles.infoLabel}>Company Size:</span>
+                      <span className={styles.infoValue}>{formatCompanySize(employer.company_size)}</span>
                     </div>
-                  )}
-                  {employer.contact_person && (
-                    <div className={styles.contactMethod}>
-                      <span className={styles.contactLabel}>👤 Contact Person:</span>
-                      <span className={styles.contactValue}>{employer.contact_person}</span>
+                    <div className={styles.infoItem}>
+                      <span className={styles.infoLabel}>Founded:</span>
+                      <span className={styles.infoValue}>{employer.founded_year || 'Not specified'}</span>
                     </div>
-                  )}
-                  {employer.preferred_contact_method && (
-                    <div className={styles.preferredMethod}>
-                      <strong>Preferred Contact Method:</strong> {formatFeature(employer.preferred_contact_method)}
+                  </div>
+                </div>
+
+                {/* Location Details */}
+                <div className={styles.infoSection}>
+                  <h4 className={styles.sectionTitle}>📍 Location</h4>
+                  <div className={styles.infoGrid}>
+                    {employer.address && (
+                      <div className={styles.infoItem}>
+                        <span className={styles.infoLabel}>Address:</span>
+                        <span className={styles.infoValue}>{employer.address}</span>
+                      </div>
+                    )}
+                    <div className={styles.infoItem}>
+                      <span className={styles.infoLabel}>City, State:</span>
+                      <span className={styles.infoValue}>{employer.city}, {employer.state}</span>
+                    </div>
+                    {employer.zip_code && (
+                      <div className={styles.infoItem}>
+                        <span className={styles.infoLabel}>Zip Code:</span>
+                        <span className={styles.infoValue}>{employer.zip_code}</span>
+                      </div>
+                    )}
+                  </div>
+                  
+                  {/* Additional Locations */}
+                  {employer.additional_locations && Array.isArray(employer.additional_locations) && employer.additional_locations.length > 0 && (
+                    <div className={styles.additionalInfo}>
+                      <strong>Additional Locations:</strong>
+                      <ul className={styles.locationList}>
+                        {employer.additional_locations.map((location, index) => (
+                          <li key={index}>{location}</li>
+                        ))}
+                      </ul>
                     </div>
                   )}
                 </div>
-                
-                {isNotHiring && (
-                  <div className={styles.warningNote}>
-                    <strong>Note:</strong> This employer is not currently marked as actively hiring, 
-                    but you can still reach out for future opportunities.
+
+                {/* Company Description */}
+                {employer.description && (
+                  <div className={styles.infoSection}>
+                    <h4 className={styles.sectionTitle}>📝 About the Company</h4>
+                    <div className={styles.descriptionContent}>
+                      <p>{employer.description}</p>
+                    </div>
                   </div>
                 )}
               </div>
-            </div>
+            )}
+
+            {/* TAB 2: EMPLOYMENT */}
+            {activeTab === 'employment' && (
+              <div className={styles.tabPanel}>
+                {/* Work Arrangements */}
+                <div className={styles.infoSection}>
+                  <h4 className={styles.sectionTitle}>💻 Work Arrangements</h4>
+                  <div className={styles.infoGrid}>
+                    <div className={styles.infoItem}>
+                      <span className={styles.infoLabel}>Remote Work:</span>
+                      <span className={styles.infoValue}>
+                        {employer.remote_work_options ? formatRemoteWork(employer.remote_work_options) : 'Not specified'}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Job Types Available */}
+                {employer.job_types_available?.length > 0 && (
+                  <div className={styles.infoSection}>
+                    <h4 className={styles.sectionTitle}>
+                      💼 Job Types Available ({employer.job_types_available.length})
+                    </h4>
+                    <div className={styles.featureTags}>
+                      {employer.job_types_available.map((jobType, index) => (
+                        <span key={index} className={`badge badge-success ${styles.jobOpening}`}>
+                          {formatFeature(jobType)}
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* Benefits Offered */}
+                {employer.benefits_offered?.length > 0 && (
+                  <div className={styles.infoSection}>
+                    <h4 className={styles.sectionTitle}>
+                      💰 Benefits Offered ({employer.benefits_offered.length})
+                    </h4>
+                    <div className={styles.featureTags}>
+                      {employer.benefits_offered.map((benefit, index) => (
+                        <span key={index} className={`badge badge-warning ${styles.benefit}`}>
+                          {formatFeature(benefit)}
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* Employment Policies */}
+                <div className={styles.infoSection}>
+                  <h4 className={styles.sectionTitle}>📋 Employment Policies</h4>
+                  <div className={styles.infoGrid}>
+                    <div className={styles.infoItem}>
+                      <span className={styles.infoLabel}>Drug Testing Policy:</span>
+                      <span className={styles.infoValue}>
+                        {formatDrugTestingPolicy(employer.drug_testing_policy)}
+                      </span>
+                    </div>
+                    <div className={styles.infoItem}>
+                      <span className={styles.infoLabel}>Background Check Policy:</span>
+                      <span className={styles.infoValue}>
+                        {formatBackgroundCheckPolicy(employer.background_check_policy)}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Hiring Practices */}
+                {employer.hiring_practices && (
+                  <div className={styles.infoSection}>
+                    <h4 className={styles.sectionTitle}>🎯 Hiring Practices</h4>
+                    <div className={styles.descriptionContent}>
+                      <p>{employer.hiring_practices}</p>
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* TAB 3: CULTURE & VALUES */}
+            {activeTab === 'culture' && (
+              <div className={styles.tabPanel}>
+                {/* Recovery-Friendly Features */}
+                {employer.recovery_friendly_features?.length > 0 && (
+                  <div className={styles.infoSection}>
+                    <h4 className={styles.sectionTitle}>
+                      🤝 Recovery-Friendly Features ({employer.recovery_friendly_features.length})
+                    </h4>
+                    <div className={styles.featureTags}>
+                      {employer.recovery_friendly_features.map((feature, index) => (
+                        <span key={index} className={`badge badge-info ${styles.recoveryFeature}`}>
+                          {formatFeature(feature)}
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* Company Culture */}
+                {employer.company_culture && (
+                  <div className={styles.infoSection}>
+                    <h4 className={styles.sectionTitle}>🌟 Company Culture</h4>
+                    <div className={styles.descriptionContent}>
+                      <p>{employer.company_culture}</p>
+                    </div>
+                  </div>
+                )}
+
+                {/* Diversity Commitment */}
+                {employer.diversity_commitment && (
+                  <div className={styles.infoSection}>
+                    <h4 className={styles.sectionTitle}>🌈 Diversity & Inclusion Commitment</h4>
+                    <div className={styles.descriptionContent}>
+                      <p>{employer.diversity_commitment}</p>
+                    </div>
+                  </div>
+                )}
+
+                {/* Accommodation Policies */}
+                {employer.accommodation_policies && (
+                  <div className={styles.infoSection}>
+                    <h4 className={styles.sectionTitle}>♿ Accommodation Policies</h4>
+                    <div className={styles.descriptionContent}>
+                      <p>{employer.accommodation_policies}</p>
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* TAB 4: CONTACT & APPLY */}
+            {activeTab === 'contact' && (
+              <div className={styles.tabPanel}>
+                {/* Application Process */}
+                {employer.application_process && (
+                  <div className={styles.infoSection}>
+                    <h4 className={styles.sectionTitle}>📋 How to Apply</h4>
+                    <div className={styles.descriptionContent}>
+                      <p>{employer.application_process}</p>
+                    </div>
+                  </div>
+                )}
+
+                {/* Contact Information */}
+                <div className={styles.infoSection}>
+                  <h4 className={styles.sectionTitle}>📞 Contact Information</h4>
+                  <div className={styles.nextStepsContent}>
+                    <div className="alert alert-info">
+                      <strong>💼 How to Contact This Employer:</strong>
+                      <div className={styles.contactMethodsList}>
+                        {employer.contact_email && (
+                          <div className={styles.contactMethod}>
+                            <span className={styles.contactLabel}>📧 Email:</span>
+                            <a href={`mailto:${employer.contact_email}`} className={styles.contactLink}>
+                              {employer.contact_email}
+                            </a>
+                          </div>
+                        )}
+                        {employer.phone && (
+                          <div className={styles.contactMethod}>
+                            <span className={styles.contactLabel}>📞 Phone:</span>
+                            <a href={`tel:${employer.phone}`} className={styles.contactLink}>
+                              {employer.phone}
+                            </a>
+                          </div>
+                        )}
+                        {employer.website && (
+                          <div className={styles.contactMethod}>
+                            <span className={styles.contactLabel}>🌐 Website:</span>
+                            <a href={employer.website} target="_blank" rel="noopener noreferrer" className={styles.contactLink}>
+                              {employer.website}
+                            </a>
+                          </div>
+                        )}
+                        {employer.contact_person && (
+                          <div className={styles.contactMethod}>
+                            <span className={styles.contactLabel}>👤 Contact Person:</span>
+                            <span className={styles.contactValue}>{employer.contact_person}</span>
+                          </div>
+                        )}
+                        {employer.preferred_contact_method && (
+                          <div className={styles.preferredMethod}>
+                            <strong>Preferred Contact Method:</strong> {formatFeature(employer.preferred_contact_method)}
+                          </div>
+                        )}
+                      </div>
+                      
+                      {isNotHiring && (
+                        <div className={styles.warningNote}>
+                          <strong>Note:</strong> This employer is not currently marked as actively hiring, 
+                          but you can still reach out for future opportunities.
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
           </div>
         </div>
 
-        {/* ✅ CHANGED: Modal Footer - Main Action is Now Favorites */}
+        {/* Modal Footer */}
         <div className={styles.modalFooter}>
           <div className={styles.footerActions}>
             <button
@@ -294,7 +442,7 @@ const EmployerModal = ({
               Close
             </button>
             
-            {/* ✅ MAIN ACTION: Add/Remove from Favorites */}
+            {/* Main Action: Add/Remove from Favorites */}
             <button
               className={`btn ${isFavorited ? 'btn-warning' : 'btn-primary'}`}
               onClick={handleMainAction}
@@ -307,7 +455,7 @@ const EmployerModal = ({
             </button>
           </div>
           
-          {/* ✅ ADDED: Helpful action hint */}
+          {/* Action hint */}
           <div className={styles.actionHint}>
             <small className="text-muted">
               {isFavorited 
