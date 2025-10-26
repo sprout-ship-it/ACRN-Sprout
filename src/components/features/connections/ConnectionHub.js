@@ -48,7 +48,58 @@ const ConnectionHub = ({ onBack }) => {
     if (!lastName) return firstName;
     return `${firstName} ${lastName.charAt(0)}.`;
   };
+/**
+ * Get user-friendly status label for connection cards
+ * ✅ FIXED: Shows correct status for different connection scenarios
+ */
+const getConnectionStatusLabel = (connection) => {
+  // Handle different status types
+  switch (connection.status) {
+    // Standard match_groups statuses
+    case 'active':
+      return 'Active';
+    case 'requested':
+      return 'Pending';
+    case 'confirmed':
+      return 'Active';
+    
+    // Custom statuses for group expansion scenarios
+    case 'pending_invitation':
+      return 'Invitation Received';
+    case 'needs_approval':
+      return 'Approval Needed';
+    case 'invitation_sent':
+      return 'Invitation Sent';
+    
+    // Housing match statuses
+    case 'approved':
+      return 'Active';
+    
+    // Peer support/employment statuses
+    case 'inactive':
+      return 'Ended';
+    
+    // Default
+    default:
+      return connection.status?.charAt(0).toUpperCase() + connection.status?.slice(1) || 'Unknown';
+  }
+};
 
+/**
+ * Get CSS class for status badge
+ */
+const getConnectionStatusClass = (connection) => {
+  const activeStatuses = ['active', 'confirmed', 'approved'];
+  const pendingStatuses = ['requested', 'pending_invitation', 'needs_approval', 'invitation_sent'];
+  
+  if (activeStatuses.includes(connection.status)) {
+    return 'badge-success';
+  } else if (pendingStatuses.includes(connection.status)) {
+    return 'badge-warning';
+  } else {
+    return 'badge-secondary';
+  }
+};
   /**
    * Load user's role-specific profile IDs
    */
@@ -174,25 +225,25 @@ const loadMatchGroupConnections = async (categories) => {
       
       if (allMemberIds.length === 0) continue;
       
-const { data: memberData } = await supabase
-  .from('applicant_matching_profiles')
-  .select(`
-    id, 
-    user_id, 
-    primary_phone,
-    date_of_birth, 
-    recovery_stage, 
-    work_schedule, 
-    budget_min, 
-    budget_max, 
-    primary_location,
-    registrant_profiles(first_name, last_name, email)
-  `)
-  .in('id', allMemberIds);
+      const { data: memberData } = await supabase
+        .from('applicant_matching_profiles')
+        .select(`
+          id, 
+          user_id, 
+          primary_phone,
+          date_of_birth, 
+          recovery_stage, 
+          work_schedule, 
+          budget_min, 
+          budget_max, 
+          primary_location,
+          registrant_profiles(first_name, last_name, email)
+        `)
+        .in('id', allMemberIds);
       
       const members = memberData || [];
       
-// Split into confirmed and pending for display purposes
+      // Split into confirmed and pending for display purposes
       const confirmedMembers = members.filter(m => roommateIds.includes(m.id));
       const pendingMembers = members.filter(m => pendingIds.includes(m.id));
       
@@ -207,11 +258,10 @@ const { data: memberData } = await supabase
       });
 
       // ✅ CASE 0: Initial 2-person request (no member_confirmations yet)
-      // This handles the very first request where A sends to B
-if (group.status === 'requested' && 
-    roommateIds.length === 1 &&  // ← Changed from 2 to 1
-    pendingIds.length === 1 &&
-    Object.keys(confirmations).length === 0) {
+      if (group.status === 'requested' && 
+          roommateIds.length === 1 &&
+          pendingIds.length === 1 &&
+          Object.keys(confirmations).length === 0) {
         
         const pendingMember = members.find(m => m.id === pendingIds[0]);
         const isPendingUser = pendingIds.includes(profileIds.applicant);
@@ -243,6 +293,30 @@ if (group.status === 'requested' &&
         continue; // Skip other cases for initial requests
       }
 
+      // ✅ NEW: Add base group to "active" for all confirmed members
+      // This happens BEFORE we add separate invitation cards
+      if (isConfirmedMember && roommateIds.length >= 2 && group.status === 'active') {
+        const baseGroupConnection = {
+          id: `${group.id}-base`,
+          type: 'roommate',
+          status: 'active',
+          source: 'match_group',
+          match_group_id: group.id,
+          created_at: group.created_at,
+          last_activity: group.updated_at || group.created_at,
+          avatar: '👥',
+          roommates: confirmedMembers, // Only show confirmed members in the base group
+          requested_by_id: group.requested_by_id,
+          pending_member_ids: [],
+          member_confirmations: {},
+          message: group.message,
+          group_name: group.group_name,
+          move_in_date: group.move_in_date
+        };
+        
+        categories.active.push(baseGroupConnection);
+      }
+
       // ✅ CASE 1: User is pending invitee (needs to accept invitation)
       if (isPendingMember) {
         const confirmation = confirmations[profileIds.applicant];
@@ -250,7 +324,7 @@ if (group.status === 'requested' &&
           const connection = {
             id: `${group.id}-invitee-${profileIds.applicant}`,
             type: 'roommate',
-            status: group.status,
+            status: 'pending_invitation',
             source: 'match_group',
             match_group_id: group.id,
             created_at: confirmation.invited_at || group.created_at,
@@ -283,13 +357,14 @@ if (group.status === 'requested' &&
             const connection = {
               id: `${group.id}-approve-${pendingId}`,
               type: 'roommate',
-              status: group.status,
+              status: 'needs_approval',
               source: 'match_group',
               match_group_id: group.id,
               created_at: confirmation.invited_at || group.created_at,
               last_activity: group.updated_at || group.created_at,
               avatar: '👥',
-              roommates: pendingMember ? [...confirmedMembers, pendingMember] : confirmedMembers, // Show group context + who wants to join
+              roommates: pendingMember ? [pendingMember] : [], // Just show who wants to join
+              confirmed_members: confirmedMembers, // Keep reference to full group
               requested_by_id: confirmation.invited_by,
               pending_member_ids: [pendingId],
               pending_member_id: pendingId,
@@ -318,13 +393,14 @@ if (group.status === 'requested' &&
             const connection = {
               id: `${group.id}-invited-${pendingId}`,
               type: 'roommate',
-              status: group.status,
+              status: 'invitation_sent',
               source: 'match_group',
               match_group_id: group.id,
               created_at: confirmation.invited_at || group.created_at,
               last_activity: group.updated_at || group.created_at,
               avatar: '👥',
-              roommates: pendingMember ? [...confirmedMembers, pendingMember] : confirmedMembers, // Show confirmed members + who was invited
+              roommates: pendingMember ? [pendingMember] : [], // Just show who was invited
+              confirmed_members: confirmedMembers, // Keep reference to full group
               requested_by_id: profileIds.applicant,
               pending_member_ids: [pendingId],
               pending_member_id: pendingId,
@@ -341,44 +417,13 @@ if (group.status === 'requested' &&
           }
         });
       }
-
-      // ✅ CASE 5: Standard roommate groups (no property, no pending members)
-      if (!group.property_id && roommateIds.length >= 2 && pendingIds.length === 0 && isConfirmedMember) {
-        const connection = {
-          id: group.id,
-          type: 'roommate',
-          status: group.status,
-          source: 'match_group',
-          match_group_id: group.id,
-          created_at: group.created_at,
-          last_activity: group.updated_at || group.created_at,
-          avatar: '👥',
-          roommates: confirmedMembers,
-          requested_by_id: group.requested_by_id,
-          pending_member_ids: [],
-          member_confirmations: confirmations,
-          message: group.message,
-          group_name: group.group_name,
-          move_in_date: group.move_in_date
-        };
-
-        // Categorize based on status
-        if (group.status === 'requested') {
-          if (isRequester) {
-            categories.sent.push(connection);
-          } else {
-            categories.awaiting.push(connection);
-          }
-        } else if (group.status === 'active') {
-          categories.active.push(connection);
-        }
-      }
     }
   } catch (error) {
     console.error('Error in loadMatchGroupConnections:', error);
     throw error;
   }
 };
+
 
   /**
    * Load housing matches from housing_matches table
@@ -1068,21 +1113,66 @@ const handleApproveRequest = async (connection) => {
     return `${Math.floor(diffInHours / 24)} days ago`;
   };
 
-  const getConnectionName = (connection) => {
-    if (connection.type === 'landlord' && connection.property) {
-      return connection.property.title || connection.property.address || 'Property Match';
-    } else if (connection.type === 'roommate') {
-      const count = connection.roommates?.length || 0;
-      return `Roommate Group (${count} member${count !== 1 ? 's' : ''})`;
-    } else if (connection.type === 'peer_support') {
-      const other = connection.other_person;
-      return other?.professional_title || formatName(other?.registrant_profiles?.first_name, other?.registrant_profiles?.last_name);
-    } else if (connection.type === 'employer') {
-      const other = connection.other_person;
-      return other?.company_name || formatName(other?.registrant_profiles?.first_name, other?.registrant_profiles?.last_name);
+/**
+ * Get display name for connection card
+ * ✅ UPDATED: Better handling of group invitations and approvals
+ */
+const getConnectionName = (connection) => {
+  if (connection.type === 'landlord' && connection.property) {
+    return connection.property.title || connection.property.address || 'Property Match';
+  } else if (connection.type === 'roommate') {
+    // For invitation cards, show who's being invited/approved
+    if (connection.status === 'invitation_sent') {
+      const person = connection.roommates?.[0];
+      if (person) {
+        return `Invitation: ${formatName(
+          person.registrant_profiles?.first_name,
+          person.registrant_profiles?.last_name
+        )}`;
+      }
+      return 'Group Invitation Sent';
     }
-    return 'Unknown';
-  };
+    
+    if (connection.status === 'needs_approval') {
+      const person = connection.roommates?.[0];
+      if (person) {
+        return `Approve: ${formatName(
+          person.registrant_profiles?.first_name,
+          person.registrant_profiles?.last_name
+        )}`;
+      }
+      return 'Group Approval Needed';
+    }
+    
+    if (connection.status === 'pending_invitation') {
+      const confirmedCount = connection.roommates?.length || 0;
+      if (connection.group_name) {
+        return `Invitation: ${connection.group_name}`;
+      }
+      return `Invitation: Roommate Group (${confirmedCount} member${confirmedCount !== 1 ? 's' : ''})`;
+    }
+    
+    // For base active group or standard requests
+    const confirmedCount = connection.confirmed_members?.length || connection.roommates?.length || 0;
+    const pendingCount = connection.pending_member_ids?.length || 0;
+    
+    if (connection.group_name) {
+      if (pendingCount > 0 && connection.confirmed_members) {
+        return `${connection.group_name} (${confirmedCount} confirmed, ${pendingCount} pending)`;
+      }
+      return connection.group_name;
+    }
+    
+    return `Roommate Group (${confirmedCount} member${confirmedCount !== 1 ? 's' : ''})`;
+  } else if (connection.type === 'peer_support') {
+    const other = connection.other_person;
+    return other?.professional_title || formatName(other?.registrant_profiles?.first_name, other?.registrant_profiles?.last_name);
+  } else if (connection.type === 'employer') {
+    const other = connection.other_person;
+    return other?.company_name || formatName(other?.registrant_profiles?.first_name, other?.registrant_profiles?.last_name);
+  }
+  return 'Unknown';
+};
 
   const getConnectionTypeLabel = (type) => {
     const labels = {
@@ -1188,9 +1278,9 @@ const handleApproveRequest = async (connection) => {
                           <div className={styles.connectionTitle}>{getConnectionName(connection)}</div>
                         </div>
                         <div className={styles.headerActions}>
-                          <span className={`badge ${connection.status === 'active' || connection.status === 'confirmed' || connection.status === 'approved' ? 'badge-success' : 'badge-warning'}`}>
-                            {connection.status}
-                          </span>
+                        <span className={`badge ${getConnectionStatusClass(connection)}`}>
+                          {getConnectionStatusLabel(connection)}
+                        </span>
                           {activeTab === 'active' && (
                             <button 
                               className={`btn btn-sm ${styles.endConnectionButton}`}
