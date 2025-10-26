@@ -1,4 +1,4 @@
-// src/pages/MainApp.js - SIMPLIFIED: No profile blocking, immediate dashboard access
+// src/pages/MainApp.js - FIXED: Proper state refresh for peer support modal
 import React, { useEffect, useState, useCallback, useMemo } from 'react'
 import { Routes, Route, Navigate, useNavigate, useLocation } from 'react-router-dom'
 import { useAuth } from '../hooks/useAuth';
@@ -195,8 +195,11 @@ const MainApp = () => {
   const { user, profile, isAuthenticated, hasRole } = useAuth()
   const navigate = useNavigate()
   const location = useLocation();
+  
+  // ✅ FIXED: Add refreshCallback state to store the dashboard refresh function
   const [selectedClient, setSelectedClient] = useState(null);
   const [modalOpen, setModalOpen] = useState(false);
+  const [refreshCallback, setRefreshCallback] = useState(null);
   
   // ✅ SIMPLIFIED: Profile completion tracking for display only (NOT blocking)
   const [profileCompletion, setProfileCompletion] = useState({
@@ -365,36 +368,33 @@ else if (role === 'employer') {
                   </div>
                 } />
                 
-<Route path="/peer-dashboard" element={
-  <>
-    <PeerSupportDashboard 
-      onClientSelect={(client) => {
-        setSelectedClient(client);
-        setModalOpen(true);
-      }}
-    />
-    {modalOpen && selectedClient && (
-      <PeerSupportModal 
-        client={selectedClient}
-        onClose={() => {
-          setModalOpen(false);
-          setSelectedClient(null);
-        }}
-        onClientUpdate={() => {
-          // ✅ FIXED: Force component remount to refresh data
-          const currentClient = selectedClient;
-          setModalOpen(false);
-          setSelectedClient(null);
-          
-          setTimeout(() => {
-            setSelectedClient(currentClient);
-            setModalOpen(true);
-          }, 100);
-        }}
-      />
-    )}
-  </>
-} />
+                {/* ✅ FIXED: Peer Support Dashboard with proper refresh handling */}
+                <Route path="/peer-dashboard" element={
+                  <>
+                    <PeerSupportDashboard 
+                      onClientSelect={(client, refresh) => {
+                        // ✅ CRITICAL: Store both client AND refresh callback
+                        console.log('📝 MainApp: Received client and refresh callback');
+                        setSelectedClient(client);
+                        setRefreshCallback(() => refresh); // Store the refresh function
+                        setModalOpen(true);
+                      }}
+                    />
+                    
+                    {modalOpen && selectedClient && (
+                      <PeerSupportModal 
+                        client={selectedClient}
+                        onClose={() => {
+                          setModalOpen(false);
+                          setSelectedClient(null);
+                          setRefreshCallback(null);
+                        }}
+                        // ✅ CRITICAL: Pass refresh callback to modal
+                        onRefresh={refreshCallback}
+                      />
+                    )}
+                  </>
+                } />
                 <Route path="/clients" element={<MatchRequests />} />
               </>
             )}

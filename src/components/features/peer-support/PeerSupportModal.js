@@ -1,10 +1,10 @@
-// src/components/features/peer-support/PeerSupportModal.js
+// src/components/features/peer-support/PeerSupportModal.js - FIXED: Calls onRefresh after updates
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../../../hooks/useAuth';
 import { db } from '../../../utils/supabase';
 import styles from './PeerSupportModal.module.css';
 
-const PeerSupportModal = ({ client, onClose, onClientUpdate }) => {
+const PeerSupportModal = ({ client, onClose, onClientUpdate, onRefresh }) => {
   const { profile } = useAuth();
   const [activeTab, setActiveTab] = useState('overview');
   const [saving, setSaving] = useState(false);
@@ -30,7 +30,7 @@ const PeerSupportModal = ({ client, onClose, onClientUpdate }) => {
   const [newGoal, setNewGoal] = useState('');
 
   /**
-   * Update client information
+   * ✅ FIXED: Update client information AND trigger dashboard refresh
    */
   const handleUpdateClient = async (clientId, updates) => {
     if (!profile?.id) return false;
@@ -54,7 +54,13 @@ const PeerSupportModal = ({ client, onClose, onClientUpdate }) => {
           ...updates
         }));
 
-        // Notify parent component of the update
+        // ✅ CRITICAL: Trigger dashboard refresh
+        if (onRefresh) {
+          console.log('🔄 Triggering dashboard refresh...');
+          await onRefresh();
+        }
+
+        // Notify parent component of the update (legacy support)
         if (onClientUpdate) {
           onClientUpdate();
         }
@@ -62,7 +68,12 @@ const PeerSupportModal = ({ client, onClose, onClientUpdate }) => {
         return true;
       } else {
         console.log('Using fallback: storing in peer_support_matches');
-        // Fallback logic for when PSS service isn't available
+        
+        // ✅ CRITICAL: Also trigger refresh in fallback
+        if (onRefresh) {
+          await onRefresh();
+        }
+        
         if (onClientUpdate) {
           onClientUpdate();
         }
@@ -76,7 +87,7 @@ const PeerSupportModal = ({ client, onClose, onClientUpdate }) => {
   };
 
   /**
-   * Log a new session and update client info
+   * ✅ FIXED: Log a new session and update client info, then refresh dashboard
    */
   const handleLogSession = async () => {
     if (!sessionType || !sessionNotes.trim()) {
@@ -134,7 +145,7 @@ const PeerSupportModal = ({ client, onClose, onClientUpdate }) => {
   };
 
   /**
-   * Add a new recovery goal
+   * ✅ FIXED: Add a new recovery goal and refresh dashboard
    */
   const handleAddGoal = async () => {
     if (!newGoal.trim()) {
@@ -171,7 +182,7 @@ const PeerSupportModal = ({ client, onClose, onClientUpdate }) => {
   };
 
   /**
-   * Update goal status
+   * ✅ FIXED: Update goal status and refresh dashboard
    */
   const handleUpdateGoal = async (goalId, updates) => {
     setSaving(true);
