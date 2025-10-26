@@ -1540,34 +1540,46 @@ const getConnectionName = (connection) => {
                         </div>
                       )}
 
-                      {/* Primary Action - View Details */}
-                      <div className={styles.primaryAction}>
-                        {connection.type === 'landlord' ? (
-                          <button 
-                            className="btn btn-primary"
-                            onClick={() => handleViewProperty(connection)}
-                            style={{ width: '100%' }}
-                          >
-                            👁️ View Property Details
-                          </button>
-                        ) : connection.type === 'roommate' ? (
-                          <button 
-                            className="btn btn-primary"
-                            onClick={() => handleViewGroupDetails(connection)}
-                            style={{ width: '100%' }}
-                          >
-                            👥 View Group Details
-                          </button>
-                        ) : (
-                          <button 
-                            className="btn btn-primary"
-                            onClick={() => handleViewProfile(connection)}
-                            style={{ width: '100%' }}
-                          >
-                            👁️ View Profile
-                          </button>
-                        )}
-                      </div>
+{/* Primary Action - View Details */}
+<div className={styles.primaryAction}>
+  {connection.type === 'landlord' ? (
+    // ✅ FIXED: Landlords see applicant profile, Applicants see property
+    connection.is_applicant ? (
+      <button 
+        className="btn btn-primary"
+        onClick={() => handleViewProperty(connection)}
+        style={{ width: '100%' }}
+      >
+        👁️ View Property Details
+      </button>
+    ) : (
+      <button 
+        className="btn btn-primary"
+        onClick={() => handleViewProfile(connection)}
+        style={{ width: '100%' }}
+      >
+        👁️ View Applicant Profile
+      </button>
+    )
+  ) : connection.type === 'roommate' ? (
+    <button 
+      className="btn btn-primary"
+      onClick={() => handleViewGroupDetails(connection)}
+      style={{ width: '100%' }}
+    >
+      👥 View Group Details
+    </button>
+  ) : (
+    <button 
+      className="btn btn-primary"
+      onClick={() => handleViewProfile(connection)}
+      style={{ width: '100%' }}
+    >
+      👁️ View Profile
+    </button>
+  )}
+</div>
+
 
                       {/* ✅ NEW: View My Progress button for active peer support connections */}
                       {activeTab === 'active' && connection.type === 'peer_support' && (
@@ -1648,19 +1660,14 @@ const getConnectionName = (connection) => {
       setSelectedConnection(null);
     }}
     onRequestMatch={(match) => {
-      // Optional: Add request match handler if needed
       console.log('Request match:', match);
     }}
-    // Contact info visibility based on connection status
+    // ✅ FIXED: Show contact info only for confirmed/approved connections
     showContactInfo={
-      (selectedConnection?.status === 'confirmed' || 
-       selectedConnection?.status === 'active' || 
-       selectedConnection?.status === 'approved') &&
-      !selectedConnection?.pending_member_ids?.includes(profileIds.applicant) &&
-      (selectedConnection?.type !== 'roommate' || 
-       !(selectedConnection?.pending_member_ids || []).includes(selectedProfile?.id || selectedProfile?.user_id))
+      selectedConnection?.status === 'confirmed' || 
+      selectedConnection?.status === 'active' || 
+      selectedConnection?.status === 'approved'
     }
-    // Don't show request match button in ConnectionHub context
     isAlreadyMatched={true}
     isRequestSent={false}
     usePortal={true}
