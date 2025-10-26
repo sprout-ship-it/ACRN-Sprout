@@ -1,4 +1,4 @@
-// src/utils/database/employerService.js - FIXED TO MATCH EXISTING SUPABASE.JS STRUCTURE
+// src/utils/database/employerService.js - FIXED FOR NEW SCHEMA
 import { supabase } from '../supabase';
 
 const createEmployerService = (supabaseClient) => {
@@ -300,7 +300,7 @@ const createEmployerService = (supabaseClient) => {
     }
   };
 
-  // ✅ CRITICAL: Favorites service that matches existing supabase.js structure
+  // ✅ FIXED: Favorites service with correct column name (employer_profile_id)
   const favorites = {
     tableName: 'employer_favorites',
 
@@ -334,23 +334,23 @@ const createEmployerService = (supabaseClient) => {
     },
 
     /**
-     * ✅ FIXED: Add employer to favorites
+     * ✅ FIXED: Add employer to favorites using employer_profile_id
      * @param {string} userId - registrant_profiles.id of the user
-     * @param {string} employerUserId - registrant_profiles.id of the employer
+     * @param {string} employerProfileId - employer_profiles.id (NOT user_id)
      * @returns {Object} Database response
      */
-    add: async (userId, employerUserId) => {
+    add: async (userId, employerProfileId) => {
       try {
         console.log('⭐ Favorites: Adding favorite:', {
           user_id: userId,
-          employer_user_id: employerUserId,
+          employer_profile_id: employerProfileId,
           table: favorites.tableName
         });
 
         // Check if already favorited to prevent duplicates
-        const existingCheck = await favorites.isFavorited(userId, employerUserId);
+        const existingCheck = await favorites.isFavorited(userId, employerProfileId);
         if (existingCheck.success && existingCheck.data) {
-          console.log('⚠️ Already favorited, not adding duplicate');
+          console.log('⚠️ Favorites: Already favorited, not adding duplicate');
           return { 
             success: false, 
             data: null, 
@@ -358,14 +358,14 @@ const createEmployerService = (supabaseClient) => {
           };
         }
 
-        // Insert new favorite record
+        // Insert new favorite record with correct column name
         const favoriteData = {
           user_id: userId,
-          employer_user_id: employerUserId,
+          employer_profile_id: employerProfileId,
           created_at: new Date().toISOString()
         };
 
-        console.log('📝 Inserting favorite data:', favoriteData);
+        console.log('📝 Favorites: Inserting favorite data:', favoriteData);
 
         const { data, error } = await supabaseClient
           .from(favorites.tableName)
@@ -394,23 +394,23 @@ const createEmployerService = (supabaseClient) => {
     },
 
     /**
-     * ✅ FIXED: Remove employer from favorites
+     * ✅ FIXED: Remove employer from favorites using employer_profile_id
      * @param {string} userId - registrant_profiles.id of the user  
-     * @param {string} employerUserId - registrant_profiles.id of the employer
+     * @param {string} employerProfileId - employer_profiles.id (NOT user_id)
      * @returns {Object} Database response
      */
-    remove: async (userId, employerUserId) => {
+    remove: async (userId, employerProfileId) => {
       try {
         console.log('⭐ Favorites: Removing favorite:', {
           user_id: userId,
-          employer_user_id: employerUserId
+          employer_profile_id: employerProfileId
         });
 
         const { data, error } = await supabaseClient
           .from(favorites.tableName)
           .delete()
           .eq('user_id', userId)
-          .eq('employer_user_id', employerUserId)
+          .eq('employer_profile_id', employerProfileId)
           .select();
 
         if (error) {
@@ -419,7 +419,7 @@ const createEmployerService = (supabaseClient) => {
         }
 
         if (!data || data.length === 0) {
-          console.log('⚠️ No favorite found to remove');
+          console.log('⚠️ Favorites: No favorite found to remove');
           return { 
             success: false, 
             data: null, 
@@ -437,28 +437,28 @@ const createEmployerService = (supabaseClient) => {
     },
 
     /**
-     * ✅ FIXED: Check if employer is favorited
+     * ✅ FIXED: Check if employer is favorited using employer_profile_id
      * @param {string} userId - registrant_profiles.id of the user
-     * @param {string} employerUserId - registrant_profiles.id of the employer  
+     * @param {string} employerProfileId - employer_profiles.id (NOT user_id)
      * @returns {Object} Database response with boolean result
      */
-    isFavorited: async (userId, employerUserId) => {
+    isFavorited: async (userId, employerProfileId) => {
       try {
         console.log('🔍 Favorites: Checking if favorited:', {
           user_id: userId,
-          employer_user_id: employerUserId
+          employer_profile_id: employerProfileId
         });
 
         const { data, error } = await supabaseClient
           .from(favorites.tableName)
           .select('id')
           .eq('user_id', userId)
-          .eq('employer_user_id', employerUserId)
+          .eq('employer_profile_id', employerProfileId)
           .single();
 
         // Handle "no rows" as not favorited (not an error)
         if (error && error.code === 'PGRST116') {
-          console.log('📝 Not favorited (no rows found)');
+          console.log('📝 Favorites: Not favorited (no rows found)');
           return { success: true, data: false, error: null };
         }
 
@@ -468,7 +468,7 @@ const createEmployerService = (supabaseClient) => {
         }
 
         const isFavorited = !!data;
-        console.log(`📝 Favorited status: ${isFavorited}`);
+        console.log(`📝 Favorites: Favorited status: ${isFavorited}`);
         return { success: true, data: isFavorited, error: null };
 
       } catch (err) {
@@ -478,33 +478,33 @@ const createEmployerService = (supabaseClient) => {
     },
 
     /**
-     * ✅ FIXED: Toggle favorite status
+     * ✅ FIXED: Toggle favorite status using employer_profile_id
      * @param {string} userId - registrant_profiles.id of the user
-     * @param {string} employerUserId - registrant_profiles.id of the employer
+     * @param {string} employerProfileId - employer_profiles.id (NOT user_id)
      * @returns {Object} Database response
      */
-    toggle: async (userId, employerUserId) => {
+    toggle: async (userId, employerProfileId) => {
       try {
         console.log('🔄 Favorites: Toggling favorite:', {
           user_id: userId,
-          employer_user_id: employerUserId
+          employer_profile_id: employerProfileId
         });
 
-        const favoriteCheck = await favorites.isFavorited(userId, employerUserId);
+        const favoriteCheck = await favorites.isFavorited(userId, employerProfileId);
         
         if (!favoriteCheck.success) {
-          console.error('❌ Could not check favorite status');
+          console.error('❌ Favorites: Could not check favorite status');
           return favoriteCheck;
         }
 
         if (favoriteCheck.data) {
           // Already favorited - remove it
-          console.log('💔 Removing existing favorite');
-          return await favorites.remove(userId, employerUserId);
+          console.log('💔 Favorites: Removing existing favorite');
+          return await favorites.remove(userId, employerProfileId);
         } else {
           // Not favorited - add it
-          console.log('❤️ Adding new favorite');
-          return await favorites.add(userId, employerUserId);
+          console.log('❤️ Favorites: Adding new favorite');
+          return await favorites.add(userId, employerProfileId);
         }
 
       } catch (err) {
