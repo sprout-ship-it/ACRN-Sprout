@@ -17,17 +17,13 @@
 }
 
 /* ==================== CARD HEADER ==================== */
-/* ✅ FIXED: Using CSS custom properties for coral/purple gradient */
+/* ✅ FIXED: Using coral/purple gradient with better browser compatibility */
 .cardHeader {
-  background: linear-gradient(
-    135deg, 
-    color-mix(in srgb, var(--coral) 15%, transparent) 0%, 
-    color-mix(in srgb, var(--primary-purple) 15%, transparent) 100%
-  );
+  background: linear-gradient(135deg, rgba(255, 111, 97, 0.15) 0%, rgba(160, 32, 240, 0.15) 100%);
   padding: 1rem;
   border-radius: var(--radius-md);
   margin-bottom: 1rem;
-  border: 1px solid color-mix(in srgb, var(--coral) 20%, transparent);
+  border: 1px solid rgba(255, 111, 97, 0.2);
 }
 
 .employerCardHeader {
@@ -63,7 +59,7 @@
 
 .favoriteBtn:hover {
   transform: scale(1.1);
-  background: color-mix(in srgb, var(--primary-purple) 10%, transparent);
+  background: rgba(160, 32, 240, 0.1);
 }
 
 .favoriteBtn.favorited {
@@ -104,8 +100,8 @@
 .featureSection {
   border-radius: 8px;
   padding: 12px;
-  background: color-mix(in srgb, var(--primary-purple) 2%, transparent);
-  border: 1px solid color-mix(in srgb, var(--primary-purple) 10%, transparent);
+  background: rgba(160, 32, 240, 0.02);
+  border: 1px solid rgba(160, 32, 240, 0.1);
   margin-bottom: 1rem;
 }
 

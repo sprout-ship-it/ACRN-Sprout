@@ -216,9 +216,21 @@ const EmployerModal = ({
                     <div className={styles.additionalInfo}>
                       <strong>Additional Locations:</strong>
                       <ul className={styles.locationList}>
-                        {employer.additional_locations.map((location, index) => (
-                          <li key={index}>{location}</li>
-                        ))}
+                        {employer.additional_locations.map((location, index) => {
+                          // Handle both string and object formats
+                          if (typeof location === 'string') {
+                            return <li key={index}>{location}</li>;
+                          } else if (typeof location === 'object' && location !== null) {
+                            // Format location object as string
+                            const parts = [];
+                            if (location.address) parts.push(location.address);
+                            if (location.city) parts.push(location.city);
+                            if (location.state) parts.push(location.state);
+                            if (location.zip) parts.push(location.zip);
+                            return <li key={index}>{parts.join(', ')}</li>;
+                          }
+                          return null;
+                        })}
                       </ul>
                     </div>
                   )}
