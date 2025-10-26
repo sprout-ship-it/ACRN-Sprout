@@ -1,7 +1,7 @@
-// src/utils/database/propertiesService.js - Updated for refactored schema
+// src/utils/database/propertiesService.js - FIXED: Removed non-existent landlord_profiles fields
 /**
  * Properties service for properties table operations
- * Updated to work with new properties table schema
+ * ✅ FIXED: Only queries fields that exist in landlord_profiles schema
  */
 
 const createPropertiesService = (supabaseClient) => {
@@ -87,6 +87,7 @@ const createPropertiesService = (supabaseClient) => {
 
     /**
      * Get available properties with comprehensive filters
+     * ✅ FIXED: Removed primary_service_city, primary_service_state
      */
     getAvailable: async (filters = {}) => {
       try {
@@ -100,8 +101,6 @@ const createPropertiesService = (supabaseClient) => {
               id,
               primary_phone,
               contact_email,
-              primary_service_city,
-              primary_service_state,
               registrant:registrant_profiles!inner(
                 first_name,
                 last_name
@@ -209,6 +208,7 @@ const createPropertiesService = (supabaseClient) => {
 
     /**
      * Get recovery housing properties with specialized filters
+     * ✅ FIXED: Removed recovery_experience_level, supported_recovery_methods
      */
     getRecoveryHousing: async (filters = {}) => {
       try {
@@ -222,8 +222,6 @@ const createPropertiesService = (supabaseClient) => {
               id,
               primary_phone,
               contact_email,
-              recovery_experience_level,
-              supported_recovery_methods,
               registrant:registrant_profiles!inner(
                 first_name,
                 last_name
@@ -318,6 +316,8 @@ const createPropertiesService = (supabaseClient) => {
 
     /**
      * Get property by ID with full details
+     * ✅ FIXED: Removed contact_person, business_name, recovery_friendly, recovery_experience_level,
+     *           supported_recovery_methods, preferred_contact_method, response_time_expectation
      */
     getById: async (id) => {
       try {
@@ -331,13 +331,6 @@ const createPropertiesService = (supabaseClient) => {
               id,
               primary_phone,
               contact_email,
-              contact_person,
-              business_name,
-              recovery_friendly,
-              recovery_experience_level,
-              supported_recovery_methods,
-              preferred_contact_method,
-              response_time_expectation,
               registrant:registrant_profiles!inner(
                 id,
                 first_name,
@@ -512,6 +505,7 @@ const createPropertiesService = (supabaseClient) => {
 
     /**
      * Get properties with matching criteria for applicant
+     * ✅ FIXED: Removed supported_recovery_methods, recovery_friendly
      */
     getMatchingProperties: async (applicantProfile) => {
       try {
@@ -524,8 +518,6 @@ const createPropertiesService = (supabaseClient) => {
             landlord_profile:landlord_profiles!inner(
               id,
               primary_phone,
-              supported_recovery_methods,
-              recovery_friendly,
               registrant:registrant_profiles!inner(
                 first_name,
                 last_name

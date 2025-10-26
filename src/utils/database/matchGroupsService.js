@@ -119,8 +119,8 @@ const createMatchGroupsService = (supabaseClient) => {
       try {
         console.log('🏠 MatchGroups: Inviting member to group:', { groupId, inviterId, inviteeId });
 
-        // Get current group
-        const groupResult = await service.getById(groupId);
+        // Get current group (without property joins for roommate groups)
+        const groupResult = await service.getById(groupId, false);
         if (!groupResult.success) {
           return groupResult;
         }
@@ -192,7 +192,7 @@ const createMatchGroupsService = (supabaseClient) => {
         console.log('✅ MatchGroups: Approving pending member:', { groupId, approverId, inviteeId });
 
         // Get current group
-        const groupResult = await service.getById(groupId);
+        const groupResult = await service.getById(groupId, false);
         if (!groupResult.success) {
           return groupResult;
         }
@@ -265,7 +265,7 @@ acceptGroupInvitation: async (groupId, inviteeId) => {
     console.log('✅ MatchGroups: Invitee accepting invitation:', { groupId, inviteeId });
 
     // Get current group
-    const groupResult = await service.getById(groupId);
+    const groupResult = await service.getById(groupId, false);
     if (!groupResult.success) {
       return groupResult;
     }
@@ -357,7 +357,7 @@ acceptGroupInvitation: async (groupId, inviteeId) => {
         console.log('🏠 MatchGroups: Confirming pending member:', { groupId, inviteeId });
 
         // Get current group
-        const groupResult = await service.getById(groupId);
+        const groupResult = await service.getById(groupId, false);
         if (!groupResult.success) {
           return groupResult;
         }
@@ -391,7 +391,7 @@ acceptGroupInvitation: async (groupId, inviteeId) => {
 
 /**
  * Get match groups by user ID (checks if user is in roommate_ids array)
- * ✅ CLEANED UP: Removed peer_support joins (now handled in peer_support_matches table)
+ * ✅ FIXED: Only select fields that exist in landlord_profiles schema
  * @param {string} userType - User type (applicant, landlord)
  * @param {string} userId - Role-specific user ID
  * @returns {Object} Database response
@@ -420,7 +420,6 @@ getByUserId: async (userType, userId) => {
               landlord:landlord_profiles!landlord_id(
                 id,
                 primary_phone,
-                business_name,
                 contact_email
               )
             )
@@ -486,17 +485,18 @@ getByUserId: async (userType, userId) => {
 
 /**
  * Get match group by ID with full details
- * ✅ CLEANED UP: Removed peer_support join (now handled in peer_support_matches table)
+ * ✅ FIXED: Only select fields that exist in landlord_profiles, made property join optional
  * @param {string} groupId - Match group ID
+ * @param {boolean} includeProperty - Whether to join property data (default: true)
  * @returns {Object} Database response
  */
-getById: async (groupId) => {
+getById: async (groupId, includeProperty = true) => {
   try {
-    console.log('🏠 MatchGroups: Fetching match group by ID:', groupId);
+    console.log('🏠 MatchGroups: Fetching match group by ID:', groupId, '(includeProperty:', includeProperty, ')');
 
-    const { data, error } = await supabaseClient
-      .from(tableName)
-      .select(`
+    // Build query based on whether we need property data
+    const selectQuery = includeProperty
+      ? `
         *,
         property:properties!property_id(
           id,
@@ -511,12 +511,15 @@ getById: async (groupId) => {
           landlord:landlord_profiles!landlord_id(
             id,
             primary_phone,
-            contact_email,
-            business_name,
-            bio
+            contact_email
           )
         )
-      `)
+      `
+      : '*';
+
+    const { data, error } = await supabaseClient
+      .from(tableName)
+      .select(selectQuery)
       .eq('id', groupId)
       .single();
 
@@ -594,7 +597,7 @@ getById: async (groupId) => {
         console.log('🏠 MatchGroups: Removing member from group:', groupId, memberId);
 
         // Get current group
-        const groupResult = await service.getById(groupId);
+        const groupResult = await service.getById(groupId, false);
         if (!groupResult.success) {
           return groupResult;
         }

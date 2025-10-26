@@ -383,102 +383,100 @@ if (group.status === 'requested' &&
   /**
    * Load housing matches from housing_matches table
    */
-  const loadHousingMatches = async (categories) => {
-    try {
-      let query = supabase.from('housing_matches').select('*');
-      const conditions = [];
-      
-      if (profileIds.applicant) {
-        conditions.push(`applicant_id.eq.${profileIds.applicant}`);
-      }
-      
-      if (profileIds.landlord) {
-        const { data: properties } = await supabase
-          .from('properties')
-          .select('id')
-          .eq('landlord_id', profileIds.landlord);
-        
-        if (properties && properties.length > 0) {
-          const propertyIds = properties.map(p => p.id);
-          conditions.push(`property_id.in.(${propertyIds.join(',')})`);
-        }
-      }
-      
-      if (conditions.length > 0) {
-        query = query.or(conditions.join(','));
-      }
-
-      const { data: matches, error } = await query;
-      if (error) throw error;
-      if (!matches || matches.length === 0) return;
-
-      for (const match of matches) {
-        const isApplicant = match.applicant_id === profileIds.applicant;
-        
-        let property = null;
-        if (match.property_id) {
-          const { data: propData } = await supabase
-            .from('properties')
-            .select(`
-              *,
-              landlord_profiles(
-                id,
-                user_id,
-                primary_phone,
-                contact_email,
-                contact_person,
-                business_name,
-                registrant_profiles(first_name, last_name, email)
-              )
-            `)
-            .eq('id', match.property_id)
-            .single();
-          property = propData;
-        }
-        
-        let applicant = null;
-        if (!isApplicant && match.applicant_id) {
-const { data: applicantData } = await supabase
-  .from('applicant_matching_profiles')  // ← Changed
-  .select('*, registrant_profiles(*)')
-  .eq('id', match.applicant_id)
-  .single();
-          applicant = applicantData;
-        }
-
-        const connection = {
-          id: match.id,
-          type: 'landlord',
-          status: match.status,
-          source: 'housing_match',
-          housing_match_id: match.id,
-          created_at: match.created_at,
-          last_activity: match.updated_at || match.created_at,
-          avatar: '🏠',
-          property: property,
-          requesting_applicant: applicant,
-          applicant_message: match.applicant_message,
-          landlord_message: match.landlord_message,
-          compatibility_score: match.compatibility_score,
-          match_factors: match.match_factors,
-          is_applicant: isApplicant
-        };
-
-        if (match.status === 'requested') {
-          if (isApplicant) {
-            categories.sent.push(connection);
-          } else {
-            categories.awaiting.push(connection);
-          }
-        } else if (match.status === 'approved') {
-          categories.active.push(connection);
-        }
-      }
-    } catch (error) {
-      console.error('Error in loadHousingMatches:', error);
-      throw error;
+const loadHousingMatches = async (categories) => {
+  try {
+    let query = supabase.from('housing_matches').select('*');
+    const conditions = [];
+    
+    if (profileIds.applicant) {
+      conditions.push(`applicant_id.eq.${profileIds.applicant}`);
     }
-  };
+    
+    if (profileIds.landlord) {
+      const { data: properties } = await supabase
+        .from('properties')
+        .select('id')
+        .eq('landlord_id', profileIds.landlord);
+      
+      if (properties && properties.length > 0) {
+        const propertyIds = properties.map(p => p.id);
+        conditions.push(`property_id.in.(${propertyIds.join(',')})`);
+      }
+    }
+    
+    if (conditions.length > 0) {
+      query = query.or(conditions.join(','));
+    }
+
+    const { data: matches, error } = await query;
+    if (error) throw error;
+    if (!matches || matches.length === 0) return;
+
+    for (const match of matches) {
+      const isApplicant = match.applicant_id === profileIds.applicant;
+      
+      let property = null;
+      if (match.property_id) {
+        const { data: propData } = await supabase
+          .from('properties')
+          .select(`
+            *,
+            landlord_profiles(
+              id,
+              user_id,
+              primary_phone,
+              contact_email,
+              registrant_profiles(first_name, last_name, email)
+            )
+          `)
+          .eq('id', match.property_id)
+          .single();
+        property = propData;
+      }
+      
+      let applicant = null;
+      if (!isApplicant && match.applicant_id) {
+        const { data: applicantData } = await supabase
+          .from('applicant_matching_profiles')
+          .select('*, registrant_profiles(*)')
+          .eq('id', match.applicant_id)
+          .single();
+        applicant = applicantData;
+      }
+
+      const connection = {
+        id: match.id,
+        type: 'landlord',
+        status: match.status,
+        source: 'housing_match',
+        housing_match_id: match.id,
+        created_at: match.created_at,
+        last_activity: match.updated_at || match.created_at,
+        avatar: '🏠',
+        property: property,
+        requesting_applicant: applicant,
+        applicant_message: match.applicant_message,
+        landlord_message: match.landlord_message,
+        compatibility_score: match.compatibility_score,
+        match_factors: match.match_factors,
+        is_applicant: isApplicant
+      };
+
+      if (match.status === 'requested') {
+        if (isApplicant) {
+          categories.sent.push(connection);
+        } else {
+          categories.awaiting.push(connection);
+        }
+      } else if (match.status === 'approved') {
+        categories.active.push(connection);
+      }
+    }
+  } catch (error) {
+    console.error('Error in loadHousingMatches:', error);
+    throw error;
+  }
+};
 
   /**
    * Load peer support connections
