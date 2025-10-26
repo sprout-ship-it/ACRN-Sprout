@@ -21,10 +21,12 @@ const EmployerCard = ({
   // Get formatted display data
   const cardData = getEmployerCardData(employer);
   
-  // Handle favorite toggle
+  /**
+   * ✅ FIXED: Handle favorite toggle - pass employer.id (employer_profiles.id)
+   */
   const handleFavoriteClick = (e) => {
     e.stopPropagation();
-    onToggleFavorite(employer.user_id);
+    onToggleFavorite(employer.id);
   };
 
   // Handle connect click
@@ -106,7 +108,7 @@ const EmployerCard = ({
           </div>
         </div>
 
-        {/* ✅ FIXED: Job Types Available instead of Current Job Openings */}
+        {/* Job Types Available */}
         {cardData.currentOpenings.length > 0 && (
           <div className={`${styles.featureSection} mb-3`}>
             <div className={styles.featureLabel}>

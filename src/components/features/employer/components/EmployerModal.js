@@ -51,7 +51,9 @@ const EmployerModal = ({
     }
   };
 
-  // Main action is favorites
+  /**
+   * ✅ FIXED: Main action - toggle favorite using employer.id (employer_profiles.id)
+   */
   const handleMainAction = () => {
     console.log('🎯 Main action - toggling favorite for employer:', {
       employer_id: employer.id,
@@ -59,16 +61,19 @@ const EmployerModal = ({
       company_name: employer.company_name,
       currently_favorited: isFavorited
     });
-    onToggleFavorite(employer.user_id);
+    onToggleFavorite(employer.id);
   };
 
-  // Keep the header favorite toggle separate  
+  /**
+   * ✅ FIXED: Header favorite toggle using employer.id (employer_profiles.id)
+   */
   const handleHeaderFavoriteToggle = () => {
     console.log('❤️ Header favorite toggle for employer:', {
+      employer_id: employer.id,
       employer_user_id: employer.user_id,
       company_name: employer.company_name
     });
-    onToggleFavorite(employer.user_id);
+    onToggleFavorite(employer.id);
   };
 
   const isConnected = connectionStatus?.type === 'connected';

@@ -1,9 +1,9 @@
-// src/components/features/employer/EmployerFinder.js - UPDATED FOR TABBED EMPLOYERMODAL
+// src/components/features/employer/EmployerFinder.js - UPDATED FOR EMPLOYER PROFILE ID FAVORITES
 import React, { useState } from 'react';
 import useEmployerSearch from './hooks/useEmployerSearch';
 import EmployerFilterPanel from './components/EmployerFilterPanel';
 import EmployerResultsGrid from './components/EmployerResultsGrid';
-import EmployerModal from './components/EmployerModal'; // ✅ UPDATED: Use specialized EmployerModal
+import EmployerModal from './components/EmployerModal';
 
 const EmployerFinder = ({ onBack }) => {
   // Comprehensive search hook for all employer functionality
@@ -40,7 +40,7 @@ const EmployerFinder = ({ onBack }) => {
   const [showModal, setShowModal] = useState(false);
 
   /**
-   * ✅ UPDATED: Handle viewing employer details (no transformation needed)
+   * Handle viewing employer details
    */
   const handleViewDetails = (employer) => {
     setSelectedEmployer(employer);
@@ -77,7 +77,7 @@ const EmployerFinder = ({ onBack }) => {
   };
 
   /**
-   * Handle toggling favorite status
+   * ✅ FIXED: Handle toggling favorite - receives employer profile ID
    */
   const handleToggleFavorite = async (employerId) => {
     console.log('🎯 EmployerFinder: handleToggleFavorite called with:', {
@@ -116,10 +116,10 @@ const EmployerFinder = ({ onBack }) => {
   };
 
   /**
-   * ✅ UPDATED: Check if employer is favorited
+   * ✅ FIXED: Check if employer is favorited using employer.id (employer_profiles.id)
    */
   const isEmployerFavorited = (employer) => {
-    return favorites.has(employer.user_id);
+    return favorites.has(employer.id);
   };
 
   return (

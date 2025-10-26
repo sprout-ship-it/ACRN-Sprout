@@ -1,4 +1,4 @@
-// src/components/features/employer/hooks/useEmployerSearch.js - UPDATED FOR NEW FILTERS
+// src/components/features/employer/hooks/useEmployerSearch.js - UPDATED FOR EMPLOYER PROFILE ID FAVORITES
 import { useState, useEffect, useCallback } from 'react';
 import { useAuth } from '../../../../context/AuthContext';
 import { db } from '../../../../utils/supabase';
@@ -22,15 +22,14 @@ const useEmployerSearch = () => {
     location: '',
     state: '',
     businessType: '',
-    companySize: '', // ✅ NEW
+    companySize: '',
     recoveryFeatures: [],
     jobTypes: [],
-    benefits: [], // ✅ NEW
+    benefits: [],
     remoteWork: '',
-    drugTestingPolicy: '', // ✅ NEW
-    backgroundCheckPolicy: '', // ✅ NEW
+    drugTestingPolicy: '',
+    backgroundCheckPolicy: '',
     isActivelyHiring: true
-    // ✅ REMOVED: hasOpenings
   });
 
   // Search debounce
@@ -102,7 +101,7 @@ const useEmployerSearch = () => {
   }, [user?.id, profile?.id]);
 
   /**
-   * Load user's favorite employers using correct profile ID
+   * ✅ FIXED: Load user's favorite employers using employer_profile_id
    */
   const loadFavorites = useCallback(async () => {
     if (!user?.id || !profile?.id) return;
@@ -125,8 +124,9 @@ const useEmployerSearch = () => {
         throw new Error(result.error.message || 'Failed to load favorites');
       }
       
+      // ✅ FIXED: Use employer_profile_id instead of employer_user_id
       const favoriteEmployerIds = new Set(
-        (result.data || []).map(fav => fav.employer_user_id)
+        (result.data || []).map(fav => fav.employer_profile_id)
       );
       
       setFavorites(favoriteEmployerIds);
@@ -183,7 +183,6 @@ const useEmployerSearch = () => {
         dbFilters.businessType = filters.businessType;
       }
 
-      // ✅ NEW: Company size filter
       if (filters.companySize) {
         dbFilters.companySize = filters.companySize;
       }
@@ -196,7 +195,6 @@ const useEmployerSearch = () => {
         dbFilters.jobTypes = filters.jobTypes;
       }
 
-      // ✅ NEW: Benefits filter
       if (filters.benefits.length > 0) {
         dbFilters.benefits = filters.benefits;
       }
@@ -205,12 +203,10 @@ const useEmployerSearch = () => {
         dbFilters.remoteWork = filters.remoteWork;
       }
 
-      // ✅ NEW: Drug testing policy filter
       if (filters.drugTestingPolicy) {
         dbFilters.drugTestingPolicy = filters.drugTestingPolicy;
       }
 
-      // ✅ NEW: Background check policy filter
       if (filters.backgroundCheckPolicy) {
         dbFilters.backgroundCheckPolicy = filters.backgroundCheckPolicy;
       }
@@ -229,8 +225,6 @@ const useEmployerSearch = () => {
       let availableEmployers = result.data || [];
       console.log(`📊 Found ${availableEmployers.length} employers from database`);
 
-      // ✅ REMOVED: hasOpenings client-side filter (no longer needed)
-
       // Exclude current user properly using registrant profile ID comparison
       if (profile?.id) {
         const beforeFilter = availableEmployers.length;
@@ -247,7 +241,7 @@ const useEmployerSearch = () => {
         }
       }
 
-      // Enhanced sorting - actively hiring first, then by recent updates
+      // ✅ FIXED: Enhanced sorting using employer.id for favorites
       availableEmployers.sort((a, b) => {
         // First priority: actively hiring
         if (a.is_actively_hiring && !b.is_actively_hiring) return -1;
@@ -259,9 +253,9 @@ const useEmployerSearch = () => {
         if (aHasJobTypes && !bHasJobTypes) return -1;
         if (!aHasJobTypes && bHasJobTypes) return 1;
         
-        // Third priority: favorites first
-        const aIsFavorite = favorites.has(a.user_id);
-        const bIsFavorite = favorites.has(b.user_id);
+        // Third priority: favorites first (using employer.id)
+        const aIsFavorite = favorites.has(a.id);
+        const bIsFavorite = favorites.has(b.id);
         if (aIsFavorite && !bIsFavorite) return -1;
         if (!aIsFavorite && bIsFavorite) return 1;
         
@@ -348,10 +342,18 @@ const useEmployerSearch = () => {
   }, [profile?.id, profile]);
 
   /**
-   * Toggle favorite using correct profile ID
+   * ✅ FIXED: Toggle favorite using employer profile ID (employer.id)
+   * @param {string} employerProfileId - The employer_profiles.id (NOT user_id)
    */
-  const toggleFavorite = useCallback(async (employerId) => {
+  const toggleFavorite = useCallback(async (employerProfileId) => {
     if (!user?.id || !profile?.id) return;
+
+    console.log('🎯 toggleFavorite called with:', {
+      employerProfileId,
+      type: typeof employerProfileId,
+      currentFavorites: favorites.size,
+      favoritesArray: Array.from(favorites)
+    });
 
     try {
       // Check for service availability
@@ -360,11 +362,11 @@ const useEmployerSearch = () => {
         return;
       }
 
-      const isFavorited = favorites.has(employerId);
+      const isFavorited = favorites.has(employerProfileId);
 
       if (isFavorited) {
-        // Use registrant profile ID for favorites
-        const result = await db.employerProfiles.favorites.remove(profile.id, employerId);
+        // Remove favorite: use registrant profile ID and employer profile ID
+        const result = await db.employerProfiles.favorites.remove(profile.id, employerProfileId);
         
         if (result.error) {
           throw new Error(result.error.message || 'Failed to remove favorite');
@@ -372,21 +374,21 @@ const useEmployerSearch = () => {
         
         setFavorites(prev => {
           const newFavorites = new Set(prev);
-          newFavorites.delete(employerId);
+          newFavorites.delete(employerProfileId);
           return newFavorites;
         });
         
-        console.log('⭐ Removed employer from favorites:', employerId);
+        console.log('⭐ Removed employer from favorites:', employerProfileId);
       } else {
-        // Use registrant profile ID for favorites
-        const result = await db.employerProfiles.favorites.add(profile.id, employerId);
+        // Add favorite: use registrant profile ID and employer profile ID
+        const result = await db.employerProfiles.favorites.add(profile.id, employerProfileId);
         
         if (result.error) {
           throw new Error(result.error.message || 'Failed to add favorite');
         }
         
-        setFavorites(prev => new Set([...prev, employerId]));
-        console.log('⭐ Added employer to favorites:', employerId);
+        setFavorites(prev => new Set([...prev, employerProfileId]));
+        console.log('⭐ Added employer to favorites:', employerProfileId);
       }
     } catch (err) {
       console.error('💥 Error toggling favorite:', err);
@@ -482,11 +484,11 @@ const useEmployerSearch = () => {
   }, [user?.id, profile?.id, connections]);
 
   /**
-   * Get connection status using correct ID comparison
+   * ✅ FIXED: Get connection status using correct ID comparison
    */
   const getConnectionStatus = useCallback((employer) => {
     const isConnected = connections.has(employer.user_id); // employer.user_id is registrant_profiles.id
-    const isFavorited = favorites.has(employer.user_id);
+    const isFavorited = favorites.has(employer.id); // ✅ FIXED: Use employer.id for favorites
     const isHiring = employer.is_actively_hiring;
     
     if (isConnected) {
@@ -547,22 +549,20 @@ const useEmployerSearch = () => {
     }));
   }, []);
 
-  // ✅ UPDATED: Clear filters with new fields, removed hasOpenings
   const clearFilters = useCallback(() => {
     setFilters({
       industry: '',
       location: '',
       state: '',
       businessType: '',
-      companySize: '', // ✅ NEW
+      companySize: '',
       recoveryFeatures: [],
       jobTypes: [],
-      benefits: [], // ✅ NEW
+      benefits: [],
       remoteWork: '',
-      drugTestingPolicy: '', // ✅ NEW
-      backgroundCheckPolicy: '', // ✅ NEW
+      drugTestingPolicy: '',
+      backgroundCheckPolicy: '',
       isActivelyHiring: true
-      // ✅ REMOVED: hasOpenings
     });
   }, []);
 
