@@ -102,7 +102,7 @@ const SavedEmployers = ({ onBack }) => {
       const favoritesList = favoritesResult.data || [];
       console.log(`✅ Found ${favoritesList.length} favorites`);
 
-      const favoritesSet = new Set(favoritesList.map(fav => fav.employer_user_id));
+      const favoritesSet = new Set(favoritesList.map(fav => fav.employer_profile_id));
       setFavorites(favoritesSet);
 
       if (favoritesList.length === 0) {
@@ -111,15 +111,15 @@ const SavedEmployers = ({ onBack }) => {
         return;
       }
 
-      const employerUserIds = favoritesList.map(fav => fav.employer_user_id);
-      console.log('💼 Fetching employer profiles for:', employerUserIds);
+      const employerProfileIds = favoritesList.map(fav => fav.employer_profile_id);
+      console.log('💼 Fetching employer profiles for:', employerProfileIds);
 
-      const { data: employerProfiles, error: profilesError } = await supabase
-        .from('employer_profiles')
-        .select('*')
-        .in('user_id', employerUserIds)
-        .eq('is_active', true)
-        .order('updated_at', { ascending: false });
+const { data: employerProfiles, error: profilesError } = await supabase
+  .from('employer_profiles')
+  .select('*')
+  .in('id', employerProfileIds)
+  .eq('is_active', true)
+  .order('updated_at', { ascending: false });
 
       if (profilesError) {
         console.error('❌ Failed to fetch employer profiles:', profilesError);
@@ -256,34 +256,34 @@ const SavedEmployers = ({ onBack }) => {
   /**
    * Handle removing employer from favorites
    */
-  const handleToggleFavorite = async (employerUserId) => {
-    try {
-      console.log('💔 Removing favorite:', employerUserId);
+const handleToggleFavorite = async (employerProfileId) => {
+  try {
+    console.log('💔 Removing favorite:', employerProfileId);
+    
+    const result = await employerService.favorites.remove(profile.id, employerProfileId);
+    
+    if (result.success) {
+      setFavorites(prev => {
+        const newSet = new Set(prev);
+        newSet.delete(employerProfileId);
+        return newSet;
+      });
       
-      const result = await employerService.favorites.remove(profile.id, employerUserId);
+      setSavedEmployers(prev => prev.filter(emp => emp.id !== employerProfileId));
       
-      if (result.success) {
-        setFavorites(prev => {
-          const newSet = new Set(prev);
-          newSet.delete(employerUserId);
-          return newSet;
-        });
-        
-        setSavedEmployers(prev => prev.filter(emp => emp.user_id !== employerUserId));
-        
-        console.log('✅ Favorite removed successfully');
-        return true;
-      } else {
-        console.error('❌ Failed to remove favorite:', result.error);
-        setError('Failed to remove employer from favorites');
-        return false;
-      }
-    } catch (err) {
-      console.error('💥 Exception removing favorite:', err);
+      console.log('✅ Favorite removed successfully');
+      return true;
+    } else {
+      console.error('❌ Failed to remove favorite:', result.error);
       setError('Failed to remove employer from favorites');
       return false;
     }
-  };
+  } catch (err) {
+    console.error('💥 Exception removing favorite:', err);
+    setError('Failed to remove employer from favorites');
+    return false;
+  }
+};
 
   /**
    * Handle viewing employer details in modal
@@ -565,7 +565,7 @@ const SavedEmployers = ({ onBack }) => {
 
                       <button
                         className="btn btn-outline"
-                        onClick={() => handleToggleFavorite(employer.user_id)}
+                        onClick={() => handleToggleFavorite(employer.id)}
                         title="Remove from favorites"
                       >
                         💔 Unsave

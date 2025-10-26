@@ -6,6 +6,7 @@ import LoadingSpinner from '../../ui/LoadingSpinner';
 import MatchDetailsModal from '../matching/components/MatchDetailsModal';
 import PropertyDetailsModal from './modals/PropertyDetailsModal';
 import GroupDetailsModal from './modals/GroupDetailsModal';
+import EmployerModal from '../employer/components/EmployerModal';
 import styles from './ConnectionHub.module.css';
 import createMatchGroupsService from '../../../utils/database/matchGroupsService';
 
@@ -21,13 +22,15 @@ const ConnectionHub = ({ onBack }) => {
   const [activeTab, setActiveTab] = useState('active');
   
   // Modal state
-  const [showProfileModal, setShowProfileModal] = useState(false);
-  const [showPropertyModal, setShowPropertyModal] = useState(false);
-  const [showGroupModal, setShowGroupModal] = useState(false);
-  const [selectedConnection, setSelectedConnection] = useState(null);
-  const [selectedProfile, setSelectedProfile] = useState(null);
-  const [selectedProperty, setSelectedProperty] = useState(null);
-  const [selectedGroup, setSelectedGroup] = useState(null);
+const [showProfileModal, setShowProfileModal] = useState(false);
+const [showPropertyModal, setShowPropertyModal] = useState(false);
+const [showGroupModal, setShowGroupModal] = useState(false);
+const [showEmployerModal, setShowEmployerModal] = useState(false);
+const [selectedConnection, setSelectedConnection] = useState(null);
+const [selectedProfile, setSelectedProfile] = useState(null);
+const [selectedProperty, setSelectedProperty] = useState(null);
+const [selectedGroup, setSelectedGroup] = useState(null);
+const [selectedEmployer, setSelectedEmployer] = useState(null);
   
   const [actionLoading, setActionLoading] = useState(false);
 
@@ -648,6 +651,7 @@ const handleViewProfile = async (connection, specificRoommate = null) => {
     }
     
     let profileData = null;
+    let isEmployer = false;
     
     // If viewing a specific roommate from the group modal
     if (specificRoommate) {
@@ -677,7 +681,6 @@ const handleViewProfile = async (connection, specificRoommate = null) => {
             data.registrant_profiles?.first_name,
             data.registrant_profiles?.last_name
           ),
-          // Add first_name for modal display
           first_name: data.registrant_profiles?.first_name
         };
       }
@@ -695,34 +698,48 @@ const handleViewProfile = async (connection, specificRoommate = null) => {
       const isPeerSupportProfile = connection.other_person.professional_title || connection.other_person.specialties;
       const isEmployerProfile = connection.other_person.company_name || connection.other_person.industry;
       
-      profileData = {
-        ...connection.other_person,
-        profile_type: isPeerSupportProfile ? 'peer_support' : isEmployerProfile ? 'employer' : 'applicant',
-        name: isPeerSupportProfile 
-          ? (connection.other_person.professional_title || formatName(
-              connection.other_person.registrant_profiles?.first_name,
-              connection.other_person.registrant_profiles?.last_name
-            ))
-          : isEmployerProfile
-          ? connection.other_person.company_name 
-          : formatName(
-              connection.other_person.registrant_profiles?.first_name,
-              connection.other_person.registrant_profiles?.last_name
-            ),
-        first_name: connection.other_person.registrant_profiles?.first_name || 
-                    connection.other_person.company_name ||
-                    connection.other_person.professional_title
-      };
+      // ✅ Detect if this is an employer
+      isEmployer = isEmployerProfile;
+      
+      if (isEmployer) {
+        // For employers, use the full employer profile data
+        profileData = connection.other_person;
+      } else {
+        profileData = {
+          ...connection.other_person,
+          profile_type: isPeerSupportProfile ? 'peer_support' : 'applicant',
+          name: isPeerSupportProfile 
+            ? (connection.other_person.professional_title || formatName(
+                connection.other_person.registrant_profiles?.first_name,
+                connection.other_person.registrant_profiles?.last_name
+              ))
+            : formatName(
+                connection.other_person.registrant_profiles?.first_name,
+                connection.other_person.registrant_profiles?.last_name
+              ),
+          first_name: connection.other_person.registrant_profiles?.first_name || 
+                      connection.other_person.professional_title
+        };
+      }
     }
     
-    setSelectedProfile(profileData);
-    setSelectedConnection(connection);
-    setShowProfileModal(true);
+    // ✅ Route to appropriate modal
+    if (isEmployer) {
+      setSelectedEmployer(profileData);
+      setSelectedConnection(connection);
+      setShowEmployerModal(true);
+    } else {
+      setSelectedProfile(profileData);
+      setSelectedConnection(connection);
+      setShowProfileModal(true);
+    }
   } catch (err) {
     console.error('Error loading profile:', err);
     alert('Failed to load profile.');
   }
 };
+
+
 
   /**
    * NEW: Handle viewing group details in GroupDetailsModal
@@ -1594,6 +1611,27 @@ const getConnectionName = (connection) => {
 }
           showActions={activeTab === 'awaiting'}
           isLandlordView={!selectedConnection?.is_applicant}
+        />
+      )}
+      
+      {/* ✅ NEW: Employer Details Modal */}
+      {showEmployerModal && selectedEmployer && (
+        <EmployerModal
+          isOpen={showEmployerModal}
+          employer={selectedEmployer}
+          connectionStatus={{
+            type: selectedConnection?.status === 'active' ? 'connected' : 'none',
+            disabled: true,
+            className: selectedConnection?.status === 'active' ? 'btn-success' : 'btn-secondary'
+          }}
+          isFavorited={false}
+          onClose={() => {
+            setShowEmployerModal(false);
+            setSelectedEmployer(null);
+            setSelectedConnection(null);
+          }}
+          onConnect={() => {}}
+          onToggleFavorite={() => {}}
         />
       )}
 
