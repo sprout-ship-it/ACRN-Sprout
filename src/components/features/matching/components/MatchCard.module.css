@@ -1,4 +1,4 @@
-/* MatchCard.module.css - UPDATED HEIGHT VERSION */
+/* MatchCard.module.css - UPDATED WITH VISIBLE HEADER */
 
 /* ==================== MATCH CARD CONTAINER ==================== */
 .matchCard {
@@ -17,6 +17,7 @@
 }
 
 /* ==================== MATCH HEADER ==================== */
+/* ✅ FIXED: Pure purple gradient for roommate matching (purple fades to lighter purple) */
 .header {
   display: flex;
   justify-content: space-between;
@@ -25,9 +26,10 @@
   padding-bottom: var(--spacing-md);
   margin-bottom: var(--spacing-lg);
   border-bottom: 1px solid var(--border-beige);
-  background: linear-gradient(135deg, rgba(160, 32, 240, 0.02) 0%, rgba(32, 178, 170, 0.02) 100%);
+  background: linear-gradient(135deg, rgba(160, 32, 240, 0.15) 0%, rgba(160, 32, 240, 0.05) 100%);
   border-radius: var(--radius-md);
-  padding: var(--spacing-xl); /* INCREASED: More padding for better proportion */
+  padding: var(--spacing-xl);
+  border: 1px solid rgba(160, 32, 240, 0.2);
 }
 
 .nameSection {
@@ -66,7 +68,7 @@
   letter-spacing: 0.5px;
 }
 
-/* Score color variants remain the same */
+/* Score color variants */
 .scoreExcellent {
   background: linear-gradient(135deg, #28a745, #20c997);
   color: white;

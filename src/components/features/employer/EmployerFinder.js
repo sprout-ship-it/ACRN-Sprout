@@ -1,9 +1,9 @@
-// src/components/features/employer/EmployerFinder.js - UPDATED FOR PROFILEMODAL
+// src/components/features/employer/EmployerFinder.js - UPDATED FOR TABBED EMPLOYERMODAL
 import React, { useState } from 'react';
 import useEmployerSearch from './hooks/useEmployerSearch';
 import EmployerFilterPanel from './components/EmployerFilterPanel';
 import EmployerResultsGrid from './components/EmployerResultsGrid';
-import ProfileModal from '../connections/ProfileModal'; // ✅ UPDATED: Use consolidated ProfileModal
+import EmployerModal from './components/EmployerModal'; // ✅ UPDATED: Use specialized EmployerModal
 
 const EmployerFinder = ({ onBack }) => {
   // Comprehensive search hook for all employer functionality
@@ -40,17 +40,10 @@ const EmployerFinder = ({ onBack }) => {
   const [showModal, setShowModal] = useState(false);
 
   /**
-   * ✅ UPDATED: Handle viewing employer details with ProfileModal format
+   * ✅ UPDATED: Handle viewing employer details (no transformation needed)
    */
   const handleViewDetails = (employer) => {
-    // Transform employer data to profile format expected by ProfileModal
-    const profileData = {
-      ...employer,
-      profile_type: 'employer',
-      name: employer.company_name || 'Company'
-    };
-    
-    setSelectedEmployer(profileData);
+    setSelectedEmployer(employer);
     setShowModal(true);
   };
 
@@ -123,31 +116,10 @@ const EmployerFinder = ({ onBack }) => {
   };
 
   /**
-   * ✅ NEW: Get connection status for modal
+   * ✅ UPDATED: Check if employer is favorited
    */
-  const getModalConnectionStatus = (employer) => {
-    const status = getConnectionStatus(employer);
-    
-    // Map status to values expected by ProfileModal
-    if (status.isConnected) return 'active';
-    if (status.isRequested) return 'requested';
-    return null;
-  };
-
-  /**
-   * ✅ NEW: Determine if contact info should be shown
-   */
-  const shouldShowContactInfo = (employer) => {
-    const status = getConnectionStatus(employer);
-    return status.isConnected;
-  };
-
-  /**
-   * ✅ NEW: Determine if action buttons should be shown
-   */
-  const shouldShowActions = (employer) => {
-    const status = getConnectionStatus(employer);
-    return !status.isConnected && !status.isRequested;
+  const isEmployerFavorited = (employer) => {
+    return favorites.has(employer.user_id);
   };
 
   return (
@@ -200,17 +172,16 @@ const EmployerFinder = ({ onBack }) => {
         </div>
       )}
 
-      {/* ✅ UPDATED: Use consolidated ProfileModal */}
+      {/* ✅ UPDATED: Use specialized tabbed EmployerModal */}
       {showModal && selectedEmployer && (
-        <ProfileModal
+        <EmployerModal
           isOpen={showModal}
-          profile={selectedEmployer}
-          connectionStatus={getModalConnectionStatus(selectedEmployer)}
+          employer={selectedEmployer}
+          connectionStatus={getConnectionStatus(selectedEmployer)}
+          isFavorited={isEmployerFavorited(selectedEmployer)}
           onClose={handleCloseModal}
           onConnect={handleConnect}
-          showContactInfo={shouldShowContactInfo(selectedEmployer)}
-          showActions={shouldShowActions(selectedEmployer)}
-          isAwaitingApproval={false}
+          onToggleFavorite={handleToggleFavorite}
         />
       )}
     </div>

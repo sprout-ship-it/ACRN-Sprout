@@ -17,6 +17,15 @@
 }
 
 /* ==================== CARD HEADER ==================== */
+/* ✅ ADDED: Missing cardHeader style with coral/purple gradient */
+.cardHeader {
+  background: linear-gradient(135deg, rgba(255, 127, 80, 0.15) 0%, rgba(160, 32, 240, 0.15) 100%);
+  padding: 1rem;
+  border-radius: var(--radius-md);
+  margin-bottom: 1rem;
+  border: 1px solid rgba(255, 127, 80, 0.2);
+}
+
 .employerCardHeader {
   display: flex;
   justify-content: space-between;

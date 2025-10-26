@@ -583,8 +583,10 @@
 }
 
 .specialistCardHeader {
-  border-bottom: 1px solid var(--border-beige);
-  padding-bottom: var(--spacing-md);
+  background: linear-gradient(135deg, rgba(32, 178, 170, 0.15) 0%, rgba(32, 178, 170, 0.05) 100%);
+  border: 1px solid rgba(32, 178, 170, 0.2);
+  border-radius: var(--radius-md);
+  padding: var(--spacing-lg);
   margin-bottom: var(--spacing-lg);
   display: flex;
   justify-content: space-between;
