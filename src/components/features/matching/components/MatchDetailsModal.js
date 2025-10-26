@@ -1,4 +1,4 @@
-// src/components/features/matching/components/MatchDetailsModal.js - ENHANCED WITH ALL PROFILE DATA
+// src/components/features/matching/components/MatchDetailsModal.js - ENHANCED VERSION
 import React, { useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import PropTypes from 'prop-types';
@@ -373,6 +373,70 @@ const MatchDetailsModal = ({
     return { greenFlags: [], redFlags: [] };
   };
 
+  /**
+   * ✨ NEW: Transform housing assistance from database format to readable text
+   */
+  const formatHousingAssistance = (assistance) => {
+    const assistanceMap = {
+      'section-8': 'Section 8 Housing Choice Voucher',
+      'supportive-housing': 'Supportive Housing Program',
+      'veteran-assistance': 'Veterans Housing Assistance',
+      'tribal-housing': 'Tribal Housing Program',
+      'housing-first': 'Housing First Program',
+      'rental-assistance': 'Rental Assistance Program',
+      'transitional-housing': 'Transitional Housing',
+      'rapid-rehousing': 'Rapid Rehousing Program',
+      'public-housing': 'Public Housing',
+      'project-based': 'Project-Based Rental Assistance',
+      'tbra': 'Tenant-Based Rental Assistance',
+      'homeless-prevention': 'Homeless Prevention Program',
+      'emergency-housing': 'Emergency Housing Assistance',
+      'ssi-disability': 'SSI/Disability Housing Support',
+      'none': 'No housing assistance'
+    };
+
+    if (typeof assistance === 'string') {
+      return assistanceMap[assistance] || assistance.replace(/-/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
+    }
+
+    if (typeof assistance === 'object') {
+      const value = assistance.value || assistance.label;
+      return assistanceMap[value] || value?.replace(/-/g, ' ').replace(/\b\w/g, l => l.toUpperCase()) || 'Unknown';
+    }
+
+    return 'Unknown';
+  };
+
+  /**
+   * ✨ NEW: Get lifestyle score description with context from LifestylePreferencesSection
+   */
+  const getLifestyleLevelDescription = (type, value) => {
+    const descriptions = {
+      social_level: {
+        1: 'Very Private - Minimal interaction, need quiet space for recovery focus',
+        2: 'Somewhat Quiet - Occasional friendly conversations, respect for personal time',
+        3: 'Balanced - Regular interaction with healthy boundaries',
+        4: 'Social - Enjoy frequent interaction and group activities',
+        5: 'Very Social - Thrive with constant interaction and community activities'
+      },
+      cleanliness_level: {
+        1: 'Relaxed - Basic cleanliness, lived-in feel is comfortable',
+        2: 'Casual - Generally clean but not obsessive about organization',
+        3: 'Moderate - Regular cleaning routine, organized common spaces',
+        4: 'High Standards - Very clean and well-organized environment',
+        5: 'Pristine - Everything spotless and perfectly organized always'
+      },
+      noise_tolerance: {
+        1: 'Very Quiet - Need peaceful environment for recovery/healing',
+        2: 'Low Noise - Some sounds OK but prefer quiet, calm atmosphere',
+        3: 'Moderate - Normal household noise is fine',
+        4: 'Tolerant - Can handle louder activities and varied noise levels',
+        5: 'High Tolerance - Music, TV, gatherings, varied noise levels all OK'
+      }
+    };
+    return descriptions[type]?.[value] || `Level ${value}`;
+  };
+
   // ========================================
   // FORMAT DISPLAY FUNCTIONS
   // ========================================
@@ -504,9 +568,12 @@ const MatchDetailsModal = ({
     return styles.scoreLow;
   };
 
-  // Helper function to render lifestyle scale
-  const renderLifestyleScale = (value, label) => {
+  // Helper function to render lifestyle scale WITH EXPLANATIONS
+  const renderLifestyleScale = (value, label, type) => {
     if (!value) return null;
+    
+    const description = getLifestyleLevelDescription(type, value);
+    
     return (
       <div className={styles.lifestyleScale}>
         <div className={styles.scaleLabel}>{label}</div>
@@ -518,6 +585,9 @@ const MatchDetailsModal = ({
             />
           </div>
           <span className={styles.scaleValue}>{value}/5</span>
+        </div>
+        <div className={styles.lifestyleScoreExplanation}>
+          <strong>Score {value}:</strong> {description}
         </div>
       </div>
     );
@@ -532,6 +602,24 @@ const MatchDetailsModal = ({
         <span className={`${styles.ynValue} ${value ? styles.yes : styles.no}`}>
           {value ? 'Yes' : 'No'}
         </span>
+      </div>
+    );
+  };
+
+  // ✨ NEW: Render stylized section header
+  const renderSectionHeader = (title, subtitle, variant = 'default') => {
+    const variantClass = {
+      'recovery': styles.sectionHeaderRecovery,
+      'roommate': styles.sectionHeaderRoommate,
+      'lifestyle': styles.sectionHeaderLifestyle,
+      'housing': styles.sectionHeaderHousing,
+      'personal': styles.sectionHeaderPersonal
+    }[variant] || '';
+
+    return (
+      <div className={`${styles.sectionHeader} ${variantClass}`}>
+        <h3 className={styles.sectionHeaderTitle}>{title}</h3>
+        {subtitle && <p className={styles.sectionHeaderSubtitle}>{subtitle}</p>}
       </div>
     );
   };
@@ -665,8 +753,11 @@ const MatchDetailsModal = ({
 
   const renderRecoverySection = () => (
     <div className={styles.section}>
-      <div className={styles.sectionGrid}>
-        <div className={`${styles.infoCard} ${styles.fullWidth}`}>
+      {renderSectionHeader('Recovery Journey', 'Understanding recovery stage and support needs', 'recovery')}
+      
+      {/* ✨ ENHANCED: Horizontal layout for recovery stage and spiritual approach */}
+      <div className={styles.recoveryGrid}>
+        <div className={styles.infoCard}>
           <h4 className={styles.infoTitle}>Recovery Stage</h4>
           <p className={`${styles.infoContent} ${styles.recoveryStage}`}>
             {formatRecoveryStage(
@@ -682,109 +773,126 @@ const MatchDetailsModal = ({
           )}
         </div>
 
-        <div className={`${styles.infoCard} ${styles.fullWidth}`}>
+        <div className={styles.infoCard}>
           <h4 className={styles.infoTitle}>Spiritual Approach</h4>
           <p className={styles.infoContent}>
             {formatSpiritualAffiliation(spiritual_affiliation)}
           </p>
         </div>
-
-        {primary_substance && (
-          <div className={`${styles.infoCard} ${styles.fullWidth}`}>
-            <h4 className={styles.infoTitle}>Primary Focus Area</h4>
-            <p className={styles.infoContent}>
-              {primary_substance.replace(/-/g, ' ').replace(/\b\w/g, l => l.toUpperCase())}
-            </p>
-          </div>
-        )}
-
-        {recovery_methods && recovery_methods.length > 0 && (
-          <div className={`${styles.infoCard} ${styles.fullWidth}`}>
-            <h4 className={styles.infoTitle}>Recovery Methods</h4>
-            <div className={styles.tagsContainer}>
-              {recovery_methods.map((method, i) => (
-                <span key={i} className={`${styles.tag} ${styles.recoveryMethodTag}`}>
-                  {method.replace(/-/g, ' ').replace(/\b\w/g, l => l.toUpperCase())}
-                </span>
-              ))}
-            </div>
-          </div>
-        )}
-
-        {program_types && program_types.length > 0 && (
-          <div className={`${styles.infoCard} ${styles.fullWidth}`}>
-            <h4 className={styles.infoTitle}>Recovery Programs</h4>
-            <div className={styles.tagsContainer}>
-              {program_types.map((program, i) => (
-                <span key={i} className={`${styles.tag} ${styles.programTag}`}>{program}</span>
-              ))}
-            </div>
-          </div>
-        )}
-
-        {primary_issues && primary_issues.length > 0 && (
-          <div className={`${styles.infoCard} ${styles.fullWidth}`}>
-            <h4 className={styles.infoTitle}>Primary Issues</h4>
-            <div className={styles.tagsContainer}>
-              {primary_issues.map((issue, i) => (
-                <span key={i} className={`${styles.tag} ${styles.issueTag}`}>
-                  {issue.replace(/-/g, ' ').replace(/\b\w/g, l => l.toUpperCase())}
-                </span>
-              ))}
-            </div>
-          </div>
-        )}
-
-        {(support_meetings || sponsor_mentor || recovery_goal_timeframe) && (
-          <div className={`${styles.infoCard} ${styles.fullWidth}`}>
-            <h4 className={styles.infoTitle}>Support Structure</h4>
-            <div className={styles.supportDetails}>
-              {support_meetings && (
-                <div className={styles.supportItem}>
-                  <span className={styles.supportIcon}>📅</span>
-                  <span>{support_meetings.replace(/-/g, ' ').replace(/\b\w/g, l => l.toUpperCase())}</span>
-                </div>
-              )}
-              {sponsor_mentor && (
-                <div className={styles.supportItem}>
-                  <span className={styles.supportIcon}>🤝</span>
-                  <span>Has sponsor/mentor</span>
-                </div>
-              )}
-              {recovery_goal_timeframe && (
-                <div className={styles.supportItem}>
-                  <span className={styles.supportIcon}>🎯</span>
-                  <span>{recovery_goal_timeframe.replace(/-/g, ' ').replace(/\b\w/g, l => l.toUpperCase())}</span>
-                </div>
-              )}
-            </div>
-          </div>
-        )}
-
-        {(want_recovery_support || comfortable_discussing_recovery || attend_meetings_together || substance_free_home_required) && (
-          <div className={`${styles.infoCard} ${styles.fullWidth}`}>
-            <h4 className={styles.infoTitle}>Recovery Living Preferences</h4>
-            <div className={styles.yesNoGrid}>
-              {renderYesNo(want_recovery_support, 'Wants recovery support')}
-              {renderYesNo(comfortable_discussing_recovery, 'Comfortable discussing recovery')}
-              {renderYesNo(attend_meetings_together, 'Open to attending meetings together')}
-              {renderYesNo(substance_free_home_required, 'Requires substance-free home')}
-            </div>
-          </div>
-        )}
-
-        {recovery_context && (
-          <div className={`${styles.infoCard} ${styles.fullWidth}`}>
-            <h4 className={styles.infoTitle}>Additional Recovery Context</h4>
-            <p className={styles.infoContent}>{recovery_context}</p>
-          </div>
-        )}
       </div>
+
+      {/* ✨ ENHANCED: 3-column grid for recovery methods, programs, and primary focus */}
+      {(primary_substance || recovery_methods || program_types) && (
+        <div className={styles.recoveryGridThreeCol}>
+          {primary_substance && (
+            <div className={styles.infoCard}>
+              <h4 className={styles.infoTitle}>Primary Focus Area</h4>
+              <p className={styles.infoContent}>
+                {primary_substance.replace(/-/g, ' ').replace(/\b\w/g, l => l.toUpperCase())}
+              </p>
+            </div>
+          )}
+
+          {recovery_methods && recovery_methods.length > 0 && (
+            <div className={styles.infoCard}>
+              <h4 className={styles.infoTitle}>Recovery Methods</h4>
+              <div className={styles.tagsContainer}>
+                {recovery_methods.slice(0, 2).map((method, i) => (
+                  <span key={i} className={`${styles.tag} ${styles.recoveryMethodTag}`}>
+                    {method.replace(/-/g, ' ').replace(/\b\w/g, l => l.toUpperCase())}
+                  </span>
+                ))}
+                {recovery_methods.length > 2 && (
+                  <span className={`${styles.tag} ${styles.recoveryMethodTag}`}>
+                    +{recovery_methods.length - 2} more
+                  </span>
+                )}
+              </div>
+            </div>
+          )}
+
+          {program_types && program_types.length > 0 && (
+            <div className={styles.infoCard}>
+              <h4 className={styles.infoTitle}>Programs</h4>
+              <div className={styles.tagsContainer}>
+                {program_types.slice(0, 2).map((program, i) => (
+                  <span key={i} className={`${styles.tag} ${styles.programTag}`}>{program}</span>
+                ))}
+                {program_types.length > 2 && (
+                  <span className={`${styles.tag} ${styles.programTag}`}>
+                    +{program_types.length - 2} more
+                  </span>
+                )}
+              </div>
+            </div>
+          )}
+        </div>
+      )}
+
+      {primary_issues && primary_issues.length > 0 && (
+        <div className={`${styles.infoCard} ${styles.fullWidth}`}>
+          <h4 className={styles.infoTitle}>Primary Issues</h4>
+          <div className={styles.tagsContainer}>
+            {primary_issues.map((issue, i) => (
+              <span key={i} className={`${styles.tag} ${styles.issueTag}`}>
+                {issue.replace(/-/g, ' ').replace(/\b\w/g, l => l.toUpperCase())}
+              </span>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {(support_meetings || sponsor_mentor || recovery_goal_timeframe) && (
+        <div className={`${styles.infoCard} ${styles.fullWidth}`}>
+          <h4 className={styles.infoTitle}>Support Structure</h4>
+          <div className={styles.supportDetails}>
+            {support_meetings && (
+              <div className={styles.supportItem}>
+                <span className={styles.supportIcon}>📅</span>
+                <span>{support_meetings.replace(/-/g, ' ').replace(/\b\w/g, l => l.toUpperCase())}</span>
+              </div>
+            )}
+            {sponsor_mentor && (
+              <div className={styles.supportItem}>
+                <span className={styles.supportIcon}>🤝</span>
+                <span>Has sponsor/mentor</span>
+              </div>
+            )}
+            {recovery_goal_timeframe && (
+              <div className={styles.supportItem}>
+                <span className={styles.supportIcon}>🎯</span>
+                <span>{recovery_goal_timeframe.replace(/-/g, ' ').replace(/\b\w/g, l => l.toUpperCase())}</span>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
+      {(want_recovery_support || comfortable_discussing_recovery || attend_meetings_together || substance_free_home_required) && (
+        <div className={`${styles.infoCard} ${styles.fullWidth}`}>
+          <h4 className={styles.infoTitle}>Recovery Living Preferences</h4>
+          <div className={styles.yesNoGrid}>
+            {renderYesNo(want_recovery_support, 'Wants recovery support')}
+            {renderYesNo(comfortable_discussing_recovery, 'Comfortable discussing recovery')}
+            {renderYesNo(attend_meetings_together, 'Open to attending meetings together')}
+            {renderYesNo(substance_free_home_required, 'Requires substance-free home')}
+          </div>
+        </div>
+      )}
+
+      {recovery_context && (
+        <div className={`${styles.infoCard} ${styles.fullWidth}`}>
+          <h4 className={styles.infoTitle}>Additional Recovery Context</h4>
+          <p className={styles.infoContent}>{recovery_context}</p>
+        </div>
+      )}
     </div>
   );
 
   const renderRoommatePreferencesSection = () => (
     <div className={styles.section}>
+      {renderSectionHeader('Roommate Preferences', 'What to look for in a compatible roommate', 'roommate')}
+      
       <div className={styles.sectionGrid}>
         <div className={styles.infoCard}>
           <h4 className={styles.infoTitle}>Gender Preference</h4>
@@ -817,91 +925,94 @@ const MatchDetailsModal = ({
           <h4 className={styles.infoTitle}>Pet Preference</h4>
           <p className={styles.infoContent}>{formatPetPreference(pet_preference)}</p>
         </div>
-
-        {(prefer_recovery_experience || supportive_of_recovery || respect_privacy) && (
-          <div className={`${styles.infoCard} ${styles.fullWidth}`}>
-            <h4 className={styles.infoTitle}>Recovery Compatibility Preferences</h4>
-            <div className={styles.yesNoGrid}>
-              {renderYesNo(prefer_recovery_experience, 'Prefers roommates with recovery experience')}
-              {renderYesNo(supportive_of_recovery, 'Must be supportive of recovery')}
-              {renderYesNo(respect_privacy, 'Must respect recovery privacy')}
-            </div>
-          </div>
-        )}
-
-        {(similar_schedules || shared_chores || financially_stable || respectful_guests || lgbtq_friendly || culturally_sensitive) && (
-          <div className={`${styles.infoCard} ${styles.fullWidth}`}>
-            <h4 className={styles.infoTitle}>Living Compatibility Preferences</h4>
-            <div className={styles.yesNoGrid}>
-              {renderYesNo(similar_schedules, 'Prefers similar schedules')}
-              {renderYesNo(shared_chores, 'Willing to share chores')}
-              {renderYesNo(financially_stable, 'Requires financial stability')}
-              {renderYesNo(respectful_guests, 'Requires respectful guest policy')}
-              {renderYesNo(lgbtq_friendly, 'LGBTQ+ friendly required')}
-              {renderYesNo(culturally_sensitive, 'Cultural sensitivity required')}
-            </div>
-          </div>
-        )}
-
-        {(deal_breaker_substance_use || deal_breaker_loudness || deal_breaker_uncleanliness || 
-          deal_breaker_financial_issues || deal_breaker_pets || deal_breaker_smoking) && (
-          <div className={`${styles.infoCard} ${styles.fullWidth} ${styles.dealBreakersCard}`}>
-            <h4 className={styles.infoTitle}>
-              <span className={styles.warningIcon}>⚠️</span>
-              Deal Breakers
-            </h4>
-            <div className={styles.dealBreakersList}>
-              {deal_breaker_substance_use && (
-                <div className={styles.dealBreakerItem}>
-                  <span className={styles.dealBreakerIcon}>❌</span>
-                  <span>Any substance use in home</span>
-                </div>
-              )}
-              {deal_breaker_loudness && (
-                <div className={styles.dealBreakerItem}>
-                  <span className={styles.dealBreakerIcon}>❌</span>
-                  <span>Excessive noise or disruptive behavior</span>
-                </div>
-              )}
-              {deal_breaker_uncleanliness && (
-                <div className={styles.dealBreakerItem}>
-                  <span className={styles.dealBreakerIcon}>❌</span>
-                  <span>Poor hygiene or extreme messiness</span>
-                </div>
-              )}
-              {deal_breaker_financial_issues && (
-                <div className={styles.dealBreakerItem}>
-                  <span className={styles.dealBreakerIcon}>❌</span>
-                  <span>Unreliable with rent or bills</span>
-                </div>
-              )}
-              {deal_breaker_pets && (
-                <div className={styles.dealBreakerItem}>
-                  <span className={styles.dealBreakerIcon}>❌</span>
-                  <span>Any pets in home</span>
-                </div>
-              )}
-              {deal_breaker_smoking && (
-                <div className={styles.dealBreakerItem}>
-                  <span className={styles.dealBreakerIcon}>❌</span>
-                  <span>Any smoking</span>
-                </div>
-              )}
-            </div>
-          </div>
-        )}
       </div>
+
+      {(prefer_recovery_experience || supportive_of_recovery || respect_privacy) && (
+        <div className={`${styles.infoCard} ${styles.fullWidth}`}>
+          <h4 className={styles.infoTitle}>Recovery Compatibility Preferences</h4>
+          <div className={styles.yesNoGrid}>
+            {renderYesNo(prefer_recovery_experience, 'Prefers roommates with recovery experience')}
+            {renderYesNo(supportive_of_recovery, 'Must be supportive of recovery')}
+            {renderYesNo(respect_privacy, 'Must respect recovery privacy')}
+          </div>
+        </div>
+      )}
+
+      {/* ✨ ENHANCED: 3x2 Grid for Living Compatibility Preferences */}
+      {(similar_schedules || shared_chores || financially_stable || respectful_guests || lgbtq_friendly || culturally_sensitive) && (
+        <div className={`${styles.infoCard} ${styles.fullWidth}`}>
+          <h4 className={styles.infoTitle}>Living Compatibility Preferences</h4>
+          <div className={styles.yesNoGrid}>
+            {renderYesNo(similar_schedules, 'Prefers similar schedules')}
+            {renderYesNo(shared_chores, 'Willing to share chores')}
+            {renderYesNo(financially_stable, 'Requires financial stability')}
+            {renderYesNo(respectful_guests, 'Requires respectful guest policy')}
+            {renderYesNo(lgbtq_friendly, 'LGBTQ+ friendly required')}
+            {renderYesNo(culturally_sensitive, 'Cultural sensitivity required')}
+          </div>
+        </div>
+      )}
+
+      {(deal_breaker_substance_use || deal_breaker_loudness || deal_breaker_uncleanliness || 
+        deal_breaker_financial_issues || deal_breaker_pets || deal_breaker_smoking) && (
+        <div className={`${styles.infoCard} ${styles.fullWidth} ${styles.dealBreakersCard}`}>
+          <h4 className={styles.infoTitle}>
+            <span className={styles.warningIcon}>⚠️</span>
+            Deal Breakers
+          </h4>
+          <div className={styles.dealBreakersList}>
+            {deal_breaker_substance_use && (
+              <div className={styles.dealBreakerItem}>
+                <span className={styles.dealBreakerIcon}>❌</span>
+                <span>Any substance use in home</span>
+              </div>
+            )}
+            {deal_breaker_loudness && (
+              <div className={styles.dealBreakerItem}>
+                <span className={styles.dealBreakerIcon}>❌</span>
+                <span>Excessive noise or disruptive behavior</span>
+              </div>
+            )}
+            {deal_breaker_uncleanliness && (
+              <div className={styles.dealBreakerItem}>
+                <span className={styles.dealBreakerIcon}>❌</span>
+                <span>Poor hygiene or extreme messiness</span>
+              </div>
+            )}
+            {deal_breaker_financial_issues && (
+              <div className={styles.dealBreakerItem}>
+                <span className={styles.dealBreakerIcon}>❌</span>
+                <span>Unreliable with rent or bills</span>
+              </div>
+            )}
+            {deal_breaker_pets && (
+              <div className={styles.dealBreakerItem}>
+                <span className={styles.dealBreakerIcon}>❌</span>
+                <span>Any pets in home</span>
+              </div>
+            )}
+            {deal_breaker_smoking && (
+              <div className={styles.dealBreakerItem}>
+                <span className={styles.dealBreakerIcon}>❌</span>
+                <span>Any smoking</span>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
     </div>
   );
 
   const renderLifestyleSection = () => (
     <div className={styles.section}>
+      {renderSectionHeader('Lifestyle Compatibility', 'Daily habits, routines, and living preferences', 'lifestyle')}
+      
       <div className={styles.lifestylePreferences}>
         <h4 className={styles.subsectionTitle}>Core Lifestyle Factors</h4>
         <div className={styles.lifestyleScales}>
-          {renderLifestyleScale(cleanliness_level, 'Cleanliness Level')}
-          {renderLifestyleScale(noise_tolerance, 'Noise Tolerance')}
-          {renderLifestyleScale(social_level, 'Social Level')}
+          {renderLifestyleScale(cleanliness_level, 'Cleanliness Level', 'cleanliness_level')}
+          {renderLifestyleScale(noise_tolerance, 'Noise Tolerance', 'noise_tolerance')}
+          {renderLifestyleScale(social_level, 'Social Level', 'social_level')}
         </div>
       </div>
 
@@ -943,6 +1054,7 @@ const MatchDetailsModal = ({
         )}
       </div>
 
+      {/* ✨ ENHANCED: 3x2 Grid for Daily Habits */}
       {(early_riser || night_owl || cooking_enthusiast || exercise_at_home || plays_instruments || tv_streaming_regular) && (
         <div className={styles.lifestyleChoices}>
           <h4 className={styles.subsectionTitle}>Daily Habits</h4>
@@ -995,6 +1107,7 @@ const MatchDetailsModal = ({
         )}
       </div>
 
+      {/* ✨ ENHANCED: 3x2 Grid for Living Preferences */}
       {(pets_owned || pets_comfortable || overnight_guests_ok || shared_groceries || 
         shared_transportation || shared_activities_interest) && (
         <div className={styles.lifestyleChoices}>
@@ -1026,6 +1139,8 @@ const MatchDetailsModal = ({
 
   const renderHousingSection = () => (
     <div className={styles.section}>
+      {renderSectionHeader('Housing Requirements', 'Budget, timeline, and location preferences', 'housing')}
+      
       <div className={styles.sectionGrid}>
         {(budget_min || budget_max) && (
           <div className={`${styles.infoCard} ${styles.fullWidth} ${styles.budgetCard}`}>
@@ -1115,13 +1230,14 @@ const MatchDetailsModal = ({
         </div>
       )}
 
+      {/* ✨ ENHANCED: Housing assistance with formatted display */}
       {housing_assistance && housing_assistance.length > 0 && (
         <div className={styles.infoCard}>
           <h4 className={styles.infoTitle}>Housing Assistance Programs</h4>
           <div className={styles.tagsContainer}>
             {housing_assistance.map((assistance, i) => (
               <span key={i} className={`${styles.tag} ${styles.subsidyTag}`}>
-                {typeof assistance === 'object' ? assistance.label || assistance.value : assistance}
+                {formatHousingAssistance(assistance)}
               </span>
             ))}
           </div>
@@ -1146,6 +1262,8 @@ const MatchDetailsModal = ({
 
   const renderPersonalStorySection = () => (
     <div className={styles.section}>
+      {renderSectionHeader('Personal Story', `Get to know ${first_name} beyond the basics`, 'personal')}
+      
       {about_me && (
         <div className={styles.aboutCard}>
           <h4 className={styles.aboutTitle}>About {first_name}</h4>

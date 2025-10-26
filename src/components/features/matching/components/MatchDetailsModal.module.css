@@ -1,5 +1,4 @@
-/* MatchDetailsModal.module.css - COMPLETE INTEGRATED VERSION */
-/* Combines size optimizations with full feature set */
+/* MatchDetailsModal.module.css - ENHANCED VERSION WITH IMPROVED STYLING */
 
 /* ==================== MODAL OVERLAY & CONTAINER ==================== */
 .overlay {
@@ -14,7 +13,7 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  padding: 1rem; /* Optimized from 20px */
+  padding: 1rem;
   overflow-y: auto;
   overflow-x: hidden;
   pointer-events: auto;
@@ -27,9 +26,9 @@
   background: white;
   border-radius: 16px;
   border: 2px solid var(--border-beige);
-  max-width: 1000px; /* Optimized from 900px */
+  max-width: 1000px;
   width: 100%;
-  max-height: 92vh; /* Optimized from calc(100vh - 140px) */
+  max-height: 92vh;
   box-shadow: var(--shadow-xl);
   display: flex;
   flex-direction: column;
@@ -70,18 +69,12 @@
   overflow: hidden;
 }
 
-/* Debug stacking context class */
-.debugStackingContext {
-  outline: 3px solid red;
-  box-shadow: 0 0 0 5px rgba(255, 0, 0, 0.3);
-}
-
-/* ==================== MODAL HEADER - OPTIMIZED ==================== */
+/* ==================== MODAL HEADER ==================== */
 .header {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 1rem 1.5rem; /* Optimized from 1.5rem 2rem */
+  padding: 1rem 1.5rem;
   background: linear-gradient(135deg, var(--primary-purple), var(--secondary-purple));
   color: white;
   position: relative;
@@ -102,7 +95,7 @@
 
 .title {
   font-family: var(--font-serif);
-  font-size: 1.5rem; /* Optimized from 1.5rem to maintain consistency */
+  font-size: 1.5rem;
   font-weight: 700;
   margin: 0;
   color: white;
@@ -112,10 +105,10 @@
 }
 
 .score {
-  padding: 0.35rem 0.75rem; /* Optimized padding */
+  padding: 0.35rem 0.75rem;
   border-radius: 20px;
   font-weight: 700;
-  font-size: 0.875rem; /* Optimized from 0.9rem */
+  font-size: 0.875rem;
   text-transform: uppercase;
   letter-spacing: 0.5px;
   white-space: nowrap;
@@ -146,13 +139,13 @@
   background: rgba(255, 255, 255, 0.2);
   color: white;
   border: 2px solid rgba(255, 255, 255, 0.3);
-  width: 36px; /* Optimized from 40px */
-  height: 36px; /* Optimized from 40px */
+  width: 36px;
+  height: 36px;
   border-radius: 50%;
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 2rem; /* Optimized from 2.5rem */
+  font-size: 2rem;
   cursor: pointer;
   transition: var(--transition-normal);
   padding: 0;
@@ -163,22 +156,23 @@
   background: rgba(255, 255, 255, 0.3);
 }
 
-/* ==================== MODAL NAVIGATION - OPTIMIZED ==================== */
+/* ==================== MODAL NAVIGATION - ENHANCED ==================== */
 .navigation {
   background: white;
-  border-bottom: 2px solid var(--gray-200);
-  padding: 0.75rem 1rem; /* Optimized from 1rem 1.5rem */
+  border-bottom: 3px solid var(--gray-300);
+  padding: 0.75rem 1rem;
   display: flex;
-  gap: 0.25rem; /* Optimized from 0.5rem */
+  gap: 0.5rem;
   overflow-x: auto;
   position: relative;
   z-index: 2;
   flex-shrink: 0;
   scrollbar-width: thin;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
 }
 
 .navigation::-webkit-scrollbar {
-  height: 4px; /* Optimized from 6px */
+  height: 4px;
 }
 
 .navigation::-webkit-scrollbar-track {
@@ -192,38 +186,43 @@
 
 .navTab {
   flex: 0 0 auto;
-  min-width: 100px; /* Optimized from 120px */
-  padding: 0.5rem 0.75rem; /* Optimized from 0.75rem 0.5rem */
-  background: white;
-  border: 1px solid var(--gray-300);
+  min-width: 100px;
+  padding: 0.5rem 0.75rem;
+  background: var(--gray-50);
+  border: 2px solid var(--gray-300);
   border-radius: 8px;
   cursor: pointer;
-  font-size: 0.875rem; /* Optimized */
+  font-size: 0.875rem;
   font-weight: 500;
   color: var(--gray-700);
-  transition: var(--transition-normal);
+  transition: all 0.2s ease;
   display: flex;
   flex-direction: column;
   align-items: center;
   gap: 0.5rem;
   white-space: nowrap;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
 }
 
 .navTab:hover {
-  background: var(--gray-50);
+  background: var(--gray-100);
   border-color: var(--primary-500);
   color: var(--primary-600);
+  transform: translateY(-1px);
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
 }
 
 .navTab.active {
-  background: var(--primary-500);
-  border-color: var(--primary-500);
+  background: linear-gradient(135deg, var(--primary-purple), var(--secondary-purple));
+  border-color: var(--primary-purple);
   color: white;
   font-weight: 600;
+  box-shadow: 0 3px 6px rgba(160, 32, 240, 0.3);
+  transform: translateY(-2px);
 }
 
 .navIcon {
-  font-size: 1.125rem; /* Optimized */
+  font-size: 1.125rem;
   flex-shrink: 0;
 }
 
@@ -233,14 +232,14 @@
   text-align: center;
 }
 
-/* ==================== MODAL BODY - MAXIMIZED ==================== */
+/* ==================== MODAL BODY ==================== */
 .body {
   flex: 1;
   overflow-y: auto;
   overflow-x: hidden;
   position: relative;
   z-index: 1;
-  padding: 1.5rem; /* Optimized - kept reasonable for readability */
+  padding: 1.5rem;
   scrollbar-width: thin;
   scrollbar-color: var(--gray-400) var(--gray-100);
   min-height: 0;
@@ -275,27 +274,89 @@
 .sectionGrid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-  gap: 1rem; /* Optimized from 1.5rem */
+  gap: 1rem;
+}
+
+/* ✨ ENHANCED SECTION HEADERS WITH STYLIZED COLORS */
+.sectionHeader {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  padding: 1rem 1.25rem;
+  border-radius: 12px;
+  margin-bottom: 1rem;
+  border: 2px solid rgba(102, 126, 234, 0.3);
+  box-shadow: 0 3px 10px rgba(102, 126, 234, 0.2);
+}
+
+.sectionHeaderTitle {
+  font-size: 1.25rem;
+  font-weight: 700;
+  color: white;
+  margin: 0 0 0.25rem 0;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.sectionHeaderIcon {
+  font-size: 1.5rem;
+}
+
+.sectionHeaderSubtitle {
+  font-size: 0.9rem;
+  color: rgba(255, 255, 255, 0.9);
+  margin: 0;
+  line-height: 1.4;
+}
+
+/* Variant headers for different sections */
+.sectionHeaderRecovery {
+  background: linear-gradient(135deg, #4caf50 0%, #2e7d32 100%);
+  border-color: rgba(76, 175, 80, 0.3);
+  box-shadow: 0 3px 10px rgba(76, 175, 80, 0.2);
+}
+
+.sectionHeaderRoommate {
+  background: linear-gradient(135deg, #ff6f61 0%, #d84a40 100%);
+  border-color: rgba(255, 111, 97, 0.3);
+  box-shadow: 0 3px 10px rgba(255, 111, 97, 0.2);
+}
+
+.sectionHeaderLifestyle {
+  background: linear-gradient(135deg, #20b2aa 0%, #178d87 100%);
+  border-color: rgba(32, 178, 170, 0.3);
+  box-shadow: 0 3px 10px rgba(32, 178, 170, 0.2);
+}
+
+.sectionHeaderHousing {
+  background: linear-gradient(135deg, #ffa726 0%, #fb8c00 100%);
+  border-color: rgba(255, 167, 38, 0.3);
+  box-shadow: 0 3px 10px rgba(255, 167, 38, 0.2);
+}
+
+.sectionHeaderPersonal {
+  background: linear-gradient(135deg, #ab47bc 0%, #8e24aa 100%);
+  border-color: rgba(171, 71, 188, 0.3);
+  box-shadow: 0 3px 10px rgba(171, 71, 188, 0.2);
 }
 
 .subsectionTitle {
-  font-size: 1.125rem; /* Optimized */
+  font-size: 1.125rem;
   font-weight: 600;
   color: var(--gray-800);
-  margin: 0 0 0.75rem 0; /* Optimized bottom margin */
+  margin: 0 0 0.75rem 0;
 }
 
-/* ==================== PROFILE HEADER - OPTIMIZED ==================== */
+/* ==================== PROFILE HEADER ==================== */
 .profileHeader {
   display: flex;
   justify-content: space-between;
   align-items: flex-start;
   gap: 1.5rem;
-  padding: 1.25rem; /* Optimized from 1.5rem */
+  padding: 1.25rem;
   background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
   border-radius: 12px;
   border: 2px solid var(--border-beige);
-  margin-bottom: 1.25rem; /* Optimized */
+  margin-bottom: 1.25rem;
 }
 
 .profileInfo {
@@ -304,10 +365,10 @@
 
 .profileName {
   font-family: var(--font-serif);
-  font-size: 1.75rem; /* Optimized from 2rem */
+  font-size: 1.75rem;
   font-weight: 700;
   color: var(--gray-900);
-  margin: 0 0 0.5rem 0; /* Optimized margins */
+  margin: 0 0 0.5rem 0;
 }
 
 .profileBasics {
@@ -315,17 +376,17 @@
   flex-wrap: wrap;
   gap: 0.75rem;
   align-items: center;
-  margin-top: 0.5rem; /* Optimized */
+  margin-top: 0.5rem;
 }
 
 .basicItem {
   display: inline-flex;
   align-items: center;
-  padding: 0.25rem 0.75rem; /* Optimized from 0.4rem 0.8rem */
+  padding: 0.25rem 0.75rem;
   background: white;
   border: 1px solid var(--border-beige);
   border-radius: 20px;
-  font-size: 0.875rem; /* Optimized from 0.9rem */
+  font-size: 0.875rem;
   font-weight: 500;
   color: var(--gray-700);
 }
@@ -337,15 +398,14 @@
   font-weight: 600;
 }
 
-/* Large match score - optimized */
 .scoreLarge {
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  padding: 1rem; /* Optimized from 1.5rem */
+  padding: 1rem;
   border-radius: 12px;
-  min-width: 100px; /* Optimized from 120px */
+  min-width: 100px;
   width: 100px;
   height: 100px;
   text-align: center;
@@ -355,7 +415,7 @@
 }
 
 .scoreNumber {
-  font-size: 2rem; /* Optimized from 2.5rem */
+  font-size: 2rem;
   font-weight: 700;
   line-height: 1;
   margin-bottom: 0.25rem;
@@ -426,21 +486,21 @@
   font-size: 1.1rem;
 }
 
-/* ==================== OVERVIEW STATS - OPTIMIZED ==================== */
+/* ==================== OVERVIEW STATS ==================== */
 .overviewStats {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-  gap: 0.75rem; /* Optimized from 1rem */
-  margin-top: 1rem; /* Optimized */
+  gap: 0.75rem;
+  margin-top: 1rem;
 }
 
 .statCard {
   display: flex;
   align-items: center;
-  gap: 0.75rem; /* Optimized from 1rem */
-  padding: 0.875rem; /* Optimized from 1rem */
+  gap: 0.75rem;
+  padding: 0.875rem;
   background: white;
-  border: 1px solid var(--gray-200); /* Optimized from 2px */
+  border: 1px solid var(--gray-200);
   border-radius: 8px;
   transition: var(--transition-normal);
 }
@@ -452,7 +512,7 @@
 }
 
 .statIcon {
-  font-size: 1.5rem; /* Optimized */
+  font-size: 1.5rem;
   flex-shrink: 0;
 }
 
@@ -465,7 +525,7 @@
 }
 
 .statLabel {
-  font-size: 0.75rem; /* Optimized */
+  font-size: 0.75rem;
   font-weight: 500;
   color: var(--gray-600);
   display: block;
@@ -473,19 +533,19 @@
 }
 
 .statValue {
-  font-size: 0.9375rem; /* Optimized */
+  font-size: 0.9375rem;
   font-weight: 600;
   color: var(--gray-900);
   display: block;
   line-height: 1.3;
 }
 
-/* ==================== INFO CARDS - OPTIMIZED ==================== */
+/* ==================== INFO CARDS ==================== */
 .infoCard {
   background: white;
-  border: 1px solid var(--gray-200); /* Optimized from 2px */
+  border: 1px solid var(--gray-200);
   border-radius: 8px;
-  padding: 1rem; /* Optimized from 1.25rem */
+  padding: 1rem;
   transition: var(--transition-normal);
 }
 
@@ -499,17 +559,17 @@
 }
 
 .infoTitle {
-  font-size: 1rem; /* Optimized */
+  font-size: 1rem;
   font-weight: 600;
   color: var(--gray-800);
-  margin: 0 0 0.5rem 0; /* Optimized margins */
+  margin: 0 0 0.5rem 0;
   display: flex;
   align-items: center;
   gap: 0.5rem;
 }
 
 .infoContent {
-  font-size: 0.9375rem; /* Optimized */
+  font-size: 0.9375rem;
   color: var(--gray-700);
   line-height: 1.5;
   margin: 0;
@@ -566,19 +626,32 @@
   border-color: rgba(108, 117, 125, 0.2);
 }
 
-/* ==================== LIFESTYLE PREFERENCES - OPTIMIZED ==================== */
+/* ==================== RECOVERY SECTION - HORIZONTAL LAYOUT ==================== */
+.recoveryGrid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 1rem;
+}
+
+.recoveryGridThreeCol {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 1rem;
+}
+
+/* ==================== LIFESTYLE PREFERENCES - ENHANCED ==================== */
 .lifestylePreferences {
   background: white;
   border: 1px solid var(--gray-200);
   border-radius: 8px;
-  padding: 1rem; /* Optimized from 1.5rem */
+  padding: 1rem;
 }
 
 .lifestyleChoices {
   background: white;
   border: 1px solid var(--gray-200);
   border-radius: 8px;
-  padding: 1rem; /* Optimized from 1.5rem */
+  padding: 1rem;
 }
 
 .lifestyleScales {
@@ -591,7 +664,7 @@
   display: flex;
   align-items: center;
   gap: 1rem;
-  padding: 0.75rem; /* Added padding */
+  padding: 0.75rem;
   background: var(--gray-50);
   border-radius: 6px;
 }
@@ -632,10 +705,26 @@
   min-width: 30px;
 }
 
-/* Yes/No Grid - optimized */
+/* ✨ NEW: Lifestyle score explanation */
+.lifestyleScoreExplanation {
+  background: linear-gradient(135deg, rgba(32, 178, 170, 0.1), rgba(32, 178, 170, 0.05));
+  border-left: 4px solid var(--secondary-teal);
+  padding: 0.75rem 1rem;
+  border-radius: 6px;
+  margin-top: 0.5rem;
+  font-size: 0.875rem;
+  color: var(--gray-700);
+  line-height: 1.5;
+}
+
+.lifestyleScoreExplanation strong {
+  color: var(--secondary-teal-dark);
+}
+
+/* ✨ ENHANCED: 3x2 Grid for 6-item displays */
 .yesNoGrid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  grid-template-columns: repeat(3, 1fr);
   gap: 0.75rem;
   margin-top: 1rem;
 }
@@ -676,7 +765,7 @@
 /* ==================== COMPATIBILITY CARDS ==================== */
 .compatibilityCard {
   border-radius: var(--radius-lg);
-  padding: 1.25rem; /* Optimized from 1.5rem */
+  padding: 1.25rem;
   margin-bottom: 1rem;
 }
 
@@ -738,7 +827,7 @@
   background: white;
   border: 1px solid var(--gray-200);
   border-radius: 8px;
-  padding: 1rem; /* Optimized from 1.5rem */
+  padding: 1rem;
 }
 
 .breakdownTitle {
@@ -798,7 +887,7 @@
   background: white;
   border: 1px solid var(--gray-200);
   border-radius: 8px;
-  padding: 1rem; /* Optimized from 1.5rem */
+  padding: 1rem;
   margin-bottom: 1rem;
 }
 
@@ -823,7 +912,7 @@
   background: white;
   border: 1px solid var(--gray-200);
   border-radius: 8px;
-  padding: 1rem; /* Optimized from 1.5rem */
+  padding: 1rem;
 }
 
 .interestsTitle {
@@ -853,8 +942,8 @@
 .contactSection {
   background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
   border-radius: 12px;
-  padding: 1.25rem; /* Optimized from 1.5rem */
-  margin-bottom: 1.25rem; /* Optimized from 2rem */
+  padding: 1.25rem;
+  margin-bottom: 1.25rem;
   color: white;
   box-shadow: 0 4px 12px rgba(102, 126, 234, 0.2);
 }
@@ -1047,15 +1136,15 @@
   font-size: 1rem;
 }
 
-/* ==================== MODAL FOOTER - OPTIMIZED ==================== */
+/* ==================== MODAL FOOTER ==================== */
 .footer {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 1rem 1.5rem; /* Optimized from 1.5rem 2rem */
+  padding: 1rem 1.5rem;
   background: rgba(248, 249, 250, 0.8);
-  border-top: 1px solid var(--gray-200); /* Optimized from 2px */
-  gap: 0.75rem; /* Optimized from 1rem */
+  border-top: 1px solid var(--gray-200);
+  gap: 0.75rem;
   position: relative;
   z-index: 1;
   flex-shrink: 0;
@@ -1063,19 +1152,19 @@
 }
 
 .footer .btn {
-  min-width: 100px; /* Optimized from 120px */
-  padding: 0.5rem 1.25rem; /* Optimized */
-  font-size: 0.9375rem; /* Optimized */
+  min-width: 100px;
+  padding: 0.5rem 1.25rem;
+  font-size: 0.9375rem;
 }
 
-/* ==================== RESPONSIVE DESIGN - OPTIMIZED ==================== */
+/* ==================== RESPONSIVE DESIGN ==================== */
 @media (max-width: 768px) {
   .overlay {
     padding: 0.5rem;
   }
   
   .content {
-    max-height: 95vh; /* Optimized - even taller on mobile */
+    max-height: 95vh;
   }
   
   .header {
@@ -1092,13 +1181,13 @@
   }
   
   .navTab {
-    min-width: 80px; /* Optimized */
+    min-width: 80px;
     padding: 0.4rem 0.6rem;
     font-size: 0.8125rem;
   }
   
   .navLabel {
-    display: none; /* Show icons only on mobile */
+    display: none;
   }
   
   .navIcon {
@@ -1135,6 +1224,14 @@
     grid-template-columns: 1fr;
   }
   
+  .recoveryGrid {
+    grid-template-columns: 1fr;
+  }
+  
+  .recoveryGridThreeCol {
+    grid-template-columns: 1fr;
+  }
+  
   .breakdownGrid {
     grid-template-columns: 1fr;
   }
@@ -1145,7 +1242,7 @@
   
   .footer {
     flex-direction: column;
-    gap: 0.5rem; /* Optimized from 0.75rem */
+    gap: 0.5rem;
     padding: 0.75rem 1rem;
   }
   
@@ -1182,7 +1279,7 @@
 
 @media (max-width: 480px) {
   .content {
-    max-height: 97vh; /* Optimized - almost full height on small mobile */
+    max-height: 97vh;
     border-radius: 12px;
   }
   
@@ -1221,7 +1318,6 @@
   }
 }
 
-/* ==================== TABLET OPTIMIZATION ==================== */
 @media (min-width: 769px) and (max-width: 1024px) {
   .content {
     max-width: 900px;
@@ -1231,9 +1327,12 @@
   .sectionGrid {
     grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
   }
+  
+  .yesNoGrid {
+    grid-template-columns: repeat(2, 1fr);
+  }
 }
 
-/* ==================== LARGE DESKTOP OPTIMIZATION ==================== */
 @media (min-width: 1400px) {
   .content {
     max-width: 1200px;
@@ -1244,7 +1343,6 @@
   }
 }
 
-/* ==================== PRINT STYLES ==================== */
 @media print {
   .overlay {
     background: white;

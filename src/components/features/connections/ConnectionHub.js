@@ -1,4 +1,4 @@
-// src/components/features/connections/ConnectionHub.js - WITH GROUP MODAL
+// src/components/features/connections/ConnectionHub.js - WITH GROUP MODAL AND CLIENT PROGRESS VIEW
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../../../hooks/useAuth';
 import { supabase } from '../../../utils/supabase';
@@ -7,6 +7,7 @@ import MatchDetailsModal from '../matching/components/MatchDetailsModal';
 import PropertyDetailsModal from './modals/PropertyDetailsModal';
 import GroupDetailsModal from './modals/GroupDetailsModal';
 import EmployerModal from '../employer/components/EmployerModal';
+import ClientSelfViewModal from '../peer-support/ClientSelfViewModal';
 import styles from './ConnectionHub.module.css';
 import createMatchGroupsService from '../../../utils/database/matchGroupsService';
 
@@ -26,11 +27,13 @@ const [showProfileModal, setShowProfileModal] = useState(false);
 const [showPropertyModal, setShowPropertyModal] = useState(false);
 const [showGroupModal, setShowGroupModal] = useState(false);
 const [showEmployerModal, setShowEmployerModal] = useState(false);
+const [showClientProgressModal, setShowClientProgressModal] = useState(false);
 const [selectedConnection, setSelectedConnection] = useState(null);
 const [selectedProfile, setSelectedProfile] = useState(null);
 const [selectedProperty, setSelectedProperty] = useState(null);
 const [selectedGroup, setSelectedGroup] = useState(null);
 const [selectedEmployer, setSelectedEmployer] = useState(null);
+const [selectedClientData, setSelectedClientData] = useState(null);
   
   const [actionLoading, setActionLoading] = useState(false);
 
@@ -553,7 +556,7 @@ const loadHousingMatches = async (categories) => {
         otherPerson = data;
       } else {
 const { data } = await supabase
-  .from('applicant_matching_profiles')  // ← Changed
+  .from('applicant_matching_profiles')
   .select('*, registrant_profiles(*)')
   .eq('id', match.applicant_id)
   .single();
@@ -613,7 +616,7 @@ const { data } = await supabase
         otherPerson = data;
       } else {
 const { data } = await supabase
-  .from('applicant_matching_profiles')  // ← Changed
+  .from('applicant_matching_profiles')
   .select('*, registrant_profiles(*)')
   .eq('id', match.applicant_id)
   .single();
@@ -739,7 +742,71 @@ const handleViewProfile = async (connection, specificRoommate = null) => {
   }
 };
 
+  /**
+   * ✅ NEW: Handle viewing client progress from pss_clients table
+   */
+  const handleViewClientProgress = async (connection) => {
+    if (!profileIds.applicant) {
+      alert('Unable to load progress data.');
+      return;
+    }
 
+    try {
+      console.log('📊 Loading client progress data from pss_clients...');
+
+      // Fetch the pss_clients record where this user is the client
+      const { data: clientRecord, error } = await supabase
+        .from('pss_clients')
+        .select('*')
+        .eq('client_id', profileIds.applicant)
+        .eq('peer_specialist_id', connection.other_person?.id)
+        .maybeSingle();
+
+      if (error) {
+        console.error('❌ Error fetching pss_clients data:', error);
+        throw error;
+      }
+
+      if (!clientRecord) {
+        alert('No progress data found. Your peer support specialist hasn\'t logged any sessions yet.');
+        return;
+      }
+
+      // Transform the data for the modal
+      const clientData = {
+        id: clientRecord.id,
+        displayName: connection.other_person?.registrant_profiles?.first_name 
+          ? `${connection.other_person.registrant_profiles.first_name}'s Notes`
+          : 'Progress Notes',
+        phone: connection.other_person?.primary_phone,
+        email: connection.other_person?.contact_email || connection.other_person?.registrant_profiles?.email,
+        recoveryStage: clientRecord.recovery_stage,
+        sobrietyDate: clientRecord.sobriety_date,
+        primarySubstances: clientRecord.primary_substances || [],
+        totalSessions: clientRecord.total_sessions || 0,
+        lastContact: clientRecord.last_contact_date,
+        last_session_date: clientRecord.last_session_date,
+        nextFollowup: clientRecord.next_followup_date,
+        followupFrequency: clientRecord.followup_frequency,
+        recoveryGoals: clientRecord.recovery_goals || [],
+        progress_notes: clientRecord.progress_notes || [],
+        wantRecoverySupport: clientRecord.want_recovery_support,
+        comfortableDiscussing: clientRecord.comfortable_discussing_recovery,
+        attendMeetingsTogether: clientRecord.attend_meetings_together,
+        recoveryAccountability: clientRecord.recovery_accountability,
+        mentorshipInterest: clientRecord.mentorship_interest,
+        recoveryContext: clientRecord.recovery_context
+      };
+
+      console.log('✅ Client data loaded successfully');
+      setSelectedClientData(clientData);
+      setShowClientProgressModal(true);
+
+    } catch (err) {
+      console.error('💥 Error loading client progress:', err);
+      alert('Failed to load progress data: ' + err.message);
+    }
+  };
 
   /**
    * NEW: Handle viewing group details in GroupDetailsModal
@@ -779,7 +846,7 @@ const handleApproveRequest = async (connection) => {
 
   try {
     if (connection.type === 'roommate') {
-      // ✅ Create service instance (add import at top: import createMatchGroupsService from '../../../utils/database/matchGroupsService';)
+      // ✅ Create service instance
       const matchGroupsService = createMatchGroupsService(supabase);
 
       // SCENARIO 1: User is invitee accepting invitation
@@ -1502,8 +1569,20 @@ const getConnectionName = (connection) => {
                         )}
                       </div>
 
-                      {/* ✅ FIXED: JSX comment syntax */}
-                      {/* Secondary Actions - Updated to include Approve button */}
+                      {/* ✅ NEW: View My Progress button for active peer support connections */}
+                      {activeTab === 'active' && connection.type === 'peer_support' && (
+                        <div className={styles.secondaryAction}>
+                          <button
+                            className="btn btn-secondary"
+                            onClick={() => handleViewClientProgress(connection)}
+                            style={{ width: '100%' }}
+                          >
+                            📊 View My Progress
+                          </button>
+                        </div>
+                      )}
+
+                      {/* Secondary Actions - Approve/Decline/Withdraw buttons */}
                       {activeTab === 'awaiting' && (
                         <div className={styles.secondaryActions}>
                           <button 
@@ -1588,8 +1667,6 @@ const getConnectionName = (connection) => {
   />
 )}
 
-
-
       {/* Property Details Modal */}
       {showPropertyModal && selectedProperty && (
         <PropertyDetailsModal
@@ -1614,7 +1691,7 @@ const getConnectionName = (connection) => {
         />
       )}
       
-      {/* ✅ NEW: Employer Details Modal */}
+      {/* Employer Details Modal */}
       {showEmployerModal && selectedEmployer && (
         <EmployerModal
           isOpen={showEmployerModal}
@@ -1635,7 +1712,7 @@ const getConnectionName = (connection) => {
         />
       )}
 
-{/* Group Details Modal - NEW */}
+{/* Group Details Modal */}
 {showGroupModal && selectedGroup && selectedConnection && (
   <GroupDetailsModal
     isOpen={showGroupModal}
@@ -1662,6 +1739,17 @@ showContactInfo={
 }
     showActions={activeTab === 'awaiting'}
     isAwaitingApproval={activeTab === 'awaiting'}
+  />
+)}
+
+{/* ✅ NEW: Client Self-View Progress Modal */}
+{showClientProgressModal && selectedClientData && (
+  <ClientSelfViewModal
+    clientData={selectedClientData}
+    onClose={() => {
+      setShowClientProgressModal(false);
+      setSelectedClientData(null);
+    }}
   />
 )}
     </div>
