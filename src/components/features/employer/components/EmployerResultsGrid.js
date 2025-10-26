@@ -30,9 +30,9 @@ const EmployerResultsGrid = ({
       employer_id: employer.id,
       employer_user_id: employer.user_id,
       company_name: employer.company_name,
-      currently_favorited: favorites.has(employer.user_id)
+      currently_favorited: favorites.has(employer.id)
     });
-    onToggleFavorite(employer.user_id);
+    onToggleFavorite(employer.id);
   };
 
   // Secondary action - view details (keep existing)
@@ -123,7 +123,7 @@ const EmployerResultsGrid = ({
       {/* Employer Cards Grid */}
       <div className="grid-auto">
         {employers.map((employer) => {
-          const isFavorited = favorites.has(employer.user_id);
+          const isFavorited = favorites.has(employer.id);
           const connectionStatus = getConnectionStatus(employer);
           const isConnected = connectionStatus?.type === 'connected';
           

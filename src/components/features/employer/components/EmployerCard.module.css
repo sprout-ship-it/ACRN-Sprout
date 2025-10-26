@@ -17,13 +17,14 @@
 }
 
 /* ==================== CARD HEADER ==================== */
-/* ✅ FIXED: Using coral/purple gradient with better browser compatibility */
 .cardHeader {
-  background: linear-gradient(135deg, rgba(255, 111, 97, 0.15) 0%, rgba(160, 32, 240, 0.15) 100%);
+  background-color: #ffe5e2;
+  background: linear-gradient(135deg, #ffe5e2 0%, #ffd4cf 25%, #e6d4ff 75%, #dcc4ff 100%);
   padding: 1rem;
   border-radius: var(--radius-md);
   margin-bottom: 1rem;
-  border: 1px solid rgba(255, 111, 97, 0.2);
+  border: 1px solid rgba(255, 111, 97, 0.3);
+  box-shadow: 0 2px 4px rgba(255, 111, 97, 0.08);
 }
 
 .employerCardHeader {
