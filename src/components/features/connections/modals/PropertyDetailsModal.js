@@ -365,13 +365,15 @@ const PropertyDetailsModal = ({
         </div>
       )}
 
-      {/* Location */}
+      {/* Location - UPDATED: Only showing city, state, zip */}
       <div className={styles.locationSection}>
         <h4 className={styles.sectionSubtitle}>📍 Location</h4>
         <div className={styles.addressBox}>
-          <div className={styles.addressLine}>{property.address}</div>
           <div className={styles.addressLine}>
             {property.city}, {property.state} {property.zip_code}
+          </div>
+          <div className={styles.addressNote}>
+            Exact address will be shared by landlord after connection approval
           </div>
         </div>
       </div>
@@ -893,7 +895,7 @@ const PropertyDetailsModal = ({
       <div className={styles.modalContent} onClick={(e) => e.stopPropagation()}>
         <button className={styles.modalClose} onClick={onClose}>×</button>
         
-        {/* Property Header */}
+        {/* Property Header - UPDATED: No street address shown */}
         <div className={styles.propertyHeader} style={{ background: getHeaderGradient() }}>
           <div className={styles.propertyHeaderContent}>
             <div className={styles.propertyIcon}>
@@ -901,7 +903,7 @@ const PropertyDetailsModal = ({
             </div>
             <div className={styles.propertyHeaderInfo}>
               <h2 className={styles.propertyTitle}>
-                {property.title || property.street_address || 'Property Listing'}
+                {property.title || 'Property Listing'}
               </h2>
               <div className={styles.propertyLocation}>
                 📍 {property.city}{property.state && `, ${property.state}`}

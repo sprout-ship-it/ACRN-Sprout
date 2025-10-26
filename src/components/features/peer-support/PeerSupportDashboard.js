@@ -295,7 +295,7 @@ const PeerSupportDashboard = ({ onBack, onClientSelect }) => {
   };
 
   /**
-   * Open the unified client management modal
+   * ✅ UPDATED: Open the unified client management modal with refresh callback
    */
   const handleOpenClientModal = (client) => {
     console.log('Opening client modal for:', client.displayName);
@@ -310,9 +310,10 @@ const PeerSupportDashboard = ({ onBack, onClientSelect }) => {
     
     setSelectedClient(client);
     
+    // ✅ FIX: Pass loadClients as a refresh callback so modal can trigger refresh
     // Call parent's callback if provided (for modal integration)
     if (onClientSelect) {
-      onClientSelect(client);
+      onClientSelect(client, loadClients); // Pass loadClients as the refresh callback
     }
   };
 

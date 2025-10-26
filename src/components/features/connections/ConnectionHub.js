@@ -610,7 +610,7 @@ const { data } = await supabase
       if (isApplicant) {
         const { data } = await supabase
           .from('employer_profiles')
-          .select('id, user_id, company_name, phone, contact_email, industry, city, state, job_types_available, registrant_profiles(first_name, last_name, email)')
+          .select('*, registrant_profiles(first_name, last_name, email)')
           .eq('id', match.employer_id)
           .single();
         otherPerson = data;
