@@ -18,8 +18,11 @@ const PeerSupportDashboard = ({ onBack, onClientSelect }) => {
   const [profileModalOpen, setProfileModalOpen] = useState(false);
   const [selectedProfileClient, setSelectedProfileClient] = useState(null);
 
-  // Get peer support profile ID
+  // Get peer support profile ID and settings
   const [peerSupportProfileId, setPeerSupportProfileId] = useState(null);
+  const [acceptingClients, setAcceptingClients] = useState(true);
+  const [profileActive, setProfileActive] = useState(true);
+  const [updatingStatus, setUpdatingStatus] = useState(false);
 
   useEffect(() => {
     const loadPeerSupportId = async () => {
@@ -27,12 +30,14 @@ const PeerSupportDashboard = ({ onBack, onClientSelect }) => {
       
       const { data } = await supabase
         .from('peer_support_profiles')
-        .select('id')
+        .select('id, accepting_clients, is_active')
         .eq('user_id', profile.id)
         .single();
       
       if (data) {
         setPeerSupportProfileId(data.id);
+        setAcceptingClients(data.accepting_clients !== false);
+        setProfileActive(data.is_active !== false);
       }
     };
 
@@ -52,6 +57,86 @@ const PeerSupportDashboard = ({ onBack, onClientSelect }) => {
       loadAvailableConnections();
     }
   }, [peerSupportProfileId, clients.length, formerClients.length]);
+
+  /**
+   * ✅ NEW: Toggle accepting clients status
+   */
+  const handleToggleAcceptingClients = async () => {
+    if (!peerSupportProfileId || updatingStatus) return;
+
+    const newStatus = !acceptingClients;
+    const confirmed = window.confirm(
+      newStatus 
+        ? 'Are you ready to accept new clients? Your profile will show that you\'re available.'
+        : 'Stop accepting new clients? Your profile will show that you\'re not currently available.'
+    );
+
+    if (!confirmed) return;
+
+    setUpdatingStatus(true);
+    try {
+      console.log('🔄 Updating accepting_clients status to:', newStatus);
+
+      const { error } = await supabase
+        .from('peer_support_profiles')
+        .update({
+          accepting_clients: newStatus,
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', peerSupportProfileId);
+
+      if (error) throw error;
+
+      setAcceptingClients(newStatus);
+      console.log('✅ Successfully updated accepting_clients status');
+
+    } catch (err) {
+      console.error('💥 Error updating accepting_clients status:', err);
+      alert(`Failed to update status: ${err.message}`);
+    } finally {
+      setUpdatingStatus(false);
+    }
+  };
+
+  /**
+   * ✅ NEW: Toggle profile active status
+   */
+  const handleToggleProfileActive = async () => {
+    if (!peerSupportProfileId || updatingStatus) return;
+
+    const newStatus = !profileActive;
+    const confirmed = window.confirm(
+      newStatus 
+        ? 'Activate your profile? It will become visible in client searches.'
+        : 'Deactivate your profile? It will be hidden from client searches temporarily.'
+    );
+
+    if (!confirmed) return;
+
+    setUpdatingStatus(true);
+    try {
+      console.log('🔄 Updating is_active status to:', newStatus);
+
+      const { error } = await supabase
+        .from('peer_support_profiles')
+        .update({
+          is_active: newStatus,
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', peerSupportProfileId);
+
+      if (error) throw error;
+
+      setProfileActive(newStatus);
+      console.log('✅ Successfully updated is_active status');
+
+    } catch (err) {
+      console.error('💥 Error updating is_active status:', err);
+      alert(`Failed to update status: ${err.message}`);
+    } finally {
+      setUpdatingStatus(false);
+    }
+  };
 
   /**
    * ✅ UPDATED: Load PSS clients - separating active from former clients
@@ -580,6 +665,68 @@ const PeerSupportDashboard = ({ onBack, onClientSelect }) => {
           </p>
         </div>
       </div>
+
+      {/* ✅ NEW: Quick Status Toggles Card */}
+      {peerSupportProfileId && (
+        <div className={styles.statusTogglesCard}>
+          <h3 className={styles.togglesTitle}>Your Availability Status</h3>
+          <div className={styles.togglesGrid}>
+            {/* Profile Active Toggle */}
+            <div className={styles.toggleItem}>
+              <div className={styles.toggleInfo}>
+                <div className={styles.toggleLabel}>Profile Active</div>
+                <div className={styles.toggleDescription}>
+                  {profileActive 
+                    ? 'Your profile is visible in searches' 
+                    : 'Your profile is hidden from searches'}
+                </div>
+              </div>
+              <button
+                className={`${styles.toggleButton} ${profileActive ? styles.toggleButtonActive : styles.toggleButtonInactive}`}
+                onClick={handleToggleProfileActive}
+                disabled={updatingStatus}
+                aria-label={profileActive ? 'Deactivate profile' : 'Activate profile'}
+              >
+                <span className={`${styles.toggleSlider} ${profileActive ? styles.toggleSliderActive : ''}`}>
+                  {profileActive ? '✓' : '✕'}
+                </span>
+              </button>
+            </div>
+
+            {/* Accepting Clients Toggle */}
+            <div className={styles.toggleItem}>
+              <div className={styles.toggleInfo}>
+                <div className={styles.toggleLabel}>Accepting New Clients</div>
+                <div className={styles.toggleDescription}>
+                  {acceptingClients 
+                    ? 'You are accepting new clients' 
+                    : 'Not accepting new clients currently'}
+                </div>
+              </div>
+              <button
+                className={`${styles.toggleButton} ${acceptingClients ? styles.toggleButtonActive : styles.toggleButtonInactive}`}
+                onClick={handleToggleAcceptingClients}
+                disabled={updatingStatus}
+                aria-label={acceptingClients ? 'Stop accepting clients' : 'Start accepting clients'}
+              >
+                <span className={`${styles.toggleSlider} ${acceptingClients ? styles.toggleSliderActive : ''}`}>
+                  {acceptingClients ? '✓' : '✕'}
+                </span>
+              </button>
+            </div>
+          </div>
+
+          {/* Status explanation */}
+          <div className={styles.statusExplanation}>
+            <div className={styles.explanationItem}>
+              <strong>Profile Active:</strong> Controls whether your profile appears in client searches
+            </div>
+            <div className={styles.explanationItem}>
+              <strong>Accepting Clients:</strong> Shows if you're currently taking on new clients
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Error State */}
       {error && (

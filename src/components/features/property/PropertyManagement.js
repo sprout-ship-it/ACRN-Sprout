@@ -1,4 +1,4 @@
-// src/components/dashboard/PropertyManagement.js - FINAL GRAND INTEGRATION
+// src/components/dashboard/PropertyManagement.js - ADDED QUICK STATUS TOGGLE
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../../../context/AuthContext';
 import { supabase } from '../../../utils/supabase';
@@ -41,6 +41,9 @@ const PropertyManagement = () => {
   // ✅ Enhanced bifurcation state
   const [propertyFormType, setPropertyFormType] = useState(null);
   const [showTypeSelector, setShowTypeSelector] = useState(false);
+
+  // ✅ NEW: Track which property status is being updated
+  const [updatingStatusFor, setUpdatingStatusFor] = useState(null);
 
   // ✅ FINAL: Comprehensive form data structure supporting all fields
   const [formData, setFormData] = useState({
@@ -134,6 +137,60 @@ const PropertyManagement = () => {
     { id: 'recovery', title: 'Recovery', component: PropertyRecoverySection, icon: '🌱' },
     { id: 'amenities', title: 'Amenities', component: PropertyAmenitiesSection, icon: '⭐' }
   ];
+
+  // ✅ NEW: Status options based on property type
+  const getStatusOptions = (property) => {
+    const isRecoveryHousing = property.is_recovery_housing || isRecoveryPropertyType(property.property_type);
+    
+    if (isRecoveryHousing) {
+      return [
+        { value: 'available', label: '✅ Available', color: '#10b981' },
+        { value: 'waitlist', label: '⏳ Waitlist', color: '#f59e0b' },
+        { value: 'full', label: '🚫 Full', color: '#ef4444' },
+        { value: 'temporarily_closed', label: '⏸️ Temp Closed', color: '#6b7280' },
+        { value: 'under_renovation', label: '🔧 Renovating', color: '#8b5cf6' }
+      ];
+    } else {
+      return [
+        { value: 'available', label: '✅ Available', color: '#10b981' },
+        { value: 'waitlist', label: '⏳ Waitlist', color: '#f59e0b' },
+        { value: 'full', label: '🚫 Full', color: '#ef4444' },
+        { value: 'temporarily_closed', label: '⏸️ Temp Closed', color: '#6b7280' }
+      ];
+    }
+  };
+
+  // ✅ NEW: Quick status update handler
+  const handleQuickStatusChange = async (property, newStatus) => {
+    if (updatingStatusFor === property.id) return; // Prevent double-clicks
+    
+    setUpdatingStatusFor(property.id);
+    
+    try {
+      const { error } = await supabase
+        .from('properties')
+        .update({ status: newStatus })
+        .eq('id', property.id);
+
+      if (error) throw error;
+
+      // Update local state
+      setProperties(prevProperties => 
+        prevProperties.map(p => 
+          p.id === property.id ? { ...p, status: newStatus } : p
+        )
+      );
+
+      // Optional: Show success feedback
+      console.log(`✅ Property status updated to: ${newStatus}`);
+
+    } catch (error) {
+      console.error('Error updating property status:', error);
+      alert('Failed to update property status. Please try again.');
+    } finally {
+      setUpdatingStatusFor(null);
+    }
+  };
 
   useEffect(() => {
     fetchProperties();
@@ -860,87 +917,111 @@ const PropertyManagement = () => {
         </div>
       ) : (
         <div className={styles.propertiesGrid}>
-          {properties.map(property => (
-            <div key={property.id} className={styles.propertyCard}>
-              <div className={styles.propertyCardHeader}>
-                <div className={styles.propertyInfo}>
-                  <h3 className={styles.propertyTitle}>{property.title}</h3>
-                  <p className={styles.propertyAddress}>{property.address}, {property.city}, {property.state}</p>
-                </div>
-                <div className={styles.propertyBadges}>
-                  <span className={`badge ${property.status === 'available' ? 'badge-success' : 'badge-warning'}`}>
-                    {property.status}
-                  </span>
-                  {property.is_recovery_housing ? (
-                    <span className={styles.badgeInfo}>Recovery Housing</span>
-                  ) : (
-                    <span className={styles.badgeSecondary}>General Rental</span>
-                  )}
-                  {property.accepting_applications && (
-                    <span className={styles.badgeSuccess}>Accepting Applications</span>
-                  )}
-                </div>
-              </div>
-              
-              <div className={styles.propertyDetailsGrid}>
-                <div className={styles.propertyDetail}>
-                  <span className={styles.propertyDetailLabel}>Type:</span>
-                  <span className={styles.propertyDetailValue}>
-                    {property.property_type?.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase())}
-                  </span>
-                </div>
-                <div className={styles.propertyDetail}>
-                  <span className={styles.propertyDetailLabel}>Rent:</span>
-                  <span className={styles.propertyDetailValue}>${property.monthly_rent}/mo</span>
-                </div>
-                <div className={styles.propertyDetail}>
-                  <span className={styles.propertyDetailLabel}>Bedrooms:</span>
-                  <span className={styles.propertyDetailValue}>{property.bedrooms || 'Studio'}</span>
-                </div>
-                <div className={styles.propertyDetail}>
-                  <span className={styles.propertyDetailLabel}>Total Beds:</span>
-                  <span className={styles.propertyDetailValue}>{property.total_beds || property.bedrooms || 'Studio'}</span>
-                </div>
-                {property.is_recovery_housing && (
-                  <div className={styles.propertyDetail}>
-                    <span className={styles.propertyDetailLabel}>Available Beds:</span>
-                    <span className={styles.propertyDetailValue}>{property.available_beds || 0}</span>
+          {properties.map(property => {
+            const statusOptions = getStatusOptions(property);
+            const currentStatus = statusOptions.find(opt => opt.value === property.status) || statusOptions[0];
+            
+            return (
+              <div key={property.id} className={styles.propertyCard}>
+                <div className={styles.propertyCardHeader}>
+                  <div className={styles.propertyInfo}>
+                    <h3 className={styles.propertyTitle}>{property.title}</h3>
+                    <p className={styles.propertyAddress}>{property.address}, {property.city}, {property.state}</p>
                   </div>
-                )}
-                {property.available_date && (
+                  <div className={styles.propertyBadges}>
+                    {/* ✅ NEW: Quick Status Toggle */}
+                    <div className={styles.statusToggleContainer}>
+                      <label className={styles.statusToggleLabel}>Status:</label>
+                      <select
+                        className={styles.statusToggle}
+                        value={property.status}
+                        onChange={(e) => handleQuickStatusChange(property, e.target.value)}
+                        disabled={updatingStatusFor === property.id}
+                        style={{ 
+                          borderColor: currentStatus.color,
+                          color: currentStatus.color,
+                          fontWeight: '600'
+                        }}
+                      >
+                        {statusOptions.map(option => (
+                          <option key={option.value} value={option.value}>
+                            {option.label}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                    
+                    {property.is_recovery_housing ? (
+                      <span className={styles.badgeInfo}>Recovery Housing</span>
+                    ) : (
+                      <span className={styles.badgeSecondary}>General Rental</span>
+                    )}
+                    {property.accepting_applications && (
+                      <span className={styles.badgeSuccess}>Accepting Applications</span>
+                    )}
+                  </div>
+                </div>
+                
+                <div className={styles.propertyDetailsGrid}>
                   <div className={styles.propertyDetail}>
-                    <span className={styles.propertyDetailLabel}>Available:</span>
+                    <span className={styles.propertyDetailLabel}>Type:</span>
                     <span className={styles.propertyDetailValue}>
-                      {new Date(property.available_date).toLocaleDateString()}
+                      {property.property_type?.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase())}
                     </span>
                   </div>
-                )}
+                  <div className={styles.propertyDetail}>
+                    <span className={styles.propertyDetailLabel}>Rent:</span>
+                    <span className={styles.propertyDetailValue}>${property.monthly_rent}/mo</span>
+                  </div>
+                  <div className={styles.propertyDetail}>
+                    <span className={styles.propertyDetailLabel}>Bedrooms:</span>
+                    <span className={styles.propertyDetailValue}>{property.bedrooms || 'Studio'}</span>
+                  </div>
+                  <div className={styles.propertyDetail}>
+                    <span className={styles.propertyDetailLabel}>Total Beds:</span>
+                    <span className={styles.propertyDetailValue}>{property.total_beds || property.bedrooms || 'Studio'}</span>
+                  </div>
+                  {property.is_recovery_housing && (
+                    <div className={styles.propertyDetail}>
+                      <span className={styles.propertyDetailLabel}>Available Beds:</span>
+                      <span className={styles.propertyDetailValue}>{property.available_beds || 0}</span>
+                    </div>
+                  )}
+                  {property.available_date && (
+                    <div className={styles.propertyDetail}>
+                      <span className={styles.propertyDetailLabel}>Available:</span>
+                      <span className={styles.propertyDetailValue}>
+                        {new Date(property.available_date).toLocaleDateString()}
+                      </span>
+                    </div>
+                  )}
+                </div>
+                
+                <div className={styles.propertyActions}>
+                  <button
+                    className="btn btn-secondary btn-sm"
+                    onClick={() => handleViewPropertyDetails(property)}
+                  >
+                    👁️ View Details
+                  </button>
+                  
+                  <button
+                    className="btn btn-primary btn-sm"
+                    onClick={() => editProperty(property)}
+                  >
+                    ✏️ Edit
+                  </button>
+                  
+                  <button
+                    className="btn btn-danger btn-sm"
+                    onClick={() => deleteProperty(property.id)}
+                  >
+                    🗑️ Delete
+                  </button>
+                </div>
               </div>
-              
-<div className={styles.propertyActions}>
-  <button
-    className="btn btn-secondary btn-sm"
-    onClick={() => handleViewPropertyDetails(property)}
-  >
-    👁️ View Details
-  </button>
-  
-  <button
-    className="btn btn-primary btn-sm"
-    onClick={() => editProperty(property)}
-  >
-    ✏️ Edit
-  </button>
-  
-  <button
-    className="btn btn-danger btn-sm"
-    onClick={() => deleteProperty(property.id)}
-  >
-    🗑️ Delete
-  </button>
-</div>
-            </div>
-          ))}
+            );
+          })}
         </div>
       )}
 
@@ -1069,7 +1150,7 @@ const PropertyManagement = () => {
                   </>
                 )}
                 
-{propertyFormType === 'general_rental' && (
+                {propertyFormType === 'general_rental' && (
                   <button
                     type="submit"
                     className={`${styles.actionButton} ${styles.actionPrimary}`}
@@ -1101,4 +1182,5 @@ const PropertyManagement = () => {
     </div>
   );
 };
+
 export default PropertyManagement;

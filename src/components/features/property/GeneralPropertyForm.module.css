@@ -1,4 +1,4 @@
-/* SimplifiedPropertyForm.module.css - Enhanced with Phase 1 additions */
+/* GeneralPropertyForm.module.css - Enhanced with grouped sections */
 
 /* ==================== MAIN CONTAINER ==================== */
 .formContainer {
@@ -11,7 +11,7 @@
   font-size: 1.3rem;
   font-weight: 600;
   margin-bottom: var(--spacing-xl);
-  color: var(--gray-800);
+  color: var(--primary-purple);
   font-family: var(--font-serif);
 }
 
@@ -37,12 +37,52 @@
   font-family: var(--font-serif);
 }
 
+/* ==================== MAIN SECTIONS (NEW) ==================== */
+.mainSection {
+  background: var(--bg-light-cream);
+  border-radius: var(--radius-lg);
+  padding: var(--spacing-lg);
+  margin-bottom: var(--spacing-lg);
+  border: 1px solid var(--border-beige);
+}
+
+.mainSection:last-child {
+  margin-bottom: 0;
+}
+
+.mainSectionTitle {
+  font-size: 1.1rem;
+  font-weight: 600;
+  color: var(--gray-800);
+  margin-bottom: var(--spacing-sm);
+  font-family: var(--font-serif);
+}
+
+.mainSectionDescription {
+  color: var(--gray-600);
+  font-size: 0.9rem;
+  margin-bottom: var(--spacing-lg);
+  line-height: 1.4;
+}
+
+/* ==================== SUBSECTIONS (NEW) ==================== */
+.subSection {
+  background: white;
+  border-radius: var(--radius-md);
+  padding: var(--spacing-md);
+  border: 1px solid var(--border-beige);
+}
+
 /* ==================== FORM LAYOUT ==================== */
 .formGrid {
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: var(--spacing-lg);
   margin-bottom: var(--spacing-lg);
+}
+
+.formGrid:last-child {
+  margin-bottom: 0;
 }
 
 .formGridThree {
@@ -63,6 +103,10 @@
   margin-bottom: var(--spacing-lg);
 }
 
+.formGroup:last-child {
+  margin-bottom: 0;
+}
+
 .formGroupLarge {
   grid-column: 1 / -1;
 }
@@ -73,7 +117,7 @@
   margin-bottom: 8px;
   font-weight: 600;
   color: var(--gray-800);
-  font-size: 0.9rem;
+  font-size: 0.95rem;
 }
 
 .requiredAsterisk {
@@ -139,11 +183,12 @@
   border: 2px solid var(--border-beige);
   border-radius: var(--radius-md);
   background: white;
-  font-size: 1rem;
+  font-size: 0.95rem;
   transition: var(--transition-normal);
   font-family: var(--font-sans);
   resize: vertical;
   min-height: 100px;
+  line-height: 1.5;
 }
 
 .formTextarea:focus {
@@ -158,20 +203,27 @@
   opacity: 0.6;
 }
 
-/* ==================== NEW: FORM HINTS & HELPERS ==================== */
+/* ==================== FORM HINTS & HELPERS ==================== */
 .formHint {
   color: var(--gray-500);
   font-size: 0.85rem;
-  margin-top: 5px;
+  margin-top: var(--spacing-xs);
   line-height: 1.4;
   font-style: italic;
+}
+
+.helperText {
+  color: var(--gray-500);
+  font-size: 0.85rem;
+  margin-top: var(--spacing-xs);
+  line-height: 1.4;
 }
 
 .characterCounter {
   color: var(--gray-500);
   font-size: 0.8rem;
   text-align: right;
-  margin-top: 5px;
+  margin-top: var(--spacing-xs);
 }
 
 /* ==================== CHECKBOX STYLING ==================== */
@@ -257,7 +309,7 @@
   font-weight: 500;
 }
 
-/* ==================== NEW: UTILITIES GRID ==================== */
+/* ==================== UTILITIES GRID ==================== */
 .utilitiesGrid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
@@ -298,7 +350,7 @@
   font-weight: 500;
 }
 
-/* ==================== NEW: SUBSIDIES GRID ==================== */
+/* ==================== SUBSIDIES GRID ==================== */
 .subsidiesGrid {
   display: grid;
   grid-template-columns: 1fr;
@@ -339,7 +391,7 @@
   font-weight: 500;
 }
 
-/* ==================== NEW: ACCESSIBILITY GRID ==================== */
+/* ==================== ACCESSIBILITY GRID ==================== */
 .accessibilityGrid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
@@ -387,16 +439,17 @@
   font-weight: 500;
 }
 
-/* ==================== HELPER TEXT (Legacy Support) ==================== */
-.helperText {
-  color: var(--gray-500);
-  font-size: 0.85rem;
-  margin-top: 5px;
-  line-height: 1.4;
-}
-
 /* ==================== RESPONSIVE DESIGN ==================== */
 @media (max-width: 768px) {
+  .mainSection {
+    padding: var(--spacing-md);
+    margin-bottom: var(--spacing-md);
+  }
+
+  .subSection {
+    padding: var(--spacing-sm);
+  }
+
   .formGrid,
   .formGridThree,
   .formGridFour {
@@ -432,11 +485,30 @@
   .sectionCardTitle {
     font-size: 1rem;
   }
+
+  .mainSectionTitle {
+    font-size: 1rem;
+  }
+
+  .mainSectionDescription,
+  .helperText,
+  .formHint {
+    font-size: 0.8rem;
+  }
 }
 
 @media (max-width: 480px) {
   .formContainer {
     padding: 0;
+  }
+
+  .mainSection {
+    padding: var(--spacing-sm);
+    margin-bottom: var(--spacing-sm);
+  }
+
+  .subSection {
+    padding: var(--spacing-xs);
   }
 
   .sectionCard {
@@ -446,14 +518,15 @@
   }
 
   .formInput,
-  .formSelect,
-  .formTextarea {
+  .formSelect {
     padding: 10px;
     font-size: 0.9rem;
   }
 
   .formTextarea {
     min-height: 80px;
+    padding: var(--spacing-sm);
+    font-size: 0.9rem;
   }
 
   .sectionTitle {
@@ -462,6 +535,16 @@
 
   .sectionCardTitle {
     font-size: 0.95rem;
+  }
+
+  .mainSectionTitle {
+    font-size: 0.95rem;
+  }
+
+  .mainSectionDescription,
+  .helperText,
+  .formHint {
+    font-size: 0.75rem;
   }
 
   .checkboxLabel,
@@ -484,6 +567,10 @@
   .utilitiesGrid,
   .accessibilityGrid {
     grid-template-columns: 1fr;
+  }
+
+  .characterCounter {
+    font-size: 0.75rem;
   }
 }
 
@@ -522,7 +609,11 @@
   margin-bottom: 0;
 }
 
-/* ==================== NEW: ENHANCED VISUAL EFFECTS ==================== */
+.mainSection:last-child {
+  margin-bottom: 0;
+}
+
+/* ==================== ENHANCED VISUAL EFFECTS ==================== */
 .sectionCard::before {
   content: '';
   position: absolute;
@@ -550,7 +641,7 @@
   z-index: 2;
 }
 
-/* ==================== NEW: LOADING STATES ==================== */
+/* ==================== LOADING STATES ==================== */
 .formInput:disabled,
 .formSelect:disabled,
 .formTextarea:disabled {
@@ -568,11 +659,15 @@
   cursor: not-allowed;
 }
 
-/* ==================== NEW: SUCCESS STATES ==================== */
+/* ==================== SUCCESS STATES ==================== */
 .formInput:valid:not(:focus) {
   border-color: var(--success-green);
 }
 
 .formSelect:valid:not(:focus) {
+  border-color: var(--success-green);
+}
+
+.formTextarea:valid:not(:focus) {
   border-color: var(--success-green);
 }

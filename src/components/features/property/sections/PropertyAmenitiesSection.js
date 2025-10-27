@@ -1,11 +1,6 @@
-// src/components/features/property/sections/PropertyAmenitiesSection.js - CLEANED FOR GENERAL AMENITIES ONLY
+// src/components/features/property/sections/PropertyAmenitiesSection.js - REORGANIZED WITH GROUPED AMENITIES
 import React from 'react';
 import PropTypes from 'prop-types';
-import { 
-  propertyAmenities,
-  accessibilityFeatures,
-  neighborhoodFeatures
-} from '../constants/propertyConstants';
 
 // ✅ Import CSS module
 import styles from './PropertyAmenitiesSection.module.css';
@@ -17,140 +12,296 @@ const PropertyAmenitiesSection = ({
   onInputChange,
   onArrayChange
 }) => {
+  
+  // ✅ REORGANIZED: Amenities grouped by category (matching search filters)
+  const amenityGroups = {
+    livingSpace: {
+      title: 'Living Space',
+      description: 'In-unit features and fixtures',
+      amenities: [
+        'In-Unit WiFi',
+        'In-Unit Washer/Dryer',
+        'Full Kitchen',
+        'Air Conditioning',
+        'Heating',
+        'Dishwasher',
+        'Microwave',
+        'Refrigerator',
+        'Private Bathroom',
+        'Walk-in Closet',
+        'Balcony/Patio',
+        'Hardwood Floors',
+        'Carpet',
+        'Ceiling Fans'
+      ]
+    },
+    propertyFeatures: {
+      title: 'Property Features',
+      description: 'Building-wide amenities and services',
+      amenities: [
+        'Parking (Covered)',
+        'Parking (Garage)',
+        'Parking (Street)',
+        'Fitness Center',
+        'Swimming Pool',
+        'On-Site Laundry',
+        'Package Receiving',
+        'Bike Storage',
+        'Storage Units',
+        'Community Room',
+        'BBQ/Picnic Area',
+        'Playground',
+        'Pet Amenities',
+        'EV Charging'
+      ]
+    },
+    neighborhood: {
+      title: 'Neighborhood',
+      description: 'Location and area features',
+      amenities: [
+        'Near Public Transit',
+        'Near Shopping',
+        'Near Parks',
+        'Near Schools',
+        'Near Healthcare',
+        'Quiet Area',
+        'Well-Lit Streets',
+        'Sidewalks',
+        'Bike Lanes',
+        'Walkable Area'
+      ]
+    }
+  };
+
+  // ✅ REORGANIZED: Accessibility features grouped by category
+  const accessibilityGroups = {
+    mobility: {
+      title: 'Mobility',
+      description: 'Features for wheelchair users and mobility support',
+      features: [
+        'Wheelchair Accessible Entrance',
+        'Wheelchair Accessible Bathroom',
+        'Wheelchair Accessible Kitchen',
+        'Ramps',
+        'Elevator',
+        'Wide Doorways (36")',
+        'Wide Hallways',
+        'Accessible Parking',
+        'No Steps Entry',
+        'Roll-in Shower'
+      ]
+    },
+    usability: {
+      title: 'Usability',
+      description: 'Features for visual, auditory, and general accessibility needs',
+      features: [
+        'Grab Bars (Bathroom)',
+        'Grab Bars (Shower)',
+        'Lever Door Handles',
+        'Adjustable Countertops',
+        'Lower Light Switches',
+        'Lower Thermostat',
+        'Visual Alerts (Fire/Doorbell)',
+        'Audio Alerts',
+        'Braille Signage',
+        'Service Animal Friendly'
+      ]
+    }
+  };
+
   return (
     <>
-      <h3 className="card-title mb-4">Property Amenities & Features</h3>
+      <h3 className={styles.sectionTitle}>Property Amenities & Features</h3>
       
-      {/* ✅ SHARED: Property Amenities */}
-      <div className="form-group mb-4">
-        <label className="label">
-          Property Amenities
-        </label>
-        <div className={styles.helpTextLarge}>
-          Select all amenities available at your property. This helps potential residents find what they're looking for.
+      {/* ✅ AMENITIES SECTION */}
+      <div className={styles.mainSection}>
+        <h4 className={styles.mainSectionTitle}>🏠 Amenities</h4>
+        <p className={styles.mainSectionDescription}>
+          Select all amenities available at your property to help potential residents find what they're looking for.
+        </p>
+
+        {/* Living Space Subsection */}
+        <div className={styles.subSection}>
+          <h5 className={styles.subSectionTitle}>{amenityGroups.livingSpace.title}</h5>
+          <p className={styles.subSectionHint}>{amenityGroups.livingSpace.description}</p>
+          <div className={styles.checkboxGrid}>
+            {amenityGroups.livingSpace.amenities.map(amenity => (
+              <label key={amenity} className={styles.checkboxLabel}>
+                <input
+                  type="checkbox"
+                  className={styles.checkboxInput}
+                  checked={formData.amenities?.includes(amenity) || false}
+                  onChange={(e) => onArrayChange('amenities', amenity, e.target.checked)}
+                  disabled={loading}
+                />
+                <span className={styles.checkboxText}>{amenity}</span>
+              </label>
+            ))}
+          </div>
         </div>
-        <div className={styles.checkboxColumns}>
-          {propertyAmenities.map(amenity => (
-            <label key={amenity} className={styles.checkboxLabel}>
-              <input
-                type="checkbox"
-                checked={formData.amenities?.includes(amenity) || false}
-                onChange={(e) => onArrayChange('amenities', amenity, e.target.checked)}
-                disabled={loading}
-              />
-              <span className={styles.checkboxText}>{amenity}</span>
-            </label>
-          ))}
+
+        {/* Property Features Subsection */}
+        <div className={styles.subSection}>
+          <h5 className={styles.subSectionTitle}>{amenityGroups.propertyFeatures.title}</h5>
+          <p className={styles.subSectionHint}>{amenityGroups.propertyFeatures.description}</p>
+          <div className={styles.checkboxGrid}>
+            {amenityGroups.propertyFeatures.amenities.map(amenity => (
+              <label key={amenity} className={styles.checkboxLabel}>
+                <input
+                  type="checkbox"
+                  className={styles.checkboxInput}
+                  checked={formData.amenities?.includes(amenity) || false}
+                  onChange={(e) => onArrayChange('amenities', amenity, e.target.checked)}
+                  disabled={loading}
+                />
+                <span className={styles.checkboxText}>{amenity}</span>
+              </label>
+            ))}
+          </div>
         </div>
+
+        {/* Neighborhood Subsection */}
+        <div className={styles.subSection}>
+          <h5 className={styles.subSectionTitle}>{amenityGroups.neighborhood.title}</h5>
+          <p className={styles.subSectionHint}>{amenityGroups.neighborhood.description}</p>
+          <div className={styles.checkboxGrid}>
+            {amenityGroups.neighborhood.amenities.map(amenity => (
+              <label key={amenity} className={styles.checkboxLabel}>
+                <input
+                  type="checkbox"
+                  className={styles.checkboxInput}
+                  checked={formData.amenities?.includes(amenity) || false}
+                  onChange={(e) => onArrayChange('amenities', amenity, e.target.checked)}
+                  disabled={loading}
+                />
+                <span className={styles.checkboxText}>{amenity}</span>
+              </label>
+            ))}
+          </div>
+        </div>
+
         {errors.amenities && (
-          <div className="text-red-500 mt-1">{errors.amenities}</div>
+          <div className={styles.errorMessage}>{errors.amenities}</div>
         )}
       </div>
 
-      {/* ✅ SHARED: Accessibility Features */}
-      <div className="form-group mb-4">
-        <label className="label">
-          Accessibility Features
-        </label>
-        <div className={styles.helpTextLarge}>
+      {/* ✅ ACCESSIBILITY SECTION */}
+      <div className={styles.mainSection}>
+        <h4 className={styles.mainSectionTitle}>♿ Accessibility Features</h4>
+        <p className={styles.mainSectionDescription}>
           Select accessibility features available at your property.
+        </p>
+
+        {/* Mobility Subsection */}
+        <div className={styles.subSection}>
+          <h5 className={styles.subSectionTitle}>{accessibilityGroups.mobility.title}</h5>
+          <p className={styles.subSectionHint}>{accessibilityGroups.mobility.description}</p>
+          <div className={styles.checkboxGrid}>
+            {accessibilityGroups.mobility.features.map(feature => (
+              <label key={feature} className={styles.checkboxLabel}>
+                <input
+                  type="checkbox"
+                  className={styles.checkboxInput}
+                  checked={formData.accessibility_features?.includes(feature) || false}
+                  onChange={(e) => onArrayChange('accessibility_features', feature, e.target.checked)}
+                  disabled={loading}
+                />
+                <span className={styles.checkboxText}>{feature}</span>
+              </label>
+            ))}
+          </div>
         </div>
-        <div className={styles.checkboxColumnsCompact}>
-          {accessibilityFeatures.map(feature => (
-            <label key={feature} className={styles.checkboxLabel}>
-              <input
-                type="checkbox"
-                checked={formData.accessibility_features?.includes(feature) || false}
-                onChange={(e) => onArrayChange('accessibility_features', feature, e.target.checked)}
-                disabled={loading}
-              />
-              <span className={styles.checkboxText}>{feature}</span>
-            </label>
-          ))}
+
+        {/* Usability Subsection */}
+        <div className={styles.subSection}>
+          <h5 className={styles.subSectionTitle}>{accessibilityGroups.usability.title}</h5>
+          <p className={styles.subSectionHint}>{accessibilityGroups.usability.description}</p>
+          <div className={styles.checkboxGrid}>
+            {accessibilityGroups.usability.features.map(feature => (
+              <label key={feature} className={styles.checkboxLabel}>
+                <input
+                  type="checkbox"
+                  className={styles.checkboxInput}
+                  checked={formData.accessibility_features?.includes(feature) || false}
+                  onChange={(e) => onArrayChange('accessibility_features', feature, e.target.checked)}
+                  disabled={loading}
+                />
+                <span className={styles.checkboxText}>{feature}</span>
+              </label>
+            ))}
+          </div>
         </div>
+
         {errors.accessibility_features && (
-          <div className="text-red-500 mt-1">{errors.accessibility_features}</div>
+          <div className={styles.errorMessage}>{errors.accessibility_features}</div>
         )}
       </div>
 
-      {/* ✅ SHARED: Neighborhood Features */}
-      <div className="form-group mb-4">
-        <label className="label">
-          Neighborhood Characteristics
-        </label>
-        <div className={styles.helpTextLarge}>
-          Describe the neighborhood and nearby amenities.
-        </div>
-        <div className={styles.checkboxColumnsCompact}>
-          {neighborhoodFeatures.map(feature => (
-            <label key={feature} className={styles.checkboxLabel}>
+      {/* ✅ PROPERTY POLICIES SECTION */}
+      <div className={styles.mainSection}>
+        <h4 className={styles.mainSectionTitle}>📋 Property Policies</h4>
+        <p className={styles.mainSectionDescription}>
+          Set clear policies for your property.
+        </p>
+        
+        <div className={styles.policiesGrid}>
+          <div className={styles.policyItem}>
+            <label className={styles.policyLabel}>
               <input
                 type="checkbox"
-                checked={formData.neighborhood_features?.includes(feature) || false}
-                onChange={(e) => onArrayChange('neighborhood_features', feature, e.target.checked)}
+                className={styles.policyCheckbox}
+                name="pets_allowed"
+                checked={formData.pets_allowed || false}
+                onChange={onInputChange}
                 disabled={loading}
               />
-              <span className={styles.checkboxText}>{feature}</span>
+              <span className={styles.policyText}>Pets Allowed</span>
             </label>
-          ))}
-        </div>
-        {errors.neighborhood_features && (
-          <div className="text-red-500 mt-1">{errors.neighborhood_features}</div>
-        )}
-      </div>
-
-      {/* ✅ SHARED: General Property Policies (moved from Recovery section) */}
-      <h4 className={styles.cardSubtitle}>Property Policies</h4>
-      
-      <div className={styles.policiesGrid}>
-        <div className={styles.policyGroup}>
-          <label className={styles.checkboxLabel}>
-            <input
-              type="checkbox"
-              name="pets_allowed"
-              checked={formData.pets_allowed || false}
-              onChange={onInputChange}
-              disabled={loading}
-            />
-            <span className={styles.checkboxText}>Pets Allowed</span>
-          </label>
-          <div className={styles.helpText}>
-            Residents can have pets (specify restrictions in additional notes if needed)
+            <div className={styles.policyHint}>
+              Residents can have pets (specify restrictions in additional notes if needed)
+            </div>
+          </div>
+          
+          <div className={styles.policyItem}>
+            <label className={styles.policyLabel}>
+              <input
+                type="checkbox"
+                className={styles.policyCheckbox}
+                name="smoking_allowed"
+                checked={formData.smoking_allowed || false}
+                onChange={onInputChange}
+                disabled={loading}
+              />
+              <span className={styles.policyText}>Smoking Allowed (Designated Areas)</span>
+            </label>
+            <div className={styles.policyHint}>
+              Smoking permitted in designated outdoor areas only
+            </div>
           </div>
         </div>
+      </div>
+
+      {/* ✅ ADDITIONAL INFORMATION SECTION */}
+      <div className={styles.mainSection}>
+        <h4 className={styles.mainSectionTitle}>📝 Additional Information</h4>
         
-        <div className={styles.policyGroup}>
-          <label className={styles.checkboxLabel}>
-            <input
-              type="checkbox"
-              name="smoking_allowed"
-              checked={formData.smoking_allowed || false}
-              onChange={onInputChange}
-              disabled={loading}
-            />
-            <span className={styles.checkboxText}>Smoking Allowed (Designated Areas)</span>
-          </label>
-          <div className={styles.helpText}>
-            Smoking permitted in designated outdoor areas only
+        <div className={styles.formGroup}>
+          <label className={styles.formLabel}>Additional Notes</label>
+          <textarea
+            className={styles.formTextarea}
+            name="additional_notes"
+            value={formData.additional_notes || ''}
+            onChange={onInputChange}
+            placeholder="Any additional information about your property, special features, unique amenities, or important details potential residents should know..."
+            disabled={loading}
+            maxLength="750"
+          />
+          <div className={styles.characterCounter}>
+            {(formData.additional_notes?.length || 0)}/750 characters
           </div>
-        </div>
-      </div>
-
-      {/* ✅ SHARED: Additional Information */}
-      <div className="form-group mb-4">
-        <label className="label">Additional Information</label>
-        <textarea
-          className="input"
-          name="additional_notes"
-          value={formData.additional_notes || ''}
-          onChange={onInputChange}
-          placeholder="Any additional information about your property, special features, or unique amenities..."
-          style={{ minHeight: '80px', resize: 'vertical' }}
-          disabled={loading}
-          maxLength="750"
-        />
-        <div className={styles.characterCounter}>
-          {(formData.additional_notes?.length || 0)}/750 characters
+          <div className={styles.formHint}>
+            Use this space to highlight what makes your property special or to clarify any policies.
+          </div>
         </div>
       </div>
     </>

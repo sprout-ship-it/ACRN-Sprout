@@ -1,5 +1,150 @@
 /* PeerSupportDashboard.module.css - Dashboard-specific styles */
 
+/* ==================== STATUS TOGGLES CARD ==================== */
+.statusTogglesCard {
+  background: linear-gradient(135deg, rgba(160, 32, 240, 0.05) 0%, rgba(32, 178, 170, 0.05) 100%);
+  border: 2px solid var(--primary-purple);
+  border-radius: var(--radius-xl);
+  padding: var(--spacing-xl);
+  margin-bottom: var(--spacing-xl);
+  box-shadow: var(--shadow-md);
+}
+
+.togglesTitle {
+  font-size: 1.2rem;
+  color: var(--primary-purple);
+  margin-bottom: var(--spacing-lg);
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-sm);
+}
+
+.togglesTitle::before {
+  content: "⚙️";
+  font-size: 1.3rem;
+}
+
+.togglesGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: var(--spacing-lg);
+  margin-bottom: var(--spacing-lg);
+}
+
+.toggleItem {
+  background: white;
+  border: 2px solid var(--border-beige);
+  border-radius: var(--radius-lg);
+  padding: var(--spacing-lg);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: var(--spacing-md);
+  transition: var(--transition-normal);
+}
+
+.toggleItem:hover {
+  border-color: var(--primary-purple);
+  box-shadow: var(--shadow-sm);
+}
+
+.toggleInfo {
+  flex: 1;
+}
+
+.toggleLabel {
+  font-size: 1rem;
+  font-weight: 600;
+  color: var(--gray-800);
+  margin-bottom: var(--spacing-xs);
+}
+
+.toggleDescription {
+  font-size: 0.85rem;
+  color: var(--gray-600);
+  line-height: 1.4;
+}
+
+.toggleButton {
+  position: relative;
+  width: 56px;
+  height: 32px;
+  border-radius: 16px;
+  border: 2px solid;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  padding: 0;
+  flex-shrink: 0;
+}
+
+.toggleButtonActive {
+  background: linear-gradient(135deg, var(--primary-purple), var(--secondary-purple));
+  border-color: var(--secondary-purple);
+}
+
+.toggleButtonInactive {
+  background: var(--gray-300);
+  border-color: var(--gray-400);
+}
+
+.toggleButton:hover:not(:disabled) {
+  transform: scale(1.05);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+}
+
+.toggleButton:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.toggleSlider {
+  position: absolute;
+  top: 50%;
+  left: 3px;
+  transform: translateY(-50%);
+  width: 24px;
+  height: 24px;
+  background: white;
+  border-radius: 50%;
+  transition: all 0.3s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: var(--gray-600);
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+}
+
+.toggleSliderActive {
+  left: calc(100% - 27px);
+  color: var(--primary-purple);
+}
+
+.statusExplanation {
+  background: rgba(255, 255, 255, 0.7);
+  border-radius: var(--radius-md);
+  padding: var(--spacing-md);
+  border: 1px solid var(--border-beige);
+}
+
+.explanationItem {
+  font-size: 0.85rem;
+  color: var(--gray-700);
+  margin-bottom: var(--spacing-xs);
+  line-height: 1.5;
+}
+
+.explanationItem:last-child {
+  margin-bottom: 0;
+}
+
+.explanationItem strong {
+  color: var(--primary-purple);
+  font-weight: 600;
+}
+
 /* ==================== AVAILABLE CONNECTIONS SECTION ==================== */
 .availableConnectionsCard {
   background: linear-gradient(135deg, rgba(32, 178, 170, 0.05) 0%, rgba(160, 32, 240, 0.05) 100%);
@@ -509,6 +654,14 @@
 
 /* ==================== RESPONSIVE DESIGN ==================== */
 @media (max-width: 768px) {
+  .statusTogglesCard {
+    padding: var(--spacing-lg);
+  }
+
+  .togglesGrid {
+    grid-template-columns: 1fr;
+  }
+
   .clientsGrid {
     grid-template-columns: 1fr;
     gap: var(--spacing-lg);
@@ -564,6 +717,24 @@
 }
 
 @media (max-width: 480px) {
+  .statusTogglesCard {
+    padding: var(--spacing-md);
+  }
+
+  .togglesTitle {
+    font-size: 1rem;
+  }
+
+  .toggleItem {
+    padding: var(--spacing-md);
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .toggleButton {
+    align-self: flex-end;
+  }
+
   .clientCard {
     padding: var(--spacing-lg);
   }

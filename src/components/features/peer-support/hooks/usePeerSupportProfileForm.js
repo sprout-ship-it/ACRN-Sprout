@@ -321,10 +321,13 @@ export const usePeerSupportProfileForm = ({ editMode = false, onComplete } = {})
 
       console.log('💾 Hook: Submitting peer support profile data:', peerProfileData);
 
-      // ✅ PRESERVED: Use direct supabase calls like landlord does (since it works)
+// ✅ FIXED: Auto-detect create vs update based on loaded data
       let result;
       try {
-        if (editMode) {
+        const hasExistingProfile = hasLoadedData && formData.user_id;
+        
+        if (hasExistingProfile) {
+          console.log('📝 Updating existing peer support profile');
           const { data, error } = await supabase
             .from('peer_support_profiles')
             .update(peerProfileData)
@@ -338,6 +341,7 @@ export const usePeerSupportProfileForm = ({ editMode = false, onComplete } = {})
             error: error
           };
         } else {
+          console.log('✨ Creating new peer support profile');
           const { data, error } = await supabase
             .from('peer_support_profiles')
             .insert(peerProfileData)
@@ -399,7 +403,7 @@ export const usePeerSupportProfileForm = ({ editMode = false, onComplete } = {})
     } finally {
       setLoading(false);
     }
-  }, [profile?.id, formData, validateForm, editMode, onComplete]);
+  }, [profile?.id, formData, validateForm, hasLoadedData, onComplete]);
   
   // ✅ PRESERVED: Clear success message
   const clearSuccessMessage = useCallback(() => {

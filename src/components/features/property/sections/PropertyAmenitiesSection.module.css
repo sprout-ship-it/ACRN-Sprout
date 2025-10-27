@@ -1,31 +1,86 @@
-/* PropertyAmenitiesSection.module.css - Component-specific styles */
+/* PropertyAmenitiesSection.module.css - Enhanced with grouped sections */
 
-/* ==================== CHECKBOX LAYOUTS ==================== */
-.checkboxColumns {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-  gap: 1rem;
-  margin-top: 0.5rem;
+/* ==================== MAIN SECTION TITLE ==================== */
+.sectionTitle {
+  font-size: 1.3rem;
+  font-weight: 600;
+  margin-bottom: var(--spacing-xl);
+  color: var(--primary-purple);
+  font-family: var(--font-serif);
 }
 
-.checkboxColumnsCompact {
+/* ==================== MAIN SECTIONS ==================== */
+.mainSection {
+  background: var(--bg-light-cream);
+  border-radius: var(--radius-lg);
+  padding: var(--spacing-lg);
+  margin-bottom: var(--spacing-xl);
+  border: 1px solid var(--border-beige);
+}
+
+.mainSectionTitle {
+  font-size: 1.1rem;
+  font-weight: 600;
+  color: var(--gray-800);
+  margin-bottom: var(--spacing-sm);
+  font-family: var(--font-serif);
+}
+
+.mainSectionDescription {
+  color: var(--gray-600);
+  font-size: 0.9rem;
+  margin-bottom: var(--spacing-lg);
+  line-height: 1.4;
+}
+
+/* ==================== SUBSECTIONS ==================== */
+.subSection {
+  background: white;
+  border-radius: var(--radius-md);
+  padding: var(--spacing-md);
+  margin-bottom: var(--spacing-md);
+  border: 1px solid var(--border-beige);
+}
+
+.subSection:last-child {
+  margin-bottom: 0;
+}
+
+.subSectionTitle {
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: var(--gray-800);
+  margin-bottom: var(--spacing-xs);
+}
+
+.subSectionHint {
+  color: var(--gray-500);
+  font-size: 0.85rem;
+  margin-bottom: var(--spacing-md);
+  line-height: 1.3;
+  font-style: italic;
+}
+
+/* ==================== CHECKBOX GRID ==================== */
+.checkboxGrid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-  gap: 0.75rem;
-  margin-top: 0.5rem;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: var(--spacing-sm);
 }
 
 /* ==================== CHECKBOX LABELS ==================== */
 .checkboxLabel {
   display: flex;
   align-items: flex-start;
-  gap: 0.5rem;
+  gap: var(--spacing-sm);
   cursor: pointer;
-  padding: 0.5rem;
+  padding: var(--spacing-sm);
   border-radius: var(--radius-sm);
   transition: var(--transition-normal);
   background: white;
   border: 1px solid transparent;
+  position: relative;
+  overflow: hidden;
 }
 
 .checkboxLabel:hover {
@@ -46,15 +101,128 @@
   flex: 1;
 }
 
-/* ==================== CHECKBOX INPUT STYLING ==================== */
-.checkboxLabel input[type="checkbox"] {
+.checkboxInput {
   margin-top: 0.1rem;
   flex-shrink: 0;
   accent-color: var(--primary-purple);
   cursor: pointer;
+  width: 16px;
+  height: 16px;
 }
 
-/* ==================== SECTION SUBTITLES ==================== */
+/* ==================== LEGACY CHECKBOX LAYOUTS (PRESERVED) ==================== */
+.checkboxColumns {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+  gap: 1rem;
+  margin-top: 0.5rem;
+}
+
+.checkboxColumnsCompact {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 0.75rem;
+  margin-top: 0.5rem;
+}
+
+/* ==================== POLICIES SECTION ==================== */
+.policiesGrid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--spacing-lg);
+}
+
+.policyItem {
+  background: white;
+  border: 1px solid var(--border-beige);
+  border-radius: var(--radius-md);
+  padding: var(--spacing-md);
+  transition: var(--transition-normal);
+}
+
+.policyItem:hover {
+  border-color: var(--primary-purple);
+  background: rgba(160, 32, 240, 0.02);
+}
+
+.policyLabel {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-sm);
+  cursor: pointer;
+  margin-bottom: var(--spacing-xs);
+}
+
+.policyCheckbox {
+  width: 18px;
+  height: 18px;
+  accent-color: var(--primary-purple);
+  cursor: pointer;
+  flex-shrink: 0;
+}
+
+.policyText {
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: var(--gray-800);
+  line-height: 1.3;
+}
+
+.policyHint {
+  color: var(--gray-500);
+  font-size: 0.85rem;
+  line-height: 1.3;
+  margin-left: 26px;
+}
+
+/* ==================== FORM ELEMENTS ==================== */
+.formGroup {
+  margin-bottom: var(--spacing-lg);
+}
+
+.formLabel {
+  display: block;
+  margin-bottom: var(--spacing-sm);
+  font-weight: 600;
+  color: var(--gray-800);
+  font-size: 0.95rem;
+}
+
+.formTextarea {
+  width: 100%;
+  padding: var(--spacing-md);
+  border: 2px solid var(--border-beige);
+  border-radius: var(--radius-md);
+  background: white;
+  font-size: 0.95rem;
+  transition: var(--transition-normal);
+  font-family: var(--font-sans);
+  resize: vertical;
+  min-height: 100px;
+  line-height: 1.5;
+}
+
+.formTextarea:focus {
+  border-color: var(--primary-purple);
+  box-shadow: 0 0 0 3px rgba(160, 32, 240, 0.1);
+  outline: none;
+}
+
+.formTextarea:disabled {
+  background: var(--gray-100);
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+
+.formHint {
+  color: var(--gray-500);
+  font-size: 0.85rem;
+  margin-top: var(--spacing-xs);
+  line-height: 1.4;
+  font-style: italic;
+}
+
+/* ==================== SECTION SUBTITLES (PRESERVED) ==================== */
 .cardSubtitle {
   font-size: 1.1rem;
   font-weight: 600;
@@ -64,7 +232,7 @@
   border-top: 1px solid var(--border-beige);
 }
 
-/* ==================== HELP TEXT ==================== */
+/* ==================== HELP TEXT (PRESERVED) ==================== */
 .helpText {
   color: var(--gray-500);
   font-size: 0.85rem;
@@ -83,11 +251,23 @@
 .characterCounter {
   color: var(--gray-500);
   font-size: 0.8rem;
-  margin-top: 0.25rem;
+  margin-top: var(--spacing-xs);
   text-align: right;
 }
 
-/* ==================== SERVICE SECTIONS ==================== */
+/* ==================== ERROR MESSAGES ==================== */
+.errorMessage {
+  color: #dc3545;
+  font-size: 0.9rem;
+  margin-top: var(--spacing-md);
+  padding: var(--spacing-sm) var(--spacing-md);
+  background: rgba(220, 53, 69, 0.05);
+  border-left: 3px solid #dc3545;
+  border-radius: var(--radius-sm);
+  font-weight: 500;
+}
+
+/* ==================== SERVICE SECTIONS (PRESERVED) ==================== */
 .servicesGrid {
   display: grid;
   grid-template-columns: 1fr 1fr;
@@ -101,7 +281,7 @@
   gap: var(--spacing-md);
 }
 
-/* ==================== LICENSING SECTION ==================== */
+/* ==================== LICENSING SECTION (PRESERVED) ==================== */
 .licensingGrid {
   display: grid;
   grid-template-columns: 1fr 1fr;
@@ -109,7 +289,7 @@
   margin-bottom: var(--spacing-lg);
 }
 
-/* ==================== STATUS SECTION ==================== */
+/* ==================== STATUS SECTION (PRESERVED) ==================== */
 .statusGrid {
   display: grid;
   grid-template-columns: 1fr 1fr;
@@ -119,16 +299,24 @@
 
 /* ==================== RESPONSIVE DESIGN ==================== */
 @media (max-width: 768px) {
-  .checkboxColumns {
-    grid-template-columns: 1fr;
-    gap: 0.5rem;
-  }
-  
-  .checkboxColumnsCompact {
-    grid-template-columns: 1fr;
-    gap: 0.5rem;
+  .mainSection {
+    padding: var(--spacing-md);
+    margin-bottom: var(--spacing-lg);
   }
 
+  .subSection {
+    padding: var(--spacing-sm);
+    margin-bottom: var(--spacing-sm);
+  }
+
+  .checkboxGrid,
+  .checkboxColumns,
+  .checkboxColumnsCompact {
+    grid-template-columns: 1fr;
+    gap: var(--spacing-xs);
+  }
+
+  .policiesGrid,
   .servicesGrid,
   .licensingGrid,
   .statusGrid {
@@ -136,31 +324,61 @@
     gap: var(--spacing-md);
   }
 
-  .checkboxText {
+  .checkboxText,
+  .policyText {
     font-size: 0.85rem;
   }
 
+  .mainSectionTitle {
+    font-size: 1rem;
+  }
+
+  .subSectionTitle {
+    font-size: 0.9rem;
+  }
+
   .helpText,
-  .helpTextLarge {
+  .helpTextLarge,
+  .subSectionHint,
+  .policyHint,
+  .formHint {
     font-size: 0.8rem;
   }
 
   .cardSubtitle {
     font-size: 1rem;
   }
+
+  .sectionTitle {
+    font-size: 1.2rem;
+  }
 }
 
 @media (max-width: 480px) {
-  .checkboxLabel {
+  .mainSection {
+    padding: var(--spacing-sm);
+    margin-bottom: var(--spacing-md);
+  }
+
+  .subSection {
     padding: var(--spacing-xs);
   }
 
-  .checkboxText {
+  .checkboxLabel,
+  .policyItem {
+    padding: var(--spacing-xs);
+  }
+
+  .checkboxText,
+  .policyText {
     font-size: 0.8rem;
   }
 
   .helpText,
-  .helpTextLarge {
+  .helpTextLarge,
+  .subSectionHint,
+  .policyHint,
+  .formHint {
     font-size: 0.75rem;
   }
 
@@ -173,28 +391,59 @@
     margin-bottom: var(--spacing-sm);
     padding-top: var(--spacing-sm);
   }
+
+  .sectionTitle {
+    font-size: 1.1rem;
+  }
+
+  .mainSectionTitle {
+    font-size: 0.95rem;
+  }
+
+  .subSectionTitle {
+    font-size: 0.85rem;
+  }
+
+  .formTextarea {
+    min-height: 80px;
+    padding: var(--spacing-sm);
+    font-size: 0.9rem;
+  }
+
+  .policyHint {
+    margin-left: 22px;
+  }
 }
 
 /* ==================== ACCESSIBILITY ENHANCEMENTS ==================== */
-.checkboxLabel:focus-visible {
+.checkboxLabel:focus-visible,
+.policyLabel:focus-visible {
   outline: 2px solid var(--primary-purple);
   outline-offset: 2px;
 }
 
-.checkboxLabel input[type="checkbox"]:focus {
+.checkboxInput:focus,
+.policyCheckbox:focus {
+  outline: 2px solid var(--primary-purple);
+  outline-offset: 2px;
+}
+
+.formTextarea:focus-visible {
   outline: 2px solid var(--primary-purple);
   outline-offset: 2px;
 }
 
 /* ==================== DISABLED STATES ==================== */
-.checkboxLabel:has(input:disabled) {
+.checkboxLabel:has(input:disabled),
+.policyItem:has(input:disabled) {
   opacity: 0.6;
   cursor: not-allowed;
 }
 
-.checkboxLabel:has(input:disabled):hover {
+.checkboxLabel:has(input:disabled):hover,
+.policyItem:has(input:disabled):hover {
   background-color: white;
-  border-color: transparent;
+  border-color: var(--border-beige);
 }
 
 /* ==================== ENHANCED VISUAL EFFECTS ==================== */
@@ -207,25 +456,44 @@
   height: 100%;
   background: linear-gradient(90deg, transparent, rgba(160, 32, 240, 0.02), transparent);
   transition: left 0.6s ease;
-  z-index: -1;
+  z-index: 0;
   pointer-events: none;
-}
-
-.checkboxLabel {
-  position: relative;
-  overflow: hidden;
 }
 
 .checkboxLabel:hover::before {
   left: 100%;
 }
 
+.checkboxLabel > * {
+  position: relative;
+  z-index: 1;
+}
+
 /* ==================== FORM VALIDATION STATES ==================== */
-.checkboxLabel:has(input:invalid) {
+.checkboxLabel:has(input:invalid),
+.policyItem:has(input:invalid) {
   border-color: #dc3545;
   background-color: rgba(220, 53, 69, 0.02);
 }
 
-.checkboxLabel:has(input:valid) {
+.checkboxLabel:has(input:valid),
+.policyItem:has(input:valid) {
   border-color: var(--success-border);
+}
+
+.formTextarea:invalid {
+  border-color: #dc3545;
+}
+
+.formTextarea:valid:not(:focus) {
+  border-color: var(--success-green);
+}
+
+/* ==================== SUBTLE DIVIDERS ==================== */
+.mainSection + .mainSection {
+  margin-top: var(--spacing-xl);
+}
+
+.subSection + .subSection {
+  margin-top: var(--spacing-md);
 }

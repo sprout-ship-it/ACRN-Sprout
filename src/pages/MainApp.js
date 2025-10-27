@@ -358,7 +358,6 @@ else if (role === 'employer') {
                 <Route path="/profile/peer-support" element={
                   <div style={{ maxWidth: '900px', margin: '0 auto' }}>
                     <PeerSupportProfileForm 
-                      editMode={true}
                       onComplete={() => {
                         calculateProfileCompletion(); // Refresh completion
                         navigate('/app');
