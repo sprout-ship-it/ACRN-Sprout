@@ -118,12 +118,13 @@ const RecoveryInfoSection = ({
             Recovery Stage <span className="text-red-500">*</span>
           </label>
           <select
-            className={`input ${errors.recovery_stage ? 'border-red-500 bg-red-50' : ''}`}
+            className={`input ${errors.recovery_stage || (!formData.recovery_stage || formData.recovery_stage === '') ? 'border-red-500 bg-red-50' : ''}`}
             value={formData.recovery_stage || ''}
             onChange={(e) => onInputChange('recovery_stage', e.target.value)}
             disabled={loading}
             required
           >
+            <option value="">-- Select your recovery stage --</option>
             {recoveryStageOptions.map(option => (
               <option key={option.value} value={option.value}>
                 {option.label}
@@ -132,6 +133,9 @@ const RecoveryInfoSection = ({
           </select>
           {errors.recovery_stage && (
             <div className="text-red-500 mt-1 text-sm font-medium">{errors.recovery_stage}</div>
+          )}
+          {!formData.recovery_stage && !errors.recovery_stage && (
+            <div className="text-red-500 mt-1 text-sm font-medium">Please select your recovery stage to continue</div>
           )}
           <div className="text-gray-500 mt-1 text-sm">
             Your current recovery stage helps match with supportive roommates
@@ -143,12 +147,13 @@ const RecoveryInfoSection = ({
             Spiritual/Religious Approach <span className="text-red-500">*</span>
           </label>
           <select
-            className={`input ${errors.spiritual_affiliation ? 'border-red-500 bg-red-50' : ''}`}
+            className={`input ${errors.spiritual_affiliation || (!formData.spiritual_affiliation || formData.spiritual_affiliation === '') ? 'border-red-500 bg-red-50' : ''}`}
             value={formData.spiritual_affiliation || ''}
             onChange={(e) => onInputChange('spiritual_affiliation', e.target.value)}
             disabled={loading}
             required
           >
+            <option value="">-- Select your spiritual approach --</option>
             {spiritualAffiliationOptions.map(option => (
               <option key={option.value} value={option.value}>
                 {option.label}
@@ -157,6 +162,9 @@ const RecoveryInfoSection = ({
           </select>
           {errors.spiritual_affiliation && (
             <div className="text-red-500 mt-1 text-sm font-medium">{errors.spiritual_affiliation}</div>
+          )}
+          {!formData.spiritual_affiliation && !errors.spiritual_affiliation && (
+            <div className="text-red-500 mt-1 text-sm font-medium">Please select your spiritual approach to continue</div>
           )}
           <div className="text-gray-500 mt-1 text-sm">
             Spiritual alignment can enhance roommate compatibility and support
@@ -223,7 +231,7 @@ const RecoveryInfoSection = ({
           ))}
         </div>
         
-        {primaryIssuesError && (
+        {primaryIssuesError && !errors.primary_issues && (
           <div className="text-red-500 mt-1 text-sm font-medium">{primaryIssuesError}</div>
         )}
         {errors.primary_issues && (
@@ -237,6 +245,13 @@ const RecoveryInfoSection = ({
                 formData.primary_issues, 
                 issue => issue.replace(/-/g, ' ').replace(/\b\w/g, l => l.toUpperCase())
               )}
+            </div>
+          </div>
+        )}
+        {(formData.primary_issues || []).length === 0 && (
+          <div className="mt-2 p-2 bg-red-50 rounded border border-red-200">
+            <div className="text-red-800 text-sm">
+              <strong>⚠️ Required:</strong> Please select at least one primary issue to continue
             </div>
           </div>
         )}
@@ -274,7 +289,7 @@ const RecoveryInfoSection = ({
           ))}
         </div>
         
-        {recoveryMethodsError && (
+        {recoveryMethodsError && !errors.recovery_methods && (
           <div className="text-red-500 mt-1 text-sm font-medium">{recoveryMethodsError}</div>
         )}
         {errors.recovery_methods && (
@@ -288,6 +303,13 @@ const RecoveryInfoSection = ({
                 formData.recovery_methods, 
                 method => method.replace(/-/g, ' ').replace(/\b\w/g, l => l.toUpperCase())
               )}
+            </div>
+          </div>
+        )}
+        {(formData.recovery_methods || []).length === 0 && (
+          <div className="mt-2 p-2 bg-red-50 rounded border border-red-200">
+            <div className="text-red-800 text-sm">
+              <strong>⚠️ Required:</strong> Please select at least one recovery method to continue
             </div>
           </div>
         )}
@@ -323,7 +345,7 @@ const RecoveryInfoSection = ({
           ))}
         </div>
         
-        {programTypesError && (
+        {programTypesError && !errors.program_types && (
           <div className="text-red-500 mt-1 text-sm font-medium">{programTypesError}</div>
         )}
         {errors.program_types && (
@@ -334,6 +356,13 @@ const RecoveryInfoSection = ({
           <div className="mt-2 p-2 bg-purple-50 rounded border border-purple-200">
             <div className="text-purple-800 text-sm">
               <strong>Selected programs:</strong> {formatArrayForDisplay(formData.program_types)}
+            </div>
+          </div>
+        )}
+        {(formData.program_types || []).length === 0 && (
+          <div className="mt-2 p-2 bg-red-50 rounded border border-red-200">
+            <div className="text-red-800 text-sm">
+              <strong>⚠️ Required:</strong> Please select at least one program type to continue
             </div>
           </div>
         )}
